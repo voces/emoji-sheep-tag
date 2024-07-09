@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <title>Emoji Sheep Tag</title>
+
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22><text y=%2232%22 font-size=%2232%22>🐑</text></svg>" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-size: 1.2rem;
+      font-family: 'Trebuchet MS', sans-serif;
+      color: white;
+    }
+
+    canvas {
+      position: absolute;
+    }
+
+    #main {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+  </style>
+
+</head>
+
+<body>
+  <canvas></canvas>
+  <script src="main.js" type="module"></script>
+  <div id="main"></div>
+</body>
+
+</html>
