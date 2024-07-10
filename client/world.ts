@@ -29,13 +29,6 @@ const collections = {
   derelictHouse: derelictHouses,
 };
 
-type MovingUnit = {
-  id: string;
-  kind: "sheep" | "wolf";
-  movement: { x: number; y: number }[];
-};
-const movingUnits: Record<string, MovingUnit> = {};
-
 app.addSystem({
   props: ["id", "kind", "owner"],
   onAdd: (e) => {
@@ -47,22 +40,28 @@ app.addSystem({
 
 app.addSystem({
   props: ["id", "kind", "position"],
-  onAdd: (e) =>
+  onAdd: (e) => {
     collections[e.kind].setPositionAt(
       e.id,
       e.position.x,
       e.position.y,
-    ),
+    );
+  },
   onChange: (e) =>
     collections[e.kind].setPositionAt(
       e.id,
       e.position.x,
       e.position.y,
     ),
+  onRemove: (e) => collections[e.kind!].delete(e.id!),
 });
 
 app.addSystem({
   props: ["id", "kind", "movement"],
+  onAdd: (e) => {
+    if (e.position || !e.movement.length) return;
+    e.position = e.movement[0];
+  },
   updateChild: (unit, delta) => {
     let movement =
       ((speeds as Record<string, number | undefined>)[unit.kind] ?? 0) * delta;

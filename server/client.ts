@@ -1,12 +1,12 @@
 import { z } from "npm:zod";
-import type { Message } from "../client/client.ts";
+import type { ServerToClientMessage } from "../client/client.ts";
 
 const clients = new Set<Client>();
 
 class Client {
   constructor(readonly socket: WebSocket) {}
 
-  send(message: Message) {
+  send(message: ServerToClientMessage) {
     if (this.socket.readyState !== WebSocket.OPEN) return;
     try {
       this.socket.send(JSON.stringify(message));
@@ -17,12 +17,21 @@ class Client {
   }
 }
 
-const zClientToServerMessage = z.object({
-  type: z.literal("move"),
-  units: z.string().array().nonempty(),
-  x: z.number(),
-  y: z.number(),
-});
+const zClientToServerMessage = z.union([
+  z.object({
+    type: z.literal("move"),
+    units: z.string().array(),
+    x: z.number(),
+    y: z.number(),
+  }),
+  z.object({
+    type: z.literal("build"),
+    unit: z.string(),
+    buildType: z.string(), // literal
+    x: z.number(),
+    y: z.number(),
+  }),
+]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
 
@@ -85,6 +94,24 @@ export const handleSocket = (socket: WebSocket) => {
               id,
               movement: [{ x: message.x, y: message.y }],
             })),
+          });
+        }
+      } else if (message.type === "build") {
+        for (const client of clients) {
+          client.send({
+            type: "updates",
+            updates: [{
+              type: "newUnit",
+              id: crypto.randomUUID(),
+              kind: message.buildType as "hut",
+              owner: "player-0",
+              facing: 0,
+              movement: [{ x: message.x, y: message.y }],
+            }, {
+              type: "updateUnit",
+              id: message.unit,
+              movement: [{ x: message.x, y: message.y }],
+            }],
           });
         }
       }

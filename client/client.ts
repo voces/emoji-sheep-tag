@@ -1,9 +1,8 @@
-import z, { string, TypeOf } from "npm:zod";
-// import { collections, flagUnitMovement, sheep, wolves } from "./world.ts";
-// import { playerColors } from "./playerColors.ts";
+import z from "npm:zod";
 import { playersVar } from "./ui/vars/players.ts";
 import { stateVar } from "./ui/vars/state.ts";
 import { app, Entity } from "./ecs.ts";
+import { type ClientToServerMessage } from "../server/client.ts";
 
 const zStart = z.object({
   type: z.literal("start"),
@@ -70,18 +69,18 @@ const zMessage = z.union([
   zJoin,
 ]);
 
-export type Message = TypeOf<typeof zMessage>;
+export type ServerToClientMessage = z.TypeOf<typeof zMessage>;
 
 const map: Record<string, Entity> = {};
 
 const handlers = {
-  join: (data: TypeOf<typeof zJoin>) => playersVar(data.players),
-  slotChange: (data: TypeOf<typeof zSlotChange>) => {
+  join: (data: z.TypeOf<typeof zJoin>) => playersVar(data.players),
+  slotChange: (data: z.TypeOf<typeof zSlotChange>) => {
   },
-  start: (data: TypeOf<typeof zStart>) => {
+  start: (data: z.TypeOf<typeof zStart>) => {
     stateVar("playing");
   },
-  updates: (data: TypeOf<typeof zUpdates>) => {
+  updates: (data: z.TypeOf<typeof zUpdates>) => {
     for (const update of data.updates) {
       if (update.type === "newUnit" || update.type === "updateUnit") {
         const { type, ...props } = update;
@@ -131,13 +130,6 @@ const connect = () => {
   });
 };
 connect();
-
-type ClientToServerMessage = {
-  type: "move";
-  units: string[];
-  x: number;
-  y: number;
-};
 
 export const send = (message: ClientToServerMessage) => {
   ws.send(JSON.stringify(message));

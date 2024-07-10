@@ -11,18 +11,15 @@ import { camera, scene } from "./three.ts";
 // import { camera, scene } from "../graphics.ts";
 // import { getCharacter } from "../character.ts";
 
-export class MouseButtonEvent extends Event {
+class MosueEvent extends Event {
   readonly pixels: Vector2;
   readonly percent: Vector2;
   readonly world: Vector2;
   readonly angle: number;
   readonly intersects: Intersection<Object3D>[];
 
-  constructor(
-    direction: "up" | "down",
-    readonly button: "left" | "right" | "middle",
-  ) {
-    super(`mouseButton${direction[0].toUpperCase() + direction.slice(1)}`);
+  constructor(name: string) {
+    super(name);
 
     this.pixels = mouse.pixels.clone();
     this.percent = mouse.percent.clone();
@@ -32,9 +29,25 @@ export class MouseButtonEvent extends Event {
   }
 }
 
+export class MouseButtonEvent extends MosueEvent {
+  constructor(
+    direction: "up" | "down",
+    readonly button: "left" | "right" | "middle",
+  ) {
+    super(`mouseButton${direction[0].toUpperCase() + direction.slice(1)}`);
+  }
+}
+
+export class MouseMoveEvent extends MosueEvent {
+  constructor() {
+    super("mouseMove");
+  }
+}
+
 type MouseEvents = {
   mouseButtonDown: MouseButtonEvent;
   mouseButtonUp: MouseButtonEvent;
+  mouseMove: MouseMoveEvent;
 };
 
 class MouseEventTarget extends TypedEventTarget<MouseEvents> {}
@@ -81,6 +94,8 @@ globalThis.addEventListener("pointermove", (event) => {
   raycaster.ray.intersectPlane(plane, world3);
   mouse.world.x = world3.x;
   mouse.world.y = world3.y;
+
+  mouse.dispatchTypedEvent("mouseMove", new MouseMoveEvent());
 });
 
 globalThis.addEventListener("pointerdown", (event) =>

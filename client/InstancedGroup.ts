@@ -9,9 +9,16 @@ import {
 } from "three";
 
 const dummy = new Object3D();
+const dummyColor = new Color();
+
+const hasPlayerColor = (material: Material | Material[]) =>
+  Array.isArray(material)
+    ? material.some((m: Material) => m.userData.player)
+    : (material as Material).userData.player;
 
 export class InstancedGroup extends Group {
   private map: Record<string, number> = {};
+  private reverseMap: string[] = [];
   private innerCount: number;
 
   constructor(group: Group, count: number = 1) {
@@ -37,8 +44,13 @@ export class InstancedGroup extends Group {
     const next = this.children.map((c) => {
       if (!(c instanceof InstancedMesh)) return c;
       const next = new InstancedMesh(c.geometry, c.material, value);
-      for (let i = 0; i < Math.min(value, this.innerCount); i++) {
-        c.getMatrixAt(i, next.matrix);
+      for (let i = 0; i < value; i++) {
+        next.instanceMatrix.copyArray(c.instanceMatrix.array);
+        dummy.matrix.setPosition(Infinity, Infinity, Infinity);
+        for (let i = this.innerCount; i < value; i++) {
+          next.setMatrixAt(i, dummy.matrix);
+        }
+
         if (c.instanceColor) {
           // Ensure it exists
           next.setColorAt(0, new Color(0, 0, 0));
@@ -47,6 +59,11 @@ export class InstancedGroup extends Group {
       }
       return next;
     });
+    for (let i = this.innerCount; i > value; i--) {
+      const id = this.reverseMap[i];
+      delete this.map[id];
+    }
+    if (this.innerCount > value) this.reverseMap.splice(value);
     this.innerCount = value;
     super.clear();
     this.add(...next);
@@ -59,22 +76,61 @@ export class InstancedGroup extends Group {
   clear() {
     this.count = 0;
     this.map = {};
+    this.reverseMap = [];
     return this;
+  }
+
+  delete(id: string) {
+    if (!(id in this.map)) return; // do nothing
+    const index = this.map[id];
+
+    let swapIndex = this.reverseMap.length - 1;
+    if (swapIndex === index) swapIndex--;
+    const swapId = this.reverseMap[swapIndex];
+
+    if (swapId) {
+      const matrixInstancedMesh = this.children.find((c): c is InstancedMesh =>
+        c instanceof InstancedMesh
+      );
+      if (matrixInstancedMesh) {
+        matrixInstancedMesh.getMatrixAt(swapIndex, dummy.matrix);
+        this.setMatrixAt(id, dummy.matrix);
+      }
+
+      const colorInstancedMesh = this.children.find((c): c is InstancedMesh =>
+        c instanceof InstancedMesh &&
+        hasPlayerColor(c.material)
+      );
+      if (colorInstancedMesh) {
+        colorInstancedMesh.getColorAt(swapIndex, dummyColor);
+        this.setColorAt(id, dummyColor);
+      }
+
+      this.map[swapId] = swapIndex;
+      this.reverseMap[swapIndex] = swapId;
+    } else {
+      dummy.matrix.setPosition(Infinity, Infinity, Infinity);
+      this.setMatrixAt(index, dummy.matrix);
+    }
+
+    delete this.map[id];
+    this.reverseMap.pop();
   }
 
   getIndex(id: string) {
     if (id in this.map) return this.map[id];
-    return this.map[id] = this.count++;
+    const index = this.reverseMap.push(id) - 1;
+    this.map[id] = index;
+    if (index + 1 > this.count) this.count = (index + 1) * 2;
+    return index;
   }
 
   setMatrixAt(index: number | string, matrix: Matrix4) {
     if (typeof index === "string") index = this.getIndex(index);
-    if (index) {
-      for (const child of this.children) {
-        if (child instanceof InstancedMesh) {
-          child.setMatrixAt(index, matrix);
-          child.instanceMatrix.needsUpdate = true;
-        }
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh) {
+        child.setMatrixAt(index, matrix);
+        child.instanceMatrix.needsUpdate = true;
       }
     }
   }
@@ -89,7 +145,7 @@ export class InstancedGroup extends Group {
           dummy.quaternion,
           dummy.scale,
         );
-        dummy.scale.x = dummy.position.x > x ? 1 : -1;
+        dummy.scale.x = dummy.position.x > x ? 1 : -1; // Applies to structures...
         dummy.position.set(x, y, 0);
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);
@@ -102,11 +158,7 @@ export class InstancedGroup extends Group {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
-        if (
-          Array.isArray(child.material)
-            ? child.material.some((m: Material) => m.userData.player)
-            : (child.material as Material).userData.player
-        ) {
+        if (hasPlayerColor(child.material)) {
           child.setColorAt(index, color);
           if (child.instanceColor) {
             child.instanceColor.needsUpdate = true;
