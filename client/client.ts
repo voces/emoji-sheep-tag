@@ -3,6 +3,7 @@ import { playersVar } from "./ui/vars/players.ts";
 import { stateVar } from "./ui/vars/state.ts";
 import { app, Entity } from "./ecs.ts";
 import { type ClientToServerMessage } from "../server/client.ts";
+import { zTeam } from "../shared/zod.ts";
 
 const zStart = z.object({
   type: z.literal("start"),
@@ -10,34 +11,22 @@ const zStart = z.object({
   wolves: z.string().array(),
 });
 
+const zUpdate = z.object({
+  type: z.literal("unit"),
+  id: z.string(),
+  kind: z.string().optional(),
+  owner: z.string().optional(),
+  mana: z.number().optional(),
+  position: z.object({ x: z.number(), y: z.number() }).readonly().optional(),
+  movement: z.object({ x: z.number(), y: z.number() }).array()
+    .readonly().optional(),
+  movementSpeed: z.number().optional(),
+});
+
 // Events that come down from a loo
 const zUpdates = z.object({
   type: z.literal("updates"),
-  updates: z.union([
-    z.object({
-      type: z.literal("newUnit"),
-      id: z.string(),
-      kind: z.union([
-        z.literal("sheep"),
-        z.literal("wolf"),
-        z.literal("hut"),
-        z.literal("house"),
-      ]),
-      owner: z.string(),
-      facing: z.number(),
-      mana: z.number().optional(),
-      movement: z.object({ x: z.number(), y: z.number() }).array(),
-    }),
-    z.object({
-      type: z.literal("updateUnit"),
-      id: z.string(),
-      owner: z.string().optional(),
-      facing: z.number().optional(),
-      mana: z.number().optional(),
-      movement: z.object({ x: z.number(), y: z.number() }).array()
-        .optional(),
-    }),
-  ]).array(),
+  updates: zUpdate.array(),
 });
 
 const zSlotChange = z.object({
@@ -48,18 +37,20 @@ const zSlotChange = z.object({
 
 const zJoin = z.object({
   type: z.literal("join"),
+  status: z.union([z.literal("lobby"), z.literal("playing")]),
   players: z.object({
     id: z.string(),
     name: z.string(),
     color: z.string(),
-    team: z.union([
-      z.literal("sheep"),
-      z.literal("wolf"),
-      z.literal("wisp"),
-      z.literal("observer"),
-      z.literal("pending"),
-    ]),
+    team: zTeam,
+    local: z.boolean().optional().default(false),
   }).array(),
+  updates: zUpdate.array(),
+});
+
+const zLeave = z.object({
+  type: z.literal("leave"),
+  player: z.string(),
 });
 
 const zMessage = z.union([
@@ -67,14 +58,29 @@ const zMessage = z.union([
   zUpdates,
   zSlotChange,
   zJoin,
+  zLeave,
 ]);
 
-export type ServerToClientMessage = z.TypeOf<typeof zMessage>;
+export type ServerToClientMessage = z.input<typeof zMessage>;
 
 const map: Record<string, Entity> = {};
 
 const handlers = {
-  join: (data: z.TypeOf<typeof zJoin>) => playersVar(data.players),
+  join: (data: z.TypeOf<typeof zJoin>) => {
+    playersVar((prev) =>
+      stateVar() === "intro" ? data.players : [...prev, ...data.players]
+    );
+    stateVar(data.status);
+    if (data.status === "lobby") {
+      console.log("status lobby");
+      for (const entity of app.entities) app.delete(entity);
+    }
+    for (const update of data.updates) {
+      const { type, ...props } = update;
+      if (update.id in map) Object.assign(map[update.id], props);
+      else map[update.id] = app.add(props);
+    }
+  },
   slotChange: (data: z.TypeOf<typeof zSlotChange>) => {
   },
   start: (data: z.TypeOf<typeof zStart>) => {
@@ -82,39 +88,15 @@ const handlers = {
   },
   updates: (data: z.TypeOf<typeof zUpdates>) => {
     for (const update of data.updates) {
-      if (update.type === "newUnit" || update.type === "updateUnit") {
+      if (update.type === "unit") {
         const { type, ...props } = update;
         if (update.id in map) Object.assign(map[update.id], props);
         else map[update.id] = app.add(props);
-        // app.add({
-        //   id: update.id,
-        //   owner: update.owner,
-        //   facing: update.facing,
-        //   movement: update.movement,
-        //   mana: update.mana,
-        //   ...(update.type === "newUnit" ? {} : {}),
-        // });
-        // const collection = collections[update.kind];
-
-        // if (update.type === "newUnit") {
-        //   collection.setColorAt(
-        //     update.id,
-        //     playerColors[parseInt(update.owner.split("-")[1])],
-        //   );
-        // }
-
-        // collection.setPositionAt(
-        //   update.id,
-        //   update.movement[0].x,
-        //   update.movement[0].y,
-        // );
-
-        // if ((update.movement?.length ?? 0) > 1) {
-        //   flagUnitMovement(update);
-        // }
       }
     }
   },
+  leave: (data: z.TypeOf<typeof zLeave>) =>
+    playersVar((players) => players.filter((p) => p.id !== data.player)),
 };
 
 let ws: WebSocket;
@@ -123,9 +105,22 @@ const connect = () => {
   ws = new WebSocket(
     `ws${location.protocol === "https:" ? "s" : ""}//${location.host}`,
   );
-  ws.addEventListener("close", connect);
+  ws.addEventListener("close", () => {
+    stateVar("intro");
+    connect();
+  });
   ws.addEventListener("message", (e) => {
-    const data = zMessage.parse(JSON.parse(e.data));
+    const json = JSON.parse(e.data);
+    let data: ServerToClientMessage;
+    try {
+      data = zMessage.parse(json);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        console.error(...err.issues);
+      }
+      throw err;
+    }
+    console.log(data);
     handlers[data.type](data as any);
   });
 };

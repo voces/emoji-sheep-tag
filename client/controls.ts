@@ -2,14 +2,18 @@ import { mouse } from "./mouse.ts";
 import { send } from "./client.ts";
 import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
+import { getLocalPlayer, playersVar } from "./ui/vars/players.ts";
+import { selection } from "./world.ts";
+
+const normalize = (value: number) => Math.round(value * 2) / 2;
 
 mouse.addEventListener("mouseButtonDown", (e) => {
   if (e.button === "right") {
     send({
       type: "move",
       units: Array.from(
-        app.entities,
-        (e) => e.kind === "sheep" ? e.id : undefined,
+        selection,
+        (e) => e.id,
       ).filter(<T>(
         v: T | undefined,
       ): v is T => !!v),
@@ -19,7 +23,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   } else if (e.button === "left" && blueprint) {
     send({
       type: "build",
-      unit: Array.from(app.entities, (e) => e.id)[0]!,
+      unit: Array.from(selection, (e) => e.id)[0]!,
       buildType: "hut",
       x: normalize(e.world.x),
       y: normalize(e.world.y),
@@ -28,8 +32,6 @@ mouse.addEventListener("mouseButtonDown", (e) => {
     blueprint = undefined;
   }
 });
-
-const normalize = (value: number) => Math.round(value * 2) / 2;
 
 let blueprintIndex = 0;
 let blueprint: Entity | undefined;
@@ -40,7 +42,7 @@ globalThis.addEventListener("keydown", (e) => {
       id: `blueprint-${blueprintIndex}`,
       kind: "hut",
       position: { x: normalize(mouse.world.x), y: normalize(mouse.world.y) },
-      owner: "player-0",
+      owner: getLocalPlayer()?.id,
     });
   }
 });

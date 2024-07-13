@@ -2,18 +2,20 @@ import { newApp } from "ecs-proxy";
 import { onRender } from "./three.ts";
 
 export type Entity = {
-  id?: string;
-  kind?: "sheep" | "wolf" | "hut" | "house";
+  id: string;
+  kind?: string;
   owner?: string;
-  facing?: number;
   mana?: number;
-  position?: { readonly x: number; readonly y: number };
-  movement?: ReadonlyArray<{ readonly x: number; readonly y: number }>;
+  position?: Readonly<{ x: number; y: number }>;
+  movement?: ReadonlyArray<Readonly<{ x: number; y: number }>>;
+  movementSpeed?: number;
+  selected?: boolean;
 };
 
 export const app = newApp<Entity>({
   newEntity: (entity) => {
-    const proxy = new Proxy(entity, {
+    if (!entity.id) throw new Error("Expected entity to have an id");
+    const proxy = new Proxy(entity as Entity, {
       set: (target, prop, value) => {
         if ((target as any)[prop] === value) return true;
         (target as any)[prop] = value;

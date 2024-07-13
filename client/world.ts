@@ -6,54 +6,64 @@ import sheepSvg from "./assets/sheep.svg";
 import wolfSvg from "./assets/wolf.svg";
 //@deno-types="./assets/svg.d.ts"
 import hutSvg from "./assets/hut.svg";
-//@deno-types="./assets/svg.d.ts"
-import houseSvg from "./assets/house.svg";
-//@deno-types="./assets/svg.d.ts"
-import derelictHouse from "./assets/derelictHouse.svg";
-import { speeds } from "../shared/constants.ts";
+// //@deno-types="./assets/svg.d.ts"
+// import houseSvg from "./assets/house.svg";
+// //@deno-types="./assets/svg.d.ts"
+// import derelictHouse from "./assets/derelictHouse.svg";
 import { app, Entity } from "./ecs.ts";
-import { playersVar } from "./ui/vars/players.ts";
+import { getLocalPlayer, playersVar } from "./ui/vars/players.ts";
 import { Color } from "three";
+import { InstancedGroup } from "./InstancedGroup.ts";
 
 const sheep = loadSvg(sheepSvg, 1);
 const wolves = loadSvg(wolfSvg, 2);
 const huts = loadSvg(hutSvg, 2);
-const houses = loadSvg(houseSvg, 2);
-const derelictHouses = loadSvg(derelictHouse, 2);
+// const houses = loadSvg(houseSvg, 2);
+// const derelictHouses = loadSvg(derelictHouse, 2);
 
-const collections = {
+const collections: Record<string, InstancedGroup | undefined> = {
   sheep,
   wolf: wolves,
   hut: huts,
-  house: houses,
-  derelictHouse: derelictHouses,
+  // house: houses,
+  // derelictHouse: derelictHouses,
 };
 
 app.addSystem({
   props: ["id", "kind", "owner"],
   onAdd: (e) => {
     const collection = collections[e.kind];
+    if (!collection) return;
     const p = playersVar().find((p) => p.id === e.owner);
     if (p) collection.setColorAt(e.id, new Color(p.color));
+    if (
+      e.owner === getLocalPlayer()?.id &&
+      (e.kind === "sheep" || e.kind === "wolf")
+    ) {
+      e.selected = true;
+    }
   },
 });
 
 app.addSystem({
   props: ["id", "kind", "position"],
   onAdd: (e) => {
-    collections[e.kind].setPositionAt(
+    collections[e.kind]?.setPositionAt(
       e.id,
       e.position.x,
       e.position.y,
     );
   },
   onChange: (e) =>
-    collections[e.kind].setPositionAt(
+    collections[e.kind]?.setPositionAt(
       e.id,
       e.position.x,
       e.position.y,
     ),
-  onRemove: (e) => collections[e.kind!].delete(e.id!),
+  onRemove: (e) => {
+    console.log("delete", e);
+    collections[e.kind!]?.delete(e.id!);
+  },
 });
 
 app.addSystem({
@@ -63,12 +73,9 @@ app.addSystem({
     e.position = e.movement[0];
   },
   updateChild: (unit, delta) => {
-    let movement =
-      ((speeds as Record<string, number | undefined>)[unit.kind] ?? 0) * delta;
-
     // Clear and skip if no speed, movement empty, or already at target
     if (
-      !movement ||
+      !unit.movementSpeed ||
       !unit.movement.length ||
       (unit.movement[0].x === unit.position?.x &&
         unit.movement[0].y === unit.position?.y)
@@ -76,6 +83,8 @@ app.addSystem({
       delete (unit as Entity).movement;
       return;
     }
+
+    let movement = unit.movementSpeed * delta;
 
     // Set initial position if not already set
     if (!unit.position) unit.position = unit.movement[0];
@@ -123,3 +132,5 @@ app.addSystem({
     // sheep.setFacingAt(unit.id, x > 0 ? "right" : "left");
   },
 });
+
+export const selection = app.addSystem({ props: ["selected"] }).entities;

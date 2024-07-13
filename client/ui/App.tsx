@@ -8,6 +8,7 @@ import { theme } from "./theme.ts";
 import { ColorPicker } from "./components/ColorPicker.ts";
 import { Box } from "./components/Box.ts";
 import { Button } from "./components/Button.ts";
+import { send } from "../client.ts";
 
 const PlayerRow = ({ name, color }: Player) => (
   <Box $gap={4}>
@@ -37,7 +38,7 @@ const Players = () => {
 const Settings = () => {
   return (
     <Card color="purple" style={{ width: "40%", height: "60%" }}>
-      <Button onClick={() => alert("start!")}>Start</Button>
+      <Button onClick={() => send({ type: "start" })}>Start</Button>
     </Card>
   );
 };

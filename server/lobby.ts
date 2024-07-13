@@ -1,4 +1,8 @@
-import { ContextManager } from "./ContextManager.ts";
+import { App } from "ecs-proxy";
+import { ServerToClientMessage } from "../client/client.ts";
+import { Team } from "../shared/zod.ts";
+import { type Client } from "./client.ts";
+import { Entity } from "./ecs.ts";
 
 /**
  * Contexts:
@@ -6,13 +10,14 @@ import { ContextManager } from "./ContextManager.ts";
  *  - event: stores references to event-data (who, what, etc)
  */
 
-type Player = {
-  id: string;
-  name: string;
-  slot: number;
-};
+// type Player = {
+//   id: string;
+//   name: string;
+//   color: string;
+// };
 
 type LobbySettings = {
+  teams: Map<Client, Team>;
   // /**
   //  * - `"survival"`: classic ST
   //  * - `"bulldog"`: sheep must reach the end
@@ -38,14 +43,44 @@ type LobbySettings = {
   // view: boolean;
 };
 
-type Lobby = {
-  players: Set<Player>;
-  host: Player | undefined; // Auto (ranked) lobbies have no host
+type LobbyStatus = "lobby" | "playing";
+
+type Round = {
+  ecs: App<Entity>;
+  lookup: Record<string, Entity | undefined>;
+  sheep: Set<Client>;
+  wolves: Set<Client>;
+  clearInterval: () => void;
+};
+
+export type Lobby = {
+  players: Set<Client>;
+  host: Client | undefined; // Auto (ranked) lobbies have no host
   name: string | undefined; // Auto (ranked) lobbies have no name
   settings: LobbySettings;
+  status: LobbyStatus;
+  round?: Round;
 };
 
 // type GEvent = {};
 
-const lobbyContext = new ContextManager<Lobby>();
+export const lobbies = new Set<Lobby>();
 // const eventContext = new ContextManager<GEvent>();
+
+export const deleteLobby = (lobby: Lobby) => {
+  lobbies.delete(lobby);
+};
+
+let lobbyIndex = 0;
+export const newLobby = () => {
+  const lobby: Lobby = {
+    players: new Set(),
+    host: undefined,
+    name: `lobby-${lobbyIndex++}`,
+    settings: { teams: new Map() },
+    status: "lobby",
+  };
+  console.log("Lobby created", lobby);
+  lobbies.add(lobby);
+  return lobby;
+};

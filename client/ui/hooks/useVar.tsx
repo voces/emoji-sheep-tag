@@ -1,10 +1,12 @@
 import { useEffect, useState } from "npm:react";
 
-type ReactiveVar<T> = ((newValue?: T) => T) & {
+type ReactiveVar<T> = ((newValue?: T | ((oldValue: T) => T)) => T) & {
   subscribe: (callback: (newValue: T, prevValue: T) => void) => () => void;
 };
 
-export const makeVar = <T,>(initialValue: T): ReactiveVar<T> => {
+export const makeVar = <T extends object>(
+  initialValue: T,
+): ReactiveVar<T> => {
   let value = initialValue;
   let listeners: Set<(newValue: T, prevValue: T) => void> = new Set();
 
@@ -13,11 +15,14 @@ export const makeVar = <T,>(initialValue: T): ReactiveVar<T> => {
     return () => listeners.delete(callback);
   };
 
-  const fn = (newValue?: T) => {
+  const fn = (newValue?: T | ((oldValue: T) => T)) => {
     if (newValue) {
       const oldValue = value;
-      value = newValue;
-      for (const listener of listeners) listener(newValue, oldValue);
+      const actualNewValue = typeof newValue === "function"
+        ? newValue(value)
+        : newValue;
+      value = actualNewValue;
+      for (const listener of listeners) listener(actualNewValue, oldValue);
     }
     return value;
   };

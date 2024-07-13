@@ -75,8 +75,6 @@ export class InstancedGroup extends Group {
 
   clear() {
     this.count = 0;
-    this.map = {};
-    this.reverseMap = [];
     return this;
   }
 
@@ -85,10 +83,10 @@ export class InstancedGroup extends Group {
     const index = this.map[id];
 
     let swapIndex = this.reverseMap.length - 1;
-    if (swapIndex === index) swapIndex--;
-    const swapId = this.reverseMap[swapIndex];
 
-    if (swapId) {
+    if (swapIndex !== index) {
+      const swapId = this.reverseMap[swapIndex];
+
       const matrixInstancedMesh = this.children.find((c): c is InstancedMesh =>
         c instanceof InstancedMesh
       );
@@ -96,6 +94,8 @@ export class InstancedGroup extends Group {
         matrixInstancedMesh.getMatrixAt(swapIndex, dummy.matrix);
         this.setMatrixAt(id, dummy.matrix);
       }
+
+      this.setPositionAt(swapId, Infinity, Infinity);
 
       const colorInstancedMesh = this.children.find((c): c is InstancedMesh =>
         c instanceof InstancedMesh &&
@@ -106,8 +106,8 @@ export class InstancedGroup extends Group {
         this.setColorAt(id, dummyColor);
       }
 
-      this.map[swapId] = swapIndex;
-      this.reverseMap[swapIndex] = swapId;
+      this.map[swapId] = index;
+      this.reverseMap[index] = swapId;
     } else {
       dummy.matrix.setPosition(Infinity, Infinity, Infinity);
       this.setMatrixAt(index, dummy.matrix);
@@ -117,7 +117,7 @@ export class InstancedGroup extends Group {
     this.reverseMap.pop();
   }
 
-  getIndex(id: string) {
+  private getIndex(id: string) {
     if (id in this.map) return this.map[id];
     const index = this.reverseMap.push(id) - 1;
     this.map[id] = index;
