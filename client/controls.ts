@@ -2,8 +2,8 @@ import { mouse } from "./mouse.ts";
 import { send } from "./client.ts";
 import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
-import { getLocalPlayer, playersVar } from "./ui/vars/players.ts";
-import { selection } from "./world.ts";
+import { getLocalPlayer } from "./ui/vars/players.ts";
+import { selection } from "./systems/autoSelect.ts";
 
 const normalize = (value: number) => Math.round(value * 2) / 2;
 
@@ -40,7 +40,7 @@ globalThis.addEventListener("keydown", (e) => {
   if (e.code === "KeyF") {
     blueprint = app.add({
       id: `blueprint-${blueprintIndex}`,
-      kind: "hut",
+      unitType: "hut",
       position: { x: normalize(mouse.world.x), y: normalize(mouse.world.y) },
       owner: getLocalPlayer()?.id,
     });

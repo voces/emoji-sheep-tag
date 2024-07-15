@@ -21,7 +21,6 @@
     "three": "https://esm.sh/three@0.166.1",
     "three/SVGLoader.d.ts": "https://esm.sh/v135/@types/three@0.166.0/examples/jsm/loaders/SVGLoader.d.ts",
     "three/SVGLoader": "https://esm.sh/three@0.166.1/addons/loaders/SVGLoader.js",
-    "jsdom": "https://esm.sh/jsdom@24.1.0",
-    "ecs-proxy": "https://deno.land/x/ecs_proxy@0.5.3/src/index.ts"
+    "jsdom": "https://esm.sh/jsdom@24.1.0"
   }
 }

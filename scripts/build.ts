@@ -2,17 +2,20 @@ import jsdom from "jsdom";
 import { ensureDir } from "jsr:@std/fs";
 import esbuild, { type Plugin } from "npm:esbuild";
 import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
-import { isAbsolute, join } from "jsr:@std/path";
+import { join, relative } from "jsr:@std/path";
 
 const textPlugin = {
   name: "text",
   setup(build) {
     build.onResolve(
       { filter: /\.svg$/ },
-      async (args) => ({ path: args.path, namespace: "text" }),
+      async (args) => ({
+        path: relative(Deno.cwd(), join(args.resolveDir, args.path)),
+        namespace: "text",
+      }),
     );
     build.onLoad({ filter: /\.svg$/, namespace: "text" }, async (args) => ({
-      contents: await Deno.readTextFile(join("client", args.path)),
+      contents: await Deno.readTextFile(args.path),
       loader: "text",
     }));
   },

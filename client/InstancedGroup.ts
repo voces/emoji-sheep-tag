@@ -145,7 +145,14 @@ export class InstancedGroup extends Group {
           dummy.quaternion,
           dummy.scale,
         );
-        dummy.scale.x = dummy.position.x > x ? 1 : -1; // Applies to structures...
+        // Applies to structures...
+        if (dummy.position.x - 1e-5 > x && dummy.scale.x !== 1) {
+          console.log("SWAP", dummy.position.x - x);
+          dummy.scale.x = 1;
+        } else if (dummy.position.x + 1e-5 < x && dummy.scale.x !== -1) {
+          console.log("SWAP", dummy.position.x - x);
+          dummy.scale.x = -1;
+        }
         dummy.position.set(x, y, 0);
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);

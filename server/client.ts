@@ -124,6 +124,7 @@ const handlers = {
         const lobby = lobbyContext.context;
         if (!lobby.round) return;
         for (const owner of sheep) {
+          console.log("adding sheep");
           lobby.round.ecs.add({
             unitType: "sheep",
             owner: owner.id,
@@ -147,20 +148,26 @@ const handlers = {
       }, 300);
     });
   },
-  move: (client: Client, data: z.TypeOf<typeof zMove>) => {
+  move: (client: Client, { units, x, y }: z.TypeOf<typeof zMove>) => {
     const round = lobbyContext.context.round;
-    if (!round) return console.log("no round!");
-    round.lookup;
-    const movedUnits = data.units
+    if (!round) return;
+    const movedUnits = units
       .map((u) => round.lookup[u])
       .filter((e: Entity | undefined): e is Entity =>
         !!e && e.owner === client.id
       );
     if (!movedUnits.length) return console.log("no units!");
-    movedUnits.forEach((u) => u.movement = [{ x: data.x, y: data.y }]);
+    movedUnits.forEach((u) => {
+      // Interrupt
+      console.log("interrupt?");
+      delete u.queue;
+      console.log("set?");
+      u.action = { type: "walk", target: { x, y } };
+      console.log("set!", u);
+    });
   },
-  build: (client: Client, data: z.TypeOf<typeof zBuild>) => {
-    newUnit(client.id, data.buildType, data.x, data.y);
+  build: (client: Client, { buildType, x, y }: z.TypeOf<typeof zBuild>) => {
+    newUnit(client.id, buildType, x, y);
     // for (const c of (client.lobby?.players ?? [])) {
     // c.send({
     //     type: "unit",

@@ -1,5 +1,4 @@
-import { App } from "ecs-proxy";
-import { ServerToClientMessage } from "../client/client.ts";
+import { App } from "jsr:@verit/ecs";
 import { Team } from "../shared/zod.ts";
 import { type Client } from "./client.ts";
 import { Entity } from "./ecs.ts";

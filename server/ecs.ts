@@ -1,5 +1,22 @@
-import { newApp } from "ecs-proxy";
+import { newApp } from "jsr:@verit/ecs";
 import { send } from "./lobbyApi.ts";
+import { addQueueSystem } from "./systems/queues.ts";
+import { addLookupSystem } from "./systems/lookup.ts";
+import { addActionTagSystem } from "./systems/actionTags.ts";
+import { addUnitMovementSystem } from "./systems/movement.ts";
+
+type Action = Readonly<
+  {
+    type: "walk";
+    target: string | { x: number; y: number };
+    distanceFromTarget?: number;
+  } | {
+    type: "build";
+    unitType: string;
+    x: number;
+    y: number;
+  }
+>;
 
 export type Entity = {
   id: string;
@@ -7,8 +24,11 @@ export type Entity = {
   owner?: string;
   mana?: number;
   position?: { readonly x: number; readonly y: number };
-  movement?: ReadonlyArray<{ readonly x: number; readonly y: number }>;
+  moving?: boolean;
   movementSpeed?: number;
+
+  action?: Action | null;
+  queue?: ReadonlyArray<Action> | null;
 };
 
 // Alphanumeric, minus 0, O, l, and I
@@ -51,124 +71,31 @@ export const newEcs = () => {
           if ((target as any)[prop] === value) return true;
           (target as any)[prop] = value;
           app.onEntityPropChange(proxy, prop as any);
+          send({
+            type: "updates",
+            updates: [{ type: "unit", id: entity.id, [prop]: value }],
+          });
           return true;
         },
         deleteProperty: (target, prop) => {
           delete (target as any)[prop];
           app.onEntityPropChange(proxy, prop as any);
+          send({
+            type: "updates",
+            updates: [{ type: "unit", id: entity.id, [prop]: null }],
+          });
           return true;
         },
       });
+      send({ type: "updates", updates: [{ type: "unit", ...entity }] });
       return proxy;
     },
   });
 
-  // Alert users to new units
-  app.addSystem({
-    props: ["unitType"],
-    onAdd: (e) => {
-      send({
-        type: "updates",
-        updates: [{
-          type: "unit",
-          id: e.id,
-          kind: e.unitType,
-          owner: e.owner,
-          position: e.position,
-          movement: e.movement,
-          movementSpeed: e.movementSpeed,
-        }],
-      });
-    },
-  });
-
-  // Unit movement system
-  app.addSystem({
-    props: ["movement"],
-    onAdd: (e) => {
-      send({
-        type: "updates",
-        updates: [{
-          type: "unit",
-          id: e.id,
-          position: e.position,
-          movement: e.movement,
-        }],
-      });
-    },
-    onChange: (e) => {
-      send({
-        type: "updates",
-        updates: [{
-          type: "unit",
-          id: e.id,
-          position: e.position,
-          movement: e.movement,
-        }],
-      });
-    },
-    updateChild: (e, delta) => {
-      if (
-        !e.movementSpeed || !e.movement.length ||
-        (e.movement[e.movement.length - 1].x === e.position?.x) &&
-          e.movement[e.movement.length - 1].y === e.position.y
-      ) return delete (e as Entity).movement;
-
-      let movement = e.movementSpeed * delta;
-
-      if (!e.position) e.position = e.movement[0];
-
-      // Tween along movement
-      let remaining = ((e.movement[0].x - e.position.x) ** 2 +
-        (e.movement[0].y - e.position.y) ** 2) ** 0.5;
-      let p = movement / remaining;
-      let last = e.movement[0];
-      let nextMovement = [...e.movement];
-      while (p > 1) {
-        const [, ...shifted] = nextMovement;
-        nextMovement = shifted;
-        if (nextMovement.length === 0) break;
-        else {
-          movement -= remaining;
-          remaining = ((nextMovement[0].x - last.x) ** 2 +
-            (nextMovement[0].y - last.y) ** 2) ** 0.5;
-          p = movement / remaining;
-          last = nextMovement[0];
-        }
-      }
-
-      let x: number;
-      let y: number;
-      // If there is remaining movement, update position and step along
-      if (nextMovement.length > 0) {
-        x = e.position.x * (1 - p) + e.movement[0].x * p;
-        y = e.position.y * (1 - p) + e.movement[0].y * p;
-        if (nextMovement.length !== e.movement.length) {
-          e.movement = nextMovement;
-        }
-        // Otherwise update position to end & clear
-      } else {
-        x = last.x;
-        y = last.y;
-        delete (e as Entity).movement;
-      }
-      if (x !== e.position.x || y !== e.position.y) {
-        e.position = { x, y };
-      }
-    },
-  });
-
-  // A system to track a reverse map for entity ids to entities
-  const lookup: Record<string, Entity | undefined> = {};
-  app.addSystem({
-    props: ["id"],
-    onAdd: (e) => {
-      lookup[e.id] = e;
-    },
-    onRemove: (e) => {
-      delete lookup[e.id];
-    },
-  });
+  const lookup = addLookupSystem(app);
+  addQueueSystem(app);
+  addActionTagSystem(app);
+  addUnitMovementSystem(app); // Unit movement system
 
   return { ecs: app, lookup };
 };

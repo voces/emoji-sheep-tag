@@ -1,16 +1,8 @@
-import { newApp } from "ecs-proxy";
+import { newApp } from "jsr:@verit/ecs";
 import { onRender } from "./three.ts";
+import { Entity as ServerEntity } from "../server/ecs.ts";
 
-export type Entity = {
-  id: string;
-  kind?: string;
-  owner?: string;
-  mana?: number;
-  position?: Readonly<{ x: number; y: number }>;
-  movement?: ReadonlyArray<Readonly<{ x: number; y: number }>>;
-  movementSpeed?: number;
-  selected?: boolean;
-};
+export type Entity = ServerEntity & { selected?: boolean };
 
 export const app = newApp<Entity>({
   newEntity: (entity) => {

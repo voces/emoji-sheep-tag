@@ -11,16 +11,31 @@ const zStart = z.object({
   wolves: z.string().array(),
 });
 
+const zAction = z.union([
+  z.object({
+    type: z.literal("walk"),
+    target: z.union([z.string(), z.object({ x: z.number(), y: z.number() })]),
+  }),
+  z.object({
+    type: z.literal("build"),
+    unitType: z.string(),
+    x: z.number(),
+    y: z.number(),
+  }),
+]).readonly();
+
 const zUpdate = z.object({
   type: z.literal("unit"),
   id: z.string(),
-  kind: z.string().optional(),
+  unitType: z.string().optional(),
   owner: z.string().optional(),
   mana: z.number().optional(),
   position: z.object({ x: z.number(), y: z.number() }).readonly().optional(),
-  movement: z.object({ x: z.number(), y: z.number() }).array()
-    .readonly().optional(),
   movementSpeed: z.number().optional(),
+
+  action: zAction.nullable().optional(),
+  queue: zAction.array().readonly().nullable().optional(),
+  moving: z.boolean().nullable().optional(),
 });
 
 // Events that come down from a loo

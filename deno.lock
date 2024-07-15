@@ -19,6 +19,7 @@
       "jsr:@std/path@1.0.0-rc.1": "jsr:@std/path@1.0.0-rc.1",
       "jsr:@std/path@1.0.0-rc.2": "jsr:@std/path@1.0.0-rc.2",
       "jsr:@std/streams@^0.224.5": "jsr:@std/streams@0.224.5",
+      "jsr:@verit/ecs": "jsr:@verit/ecs@0.6.1",
       "npm:@types/react": "npm:@types/react@18.3.3",
       "npm:@types/react-dom": "npm:@types/react-dom@18.3.0",
       "npm:@types/three": "npm:@types/three@0.164.1",
@@ -102,6 +103,9 @@
       },
       "@std/streams@0.224.5": {
         "integrity": "bcde7818dd5460d474cdbd674b15f6638b9cd73cd64e52bd852fba2bd4d8ec91"
+      },
+      "@verit/ecs@0.6.1": {
+        "integrity": "a8ea5720f88193b5fb384383dc352a5ce7c18f95cc3f5d6edfe0d48dd3f0dea9"
       }
     },
     "npm": {
