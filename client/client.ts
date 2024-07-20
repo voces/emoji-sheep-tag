@@ -5,6 +5,8 @@ import { app, Entity } from "./ecs.ts";
 import { type ClientToServerMessage } from "../server/client.ts";
 import { zTeam } from "../shared/zod.ts";
 
+const zPoint = z.object({ x: z.number(), y: z.number() });
+
 const zStart = z.object({
   type: z.literal("start"),
   sheep: z.string().array(),
@@ -14,7 +16,8 @@ const zStart = z.object({
 const zAction = z.union([
   z.object({
     type: z.literal("walk"),
-    target: z.union([z.string(), z.object({ x: z.number(), y: z.number() })]),
+    target: z.union([z.string(), zPoint]),
+    path: zPoint.array(),
   }),
   z.object({
     type: z.literal("build"),
@@ -30,7 +33,7 @@ const zUpdate = z.object({
   unitType: z.string().optional(),
   owner: z.string().optional(),
   mana: z.number().optional(),
-  position: z.object({ x: z.number(), y: z.number() }).readonly().optional(),
+  position: zPoint.readonly().optional(),
   movementSpeed: z.number().optional(),
 
   action: zAction.nullable().optional(),

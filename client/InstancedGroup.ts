@@ -145,12 +145,10 @@ export class InstancedGroup extends Group {
           dummy.quaternion,
           dummy.scale,
         );
-        // Applies to structures...
+        // Applies to structures; should maybe ignore when coming from an update?
         if (dummy.position.x - 1e-5 > x && dummy.scale.x !== 1) {
-          console.log("SWAP", dummy.position.x - x);
           dummy.scale.x = 1;
         } else if (dummy.position.x + 1e-5 < x && dummy.scale.x !== -1) {
-          console.log("SWAP", dummy.position.x - x);
           dummy.scale.x = -1;
         }
         dummy.position.set(x, y, 0);

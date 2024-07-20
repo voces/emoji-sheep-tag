@@ -1,8 +1,8 @@
 import { newApp } from "jsr:@verit/ecs";
 import { onRender } from "./three.ts";
-import { Entity as ServerEntity } from "../server/ecs.ts";
+import { Entity as CommonEntity } from "../shared/types.ts";
 
-export type Entity = ServerEntity & { selected?: boolean };
+export type Entity = CommonEntity & { selected?: boolean };
 
 export const app = newApp<Entity>({
   newEntity: (entity) => {

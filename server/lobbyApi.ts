@@ -10,7 +10,7 @@ export const endRound = () => {
 };
 
 export const send = (message: ServerToClientMessage) => {
-  console.log("S->C", message);
+  // console.log("S->C", message);
   const lobby = lobbyContext.context;
   const serialized = JSON.stringify(message);
   for (const p of lobby.players) {
@@ -53,34 +53,4 @@ export const leave = (client?: Client) => {
       lobby.round.wolves.size === 0
     ) endRound();
   }
-};
-
-export const timeout = (cb: () => void, timeout: number) => {
-  const lobby = lobbyContext.context;
-  const client = clientContext.context;
-  const t = setTimeout(
-    () => lobbyContext.with(lobby, () => clientContext.with(client, cb)),
-    timeout,
-  );
-  return () => clearTimeout(t);
-};
-
-export const interval = (cb: () => void, interval: number) => {
-  const lobby = lobbyContext.context;
-  const client = clientContext.context;
-  const i = setInterval(
-    () => lobbyContext.with(lobby, () => clientContext.with(client, cb)),
-    interval,
-  );
-  return () => clearInterval(i);
-};
-
-export const newUnit = (owner: string, type: string, x: number, y: number) => {
-  const ecs = lobbyContext.context.round?.ecs;
-  if (!ecs) return;
-  ecs.add({
-    unitType: type,
-    owner,
-    position: { x, y },
-  });
 };

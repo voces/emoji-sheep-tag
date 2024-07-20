@@ -1,7 +1,7 @@
 import { App } from "jsr:@verit/ecs";
 import { Team } from "../shared/zod.ts";
 import { type Client } from "./client.ts";
-import { Entity } from "./ecs.ts";
+import { Entity } from "../shared/types.ts";
 
 /**
  * Contexts:

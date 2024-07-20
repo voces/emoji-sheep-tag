@@ -18,6 +18,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 camera.position.z = 9;
+camera.position.x = 25;
+camera.position.y = 25;
 
 const resize = () => {
   camera.aspect = globalThis.innerWidth / globalThis.innerHeight;

@@ -1,5 +1,5 @@
 import { App } from "jsr:@verit/ecs";
-import { Entity } from "../ecs.ts";
+import { Entity } from "../../shared/types.ts";
 
 export const addQueueSystem = (app: App<Entity>) =>
   app.addSystem({

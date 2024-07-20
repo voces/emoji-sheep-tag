@@ -1,3 +1,7 @@
+import {
+  distanceBetweenPoints,
+  squaredDistanceBetweenPoints,
+} from "../../shared/pathing/math.ts";
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 
@@ -15,41 +19,38 @@ app.addSystem({
     let target = typeof e.action.target === "string"
       ? lookup[e.action.target]?.position
       : e.action.target;
-    const distanceFromTarget = (e.action.distanceFromTarget ?? 0) ** 2;
+    const distanceFromTargetSquared = (e.action.distanceFromTarget ?? 0) ** 2;
 
     if (
       !target ||
-      ((target.x - e.position.x) ** 2 + (target.y - e.position.y) ** 2) <=
-        distanceFromTarget
+      squaredDistanceBetweenPoints(target, e.position) <=
+        distanceFromTargetSquared
     ) {
       delete (e as Entity).moving;
-      delete (e as Entity).action;
+      delete e.action;
       return;
     }
+
+    target = e.action.path[0];
 
     let movement = e.movementSpeed * delta;
 
     // Tween along movement
-    let remaining =
-      ((target.x - e.position.x) ** 2 + (target.y - e.position.y) ** 2) **
-        0.5;
+    let remaining = distanceBetweenPoints(target, e.position);
     let p = movement / remaining;
     let last = e.position;
     while (p > 1) {
-      if (e.queue?.[0].type !== "walk") break;
-      e.action = e.queue[0];
-      if (e.queue.length > 1) e.queue = e.queue.slice(1);
-      else delete e.queue;
+      if (e.action.path.length === 1) {
+        e.position = { ...target };
+        delete (e as Entity).moving;
+        delete e.action;
+        break;
+      }
 
       movement -= remaining;
-      const nextTarget = typeof e.action.target === "string"
-        ? lookup[e.action.target]?.position
-        : e.action.target;
-      if (!nextTarget) break;
-      target = nextTarget;
-      remaining =
-        ((target.x - e.position.x) ** 2 + (target.y - e.position.y) ** 2) **
-          0.5;
+      target = e.action.path[1];
+      e.action = { ...e.action, path: e.action.path.slice(1) };
+      remaining = distanceBetweenPoints(target, last);
       p = movement / remaining;
       last = target;
     }

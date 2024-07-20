@@ -4,14 +4,11 @@
   },
   "compilerOptions": {
     "lib": [
-      "deno.window",
-      "webgpu"
+      "deno.window"
     ],
-    "jsx": "react-jsx",
+    "jsx": "react",
     "jsxFactory": "React.createElement",
-    "jsxFragmentFactory": "React.Fragment",
-    "jsxImportSource": "npm:react",
-    "jsxImportSourceTypes": "npm:@types/react"
+    "jsxFragmentFactory": "React.Fragment"
   },
   "fmt": {
     "indentWidth": 2

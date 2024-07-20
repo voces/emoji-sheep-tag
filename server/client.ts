@@ -2,9 +2,16 @@ import { z } from "npm:zod";
 import type { ServerToClientMessage } from "../client/client.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
-import { Entity, newEcs } from "./ecs.ts";
-import { interval, leave, newUnit, send, timeout } from "./lobbyApi.ts";
-import { unitData } from "../shared/data.ts";
+import { newEcs } from "./ecs.ts";
+import { leave, send } from "./lobbyApi.ts";
+import { Entity } from "../shared/types.ts";
+import { calcPath, pathable } from "./systems/pathing.ts";
+import { SystemEntity } from "jsr:@verit/ecs";
+import { flushUpdates } from "./updates.ts";
+import { distanceBetweenPoints } from "../shared/pathing/math.ts";
+import { BUILD_RADIUS } from "../shared/data.ts";
+import { build, newUnit, tempUnit } from "./api/unit.ts";
+import { interval, timeout } from "./api/timing.ts";
 
 const colors: string[] = [
   "#FF0303",
@@ -110,7 +117,10 @@ const handlers = {
       wolves,
       ecs,
       lookup,
-      clearInterval: interval(() => ecs.update(), 50),
+      clearInterval: interval(() => {
+        ecs.update();
+        flushUpdates();
+      }, 50),
     };
 
     lobbyContext.with(lobby, () => {
@@ -123,27 +133,12 @@ const handlers = {
       timeout(() => {
         const lobby = lobbyContext.context;
         if (!lobby.round) return;
-        for (const owner of sheep) {
-          console.log("adding sheep");
-          lobby.round.ecs.add({
-            unitType: "sheep",
-            owner: owner.id,
-            position: { x: 1, y: -4 },
-            movementSpeed: unitData.sheep?.movementSpeed,
-          });
-        }
+        for (const owner of sheep) newUnit(owner.id, "sheep", 25, 25);
 
         timeout(() => {
           const lobby = lobbyContext.context;
           if (!lobby.round) return;
-          for (const owner of wolves) {
-            lobby.round.ecs.add({
-              unitType: "wolf",
-              owner: owner.id,
-              position: { x: 0, y: 0 },
-              movementSpeed: unitData.wolf?.movementSpeed,
-            });
-          }
+          for (const owner of wolves) newUnit(owner.id, "wolf", 25, 25);
         }, 2000);
       }, 300);
     });
@@ -159,23 +154,65 @@ const handlers = {
     if (!movedUnits.length) return console.log("no units!");
     movedUnits.forEach((u) => {
       // Interrupt
-      console.log("interrupt?");
       delete u.queue;
-      console.log("set?");
-      u.action = { type: "walk", target: { x, y } };
-      console.log("set!", u);
+
+      // If no position, just instantly move to target
+      if (!u.position) {
+        delete u.action;
+        return u.position = { x, y };
+      }
+
+      // If no radius, tween to target
+      if (!u.radius) {
+        return u.action = {
+          type: "walk",
+          target: { x, y },
+          path: [{ x: u.position.x, y: u.position.y }, { x, y }],
+        };
+      }
+
+      // Otherwise path find to target
+      if (u.radius) {
+        const path = calcPath(
+          u as SystemEntity<Entity, "radius" | "position">,
+          { x, y },
+        ).slice(1);
+        u.action = { type: "walk", target: path[path.length - 1], path };
+      }
     });
   },
-  build: (client: Client, { buildType, x, y }: z.TypeOf<typeof zBuild>) => {
-    newUnit(client.id, buildType, x, y);
-    // for (const c of (client.lobby?.players ?? [])) {
-    // c.send({
-    //     type: "unit",
-    //     id: data.unit,
-    //     movement: [{ x: data.x, y: data.y }],
-    //   }],
-    // });
-    // }
+  build: (
+    client: Client,
+    { unit, buildType, x, y }: z.TypeOf<typeof zBuild>,
+  ) => {
+    const round = lobbyContext.context.round;
+    if (!round) return;
+    const u = round.lookup[unit];
+    if (u?.owner !== client.id || !u.position || !u.radius) return;
+
+    // Interrupt
+    delete u.queue;
+
+    // Build immediately if in range
+    if (distanceBetweenPoints(u.position, { x, y }) <= BUILD_RADIUS) {
+      return build(u, buildType, x, y);
+    }
+
+    const temp = tempUnit(client.id, buildType, x, y);
+    if (!pathable(temp, { x, y })) return;
+
+    // Otherwise walk there and build
+    const path = calcPath(
+      u as SystemEntity<Entity, "radius" | "position">,
+      { x, y },
+    ).slice(1);
+    u.action = {
+      type: "walk",
+      target: path[path.length - 1],
+      path,
+      distanceFromTarget: BUILD_RADIUS,
+    };
+    u.queue = [{ type: "build", x, y, unitType: buildType }];
   },
 };
 
