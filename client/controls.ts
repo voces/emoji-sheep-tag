@@ -23,7 +23,10 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   } else if (e.button === "left" && blueprint) {
     send({
       type: "build",
-      unit: Array.from(selection, (e) => e.id)[0]!,
+      unit: Array.from(
+        selection.filter((u) => u.builds?.includes("hut")),
+        (e) => e.id,
+      )[0]!,
       buildType: "hut",
       x: normalize(e.world.x),
       y: normalize(e.world.y),
@@ -36,6 +39,8 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 let blueprintIndex = 0;
 let blueprint: Entity | undefined;
 globalThis.addEventListener("keydown", (e) => {
+  console.log(selection);
+  if (!selection.some((u) => u.builds?.includes("hut"))) return;
   if (blueprint) app.delete(blueprint);
   if (e.code === "KeyF") {
     blueprint = app.add({

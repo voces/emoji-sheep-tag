@@ -1,6 +1,6 @@
-import { App } from "https://jsr.io/@verit/ecs/0.6.1/src/App.ts";
+import { App, SystemEntity } from "jsr:@verit/ecs";
+
 import { Entity } from "../../shared/types.ts";
-import { SystemEntity } from "jsr:@verit/ecs";
 import { build } from "../api/unit.ts";
 import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
 import { BUILD_RADIUS } from "../../shared/data.ts";

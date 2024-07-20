@@ -22,9 +22,13 @@ export type Entity = {
   position?: { readonly x: number; readonly y: number };
   movementSpeed?: number;
 
+  // Data
+  builds?: string[];
+
   // Tags
   moving?: boolean | null;
 
+  // Pathing
   radius?: number;
   pathing?: Pathing;
   /** Override `pathing` for require checks. */
@@ -34,6 +38,7 @@ export type Entity = {
   tilemap?: Footprint;
   structure?: boolean;
 
+  // Actions
   action?: Action | null;
   queue?: ReadonlyArray<Action> | null;
 };

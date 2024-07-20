@@ -29,6 +29,7 @@ const zAction = z.union([
 
 const zUpdate = z.object({
   type: z.literal("unit"),
+
   id: z.string(),
   unitType: z.string().optional(),
   owner: z.string().optional(),
@@ -36,10 +37,30 @@ const zUpdate = z.object({
   position: zPoint.readonly().optional(),
   movementSpeed: z.number().optional(),
 
+  // Data
+  builds: z.string().array().optional(),
+
+  // Tags
+  moving: z.boolean().nullable().optional(),
+
+  // Pathing
+  radius: z.number().optional(),
+  pathing: z.number().optional(),
+  requiresPathing: z.number().optional(),
+  blocksPathing: z.number().optional(),
+  tilemap: z.object({
+    top: z.number(),
+    left: z.number(),
+    height: z.number(),
+    width: z.number(),
+    map: z.number().array(),
+  }).optional(),
+  structure: z.boolean().optional(),
+
+  // Actions
   action: zAction.nullable().optional(),
   queue: zAction.array().readonly().nullable().optional(),
-  moving: z.boolean().nullable().optional(),
-});
+}).strict();
 
 // Events that come down from a loo
 const zUpdates = z.object({

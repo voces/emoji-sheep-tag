@@ -57,8 +57,5 @@ app.addSystem({
       e.position.x,
       e.position.y,
     ),
-  onRemove: (e) => {
-    console.log("delete", e);
-    collections[e.unitType!]?.delete(e.id!);
-  },
+  onRemove: (e) => collections[e.unitType!]?.delete(e.id),
 });
