@@ -154,13 +154,11 @@ const handlers = {
     if (!movedUnits.length) return console.log("no units!");
     movedUnits.forEach((u) => {
       // Interrupt
+      delete u.action;
       delete u.queue;
 
       // If no position, just instantly move to target
-      if (!u.position) {
-        delete u.action;
-        return u.position = { x, y };
-      }
+      if (!u.position) return u.position = { x, y };
 
       // If no radius, tween to target
       if (!u.radius) {
@@ -191,6 +189,7 @@ const handlers = {
     if (u?.owner !== client.id || !u.position || !u.radius) return;
 
     // Interrupt
+    delete u.action;
     delete u.queue;
 
     // Build immediately if in range
@@ -208,7 +207,7 @@ const handlers = {
     ).slice(1);
     u.action = {
       type: "walk",
-      target: path[path.length - 1],
+      target: { x, y },
       path,
       distanceFromTarget: BUILD_RADIUS,
     };

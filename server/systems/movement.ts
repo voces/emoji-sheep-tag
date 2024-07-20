@@ -12,20 +12,22 @@ export const addUnitMovementSystem = (app: App<Entity>) =>
     updateChild: (e, delta) => {
       // If not moving or can't move, clear it
       if (
-        !e.movementSpeed || e.action?.type !== "walk"
-        // (e.action.target.x === e.position?.x) &&
-        //   e.movement[e.movement.length - 1].y === e.position.y
-      ) return delete (e as Entity).moving;
+        !e.movementSpeed || e.action?.type !== "walk" ||
+        e.action.path.length === 0
+      ) {
+        if (e.action?.type === "walk") delete e.action;
+        delete (e as Entity).moving;
+        return;
+      }
 
       let target = typeof e.action.target === "string"
         ? lookup(e.action.target).position
         : e.action.target;
-      const distanceFromTargetSquared = (e.action.distanceFromTarget ?? 0) ** 2;
 
       if (
         !target ||
         squaredDistanceBetweenPoints(target, e.position) <=
-          distanceFromTargetSquared
+          (e.action.distanceFromTarget ?? 0) ** 2
       ) {
         delete (e as Entity).moving;
         delete e.action;

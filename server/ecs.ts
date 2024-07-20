@@ -1,5 +1,4 @@
 import { newApp } from "jsr:@verit/ecs";
-import { send } from "./lobbyApi.ts";
 import { addQueueSystem } from "./systems/queues.ts";
 import { addLookupSystem } from "./systems/lookup.ts";
 import { addActionTagSystem } from "./systems/actionTags.ts";

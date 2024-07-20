@@ -53,6 +53,19 @@ export const nearestPathing = (
   );
 };
 
+export const updatePathing = (entity: Entity) => {
+  const p = pathingMap();
+  if (!isPathingEntity(entity)) return;
+  if (p.pathable(entity)) return;
+  const nearest = p.withoutEntity(
+    entity,
+    () => p.nearestSpiralPathing(entity.position.x, entity.position.y, entity),
+  );
+  if (nearest.x !== entity.position.x || nearest.y !== entity.position.y) {
+    entity.position = nearest;
+  }
+};
+
 export const addPathingSystem = (app: App<Entity>) => {
   const pathingMap = new PathingMap({
     resolution: 4,
@@ -66,8 +79,14 @@ export const addPathingSystem = (app: App<Entity>) => {
 
   app.addSystem({
     props: ["position", "radius"],
-    onAdd: (e) => pathingMap.addEntity(e),
-    onChange: (e) => pathingMap.updateEntity(e),
+    onAdd: (e) => {
+      pathingMap.addEntity(e);
+      updatePathing(e);
+    },
+    onChange: (e) => {
+      pathingMap.updateEntity(e);
+      // updatePathing(e);
+    },
     onRemove: (e) => pathingMap.removeEntity(e as any),
   });
 };
