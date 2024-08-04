@@ -1,7 +1,7 @@
 import { TypedEventTarget } from "typed-event-target";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
-import { camera, scene } from "./three.ts";
-import { InstancedGroup } from "./InstancedGroup.ts";
+import { camera, scene } from "./graphics/three.ts";
+import { InstancedGroup } from "./graphics/InstancedGroup.ts";
 import { Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
 

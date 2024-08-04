@@ -10,3 +10,7 @@ export type Player = {
 export const playersVar = makeVar<Player[]>([]);
 
 export const getLocalPlayer = () => playersVar().find((p) => p.local);
+
+export const isLocalPlayer = (player: Player | string) =>
+  playersVar().find((p) => p.local)?.id ===
+    (typeof player === "string" ? player : player.id);

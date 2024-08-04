@@ -4,7 +4,7 @@ import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
 import { getLocalPlayer } from "./ui/vars/players.ts";
 import { selection } from "./systems/autoSelect.ts";
-import { camera } from "./three.ts";
+import { camera } from "./graphics/three.ts";
 
 const normalize = (value: number) => Math.round(value * 2) / 2;
 
@@ -71,6 +71,7 @@ globalThis.addEventListener("keydown", (e) => {
       unitType: "hut",
       position: { x: normalize(mouse.world.x), y: normalize(mouse.world.y) },
       owner: getLocalPlayer()?.id,
+      blueprint: true,
     });
   }
 });

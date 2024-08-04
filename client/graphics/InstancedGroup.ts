@@ -11,6 +11,8 @@ import {
 const dummy = new Object3D();
 const dummyColor = new Color();
 
+const white = new Color("white");
+
 const hasPlayerColor = (material: Material | Material[]) =>
   Array.isArray(material)
     ? material.some((m: Material) => m.userData.player)
@@ -103,7 +105,7 @@ export class InstancedGroup extends Group {
       );
       if (colorInstancedMesh) {
         colorInstancedMesh.getColorAt(swapIndex, dummyColor);
-        this.setColorAt(id, dummyColor);
+        this.setPlayerColorAt(id, dummyColor);
       }
 
       this.map[swapId] = index;
@@ -165,16 +167,31 @@ export class InstancedGroup extends Group {
     }
   }
 
-  setColorAt(index: number | string, color: Color) {
+  setPlayerColorAt(
+    index: number | string,
+    color: Color,
+    overrideVertex = true,
+  ) {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
         if (hasPlayerColor(child.material)) {
           child.setColorAt(index, color);
-          if (child.instanceColor) {
-            child.instanceColor.needsUpdate = true;
-          }
+          if (child.instanceColor) child.instanceColor.needsUpdate = true;
+        } else if (overrideVertex) {
+          child.setColorAt(index, white);
+          if (child.instanceColor) child.instanceColor.needsUpdate = true;
         }
+      }
+    }
+  }
+
+  setVertexColorAt(index: number | string, color: Color) {
+    if (typeof index === "string") index = this.getIndex(index);
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh) {
+        child.setColorAt(index, color);
+        if (child.instanceColor) child.instanceColor.needsUpdate = true;
       }
     }
   }

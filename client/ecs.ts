@@ -1,8 +1,9 @@
 import { newApp } from "jsr:@verit/ecs";
-import { onRender } from "./three.ts";
+import { Color } from "three";
+import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "../shared/types.ts";
 
-export type Entity = CommonEntity & { selected?: boolean };
+export type Entity = CommonEntity & { selected?: boolean; blueprint?: boolean };
 
 export const app = newApp<Entity>({
   newEntity: (entity) => {
@@ -23,5 +24,6 @@ export const app = newApp<Entity>({
     return proxy;
   },
 });
+(globalThis as any).app = app;
 
 onRender((delta) => app.update(delta));
