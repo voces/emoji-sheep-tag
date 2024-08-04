@@ -1,5 +1,4 @@
 import { unitData } from "../../shared/data.ts";
-import { PathingEntity } from "../../shared/pathing/types.ts";
 import { Entity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
 import {
@@ -20,14 +19,11 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
   }
 
   // Make building if pathable
-  const pathable = p.withoutEntity(
-    builder as PathingEntity,
-    () => {
-      if (!p.pathable(temp as PathingEntity)) return false;
-      app.add(temp);
-      return true;
-    },
-  );
+  const pathable = p.withoutEntity(builder, () => {
+    if (!p.pathable(temp)) return false;
+    app.add(temp);
+    return true;
+  });
   if (!pathable) return;
 
   // Relocate entity if position not valid

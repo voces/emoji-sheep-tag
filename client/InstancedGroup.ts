@@ -125,6 +125,10 @@ export class InstancedGroup extends Group {
     return index;
   }
 
+  getId(index: number): string | undefined {
+    return this.reverseMap[index];
+  }
+
   setMatrixAt(index: number | string, matrix: Matrix4) {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
@@ -155,6 +159,8 @@ export class InstancedGroup extends Group {
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);
         child.instanceMatrix.needsUpdate = true;
+        child.computeBoundingBox();
+        child.computeBoundingSphere();
       }
     }
   }

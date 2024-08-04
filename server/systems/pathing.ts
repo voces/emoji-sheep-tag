@@ -29,14 +29,14 @@ export const calcPath = (
 
 export const pathable = (
   entity: Entity,
-  target: { x: number; y: number },
+  target?: { x: number; y: number },
 ) => {
   if (!isPathingEntity(entity)) return false;
   const pm = pathingMap();
   // TODO: withoutEntity required?
   return pm.withoutEntity(
     entity,
-    () => pm.pathable(entity, target.x, target.y),
+    () => pm.pathable(entity, target?.x, target?.y),
   );
 };
 
@@ -62,6 +62,7 @@ export const updatePathing = (entity: Entity) => {
     () => p.nearestSpiralPathing(entity.position.x, entity.position.y, entity),
   );
   if (nearest.x !== entity.position.x || nearest.y !== entity.position.y) {
+    console.log("fix", entity.position, nearest);
     entity.position = nearest;
   }
 };
@@ -85,7 +86,7 @@ export const addPathingSystem = (app: App<Entity>) => {
     },
     onChange: (e) => {
       pathingMap.updateEntity(e);
-      // updatePathing(e);
+      updatePathing(e);
     },
     onRemove: (e) => pathingMap.removeEntity(e as any),
   });

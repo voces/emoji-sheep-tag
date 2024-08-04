@@ -48,10 +48,6 @@ export const newEcs = () => {
           (target as any)[prop] = value;
           app.onEntityPropChange(proxy, prop as any);
           update(target.id, prop as keyof Entity, value);
-          // send({
-          //   type: "updates",
-          //   updates: [{ type: "unit", id: entity.id, [prop]: value }],
-          // });
           return true;
         },
         deleteProperty: (target, prop) => {
@@ -59,15 +55,10 @@ export const newEcs = () => {
           delete (target as any)[prop];
           app.onEntityPropChange(proxy, prop as any);
           update(target.id, prop as keyof Entity, null);
-          // send({
-          //   type: "updates",
-          //   updates: [{ type: "unit", id: entity.id, [prop]: null }],
-          // });
           return true;
         },
       });
       newEntity(entity);
-      // send({ type: "updates", updates: [{ type: "unit", ...entity }] });
       return proxy;
     },
   });

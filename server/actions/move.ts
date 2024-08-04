@@ -48,6 +48,7 @@ export const move = (
         u as SystemEntity<Entity, "radius" | "position">,
         { x, y },
       ).slice(1);
+      console.log("walk", path);
       u.action = { type: "walk", target: path[path.length - 1], path };
     }
   });

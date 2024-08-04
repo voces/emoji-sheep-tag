@@ -24,6 +24,18 @@ export type Entity = {
 
   // Data
   builds?: string[];
+  attack?: {
+    damage: number;
+    range: number;
+    /** How far a unit may move between the start of an attack and the damage point */
+    rangeMotionBuffer: number;
+    /** Seconds between attacks starting */
+    cooldown: number;
+    /** Seconds between an attack starting and damage occuring */
+    damagePoint: number;
+    /** Last time an attack started */
+    last?: number;
+  };
 
   // Tags
   moving?: boolean | null;

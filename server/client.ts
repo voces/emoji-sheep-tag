@@ -8,6 +8,7 @@ import { build, zBuild } from "./actions/build.ts";
 import { move, zMove } from "./actions/move.ts";
 import { start, zStart } from "./actions/start.ts";
 import { colors } from "../shared/data.ts";
+import { timeout } from "./api/timing.ts";
 
 const wrap = <T extends (...args: any[]) => unknown>(
   client: Client,

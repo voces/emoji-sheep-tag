@@ -39,7 +39,7 @@ export const build = (
   }
 
   const temp = tempUnit(client.id, buildType, x, y);
-  if (!pathable(temp, { x, y })) return;
+  if (!pathable(temp)) return;
 
   // Otherwise walk there and build
   const path = calcPath(

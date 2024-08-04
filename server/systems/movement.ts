@@ -5,6 +5,7 @@ import {
   distanceBetweenPoints,
   squaredDistanceBetweenPoints,
 } from "../../shared/pathing/math.ts";
+import { calcPath, pathable } from "./pathing.ts";
 
 export const addUnitMovementSystem = (app: App<Entity>) =>
   app.addSystem({
@@ -52,20 +53,22 @@ export const addUnitMovementSystem = (app: App<Entity>) =>
 
         movement -= remaining;
         target = e.action.path[1];
+        last = e.action.path[0];
         e.action = { ...e.action, path: e.action.path.slice(1) };
         remaining = distanceBetweenPoints(target, last);
         p = movement / remaining;
-        last = target;
       }
 
       e.position = p < 1
         ? {
-          x: e.position.x * (1 - p) + target.x * p,
-          y: e.position.y * (1 - p) + target.y * p,
+          x: last.x * (1 - p) + target.x * p,
+          y: last.y * (1 - p) + target.y * p,
         }
         : {
           x: target.x,
           y: target.y,
         };
+
+      console.log(last, target, p, e.position);
     },
   });

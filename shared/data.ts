@@ -2,7 +2,10 @@ import { Entity } from "./types.ts";
 
 export const unitData: Record<
   string,
-  | Pick<Entity, "movementSpeed" | "radius" | "pathing" | "tilemap" | "builds">
+  | Pick<
+    Entity,
+    "movementSpeed" | "radius" | "pathing" | "tilemap" | "builds" | "attack"
+  >
   | undefined
 > = {
   sheep: {
@@ -15,6 +18,13 @@ export const unitData: Record<
     movementSpeed: 3.1,
     radius: 0.5,
     pathing: 1,
+    attack: {
+      damage: 100,
+      range: 0.65,
+      rangeMotionBuffer: 1,
+      cooldown: 1.5,
+      damagePoint: 0.5,
+    },
   },
   hut: {
     radius: 1,

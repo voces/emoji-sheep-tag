@@ -29,16 +29,23 @@ const zAction = z.union([
 
 const zUpdate = z.object({
   type: z.literal("unit"),
-
   id: z.string(),
+
+  // Data
   unitType: z.string().optional(),
   owner: z.string().optional(),
   mana: z.number().optional(),
   position: zPoint.readonly().optional(),
   movementSpeed: z.number().optional(),
-
-  // Data
   builds: z.string().array().optional(),
+  attack: z.object({
+    damage: z.number(),
+    range: z.number(),
+    rangeMotionBuffer: z.number(),
+    cooldown: z.number(),
+    damagePoint: z.number(),
+    last: z.number().optional(),
+  }).optional(),
 
   // Tags
   moving: z.boolean().nullable().optional(),
@@ -166,5 +173,9 @@ const connect = () => {
 connect();
 
 export const send = (message: ClientToServerMessage) => {
+  // setTimeout(
+  // () =>
   ws.send(JSON.stringify(message));
+  // 100 + Math.random() * 50,
+  // );
 };

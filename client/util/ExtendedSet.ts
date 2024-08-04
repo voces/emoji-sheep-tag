@@ -12,4 +12,8 @@ export class ExtendedSet<T> extends Set<T> {
     for (const entity of this) if (predicate(entity)) newSet.add(entity as U);
     return newSet;
   }
+
+  clone() {
+    return new ExtendedSet(this);
+  }
 }

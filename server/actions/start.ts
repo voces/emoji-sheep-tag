@@ -12,6 +12,7 @@ export const zStart = z.object({ type: z.literal("start") });
 
 export const start = (client: Client) => {
   const lobby = client.lobby;
+  console.log(lobby?.status, lobby?.host === client);
   if (
     !lobby || lobby.host !== client ||
     lobby.status === "playing"
@@ -48,10 +49,14 @@ export const start = (client: Client) => {
       const lobby = lobbyContext.context;
       if (!lobby.round) return;
       for (const owner of sheep) newUnit(owner.id, "sheep", 25, 25);
+      // for (let y = 19; y < 32; y += 1.5) {
+      //   for (let x = 16; x < 35; x += 1.5) {
+      //     newUnit(Array.from(sheep)[0].id, "hut", x, y);
+      //   }
+      // }
 
       timeout(() => {
         const lobby = lobbyContext.context;
-        console.log("timeout!", lobby.round, wolves);
         if (!lobby.round) return;
         for (const owner of wolves) newUnit(owner.id, "wolf", 25, 25);
       }, 2000);

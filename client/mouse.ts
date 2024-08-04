@@ -1,22 +1,16 @@
 import { TypedEventTarget } from "typed-event-target";
-import {
-  Intersection,
-  Object3D,
-  Plane,
-  Raycaster,
-  Vector2,
-  Vector3,
-} from "three";
+import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { camera, scene } from "./three.ts";
-// import { camera, scene } from "../graphics.ts";
-// import { getCharacter } from "../character.ts";
+import { InstancedGroup } from "./InstancedGroup.ts";
+import { Entity } from "./ecs.ts";
+import { lookup } from "./systems/lookup.ts";
 
-class MosueEvent extends Event {
+class MouseEvent extends Event {
   readonly pixels: Vector2;
   readonly percent: Vector2;
   readonly world: Vector2;
   readonly angle: number;
-  readonly intersects: Intersection<Object3D>[];
+  readonly intersects: Set<Entity>;
 
   constructor(name: string) {
     super(name);
@@ -25,11 +19,11 @@ class MosueEvent extends Event {
     this.percent = mouse.percent.clone();
     this.world = mouse.world.clone();
     this.angle = mouse.angle;
-    this.intersects = [...mouse.intersects];
+    this.intersects = new Set(mouse.intersects);
   }
 }
 
-export class MouseButtonEvent extends MosueEvent {
+export class MouseButtonEvent extends MouseEvent {
   constructor(
     direction: "up" | "down",
     readonly button: "left" | "right" | "middle",
@@ -38,7 +32,7 @@ export class MouseButtonEvent extends MosueEvent {
   }
 }
 
-export class MouseMoveEvent extends MosueEvent {
+export class MouseMoveEvent extends MouseEvent {
   constructor() {
     super("mouseMove");
   }
@@ -57,7 +51,7 @@ type Mouse = {
   percent: Vector2;
   world: Vector2;
   angle: number;
-  intersects: Intersection<Object3D>[];
+  intersects: Set<Entity>;
 };
 
 export const mouse: MouseEventTarget & Mouse = Object.assign(
@@ -67,7 +61,7 @@ export const mouse: MouseEventTarget & Mouse = Object.assign(
     percent: new Vector2(),
     world: new Vector2(),
     angle: 0,
-    intersects: [],
+    intersects: new Set<Entity>(),
   },
 );
 
@@ -88,8 +82,23 @@ globalThis.addEventListener("pointermove", (event) => {
   cameraSpace.y = mouse.percent.y * -2 + 1;
 
   raycaster.setFromCamera(cameraSpace, camera);
-  if (mouse.intersects.length) mouse.intersects = [];
-  raycaster.intersectObjects(scene.children, false, mouse.intersects);
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  if (intersects.length) {
+    const set = new Set<Entity>();
+    for (const intersect of intersects) {
+      const parent = intersect.object.parent;
+      if (
+        !(parent instanceof InstancedGroup) ||
+        typeof intersect.instanceId !== "number"
+      ) continue;
+      const id = parent.getId(intersect.instanceId);
+      if (!id) continue;
+      const entity = lookup[id];
+      if (!entity) continue;
+      set.add(entity);
+    }
+    if (set.size || mouse.intersects.size) mouse.intersects = set;
+  } else if (mouse.intersects.size) mouse.intersects = new Set();
 
   raycaster.ray.intersectPlane(plane, world3);
   mouse.world.x = world3.x;
