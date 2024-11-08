@@ -10,7 +10,7 @@ export const endRound = () => {
 };
 
 export const send = (message: ServerToClientMessage) => {
-  // console.log("S->C", message);
+  console.log("S->C", message);
   const lobby = lobbyContext.context;
   const serialized = JSON.stringify(message);
   for (const p of lobby.players) {

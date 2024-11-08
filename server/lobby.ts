@@ -1,7 +1,7 @@
-import { App } from "jsr:@verit/ecs";
 import { Team } from "../shared/zod.ts";
 import { type Client } from "./client.ts";
 import { Entity } from "../shared/types.ts";
+import { Game } from "./ecs.ts";
 
 /**
  * Contexts:
@@ -45,7 +45,7 @@ type LobbySettings = {
 type LobbyStatus = "lobby" | "playing";
 
 type Round = {
-  ecs: App<Entity>;
+  ecs: Game;
   lookup: Record<string, Entity | undefined>;
   sheep: Set<Client>;
   wolves: Set<Client>;

@@ -5,24 +5,24 @@ import { Entity } from "../../shared/types.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { calcPath } from "../systems/pathing.ts";
+import { zPoint } from "../../shared/zod.ts";
 
 export const zMove = z.object({
   type: z.literal("move"),
   units: z.string().array(),
-  x: z.number(),
-  y: z.number(),
+  target: z.union([zPoint, z.string()]),
 });
 
 export const move = (
   client: Client,
-  { units, x, y }: z.TypeOf<typeof zMove>,
+  { units, target }: z.TypeOf<typeof zMove>,
 ) => {
   const round = lobbyContext.context.round;
   if (!round) return;
   const movedUnits = units
     .map((u) => round.lookup[u])
-    .filter((e: Entity | undefined): e is Entity =>
-      !!e && e.owner === client.id
+    .filter((e: Entity | undefined): e is SystemEntity<Entity, "position"> =>
+      !!e && e.owner === client.id && !!e.position
     );
   if (!movedUnits.length) return console.log("no units!");
   movedUnits.forEach((u) => {
@@ -30,26 +30,33 @@ export const move = (
     delete u.action;
     delete u.queue;
 
-    // If no position, just instantly move to target
-    if (!u.position) return u.position = { x, y };
+    const targetPos = typeof target === "string"
+      ? round.lookup[target]?.position
+      : target;
+    if (!targetPos) return;
 
     // If no radius, tween to target
     if (!u.radius) {
       return u.action = {
         type: "walk",
-        target: { x, y },
-        path: [{ x: u.position.x, y: u.position.y }, { x, y }],
+        target,
+        path: [{ x: u.position.x, y: u.position.y }, targetPos],
+        distanceFromTarget: typeof target === "string"
+          ? u.attack?.range
+          : undefined,
       };
     }
 
     // Otherwise path find to target
-    if (u.radius) {
-      const path = calcPath(
-        u as SystemEntity<Entity, "radius" | "position">,
-        { x, y },
-      ).slice(1);
-      console.log("walk", path);
-      u.action = { type: "walk", target: path[path.length - 1], path };
-    }
+    const path = calcPath(u, target).slice(1);
+    if (!path.length) return;
+    u.action = {
+      type: "walk",
+      target: typeof target === "string" ? target : path[path.length - 1],
+      path,
+      distanceFromTarget: typeof target === "string"
+        ? u.attack?.range
+        : undefined,
+    };
   });
 };

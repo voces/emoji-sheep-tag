@@ -11,6 +11,13 @@ type Action = Readonly<
     unitType: string;
     x: number;
     y: number;
+  } | {
+    type: "attack";
+    target: string | { x: number; y: number };
+  } | {
+    type: "swing";
+    target: string;
+    start: number;
   }
 >;
 
@@ -38,7 +45,8 @@ export type Entity = {
   };
 
   // Tags
-  moving?: boolean | null;
+  isMoving?: boolean | null;
+  isPathing?: boolean | null;
 
   // Pathing
   radius?: number;
@@ -48,7 +56,6 @@ export type Entity = {
   /** Override `pathing` when blocking tiles. */
   blocksPathing?: Pathing;
   tilemap?: Footprint;
-  structure?: boolean;
 
   // Actions
   action?: Action | null;

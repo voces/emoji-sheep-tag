@@ -7,14 +7,14 @@ import { lookup } from "./lookup.ts";
 
 // Movement system
 app.addSystem({
-  props: ["moving", "position"],
+  props: ["isMoving", "position"],
   updateChild: (e, delta) => {
     // If not moving or can't move, clear it
     if (
       !e.movementSpeed || e.action?.type !== "walk"
       // (e.action.target.x === e.position?.x) &&
       //   e.movement[e.movement.length - 1].y === e.position.y
-    ) return delete (e as Entity).moving;
+    ) return delete (e as Entity).isMoving;
 
     let target = typeof e.action.target === "string"
       ? lookup[e.action.target]?.position
@@ -26,7 +26,7 @@ app.addSystem({
       squaredDistanceBetweenPoints(target, e.position) <=
         distanceFromTargetSquared
     ) {
-      delete (e as Entity).moving;
+      delete (e as Entity).isMoving;
       delete e.action;
       return;
     }
@@ -42,7 +42,7 @@ app.addSystem({
     while (p > 1) {
       if (e.action.path.length === 1) {
         e.position = { ...target };
-        delete (e as Entity).moving;
+        delete (e as Entity).isMoving;
         delete e.action;
         break;
       }

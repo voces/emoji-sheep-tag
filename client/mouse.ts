@@ -2,7 +2,7 @@ import { TypedEventTarget } from "typed-event-target";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { camera, scene } from "./graphics/three.ts";
 import { InstancedGroup } from "./graphics/InstancedGroup.ts";
-import { Entity } from "./ecs.ts";
+import { app, Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
 
 class MouseEvent extends Event {
@@ -73,15 +73,7 @@ const plane = new Plane(new Vector3(0, 0, 1), 0);
 
 const world3 = new Vector3();
 
-globalThis.addEventListener("pointermove", (event) => {
-  mouse.pixels.x = event.clientX;
-  mouse.pixels.y = event.clientY;
-  mouse.percent.x = event.clientX / window.innerWidth;
-  mouse.percent.y = event.clientY / window.innerHeight;
-  cameraSpace.x = mouse.percent.x * 2 - 1;
-  cameraSpace.y = mouse.percent.y * -2 + 1;
-
-  raycaster.setFromCamera(cameraSpace, camera);
+const updateIntersects = () => {
   const intersects = raycaster.intersectObjects(scene.children, true);
   if (intersects.length) {
     const set = new Set<Entity>();
@@ -103,6 +95,18 @@ globalThis.addEventListener("pointermove", (event) => {
   raycaster.ray.intersectPlane(plane, world3);
   mouse.world.x = world3.x;
   mouse.world.y = world3.y;
+};
+
+globalThis.addEventListener("pointermove", (event) => {
+  mouse.pixels.x = event.clientX;
+  mouse.pixels.y = event.clientY;
+  mouse.percent.x = event.clientX / window.innerWidth;
+  mouse.percent.y = event.clientY / window.innerHeight;
+  cameraSpace.x = mouse.percent.x * 2 - 1;
+  cameraSpace.y = mouse.percent.y * -2 + 1;
+
+  raycaster.setFromCamera(cameraSpace, camera);
+  updateIntersects();
 
   mouse.dispatchTypedEvent("mouseMove", new MouseMoveEvent());
 });
@@ -117,3 +121,6 @@ globalThis.addEventListener("pointerdown", (event) =>
   ));
 
 globalThis.addEventListener("contextmenu", (e) => e.preventDefault());
+
+let counter = 0;
+app.addSystem({ update: () => (counter++ % 15 === 0) && updateIntersects() });

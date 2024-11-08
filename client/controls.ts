@@ -13,7 +13,6 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 
   if (e.button === "right") {
     if (e.intersects.size) {
-      console.log("inside");
       const intersects = Array.from(e.intersects);
       const selections = selection.clone();
 
@@ -21,19 +20,31 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       for (const s of selections) if (e.intersects.has(s)) selections.delete(s);
       if (!selections.size) return;
 
-      const attackers = selections.filter((e) => e.attack);
-
-      console.log(
-        Array.from(selections, (e) => e.id),
-        "right clicks",
-        Array.from(e.intersects, (e) => e.id),
+      const { attackers, movers } = selections.group((e) =>
+        e.attack ? "attackers" as const : "movers" as const
       );
+
+      if (attackers?.size) {
+        send({
+          type: "attack",
+          units: Array.from(attackers, (e) => e.id),
+          target: intersects[0].id,
+        });
+      }
+
+      if (movers?.size) {
+        send({
+          type: "move",
+          units: Array.from(movers, (e) => e.id),
+          target: intersects[0].id,
+        });
+      }
     }
+
     send({
       type: "move",
       units: Array.from(selection, (e) => e.id),
-      x: e.world.x,
-      y: e.world.y,
+      target: e.world,
     });
   } else if (e.button === "left" && blueprint) {
     send({
@@ -66,13 +77,23 @@ globalThis.addEventListener("keydown", (e) => {
   if (!selection.some((u) => u.builds?.includes("hut"))) return;
   if (blueprint) app.delete(blueprint);
   if (e.code === "KeyF") {
-    blueprint = app.add({
+    return blueprint = app.add({
       id: `blueprint-${blueprintIndex}`,
       unitType: "hut",
       position: { x: normalize(mouse.world.x), y: normalize(mouse.world.y) },
       owner: getLocalPlayer()?.id,
       blueprint: true,
     });
+  }
+  if (e.code === "KeyX") {
+    const units = selection.filter((u) => u.unitType === "sheep");
+    if (units.size) {
+      send({
+        type: "unitEvent",
+        event: "destroyLastFarm",
+        units: Array.from(units, (u) => u.id),
+      });
+    }
   }
 });
 

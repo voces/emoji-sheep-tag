@@ -151,14 +151,14 @@ export class PathingMap {
       for (let x = 0; x < this.grid[y].length; x++) {
         const nodes: Tile[] = this.grid[y][x].nodes;
 
-        // Above
-        if (y > 0) nodes.push(this.grid[y - 1][x]);
-        // Left
-        if (x > 0) nodes.push(this.grid[y][x - 1]);
-        // Right
-        if (x < this.widthMap - 1) nodes.push(this.grid[y][x + 1]);
         // Below
         if (y < this.heightMap - 1) nodes.push(this.grid[y + 1][x]);
+        // Right
+        if (x < this.widthMap - 1) nodes.push(this.grid[y][x + 1]);
+        // Left
+        if (x > 0) nodes.push(this.grid[y][x - 1]);
+        // Above
+        if (y > 0) nodes.push(this.grid[y - 1][x]);
       }
     }
 
@@ -436,7 +436,7 @@ export class PathingMap {
       : DIRECTION.DOWN;
 
     let steps = 0;
-    const stride = entity.structure ? 2 : 1;
+    const stride = entity.tilemap ? 2 : 1;
     let initialSteps = 0;
 
     let remainingTries = MAX_TRIES;
@@ -618,7 +618,7 @@ export class PathingMap {
    */
   path(
     entity: PathingEntity,
-    target: Point,
+    target: Readonly<Point>,
     start: Point = entity.position,
   ): Point[] {
     if (typeof entity.radius !== "number") {
@@ -728,7 +728,7 @@ export class PathingMap {
     let checksSinceBestChange = 0;
     while (startHeap.length) {
       // Degenerate case: target is close to start, but ~blocked off
-      if (checksSinceBestChange++ > 2500) break;
+      if (checksSinceBestChange++ > 500) break;
 
       // Start to End
       const startCurrent = startHeap.pop();

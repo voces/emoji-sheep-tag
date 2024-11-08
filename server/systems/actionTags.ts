@@ -7,7 +7,9 @@ import { BUILD_RADIUS } from "../../shared/data.ts";
 
 export const addActionTagSystem = (app: App<Entity>) => {
   const handler = (e: SystemEntity<Entity, "action">) => {
-    if (e.action.type === "walk" && !e.moving) return e.moving = true;
+    if (e.action.type === "walk" && !e.isPathing) e.isPathing = true;
+
+    if (e.action.type === "walk" && !e.isMoving) return e.isMoving = true;
 
     if (e.action.type === "build") {
       if (

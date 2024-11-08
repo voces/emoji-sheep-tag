@@ -43,7 +43,6 @@ app.addSystem({
         color2.lerp(white, 0.8);
         color2.lerp(blue, 0.5);
         collection.setVertexColorAt(e.id, color2);
-        color.lerp(blue, 0.3);
         collection.setPlayerColorAt(e.id, color, false);
       } else {
         collection.setPlayerColorAt(e.id, color);

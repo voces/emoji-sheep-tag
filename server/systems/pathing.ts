@@ -3,6 +3,7 @@ import { Entity } from "../../shared/types.ts";
 import { PathingMap } from "../../shared/pathing/PathingMap.ts";
 import { currentApp } from "../contexts.ts";
 import { PathingEntity } from "../../shared/pathing/types.ts";
+import { lookup } from "./lookup.ts";
 
 const pathingMaps = new WeakMap<App<Entity>, PathingMap>();
 
@@ -21,9 +22,18 @@ export const withPathingMap = <T>(fn: (pathingMap: PathingMap) => T) =>
 
 export const calcPath = (
   entity: Entity,
-  target: { x: number; y: number },
+  target: string | { x: number; y: number },
 ) => {
   if (!isPathingEntity(entity)) return [];
+  if (typeof target === "string") {
+    const targetEntity = lookup(target);
+    if (!targetEntity.position) return [];
+    const p = pathingMap();
+    return p.withoutEntity(
+      entity,
+      () => p.path(entity, targetEntity.position!),
+    );
+  }
   return pathingMap().path(entity, target);
 };
 
@@ -62,7 +72,7 @@ export const updatePathing = (entity: Entity) => {
     () => p.nearestSpiralPathing(entity.position.x, entity.position.y, entity),
   );
   if (nearest.x !== entity.position.x || nearest.y !== entity.position.y) {
-    console.log("fix", entity.position, nearest);
+    // console.log("fix", entity.position, nearest);
     entity.position = nearest;
   }
 };

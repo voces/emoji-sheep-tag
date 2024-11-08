@@ -8,3 +8,5 @@ export const zTeam = z.union([
   z.literal("pending"),
 ]);
 export type Team = z.TypeOf<typeof zTeam>;
+
+export const zPoint = z.object({ x: z.number(), y: z.number() });

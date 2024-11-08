@@ -17,12 +17,16 @@ export const update = <K extends keyof Entity>(
   } else updates[entityId][prop] = value;
 };
 
+export const remove = (entityId: string) => {
+  updates[entityId] = { __delete: true } as Partial<Entity>;
+};
+
 export const flushUpdates = () => {
-  const updatesArray = Object.entries(updates).map(([id, update]) => ({
-    type: "unit" as const,
-    id,
-    ...update,
-  }));
+  const updatesArray = Object.entries(updates).map(([id, update]) =>
+    "__delete" in update
+      ? ({ type: "delete" as const, id })
+      : ({ type: "unit" as const, id, ...update })
+  );
   if (updatesArray.length) {
     send({ type: "updates", updates: updatesArray });
     updates = {};

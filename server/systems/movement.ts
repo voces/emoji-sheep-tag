@@ -5,11 +5,12 @@ import {
   distanceBetweenPoints,
   squaredDistanceBetweenPoints,
 } from "../../shared/pathing/math.ts";
-import { calcPath, pathable } from "./pathing.ts";
+import { calcPath } from "./pathing.ts";
 
-export const addUnitMovementSystem = (app: App<Entity>) =>
+export const addUnitMovementSystem = (app: App<Entity>) => {
+  // Motion tweening
   app.addSystem({
-    props: ["moving", "position"],
+    props: ["isMoving", "position"],
     updateChild: (e, delta) => {
       // If not moving or can't move, clear it
       if (
@@ -17,7 +18,7 @@ export const addUnitMovementSystem = (app: App<Entity>) =>
         e.action.path.length === 0
       ) {
         if (e.action?.type === "walk") delete e.action;
-        delete (e as Entity).moving;
+        delete (e as Entity).isMoving;
         return;
       }
 
@@ -30,8 +31,8 @@ export const addUnitMovementSystem = (app: App<Entity>) =>
         squaredDistanceBetweenPoints(target, e.position) <=
           (e.action.distanceFromTarget ?? 0) ** 2
       ) {
-        delete (e as Entity).moving;
-        delete e.action;
+        delete (e as Entity).isMoving;
+        if (typeof e.action.target !== "string") delete e.action;
         return;
       }
 
@@ -46,8 +47,8 @@ export const addUnitMovementSystem = (app: App<Entity>) =>
       while (p > 1) {
         if (e.action.path.length === 1) {
           e.position = { ...target };
-          delete (e as Entity).moving;
-          delete e.action;
+          delete (e as Entity).isMoving;
+          if (typeof e.action.target !== "string") delete e.action;
           break;
         }
 
@@ -68,7 +69,29 @@ export const addUnitMovementSystem = (app: App<Entity>) =>
           x: target.x,
           y: target.y,
         };
-
-      console.log(last, target, p, e.position);
     },
   });
+
+  // Recalculate paths regularly
+  let counter = 0;
+  const sys = app.addSystem({
+    props: ["action"],
+    update: () => {
+      let offset = -1;
+      for (const e of sys.entities) {
+        offset++;
+        if (
+          e.action.type !== "walk" ||
+          (counter + offset) % (typeof e.action.target === "string" ? 3 : 17)
+        ) continue;
+        const newPath = calcPath(e, e.action.target);
+        if (!newPath.length) return delete (e as Entity).action;
+        e.action = {
+          ...e.action,
+          path: newPath,
+        };
+      }
+      counter++;
+    },
+  });
+};

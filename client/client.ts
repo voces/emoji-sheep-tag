@@ -4,6 +4,7 @@ import { stateVar } from "./ui/vars/state.ts";
 import { app, Entity } from "./ecs.ts";
 import { type ClientToServerMessage } from "../server/client.ts";
 import { zTeam } from "../shared/zod.ts";
+import { camera } from "./graphics/three.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -24,6 +25,15 @@ const zAction = z.union([
     unitType: z.string(),
     x: z.number(),
     y: z.number(),
+  }),
+  z.object({
+    type: z.literal("attack"),
+    target: z.union([z.string(), zPoint]),
+  }),
+  z.object({
+    type: z.literal("swing"),
+    target: z.string(),
+    start: z.number(),
   }),
 ]).readonly();
 
@@ -48,7 +58,8 @@ const zUpdate = z.object({
   }).optional(),
 
   // Tags
-  moving: z.boolean().nullable().optional(),
+  isMoving: z.boolean().nullable().optional(),
+  isPathing: z.boolean().nullable().optional(),
 
   // Pathing
   radius: z.number().optional(),
@@ -69,10 +80,15 @@ const zUpdate = z.object({
   queue: zAction.array().readonly().nullable().optional(),
 }).strict();
 
+const zDelete = z.object({
+  type: z.literal("delete"),
+  id: z.string(),
+});
+
 // Events that come down from a loo
 const zUpdates = z.object({
   type: z.literal("updates"),
-  updates: zUpdate.array(),
+  updates: z.union([zUpdate, zDelete]).array(),
 });
 
 const zSlotChange = z.object({
@@ -131,6 +147,8 @@ const handlers = {
   },
   start: (data: z.TypeOf<typeof zStart>) => {
     stateVar("playing");
+    camera.position.x = 25;
+    camera.position.y = 25;
   },
   updates: (data: z.TypeOf<typeof zUpdates>) => {
     for (const update of data.updates) {
@@ -138,6 +156,11 @@ const handlers = {
         const { type, ...props } = update;
         if (update.id in map) Object.assign(map[update.id], props);
         else map[update.id] = app.add(props);
+      } else if (update.type === "delete") {
+        if (update.id in map) {
+          app.delete(map[update.id]);
+          delete map[update.id];
+        }
       }
     }
   },

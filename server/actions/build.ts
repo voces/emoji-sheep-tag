@@ -42,10 +42,8 @@ export const build = (
   if (!pathable(temp)) return;
 
   // Otherwise walk there and build
-  const path = calcPath(
-    u as SystemEntity<Entity, "radius" | "position">,
-    { x, y },
-  ).slice(1);
+  const path = calcPath(u, { x, y }).slice(1);
+  if (!path.length) return;
   u.action = {
     type: "walk",
     target: { x, y },
