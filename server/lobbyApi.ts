@@ -10,19 +10,10 @@ export const endRound = () => {
 };
 
 export const send = (message: ServerToClientMessage) => {
-  console.log("S->C", message);
+  // console.log("S->C", message);
   const lobby = lobbyContext.context;
   const serialized = JSON.stringify(message);
-  for (const p of lobby.players) {
-    try {
-      // setTimeout(() => {
-      if (p.socket.readyState === WebSocket.OPEN) p.socket.send(serialized);
-      // }, 100 + Math.random() * 50);
-    } catch (err) {
-      console.error(err);
-      p.socket.close();
-    }
-  }
+  for (const p of lobby.players) p.rawSend(serialized);
 };
 
 /** Causes the local player to leave their current lobby. */

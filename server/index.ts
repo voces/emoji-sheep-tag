@@ -1,5 +1,6 @@
 import { serveFile } from "jsr:@std/http/file-server";
 import { handleSocket } from "./client.ts";
+import "./st/index.ts";
 
 const isDev = Deno.args.includes("--dev");
 
@@ -17,3 +18,5 @@ Deno.serve((req) => {
   handleSocket(socket);
   return response;
 });
+
+console.debug = () => void 0;

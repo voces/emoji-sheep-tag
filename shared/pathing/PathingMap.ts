@@ -4,6 +4,7 @@ import { BinaryHeap } from "./BinaryHeap.ts";
 // import { emptyElement } from "../util/html";
 import {
   behind,
+  distanceBetweenEntities,
   infront,
   offset,
   polarProject,
@@ -12,7 +13,13 @@ import {
 } from "./math.ts";
 import { memoize } from "./memoize.ts";
 import { Tile } from "./Tile.ts";
-import { Footprint, Pathing, PathingEntity, Point } from "./types.ts";
+import {
+  Footprint,
+  Pathing,
+  PathingEntity,
+  Point,
+  TargetEntity,
+} from "./types.ts";
 
 let debugging = false;
 // const elems: HTMLElement[] = [];
@@ -86,6 +93,36 @@ interface Cache {
 // 	arena.appendChild(div);
 // 	elems.push(div);
 // };
+
+const closestCardinalDirections = (angle: number): [x: number, y: number][] => {
+  // Normalize angle between 0 and 2 * PI
+  const TWO_PI = Math.PI * 2;
+  angle = angle % TWO_PI;
+  if (angle < 0) angle += TWO_PI; // Adjust if angle is negative
+
+  // Define the cardinal directions as vectors with corresponding angles
+  const directions: { vector: [x: number, y: number]; angle: number }[] = [
+    { vector: [1, 0], angle: 0 }, // right
+    { vector: [0, 1], angle: Math.PI / 2 }, // up
+    { vector: [-1, 0], angle: Math.PI }, // left
+    { vector: [0, -1], angle: (3 * Math.PI) / 2 }, // down
+  ];
+
+  // Calculate the angular difference for each direction
+  const differences = directions.map(({ vector, angle: dirAngle }) => {
+    const diff = Math.min(
+      Math.abs(angle - dirAngle),
+      TWO_PI - Math.abs(angle - dirAngle),
+    );
+    return { vector, diff };
+  });
+
+  // Sort directions by the smallest angular difference
+  differences.sort((a, b) => a.diff - b.diff);
+
+  // Return the sorted vectors
+  return differences.map((d) => d.vector);
+};
 
 export class PathingMap {
   readonly resolution: number;
@@ -167,7 +204,7 @@ export class PathingMap {
       this.path = (...args) => {
         const ret = oldPath.call(this, ...args);
         // eslint-disable-next-line no-console
-        if (debugging) console.log("PathingMap#path", ret);
+        if (debugging) console.debug("PathingMap#path", ret);
         return ret;
       };
 
@@ -175,7 +212,7 @@ export class PathingMap {
       this.recheck = (...args) => {
         const ret = oldRecheck.call(this, ...args);
         // eslint-disable-next-line no-console
-        if (debugging) console.log("PathingMap#recheck", ret);
+        if (debugging) console.debug("PathingMap#recheck", ret);
         return ret;
       };
     }
@@ -512,7 +549,7 @@ export class PathingMap {
   }
 
   worldToTile(world: Point): Tile {
-    return this.grid[this.yWorldToTile(world.y)][
+    return this.grid[this.yWorldToTile(world.y)]?.[
       this.xWorldToTile(world.x)
     ];
   }
@@ -609,6 +646,60 @@ export class PathingMap {
     return Math.max(Math.min(xIndex, this.widthMap - 1), 0);
   }
 
+  // step(
+  //   entity: PathingEntity,
+  //   target: TargetEntity | Readonly<Point>,
+  //   distance: number,
+  // ) {
+  //   const removed = this.entities.has(entity);
+  //   if (removed) this.removeEntity(entity);
+
+  //   // We assume an entity shoved into the top left corner is good
+  //   const pathing = entity.requiresPathing === undefined
+  //     ? entity.pathing
+  //     : entity.requiresPathing;
+  //   if (pathing === undefined) throw new Error("entity has no pathing");
+  //   // const minimalTilemap = this.pointToTilemap(
+  //   //   entity.radius,
+  //   //   entity.radius,
+  //   //   entity.radius,
+  //   //   { type: pathing },
+  //   // );
+
+  //   // const offset = entity.radius % (1 / this.resolution);
+  //   // const startReal = {
+  //   //   x: entity.position.x * this.resolution,
+  //   //   y: entity.position.y * this.resolution,
+  //   // };
+
+  //   const targetPosition = "x" in target ? target : target.position;
+
+  //   // const startTile = this.entityToTile(entity);
+
+  //   const angle = Math.atan2(
+  //     targetPosition.y - entity.position.y,
+  //     targetPosition.x - entity.position.x,
+  //   );
+
+  //   // Simple: diag
+  //   {
+  //     const diag = {
+  //       x: entity.position.x + distance * Math.cos(angle),
+  //       y: entity.position.y + distance * Math.sin(angle),
+  //     };
+  //     if (this.linearPathable(entity, entity.position, diag)) return diag;
+  //   }
+
+  //   const dirs = closestCardinalDirections(angle);
+  //   for (const [x, y] of dirs) {
+  //     const point = {
+  //       x: entity.position.x + distance * x,
+  //       y: entity.position.y + distance * y,
+  //     };
+  //     if (this.linearPathable(entity, entity.position, point)) return point;
+  //   }
+  // }
+
   // Adapted from https://github.com/bgrins/javascript-astar/blob/master/astar.js
   // towards Theta*
   // This gets really sad when a path is not possible
@@ -618,8 +709,9 @@ export class PathingMap {
    */
   path(
     entity: PathingEntity,
-    target: Readonly<Point>,
+    target: TargetEntity | Readonly<Point>,
     start: Point = entity.position,
+    distance?: number,
   ): Point[] {
     if (typeof entity.radius !== "number") {
       throw new Error("Can only path find radial entities");
@@ -653,17 +745,18 @@ export class PathingMap {
       y: start.y * this.resolution,
     };
 
+    const targetPosition = "x" in target ? target : target.position;
     const startTile = this.entityToTile(entity);
     // For target, if the exact spot is pathable, we aim towards that; otherwise the nearest spot
-    const targetTile = this.entityToTile(entity, target);
+    const targetTile = this.entityToTile(entity, targetPosition);
 
     const targetPathable = targetTile &&
       targetTile.pathable(pathing) &&
-      this.pathable(entity, target.x, target.y);
+      this.pathable(entity, targetPosition.x, targetPosition.y);
     const endTile = targetPathable ? targetTile : (() => {
       const { x, y } = this.nearestPathing(
-        target.x,
-        target.y,
+        targetPosition.x,
+        targetPosition.y,
         entity,
       );
       return this.grid[
@@ -671,7 +764,10 @@ export class PathingMap {
       ][Math.round((x - offset) * this.resolution)];
     })();
     const endReal = targetPathable
-      ? { x: target.x * this.resolution, y: target.y * this.resolution }
+      ? {
+        x: targetPosition.x * this.resolution,
+        y: targetPosition.y * this.resolution,
+      }
       : endTile;
 
     // If we start and end on the same tile, just move between them
@@ -684,6 +780,16 @@ export class PathingMap {
           y: endReal.y / this.resolution,
         },
       ];
+    }
+
+    // If already in range, just return start
+    if (
+      typeof distance === "number" && "position" in target &&
+      distanceBetweenEntities(entity, target) < distance
+    ) {
+      if (removed) this.addEntity(entity);
+      // Should I return start?
+      return [];
     }
 
     // Estimated cost remaining
@@ -735,11 +841,46 @@ export class PathingMap {
 
       if (startCurrent === endTile) {
         startBest = endTile;
+        console.debug("s reached end?1");
         break;
       } else if (startCurrent.__endTag === endTag) {
         startBest = endBest = startCurrent;
+        console.debug("s reached end?2");
         break;
-      }
+      } else if (
+        typeof distance === "number" && "position" in target
+      ) {
+        if (
+          distanceBetweenEntities(
+            { ...entity, position: startCurrent.world },
+            target,
+          ) < distance
+        ) {
+          startBest = startCurrent;
+          console.debug(
+            "s in range!",
+            distanceBetweenEntities(
+              { ...entity, position: startCurrent.world },
+              target,
+            ),
+            target.position,
+          );
+          break;
+        } else {
+          console.debug(
+            "not in range",
+            distanceBetweenEntities(
+              { ...entity, position: startCurrent.world },
+              target,
+            ),
+          );
+        }
+      } else {console.debug(
+          "some other case",
+          distance,
+          "position" in target,
+          !!entity.attack,
+        );}
 
       startCurrent.__startClosed = true;
 
@@ -859,8 +1000,8 @@ export class PathingMap {
 
       if (!endHeap.length) {
         const { x, y } = this.nearestPathing(
-          target.x,
-          target.y,
+          targetPosition.x,
+          targetPosition.y,
           entity,
           (tile) => tile.__endTag !== endTag,
         );
@@ -889,11 +1030,25 @@ export class PathingMap {
 
       if (endCurrent === startTile) {
         endBest = startTile;
+        console.debug("e reached end?1");
         break;
       } else if (endCurrent.__startTag === startTag) {
+        console.debug("e reached end?2");
         startBest = endBest = endCurrent;
         break;
       }
+
+      // else if (
+      //   mode === "attack" && "position" in target && entity.attack &&
+      //   distanceBetweenEntities(
+      //       { ...entity, position: endCurrent.world },
+      //       target,
+      //     ) < entity.attack.range
+      // ) {
+      //   endBest = startTile;
+      //   console.debug("e in range!");
+      //   break;
+      // }
 
       endCurrent.__endClosed = true;
 
@@ -1097,37 +1252,106 @@ export class PathingMap {
 
     const last = pathTiles[pathTiles.length - 1];
 
-    const beginning = pathWorld.length > 1 &&
-        (pathWorld[0].x !== start.x || pathWorld[0].y !== start.y)
-      ? this.linearPathable(entity, start, pathWorld[1])
-        ? [{ x: start.x, y: start.y }]
-        : [{ x: start.x, y: start.y }, pathWorld[0]]
-      : [pathWorld[0]];
+    console.debug("finalizing...", pathWorld);
+
+    const path = [{ x: start.x, y: start.y }];
+
+    if (
+      pathWorld.length > 1 &&
+      (pathWorld[0].x !== start.x || pathWorld[0].y !== start.y) &&
+      !this.linearPathable(entity, start, pathWorld[1])
+    ) {
+      console.debug("including first tile");
+      path.push(pathWorld[0]);
+    }
+
+    // const path = pathWorld.length > 1 &&
+    //     (pathWorld[0].x !== start.x || pathWorld[0].y !== start.y)
+    //   ? this.linearPathable(entity, start, pathWorld[1])
+    //     // Can skip first tile since we can path directly to the second
+    //     ? [{ x: start.x, y: start.y }]
+    //     // Must go through first tile since we cannot path directly to the second
+    //     : [{ x: start.x, y: start.y }, pathWorld[0]]
+    //   : [pathWorld[0]];
+
+    path.push(...pathWorld.slice(1, -1));
+
+    if (
+      !this.linearPathable(entity, path[path.length - 1], targetPosition) ||
+      (last !== targetTile)
+    ) {
+      console.debug("including last tile");
+      path.push(pathWorld[pathWorld.length - 1]);
+    }
+
+    if (last === targetTile && targetPathable) {
+      console.debug("including target");
+      path.push(targetPosition);
+    }
+
+    // Step back with a tolerance
+    const tolerance = 0.02;
+    if (
+      typeof distance === "number" && "position" in target && path.length > 1 &&
+      distanceBetweenEntities(
+          { ...entity, position: path[path.length - 1] },
+          target,
+        ) < distance - tolerance
+    ) {
+      console.debug(
+        "refining from",
+        distanceBetweenEntities(
+          { ...entity, position: path[path.length - 1] },
+          target,
+        ),
+        distance,
+      );
+      let a = path[path.length - 1];
+      let b = path[path.length - 2];
+      let mid;
+      let itrs = 0;
+      while (itrs < 15) {
+        itrs++;
+        mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const currentDistance = distanceBetweenEntities({
+          ...entity,
+          position: mid,
+        }, target);
+        const diff = distance - currentDistance;
+        if (diff >= 0 && diff <= tolerance) break;
+        if (currentDistance < distance) a = mid;
+        else b = mid;
+      }
+      console.debug(
+        "refined over",
+        itrs,
+        "iterations from",
+        distanceBetweenEntities(
+          { ...entity, position: path[path.length - 1] },
+          target,
+        ) - distance,
+        "to",
+        distanceBetweenEntities(
+          { ...entity, position: mid },
+          target,
+        ) - distance,
+      );
+      if (mid && itrs < 15) path[path.length - 1] = mid;
+    } else {
+      console.debug(
+        "no shorten",
+        distance,
+        target,
+        path,
+        "position" in target &&
+          distanceBetweenEntities(
+            { ...entity, position: path[path.length - 1] },
+            target,
+          ),
+      );
+    }
 
     if (removed) this.addEntity(entity);
-
-    // This may allow tiny clipping when replacing the last point with target, but better than the clunky alternative
-    const path =
-      // We didn't reach the end; pick closest node
-      last !== targetTile || !targetPathable
-        ? [...beginning, ...pathWorld.slice(1)]
-        // We reached the end
-        : [
-          ...beginning,
-          ...pathWorld.slice(1, -1),
-          target,
-          // ...(pathWorld[pathWorld.length - 1].x !==
-          //       endReal.x / this.resolution ||
-          //     pathWorld[pathWorld.length - 1].y !==
-          //       endReal.y / this.resolution
-          //   ? [
-          //     {
-          //       x: endReal.x / this.resolution,
-          //       y: endReal.y / this.resolution,
-          //     },
-          //   ]
-          //   : []),
-        ];
 
     return path;
   }

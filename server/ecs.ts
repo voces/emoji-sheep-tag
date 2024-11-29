@@ -7,8 +7,8 @@ import { Entity } from "../shared/types.ts";
 import { addPathingSystem } from "./systems/pathing.ts";
 import { newEntity, remove, update } from "./updates.ts";
 import { TypedEventTarget } from "typed-event-target";
-import { registerDestroyLastFarm } from "./actions/destroyLastFarm.ts";
 import { addPlayerEntitiesSystem } from "./systems/playerEntities.ts";
+import { addAttackSystem } from "./systems/attack.ts";
 
 // Alphanumeric, minus 0, O, l, and I
 const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -38,18 +38,25 @@ const id = (type?: string) => {
   }
 };
 
-export class UnitEventEvent extends Event {
+export class UnitOrderEvent extends Event {
   constructor(
     readonly unit: Entity,
     readonly player: string,
-    readonly abilityId: string,
+    readonly order: string,
   ) {
-    super("unitEvent");
+    super("unitOrder");
+  }
+}
+
+export class UnitDeathEvent extends Event {
+  constructor(readonly unit: Entity, readonly killer: Entity) {
+    super("unitDeath");
   }
 }
 
 type GameEvents = {
-  unitEvent: UnitEventEvent;
+  unitOrder: UnitOrderEvent;
+  unitDeath: UnitDeathEvent;
 };
 
 class GameTarget extends TypedEventTarget<GameEvents> {
@@ -75,6 +82,11 @@ class GameTarget extends TypedEventTarget<GameEvents> {
 }
 
 export type Game = GameTarget & App<Entity>;
+
+const initHooks: ((game: Game) => void)[] = [];
+export const onInit = (fn: (game: Game) => void) => {
+  initHooks.push(fn);
+};
 
 export const newEcs = () => {
   const app = newApp<Entity>(
@@ -112,8 +124,9 @@ export const newEcs = () => {
   addUnitMovementSystem(app);
   addPathingSystem(app);
   addPlayerEntitiesSystem(app);
+  addAttackSystem(app);
 
-  registerDestroyLastFarm(app);
+  for (const hook of initHooks) hook(app);
 
   return { ecs: app, lookup };
 };

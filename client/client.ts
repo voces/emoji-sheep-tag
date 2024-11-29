@@ -28,12 +28,7 @@ const zAction = z.union([
   }),
   z.object({
     type: z.literal("attack"),
-    target: z.union([z.string(), zPoint]),
-  }),
-  z.object({
-    type: z.literal("swing"),
     target: z.string(),
-    start: z.number(),
   }),
 ]).readonly();
 
@@ -44,6 +39,8 @@ const zUpdate = z.object({
   // Data
   unitType: z.string().optional(),
   owner: z.string().optional(),
+  health: z.number().optional(),
+  maxHealth: z.number().optional(),
   mana: z.number().optional(),
   position: zPoint.readonly().optional(),
   movementSpeed: z.number().optional(),
@@ -54,12 +51,17 @@ const zUpdate = z.object({
     rangeMotionBuffer: z.number(),
     cooldown: z.number(),
     damagePoint: z.number(),
-    last: z.number().optional(),
   }).optional(),
+  swing: z.object({
+    time: z.number(),
+    source: z.object({ x: z.number(), y: z.number() }),
+    target: z.object({ x: z.number(), y: z.number() }),
+  }).nullable().optional(),
+  lastAttack: z.number().optional(),
 
   // Tags
   isMoving: z.boolean().nullable().optional(),
-  isPathing: z.boolean().nullable().optional(),
+  isAttacking: z.boolean().nullable().optional(),
 
   // Pathing
   radius: z.number().optional(),
@@ -115,12 +117,17 @@ const zLeave = z.object({
   player: z.string(),
 });
 
+const zStop = z.object({
+  type: z.literal("stop"),
+});
+
 const zMessage = z.union([
   zStart,
   zUpdates,
   zSlotChange,
   zJoin,
   zLeave,
+  zStop,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;
@@ -149,6 +156,10 @@ const handlers = {
     stateVar("playing");
     camera.position.x = 25;
     camera.position.y = 25;
+  },
+  stop: () => {
+    stateVar("lobby");
+    for (const entity of app.entities) app.delete(entity);
   },
   updates: (data: z.TypeOf<typeof zUpdates>) => {
     for (const update of data.updates) {

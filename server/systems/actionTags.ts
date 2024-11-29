@@ -7,9 +7,10 @@ import { BUILD_RADIUS } from "../../shared/data.ts";
 
 export const addActionTagSystem = (app: App<Entity>) => {
   const handler = (e: SystemEntity<Entity, "action">) => {
-    if (e.action.type === "walk" && !e.isPathing) e.isPathing = true;
-
-    if (e.action.type === "walk" && !e.isMoving) return e.isMoving = true;
+    if (e.action.type === "walk" && !e.isMoving) {
+      console.debug("setting isMoving to true");
+      return e.isMoving = true;
+    }
 
     if (e.action.type === "build") {
       if (
@@ -20,6 +21,8 @@ export const addActionTagSystem = (app: App<Entity>) => {
       build(e, e.action.unitType, e.action.x, e.action.y);
       return (e as Entity).action = null;
     }
+
+    if (e.action.type === "attack") e.isAttacking = true;
   };
 
   app.addSystem({

@@ -64,6 +64,7 @@ export type Lobby = {
 // type GEvent = {};
 
 export const lobbies = new Set<Lobby>();
+Object.assign(globalThis, { lobbies });
 // const eventContext = new ContextManager<GEvent>();
 
 export const deleteLobby = (lobby: Lobby) => {

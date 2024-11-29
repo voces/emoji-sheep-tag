@@ -33,12 +33,15 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       }
 
       if (movers?.size) {
+        // Should follow
         send({
           type: "move",
           units: Array.from(movers, (e) => e.id),
           target: intersects[0].id,
         });
       }
+
+      return;
     }
 
     send({
@@ -89,8 +92,8 @@ globalThis.addEventListener("keydown", (e) => {
     const units = selection.filter((u) => u.unitType === "sheep");
     if (units.size) {
       send({
-        type: "unitEvent",
-        event: "destroyLastFarm",
+        type: "unitOrder",
+        order: "destroyLastFarm",
         units: Array.from(units, (u) => u.id),
       });
     }

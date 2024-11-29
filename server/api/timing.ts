@@ -1,5 +1,10 @@
 import { clientContext, lobbyContext } from "../contexts.ts";
 
+/**
+ * @param cb
+ * @param timeout Mill
+ * @returns
+ */
 export const timeout = (cb: () => void, timeout: number) => {
   const lobby = lobbyContext.context;
   const client = clientContext.context;
@@ -9,7 +14,7 @@ export const timeout = (cb: () => void, timeout: number) => {
         if (!lobby.round?.ecs) return clearTimeout(t);
         clientContext.with(client, cb);
       }),
-    timeout,
+    timeout * 1000,
   );
   return () => clearTimeout(t);
 };
@@ -23,7 +28,7 @@ export const interval = (cb: () => void, interval: number) => {
         if (!lobby.round?.ecs) return clearInterval(i);
         clientContext.with(client, cb);
       }),
-    interval,
+    interval * 1000,
   );
   return () => clearInterval(i);
 };

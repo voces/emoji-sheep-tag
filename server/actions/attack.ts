@@ -6,7 +6,6 @@ import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { calcPath } from "../systems/pathing.ts";
 import { zPoint } from "../../shared/zod.ts";
-import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
 
 export const zAttack = z.object({
   type: z.literal("attack"),
@@ -18,6 +17,7 @@ export const attack = (
   client: Client,
   { units, target }: z.TypeOf<typeof zAttack>,
 ) => {
+  console.log("attack");
   const round = lobbyContext.context.round;
   if (!round) return;
   const attackingUnits = units
@@ -38,35 +38,15 @@ export const attack = (
       : target;
     if (!targetPos) return;
 
-    // If no radius, tween to target
-    if (!u.radius) {
-      if (
-        typeof target === "string" &&
-        distanceBetweenPoints(u.position, targetPos) < u.attack.range
-      ) {
-        u.action = { type: "swing", target, start: Date.now() };
-        u.queue = [{ type: "attack", target }];
-        return;
-      }
-
-      // walk, attack, swing. Maybe unify to just attack with optional "swing" and "path" parts?
-      u.action = {
-        type: "walk",
-        target: targetPos,
-        distanceFromTarget: u.attack.range,
-        path: calcPath(u, target).slice(1),
-      };
-      u.queue = [{ type: "attack", target }];
-      return;
-    }
-
-    // Otherwise path find to target
-    const path = calcPath(u, target).slice(1);
+    // Path to target and attack
+    const path = calcPath(u, target, "attack").slice(1);
     if (!path.length) return;
     u.action = {
       type: "walk",
       target: typeof target === "string" ? target : path[path.length - 1],
+      distanceFromTarget: u.attack.range,
       path,
+      attacking: true,
     };
     if (typeof target === "string") u.queue = [{ type: "attack", target }];
   });

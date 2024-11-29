@@ -1,10 +1,10 @@
 {
   "tasks": {
-    "dev": "deno run -A --watch server/index.ts --dev"
+    "dev": "deno run -A --watch --inspect server/index.ts --dev"
   },
   "compilerOptions": {
     "lib": [
-      "deno.window"
+      "deno.window", "dom"
     ],
     "jsx": "react",
     "jsxFactory": "React.createElement",

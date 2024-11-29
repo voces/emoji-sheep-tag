@@ -40,6 +40,7 @@ export const tempUnit = (
   unitType: type,
   owner,
   position: { x, y },
+  health: unitData[type]?.maxHealth,
   ...unitData[type],
 });
 

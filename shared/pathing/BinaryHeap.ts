@@ -6,14 +6,14 @@ export class BinaryHeap<T> extends Array<T> {
     this.scoreFunc = scoreFunc;
   }
 
-  push(element: T): number {
+  override push(element: T): number {
     this.bubbleUp(super.push(element) - 1);
 
     // todo: return final index?
     return 0;
   }
 
-  pop(): T {
+  override pop(): T {
     const top = this[0];
     const bottom = super.pop();
 

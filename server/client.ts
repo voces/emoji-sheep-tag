@@ -8,8 +8,8 @@ import { build, zBuild } from "./actions/build.ts";
 import { move, zMove } from "./actions/move.ts";
 import { start, zStart } from "./actions/start.ts";
 import { colors } from "../shared/data.ts";
-import { zAttack } from "./actions/attack.ts";
-import { unitEvent, zUnitEvent } from "./actions/unitEvent.ts";
+import { attack, zAttack } from "./actions/attack.ts";
+import { unitOrder, zOrderEvent } from "./actions/unitOrder.ts";
 import { flushUpdates } from "./updates.ts";
 
 const wrap = <T extends (...args: any[]) => unknown>(
@@ -41,11 +41,22 @@ export class Client {
   }
 
   send(message: ServerToClientMessage) {
+    if (this.socket.readyState !== WebSocket.OPEN) return;
     try {
-      console.log("S->C", message);
+      // console.log("S->C", message);
       this.socket.send(JSON.stringify(message));
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  rawSend(message: string) {
+    if (this.socket.readyState !== WebSocket.OPEN) return;
+    try {
+      this.socket.send(message);
+    } catch (err) {
+      console.error(err);
+      this.socket.close();
     }
   }
 }
@@ -55,7 +66,7 @@ const zClientToServerMessage = z.union([
   zMove,
   zBuild,
   zAttack,
-  zUnitEvent,
+  zOrderEvent,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -64,8 +75,8 @@ const actions = {
   start,
   move,
   build,
-  attack: () => {},
-  unitEvent,
+  attack,
+  unitOrder,
 };
 
 export const handleSocket = (socket: WebSocket) => {
@@ -131,7 +142,7 @@ export const handleSocket = (socket: WebSocket) => {
     wrap(client, (e) => {
       try {
         const json = JSON.parse(e.data);
-        console.log("C->S", json);
+        // console.log("C->S", json);
         const message = zClientToServerMessage.parse(json);
         actions[message.type](client, message as any);
         flushUpdates();

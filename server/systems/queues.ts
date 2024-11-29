@@ -7,8 +7,11 @@ export const addQueueSystem = (app: App<Entity>) =>
     updateChild: (e) => {
       if (!e.queue.length) return delete (e as Entity).queue;
       if (!e.action) {
-        if (e.queue.length > 1) [e.action, ...e.queue] = e.queue;
-        else {
+        if (e.queue.length > 1) {
+          console.debug("popping action from queue", e.queue);
+          [e.action, ...e.queue] = e.queue;
+        } else {
+          console.debug("popping action and clearing queue", e.queue[0]);
           e.action = e.queue[0];
           delete (e as Entity).queue;
         }

@@ -1,5 +1,5 @@
 import { SystemEntity } from "jsr:@verit/ecs";
-import { Entity as CommonEntity } from "../types.ts";
+import { Entity } from "../types.ts";
 
 export type Pathing = number;
 
@@ -13,4 +13,5 @@ export type Footprint = {
   map: number[];
 };
 
-export type PathingEntity = SystemEntity<CommonEntity, "position" | "radius">;
+export type PathingEntity = SystemEntity<Entity, "position" | "radius">;
+export type TargetEntity = SystemEntity<Entity, "position">;

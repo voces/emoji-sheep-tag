@@ -2,22 +2,23 @@ import { Footprint, Pathing } from "./pathing/types.ts";
 
 type Action = Readonly<
   {
-    type: "walk";
-    target: string | { x: number; y: number };
-    path: { x: number; y: number }[];
-    distanceFromTarget?: number;
+    readonly type: "walk";
+    readonly target: string | { x: number; y: number };
+    readonly path: { x: number; y: number }[];
+    readonly distanceFromTarget?: number;
+    /**
+     * If `target` is a string, will stop walking once in range. If `target` is
+     * a position, will attack nearby enemies.
+     */
+    readonly attacking?: boolean;
   } | {
-    type: "build";
-    unitType: string;
-    x: number;
-    y: number;
+    readonly type: "build";
+    readonly unitType: string;
+    readonly x: number;
+    readonly y: number;
   } | {
-    type: "attack";
-    target: string | { x: number; y: number };
-  } | {
-    type: "swing";
-    target: string;
-    start: number;
+    readonly type: "attack";
+    readonly target: string;
   }
 >;
 
@@ -25,28 +26,37 @@ export type Entity = {
   id: string;
   unitType?: string;
   owner?: string;
-  mana?: number;
+
   position?: { readonly x: number; readonly y: number };
-  movementSpeed?: number;
 
   // Data
+  health?: number;
+  maxHealth?: number;
+  mana?: number;
+  movementSpeed?: number;
   builds?: string[];
   attack?: {
-    damage: number;
-    range: number;
+    readonly damage: number;
+    readonly range: number;
     /** How far a unit may move between the start of an attack and the damage point */
-    rangeMotionBuffer: number;
+    readonly rangeMotionBuffer: number;
     /** Seconds between attacks starting */
-    cooldown: number;
-    /** Seconds between an attack starting and damage occuring */
-    damagePoint: number;
-    /** Last time an attack started */
-    last?: number;
+    readonly cooldown: number;
+    /** Seconds between an attack starting and damage occurring */
+    readonly damagePoint: number;
   };
+
+  // Attacking
+  swing?: {
+    readonly time: number;
+    readonly source: { readonly x: number; readonly y: number };
+    readonly target: { readonly x: number; readonly y: number };
+  } | null;
+  lastAttack?: number;
 
   // Tags
   isMoving?: boolean | null;
-  isPathing?: boolean | null;
+  isAttacking?: boolean | null;
 
   // Pathing
   radius?: number;
