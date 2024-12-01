@@ -58,7 +58,11 @@ export const addAttackSystem = (app: Game) => {
         return;
       }
 
-      if (distanceBetweenEntities(e, target) > e.attack.range) {
+      if (
+        distanceBetweenEntities(e, target) >
+          e.attack.range +
+            (target.isMoving ? e.attack.rangeMotionBuffer * 0.1 : 0)
+      ) {
         if ((counter + offset) % 17 > 0) return;
         const path = calcPath(e, e.action.target, { mode: "attack" });
         if (
@@ -79,6 +83,7 @@ export const addAttackSystem = (app: Game) => {
           path,
           attacking: true,
         };
+        return;
       }
 
       if ((e.lastAttack ?? 0) + e.attack.cooldown <= time) {

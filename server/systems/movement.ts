@@ -5,7 +5,7 @@ import {
   distanceBetweenEntities,
   distanceBetweenPoints,
 } from "../../shared/pathing/math.ts";
-import { calcPath, pathable, pathingMap } from "./pathing.ts";
+import { calcPath, pathable } from "./pathing.ts";
 
 const repath = (e: Entity) => {
   if (e.action?.type !== "walk") return;
@@ -13,9 +13,7 @@ const repath = (e: Entity) => {
     const target = lookup(e.action.target);
     if (
       target && distanceBetweenEntities(e, target) <= (e.attack?.range ?? 0)
-    ) {
-      return delete (e as Entity).action;
-    }
+    ) return delete (e as Entity).action;
   }
   let newPath = calcPath(
     e,

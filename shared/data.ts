@@ -39,7 +39,7 @@ export const unitData: Record<
     maxHealth: 20,
   },
   wolf: {
-    movementSpeed: .031,
+    movementSpeed: 3.1,
     radius: 0.5,
     pathing: 1,
     attack: {
