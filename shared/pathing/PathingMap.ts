@@ -1,25 +1,18 @@
 import { DIRECTION, PATHING_TYPES } from "./constants.ts";
 import { BinaryHeap } from "./BinaryHeap.ts";
-// import { document } from "../util/globals";
-// import { emptyElement } from "../util/html";
 import {
   behind,
   distanceBetweenEntities,
   infront,
   offset,
+  Point,
   polarProject,
   trueMaxX,
   trueMinX,
 } from "./math.ts";
 import { memoize } from "./memoize.ts";
 import { Tile } from "./Tile.ts";
-import {
-  Footprint,
-  Pathing,
-  PathingEntity,
-  Point,
-  TargetEntity,
-} from "./types.ts";
+import { Footprint, Pathing, PathingEntity, TargetEntity } from "./types.ts";
 
 let debugging = false;
 // const elems: HTMLElement[] = [];
@@ -203,16 +196,12 @@ export class PathingMap {
       const oldPath = this.path;
       this.path = (...args) => {
         const ret = oldPath.call(this, ...args);
-        // eslint-disable-next-line no-console
-        if (debugging) console.debug("PathingMap#path", ret);
         return ret;
       };
 
       const oldRecheck = this.recheck;
       this.recheck = (...args) => {
         const ret = oldRecheck.call(this, ...args);
-        // eslint-disable-next-line no-console
-        if (debugging) console.debug("PathingMap#recheck", ret);
         return ret;
       };
     }
@@ -710,8 +699,11 @@ export class PathingMap {
   path(
     entity: PathingEntity,
     target: TargetEntity | Readonly<Point>,
-    start: Point = entity.position,
-    distance?: number,
+    { start = entity.position, distance, removeMovingEntities = true }: {
+      start?: Point;
+      distance?: number;
+      removeMovingEntities?: boolean;
+    } = {},
   ): Point[] {
     if (typeof entity.radius !== "number") {
       throw new Error("Can only path find radial entities");
@@ -725,6 +717,15 @@ export class PathingMap {
 
     const removed = this.entities.has(entity);
     if (removed) this.removeEntity(entity);
+
+    const removedMovingEntities = new Set<PathingEntity>();
+    if (removeMovingEntities) {
+      for (const entity of this.entities.keys()) {
+        if (!entity.isMoving) continue;
+        removedMovingEntities.add(entity);
+        this.removeEntity(entity);
+      }
+    }
 
     // We assume an entity shoved into the top left corner is good
     const pathing = entity.requiresPathing === undefined
@@ -773,6 +774,7 @@ export class PathingMap {
     // If we start and end on the same tile, just move between them
     if (startTile === endTile && this.pathable(entity)) {
       if (removed) this.addEntity(entity);
+      for (const entity of removedMovingEntities) this.addEntity(entity);
       return [
         { x: start.x, y: start.y },
         {
@@ -788,6 +790,7 @@ export class PathingMap {
       distanceBetweenEntities(entity, target) < distance
     ) {
       if (removed) this.addEntity(entity);
+      for (const entity of removedMovingEntities) this.addEntity(entity);
       // Should I return start?
       return [];
     }
@@ -841,11 +844,9 @@ export class PathingMap {
 
       if (startCurrent === endTile) {
         startBest = endTile;
-        console.debug("s reached end?1");
         break;
       } else if (startCurrent.__endTag === endTag) {
         startBest = endBest = startCurrent;
-        console.debug("s reached end?2");
         break;
       } else if (
         typeof distance === "number" && "position" in target
@@ -857,30 +858,9 @@ export class PathingMap {
           ) < distance
         ) {
           startBest = startCurrent;
-          console.debug(
-            "s in range!",
-            distanceBetweenEntities(
-              { ...entity, position: startCurrent.world },
-              target,
-            ),
-            target.position,
-          );
           break;
-        } else {
-          console.debug(
-            "not in range",
-            distanceBetweenEntities(
-              { ...entity, position: startCurrent.world },
-              target,
-            ),
-          );
         }
-      } else {console.debug(
-          "some other case",
-          distance,
-          "position" in target,
-          !!entity.attack,
-        );}
+      }
 
       startCurrent.__startClosed = true;
 
@@ -1030,25 +1010,11 @@ export class PathingMap {
 
       if (endCurrent === startTile) {
         endBest = startTile;
-        console.debug("e reached end?1");
         break;
       } else if (endCurrent.__startTag === startTag) {
-        console.debug("e reached end?2");
         startBest = endBest = endCurrent;
         break;
       }
-
-      // else if (
-      //   mode === "attack" && "position" in target && entity.attack &&
-      //   distanceBetweenEntities(
-      //       { ...entity, position: endCurrent.world },
-      //       target,
-      //     ) < entity.attack.range
-      // ) {
-      //   endBest = startTile;
-      //   console.debug("e in range!");
-      //   break;
-      // }
 
       endCurrent.__endClosed = true;
 
@@ -1252,18 +1218,13 @@ export class PathingMap {
 
     const last = pathTiles[pathTiles.length - 1];
 
-    console.debug("finalizing...", pathWorld);
-
     const path = [{ x: start.x, y: start.y }];
 
     if (
       pathWorld.length > 1 &&
       (pathWorld[0].x !== start.x || pathWorld[0].y !== start.y) &&
       !this.linearPathable(entity, start, pathWorld[1])
-    ) {
-      console.debug("including first tile");
-      path.push(pathWorld[0]);
-    }
+    ) path.push(pathWorld[0]);
 
     // const path = pathWorld.length > 1 &&
     //     (pathWorld[0].x !== start.x || pathWorld[0].y !== start.y)
@@ -1279,18 +1240,14 @@ export class PathingMap {
     if (
       !this.linearPathable(entity, path[path.length - 1], targetPosition) ||
       (last !== targetTile)
-    ) {
-      console.debug("including last tile");
-      path.push(pathWorld[pathWorld.length - 1]);
-    }
+    ) path.push(pathWorld[pathWorld.length - 1]);
 
-    if (last === targetTile && targetPathable) {
-      console.debug("including target");
-      path.push(targetPosition);
-    }
+    if (last === targetTile && targetPathable) path.push(targetPosition);
 
-    // Step back with a tolerance
-    const tolerance = 0.02;
+    // Step back with a tolerance between 99% and 100% distance to target
+    // E.g., if the passed distance is 100, the path will terminate (if
+    // possible) between 99 and 100 units away.
+    const tolerance = (distance ?? 0) * 0.01;
     if (
       typeof distance === "number" && "position" in target && path.length > 1 &&
       distanceBetweenEntities(
@@ -1298,14 +1255,6 @@ export class PathingMap {
           target,
         ) < distance - tolerance
     ) {
-      console.debug(
-        "refining from",
-        distanceBetweenEntities(
-          { ...entity, position: path[path.length - 1] },
-          target,
-        ),
-        distance,
-      );
       let a = path[path.length - 1];
       let b = path[path.length - 2];
       let mid;
@@ -1322,36 +1271,11 @@ export class PathingMap {
         if (currentDistance < distance) a = mid;
         else b = mid;
       }
-      console.debug(
-        "refined over",
-        itrs,
-        "iterations from",
-        distanceBetweenEntities(
-          { ...entity, position: path[path.length - 1] },
-          target,
-        ) - distance,
-        "to",
-        distanceBetweenEntities(
-          { ...entity, position: mid },
-          target,
-        ) - distance,
-      );
       if (mid && itrs < 15) path[path.length - 1] = mid;
-    } else {
-      console.debug(
-        "no shorten",
-        distance,
-        target,
-        path,
-        "position" in target &&
-          distanceBetweenEntities(
-            { ...entity, position: path[path.length - 1] },
-            target,
-          ),
-      );
     }
 
     if (removed) this.addEntity(entity);
+    for (const entity of removedMovingEntities) this.addEntity(entity);
 
     return path;
   }

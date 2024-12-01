@@ -3,8 +3,6 @@ import { Entity } from "../types.ts";
 
 export type Pathing = number;
 
-export type Point = { x: number; y: number };
-
 export type Footprint = {
   top: number;
   left: number;

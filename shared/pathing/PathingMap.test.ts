@@ -21,7 +21,7 @@ Deno.test("ok", () => {
   );
 });
 
-Deno.test.only("does not cut corner on last segment", () => {
+Deno.test("does not cut corner on last segment", () => {
   const solver = new PathingMap({
     resolution: 4,
     // Exclusion: [0.75, 2.25]
@@ -55,7 +55,7 @@ Deno.test.only("does not cut corner on last segment", () => {
   );
 });
 
-Deno.test.only("distance to target corner", () => {
+Deno.test("distance to target corner", () => {
   const sheep = {
     id: "sheep-0",
     radius: 0.25,
@@ -71,8 +71,8 @@ Deno.test.only("distance to target corner", () => {
   const solver = new PathingMap({ resolution: 4, pathing: [[0, 0], [0, 0]] });
   solver.addEntity(sheep);
   solver.addEntity(wolf);
-  assertEquals(solver.path(wolf, sheep, undefined, Math.SQRT2 - 1), [
+  assertEquals(solver.path(wolf, sheep, { distance: Math.SQRT2 - 1 }), [
     { x: 0.5, y: 0.5 },
-    { x: 1, y: 1.5 },
+    { x: 51 / 64, y: 70 / 64 },
   ]);
 });

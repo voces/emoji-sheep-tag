@@ -17,14 +17,14 @@ export const addAttackSystem = (app: Game) => {
       if (e.action?.type !== "attack" || !e.position) {
         delete (e as Entity).isAttacking;
         if (e.swing) delete e.swing;
-        return console.debug("bad action or position", e.action, e.position);
+        return;
       }
 
       if (!e.attack) {
         delete e.action;
         delete (e as Entity).isAttacking;
         if (e.swing) delete e.swing;
-        return console.debug("bad attack");
+        return;
       }
 
       const target = lookup(e.action.target);
@@ -33,43 +33,42 @@ export const addAttackSystem = (app: Game) => {
         delete e.action;
         delete (e as Entity).isAttacking;
         if (e.swing) delete e.swing;
-        return console.debug("bad target");
+        return;
       }
 
       if (e.swing) {
-        const d = distanceBetweenPoints(target.position, e.swing.target) >
-          e.attack.rangeMotionBuffer;
-        if (e.attack.rangeMotionBuffer > 0 && d) {
-          delete e.swing;
-        } else if (e.swing.time + e.attack.damagePoint <= time) {
-          console.debug(time, "hit");
+        if (
+          e.attack.rangeMotionBuffer > 0 &&
+          distanceBetweenPoints(target.position, e.swing.target) >
+            e.attack.rangeMotionBuffer
+        ) delete e.swing;
+        else if (e.swing.time + e.attack.damagePoint <= time) {
           delete e.swing;
           e.lastAttack = time;
           if (target.health) {
             target.health = Math.max(0, target.health - e.attack.damage);
-            console.debug("now at", target.health, "health");
             if (target.health === 0) {
               app.dispatchTypedEvent(
                 "unitDeath",
                 new UnitDeathEvent(target, e),
               );
             }
-          } else console.debug("no health?", target.health);
+          }
         }
-        return; //console.debug("swinging", d, e.attack.rangeMotionBuffer);
+        return;
       }
 
       if (distanceBetweenEntities(e, target) > e.attack.range) {
         if ((counter + offset) % 17 > 0) return;
-        console.debug(
-          "attack system calc path",
-          distanceBetweenEntities(e, target),
-        );
-        const path = calcPath(e, e.action.target, "attack");
-        if (!path.length) {
-          delete e.action;
+        const path = calcPath(e, e.action.target, { mode: "attack" });
+        if (
+          !path.length ||
+          (path[path.length - 1].x === e.position.x &&
+            path[path.length - 1].y === e.position.y)
+        ) {
           delete (e as Entity).isAttacking;
-          return console.debug("unpathable");
+          delete e.action;
+          return;
         }
         e.queue = [e.action, ...(e.queue ?? [])];
         delete (e as Entity).isAttacking;
@@ -80,25 +79,11 @@ export const addAttackSystem = (app: Game) => {
           path,
           attacking: true,
         };
-        return console.debug(
-          "repathed",
-          distanceBetweenEntities(e, target),
-          {
-            position: e.position,
-            path,
-            target,
-            range: e.attack.range,
-          },
-          target.position,
-          e.radius,
-          target.radius,
-        );
       }
 
       if ((e.lastAttack ?? 0) + e.attack.cooldown <= time) {
-        console.debug(time, "swing", distanceBetweenEntities(e, target));
         e.swing = { time, source: e.position, target: target.position };
-      } //else console.debug("cooldown");
+      }
     },
   });
 };

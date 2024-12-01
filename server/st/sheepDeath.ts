@@ -6,6 +6,7 @@ import { data } from "./data.ts";
 
 onInit((game) => {
   game.addEventListener("unitDeath", ({ unit, killer }) => {
+    if (unit.unitType !== "sheep") return;
     console.log(`${killer.owner} killed ${unit.owner}`);
     if (!data.sheep.some((p) => (p.sheep?.health ?? 0) > 0)) {
       const lobby = lobbyContext.context;

@@ -86,7 +86,7 @@ const updateIntersects = () => {
       const id = parent.getId(intersect.instanceId);
       if (!id) continue;
       const entity = lookup[id];
-      if (!entity) continue;
+      if (!entity || entity.blueprint) continue;
       set.add(entity);
     }
     if (set.size || mouse.intersects.size) mouse.intersects = set;

@@ -8,7 +8,7 @@ export const lookup = (entityId: string) => {
   const app = lobbyContext.context.round?.ecs;
   if (!app) throw new Error("No round in progress");
   const entity = data.get(app)?.[entityId];
-  if (!entity) throw new Error(`Could not find entity ${entityId}`);
+  // if (!entity) throw new Error(`Could not find entity ${entityId}`);
   return entity;
 };
 

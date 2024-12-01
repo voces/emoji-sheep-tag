@@ -7,7 +7,7 @@ import { Entity } from "../../shared/types.ts";
 import { build as buildUnit, tempUnit } from "../api/unit.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
-import { calcPath, pathable } from "../systems/pathing.ts";
+import { calcPath, pathable, withPathingMap } from "../systems/pathing.ts";
 
 export const zBuild = z.object({
   type: z.literal("build"),
@@ -26,7 +26,7 @@ export const build = (
   const u = round.lookup[unit];
   if (
     u?.owner !== client.id || !u.position || !u.radius ||
-    !u.builds?.includes(buildType)
+    !u.actions?.some((a) => a.type === "build" && a.unitType === buildType)
   ) return;
 
   // Interrupt
@@ -39,7 +39,14 @@ export const build = (
   }
 
   const temp = tempUnit(client.id, buildType, x, y);
-  if (!pathable(temp)) return;
+  if (
+    !withPathingMap((pm) =>
+      pm.withoutEntity(
+        u as SystemEntity<Entity, "position" | "radius">,
+        () => pathable(temp),
+      )
+    )
+  ) return;
 
   // Otherwise walk there and build
   const path = calcPath(u, { x, y }).slice(1);

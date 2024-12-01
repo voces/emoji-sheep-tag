@@ -5,8 +5,16 @@ import { Entity } from "./ecs.ts";
 import { getLocalPlayer } from "./ui/vars/players.ts";
 import { selection } from "./systems/autoSelect.ts";
 import { camera } from "./graphics/three.ts";
+import { UnitDataAction } from "../shared/types.ts";
+import { absurd } from "../shared/util/absurd.ts";
+import { setFind } from "../server/util/set.ts";
+import { SystemEntity } from "jsr:@verit/ecs";
+import { unitData } from "../shared/data.ts";
 
-const normalize = (value: number) => Math.round(value * 2) / 2;
+const normalize = (value: number, evenStep: boolean) =>
+  evenStep
+    ? Math.round(value * 2) / 2
+    : (Math.round(value * 2 + 0.5) - 0.5) / 2;
 
 mouse.addEventListener("mouseButtonDown", (e) => {
   if (!selection.size) return;
@@ -49,54 +57,116 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       units: Array.from(selection, (e) => e.id),
       target: e.world,
     });
-  } else if (e.button === "left" && blueprint) {
-    send({
-      type: "build",
-      unit: Array.from(
-        selection.filter((u) => u.builds?.includes("hut")),
-        (e) => e.id,
-      )[0],
-      buildType: "hut",
-      x: normalize(e.world.x),
-      y: normalize(e.world.y),
-    });
-    app.delete(blueprint);
-    blueprint = undefined;
+  } else if (e.button === "left") {
+    if (blueprint) {
+      const unitType = blueprint.unitType;
+      const unit = setFind(
+        selection,
+        (u) =>
+          u.actions?.some((a) =>
+            a.type === "build" && a.unitType === unitType
+          ) ?? false,
+      )?.id;
+      app.delete(blueprint);
+      blueprint = undefined;
+      if (!unit) return;
+      send({
+        type: "build",
+        unit,
+        buildType: unitType,
+        x: normalize(
+          e.world.x,
+          (unitData[unitType]?.tilemap?.width ?? 0) % 4 === 0,
+        ),
+        y: normalize(
+          e.world.y,
+          (unitData[unitType]?.tilemap?.height ?? 0) % 4 === 0,
+        ),
+      });
+    }
   }
 });
 
 mouse.addEventListener("mouseMove", (e) => {
   if (blueprint) {
-    blueprint.position = { x: normalize(e.world.x), y: normalize(e.world.y) };
+    blueprint.position = {
+      x: normalize(
+        e.world.x,
+        (unitData[blueprint.unitType]?.tilemap?.width ?? 0) % 4 === 0,
+      ),
+      y: normalize(
+        e.world.y,
+        (unitData[blueprint.unitType]?.tilemap?.height ?? 0) % 4 === 0,
+      ),
+    };
   }
 });
 
 const keyboard: Record<string, boolean> = {};
 
+const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
+  switch (a.type) {
+    case "auto":
+      return b.type === "auto" && a.order === b.order;
+    case "build":
+      return b.type === "build" && a.unitType === b.unitType;
+    default:
+      absurd(a);
+  }
+};
+
 let blueprintIndex = 0;
-let blueprint: Entity | undefined;
+let blueprint: SystemEntity<Entity, "unitType"> | undefined;
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
-  if (!selection.some((u) => u.builds?.includes("hut"))) return;
-  if (blueprint) app.delete(blueprint);
-  if (e.code === "KeyF") {
-    return blueprint = app.add({
+
+  if (e.code === "Escape" && blueprint) {
+    app.delete(blueprint);
+    blueprint = undefined;
+  }
+
+  const units: Entity[] = [];
+  let action: UnitDataAction | undefined;
+  for (const entity of selection) {
+    if (!entity.actions) continue;
+    for (const a of entity.actions) {
+      if (a.binding?.[0] === e.code && (!action || isSameAction(action, a))) {
+        action = a;
+        units.push(entity);
+      }
+    }
+  }
+
+  if (!action) return;
+
+  if (action.type === "build") {
+    if (blueprint) app.delete(blueprint);
+    blueprint = app.add({
       id: `blueprint-${blueprintIndex}`,
-      unitType: "hut",
-      position: { x: normalize(mouse.world.x), y: normalize(mouse.world.y) },
+      unitType: action.unitType,
+      position: {
+        x: normalize(
+          mouse.world.x,
+          (unitData[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
+        ),
+        y: normalize(
+          mouse.world.y,
+          (unitData[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
+        ),
+      },
       owner: getLocalPlayer()?.id,
       blueprint: true,
     });
+    return;
   }
-  if (e.code === "KeyX") {
-    const units = selection.filter((u) => u.unitType === "sheep");
-    if (units.size) {
-      send({
-        type: "unitOrder",
-        order: "destroyLastFarm",
-        units: Array.from(units, (u) => u.id),
-      });
-    }
+
+  if (action.type === "auto") {
+    send({
+      type: "unitOrder",
+      order: action.order,
+      units: units.map((u) => u.id),
+    });
+    return;
   }
 });
 

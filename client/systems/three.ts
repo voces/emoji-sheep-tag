@@ -13,15 +13,19 @@ import wolfSvg from "../assets/wolf.svg";
 import hutSvg from "../assets/hut.svg";
 
 const sheep = loadSvg(sheepSvg, 1);
-const wolves = loadSvg(wolfSvg, 2);
-const huts = loadSvg(hutSvg, 2);
+const wolf = loadSvg(wolfSvg, 2);
+const hut = loadSvg(hutSvg, 2);
+const tinyHut = loadSvg(hutSvg, 1);
+const wideHut = loadSvg(hutSvg, 3);
+const rotundHut = loadSvg(hutSvg, 4);
 
 const collections: Record<string, InstancedGroup | undefined> = {
   sheep,
-  wolf: wolves,
-  hut: huts,
-  // house: houses,
-  // derelictHouse: derelictHouses,
+  wolf,
+  hut,
+  tinyHut,
+  wideHut,
+  rotundHut,
 };
 
 const color = new Color();

@@ -1,5 +1,4 @@
 import { newApp } from "jsr:@verit/ecs";
-import { Color } from "three";
 import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "../shared/types.ts";
 

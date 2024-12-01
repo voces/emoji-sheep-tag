@@ -17,7 +17,6 @@ export const attack = (
   client: Client,
   { units, target }: z.TypeOf<typeof zAttack>,
 ) => {
-  console.log("attack");
   const round = lobbyContext.context.round;
   if (!round) return;
   const attackingUnits = units
@@ -27,7 +26,7 @@ export const attack = (
     ): e is SystemEntity<Entity, "position" | "attack"> =>
       !!e && e.owner === client.id && !!e.attack && !!e.position
     );
-  if (!attackingUnits.length) return console.log("no units!");
+  if (!attackingUnits.length) return;
   attackingUnits.forEach((u) => {
     // Interrupt
     delete u.action;
@@ -39,7 +38,7 @@ export const attack = (
     if (!targetPos) return;
 
     // Path to target and attack
-    const path = calcPath(u, target, "attack").slice(1);
+    const path = calcPath(u, target, { mode: "attack" }).slice(1);
     if (!path.length) return;
     u.action = {
       type: "walk",

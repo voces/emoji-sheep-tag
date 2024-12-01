@@ -44,7 +44,20 @@ const zUpdate = z.object({
   mana: z.number().optional(),
   position: zPoint.readonly().optional(),
   movementSpeed: z.number().optional(),
-  builds: z.string().array().optional(),
+  actions: z.array(
+    z.union([
+      z.object({
+        type: z.literal("build"),
+        unitType: z.string(),
+        binding: z.array(z.string()).optional(),
+      }),
+      z.object({
+        type: z.literal("auto"),
+        order: z.string(),
+        binding: z.array(z.string()).optional(),
+      }),
+    ]),
+  ).optional(),
   attack: z.object({
     damage: z.number(),
     range: z.number(),
@@ -62,6 +75,7 @@ const zUpdate = z.object({
   // Tags
   isMoving: z.boolean().nullable().optional(),
   isAttacking: z.boolean().nullable().optional(),
+  isIdle: z.boolean().nullable().optional(),
 
   // Pathing
   radius: z.number().optional(),
@@ -200,7 +214,7 @@ const connect = () => {
       }
       throw err;
     }
-    console.log(data);
+    // console.log(data);
     handlers[data.type](data as any);
   });
 };

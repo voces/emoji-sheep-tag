@@ -19,9 +19,9 @@ export const unitData: Record<
     | "radius"
     | "pathing"
     | "tilemap"
-    | "builds"
     | "attack"
     | "maxHealth"
+    | "actions"
   >
   | undefined
 > = {
@@ -29,30 +29,46 @@ export const unitData: Record<
     movementSpeed: 3,
     radius: 0.25,
     pathing: 1,
-    builds: ["hut"],
+    actions: [
+      { type: "build", unitType: "tinyHut", binding: ["KeyT"] },
+      { type: "build", unitType: "hut", binding: ["KeyF"] },
+      { type: "build", unitType: "wideHut", binding: ["KeyW"] },
+      { type: "build", unitType: "rotundHut", binding: ["KeyR"] },
+      { type: "auto", order: "destroyLastFarm", binding: ["KeyX"] },
+    ],
     maxHealth: 20,
   },
   wolf: {
-    movementSpeed: 3.1,
+    movementSpeed: .031,
     radius: 0.5,
     pathing: 1,
     attack: {
       damage: 100,
       range: 0.4,
       rangeMotionBuffer: 1,
-      cooldown: 1.5,
+      cooldown: 1.2,
       damagePoint: 0.3,
     },
   },
   hut: {
+    radius: 0.5,
+    tilemap: { map: Array(16).fill(1), top: -2, left: -2, width: 4, height: 4 },
+    maxHealth: 120,
+  },
+  tinyHut: {
+    radius: 0.25,
+    tilemap: { map: Array(4).fill(1), top: -1, left: -1, width: 2, height: 2 },
+    maxHealth: 20,
+  },
+  wideHut: {
+    radius: 0.75,
+    tilemap: { map: Array(36).fill(1), top: -3, left: -3, width: 6, height: 6 },
+    maxHealth: 120,
+  },
+  rotundHut: {
     radius: 1,
-    tilemap: {
-      map: Array(16).fill(1),
-      top: -2,
-      left: -2,
-      width: 4,
-      height: 4,
-    },
+    tilemap: { map: Array(64).fill(1), top: -4, left: -4, width: 8, height: 8 },
+    maxHealth: 200,
   },
 };
 

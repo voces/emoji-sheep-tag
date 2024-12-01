@@ -23,18 +23,30 @@ export const withPathingMap = <T>(fn: (pathingMap: PathingMap) => T) =>
 export const calcPath = (
   entity: Entity,
   target: string | { x: number; y: number },
-  mode?: "attack",
+  { mode, removeMovingEntities }: {
+    mode?: "attack";
+    removeMovingEntities?: boolean;
+  } = {},
 ) => {
-  console.debug("calcPath", mode, entity.id);
   if (!isPathingEntity(entity)) return [];
   if (typeof target === "string") {
     const targetEntity = lookup(target);
-    if (!targetEntity.position) return [];
+    if (!targetEntity?.position) return [];
     return pathingMap().path(
       entity,
       targetEntity as TargetEntity,
-      undefined,
-      mode === "attack" ? (entity.attack?.range ?? 0) : undefined,
+      {
+        distance: mode === "attack"
+          ? Math.max(
+            0,
+            (entity.attack?.range ?? 0) -
+              (targetEntity.isMoving
+                ? (targetEntity.movementSpeed ?? 0) * 0.2
+                : 0),
+          )
+          : undefined,
+        removeMovingEntities,
+      },
     );
   }
   return pathingMap().path(
@@ -79,7 +91,6 @@ export const updatePathing = (entity: Entity) => {
     () => p.nearestSpiralPathing(entity.position.x, entity.position.y, entity),
   );
   if (nearest.x !== entity.position.x || nearest.y !== entity.position.y) {
-    console.log("fix", entity.position, nearest);
     entity.position = nearest;
   }
 };

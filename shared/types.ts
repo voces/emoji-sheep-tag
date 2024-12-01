@@ -22,6 +22,16 @@ type Action = Readonly<
   }
 >;
 
+export type UnitDataAction = {
+  readonly type: "build";
+  readonly unitType: string;
+  readonly binding?: string[];
+} | {
+  readonly type: "auto";
+  readonly order: string;
+  readonly binding?: string[];
+};
+
 export type Entity = {
   id: string;
   unitType?: string;
@@ -34,7 +44,7 @@ export type Entity = {
   maxHealth?: number;
   mana?: number;
   movementSpeed?: number;
-  builds?: string[];
+  actions?: ReadonlyArray<UnitDataAction>;
   attack?: {
     readonly damage: number;
     readonly range: number;
@@ -57,6 +67,7 @@ export type Entity = {
   // Tags
   isMoving?: boolean | null;
   isAttacking?: boolean | null;
+  isIdle?: boolean | null;
 
   // Pathing
   radius?: number;

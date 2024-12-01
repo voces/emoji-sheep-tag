@@ -1,7 +1,7 @@
 import { SystemEntity } from "jsr:@verit/ecs";
 import { Entity } from "../types.ts";
 
-type Point = { x: number; y: number };
+export type Point = { x: number; y: number };
 
 export const polarProject = (
   point: Point,
@@ -126,20 +126,41 @@ const distanceBetweenUnits = (unitA: Unit, unitB: Unit) => {
   return Math.max(0, centerDistance - unitA.radius - unitB.radius);
 };
 
+const tileSize = 0.5; // Each tile represents 0.5 units in world space
+
 const distanceBetweenUnitAndStructure = (unit: Unit, structure: Structure) => {
   let minDistance = Infinity;
-  for (let i = 0; i < structure.tilemap.width * structure.tilemap.height; i++) {
-    if (!structure.tilemap.map[i]) { // Only consider tiles that are part of the structure
-      const tileX = structure.position.x + structure.tilemap.left +
-        (i % structure.tilemap.width);
-      const tileY = structure.position.y + structure.tilemap.top +
-        Math.floor(i / structure.tilemap.width);
-      const dx = unit.position.x - tileX;
-      const dy = unit.position.y - tileY;
-      const distance = Math.sqrt(dx * dx + dy * dy) - unit.radius;
-      minDistance = Math.min(minDistance, distance);
-    }
+  const { width, height, left, top, map } = structure.tilemap;
+
+  // Calculate the origin (top-left corner) of the tilemap in world coordinates
+  const tilemapOriginX = structure.position.x + left * tileSize;
+  const tilemapOriginY = structure.position.y + top * tileSize;
+
+  for (let i = 0; i < width * height; i++) {
+    if (!map[i]) continue; // Only consider occupied tiles
+
+    const col = i % width;
+    const row = Math.floor(i / width);
+
+    // Calculate the tile's position in world coordinates
+    const tileMinX = tilemapOriginX + col * tileSize;
+    const tileMinY = tilemapOriginY + row * tileSize;
+    const tileMaxX = tileMinX + tileSize;
+    const tileMaxY = tileMinY + tileSize;
+
+    // Find the closest point on the tile to the unit's center
+    const closestX = Math.max(tileMinX, Math.min(unit.position.x, tileMaxX));
+    const closestY = Math.max(tileMinY, Math.min(unit.position.y, tileMaxY));
+
+    // Calculate the distance from the unit's center to this closest point
+    const dx = unit.position.x - closestX;
+    const dy = unit.position.y - closestY;
+    const distance = Math.sqrt(dx * dx + dy * dy) - unit.radius;
+
+    minDistance = Math.min(minDistance, distance);
   }
+
+  // If the minimum distance is negative or zero, the unit and structure touch or overlap
   return Math.max(0, minDistance);
 };
 
@@ -153,27 +174,25 @@ const distanceBetweenStructures = (
     i < structureA.tilemap.width * structureA.tilemap.height;
     i++
   ) {
-    if (!structureA.tilemap.map[i]) {
-      const tileAx = structureA.position.x + structureA.tilemap.left +
-        (i % structureA.tilemap.width);
-      const tileAy = structureA.position.y + structureA.tilemap.top +
-        Math.floor(i / structureA.tilemap.width);
-      for (
-        let j = 0;
-        j < structureB.tilemap.width * structureB.tilemap.height;
-        j++
-      ) {
-        if (!structureB.tilemap.map[j]) {
-          const tileBx = structureB.position.x + structureB.tilemap.left +
-            (j % structureB.tilemap.width);
-          const tileBy = structureB.position.y + structureB.tilemap.top +
-            Math.floor(j / structureB.tilemap.width);
-          const dx = tileAx - tileBx;
-          const dy = tileAy - tileBy;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          minDistance = Math.min(minDistance, distance);
-        }
-      }
+    if (!structureA.tilemap.map[i]) continue;
+    const tileAx = structureA.position.x + (structureA.tilemap.left +
+          (i % structureA.tilemap.width)) / 2;
+    const tileAy = structureA.position.y + (structureA.tilemap.top +
+          Math.floor(i / structureA.tilemap.width)) / 2;
+    for (
+      let j = 0;
+      j < structureB.tilemap.width * structureB.tilemap.height;
+      j++
+    ) {
+      if (!structureB.tilemap.map[j]) continue;
+      const tileBx = structureB.position.x + (structureB.tilemap.left +
+            (j % structureB.tilemap.width)) / 2;
+      const tileBy = structureB.position.y + (structureB.tilemap.top +
+        Math.floor(j / structureB.tilemap.width) / 2);
+      const dx = tileAx - tileBx;
+      const dy = tileAy - tileBy;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      minDistance = Math.min(minDistance, distance);
     }
   }
 

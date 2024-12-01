@@ -1,6 +1,7 @@
 import { unitData } from "../../shared/data.ts";
 import { Entity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
+import { data } from "../st/data.ts";
 import {
   isPathingEntity,
   pathingMap,
@@ -40,9 +41,18 @@ export const tempUnit = (
   unitType: type,
   owner,
   position: { x, y },
-  health: unitData[type]?.maxHealth,
+  ...(typeof unitData[type]?.maxHealth === "number"
+    ? { health: unitData[type]?.maxHealth }
+    : undefined),
+  isIdle: true,
   ...unitData[type],
 });
 
 export const newUnit = (owner: string, type: string, x: number, y: number) =>
   currentApp().add(tempUnit(owner, type, x, y));
+
+export const isEnemy = (source: Entity, target: Entity) => {
+  const sourceIsSheep = data.sheep.some((s) => s.client.id === source.owner);
+  const targetIsSheep = data.sheep.some((s) => s.client.id === target.owner);
+  return sourceIsSheep !== targetIsSheep;
+};

@@ -14,3 +14,11 @@ export const setFind = <
     }
   }
 };
+
+export const setSome = <T>(
+  set: ReadonlySet<T>,
+  fn: (element: T) => boolean,
+) => {
+  for (const element of set) if (fn(element)) return true;
+  return false;
+};

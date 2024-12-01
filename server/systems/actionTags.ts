@@ -7,10 +7,9 @@ import { BUILD_RADIUS } from "../../shared/data.ts";
 
 export const addActionTagSystem = (app: App<Entity>) => {
   const handler = (e: SystemEntity<Entity, "action">) => {
-    if (e.action.type === "walk" && !e.isMoving) {
-      console.debug("setting isMoving to true");
-      return e.isMoving = true;
-    }
+    if (e.isIdle) delete e.isIdle;
+
+    if (e.action.type === "walk" && !e.isMoving) return e.isMoving = true;
 
     if (e.action.type === "build") {
       if (
@@ -29,5 +28,8 @@ export const addActionTagSystem = (app: App<Entity>) => {
     props: ["action"],
     onAdd: handler,
     onChange: handler,
+    onRemove: (e) => {
+      e.isIdle = true;
+    },
   });
 };

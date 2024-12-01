@@ -35,10 +35,8 @@ export const start = (client: Client) => {
     ecs,
     lookup,
     clearInterval: interval(() => {
-      // console.debug("update start");
       ecs.update();
       flushUpdates();
-      // console.debug("update end");
     }, 0.05),
   };
 
@@ -58,36 +56,20 @@ export const start = (client: Client) => {
       const lobby = lobbyContext.context;
       if (!lobby.round) return;
       const r = Math.random() * Math.PI * 2;
-      let lastSheep: Entity;
       for (const owner of sheep) {
-        lastSheep = newUnit(
+        newUnit(
           owner.id,
           "sheep",
           25 + 3 * Math.cos(r),
           25 + 3 * Math.sin(r),
         );
       }
-      // for (let y = 19; y < 32; y += 1.5) {
-      //   for (let x = 16; x < 35; x += 1.5) {
-      //     newUnit(Array.from(sheep)[0].id, "hut", x, y);
-      //   }
-      // }
 
       timeout(() => {
         const lobby = lobbyContext.context;
         if (!lobby.round) return;
-        for (const owner of wolves) {
-          const wolf = newUnit(owner.id, "wolf", 25, 25);
-          if (!wolf.queue) {
-            wolf.queue = [{ type: "attack", target: lastSheep.id }];
-          } else {
-            wolf.queue = [...wolf.queue, {
-              type: "attack",
-              target: lastSheep.id,
-            }];
-          }
-        }
-      }, 0.5);
+        for (const owner of wolves) newUnit(owner.id, "wolf", 25, 25);
+      }, 2);
     }, 0.3);
   });
 };
