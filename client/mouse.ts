@@ -66,6 +66,7 @@ export const mouse: MouseEventTarget & Mouse = Object.assign(
 );
 
 const raycaster = new Raycaster();
+raycaster.layers.set(0);
 
 const cameraSpace = new Vector2();
 
@@ -74,7 +75,8 @@ const plane = new Plane(new Vector3(0, 0, 1), 0);
 const world3 = new Vector3();
 
 const updateIntersects = () => {
-  const intersects = raycaster.intersectObjects(scene.children, true);
+  raycaster.layers.set(0);
+  const intersects = raycaster.intersectObject(scene, true);
   if (intersects.length) {
     const set = new Set<Entity>();
     for (const intersect of intersects) {
@@ -98,10 +100,21 @@ const updateIntersects = () => {
 };
 
 globalThis.addEventListener("pointermove", (event) => {
-  mouse.pixels.x = event.clientX;
-  mouse.pixels.y = event.clientY;
-  mouse.percent.x = event.clientX / window.innerWidth;
-  mouse.percent.y = event.clientY / window.innerHeight;
+  if (document.pointerLockElement) {
+    mouse.pixels.x = Math.max(
+      8,
+      Math.min(mouse.pixels.x + event.movementX, window.innerWidth - 8),
+    );
+    mouse.pixels.y = Math.max(
+      8,
+      Math.min(mouse.pixels.y + event.movementY, window.innerHeight - 8),
+    );
+  } else {
+    mouse.pixels.x = event.clientX;
+    mouse.pixels.y = event.clientY;
+  }
+  mouse.percent.x = mouse.pixels.x / window.innerWidth;
+  mouse.percent.y = mouse.pixels.y / window.innerHeight;
   cameraSpace.x = mouse.percent.x * 2 - 1;
   cameraSpace.y = mouse.percent.y * -2 + 1;
 

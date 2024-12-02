@@ -24,6 +24,7 @@
     "npm:esbuild@*": "0.23.0",
     "npm:react-dom@*": "18.3.1_react@18.3.1",
     "npm:react@*": "18.3.1",
+    "npm:stats.js@*": "0.17.0",
     "npm:styled-components@*": "6.1.11_react@18.3.1_react-dom@18.3.1__react@18.3.1",
     "npm:zod@*": "3.23.8"
   },
@@ -302,6 +303,9 @@
     },
     "source-map-js@1.2.0": {
       "integrity": "sha512-itJW8lvSA0TXEphiRoawsCksnlf8SyvmFzIhltqAHluXd88pkCd+cXJVHTDwdCr0IzwptSm035IHQktUu1QUMg=="
+    },
+    "stats.js@0.17.0": {
+      "integrity": "sha512-hNKz8phvYLPEcRkeG1rsGmV5ChMjKDAWU7/OJJdDErPBNChQXxCo3WZurGpnWc6gZhAzEPFad1aVgyOANH1sMw=="
     },
     "styled-components@6.1.11_react@18.3.1_react-dom@18.3.1__react@18.3.1": {
       "integrity": "sha512-Ui0jXPzbp1phYij90h12ksljKGqF8ncGx+pjrNPsSPhbUUjWT2tD1FwGo2LF6USCnbrsIhNngDfodhxbegfEOA==",

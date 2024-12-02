@@ -73,6 +73,6 @@ Deno.test("distance to target corner", () => {
   solver.addEntity(wolf);
   assertEquals(solver.path(wolf, sheep, { distance: Math.SQRT2 - 1 }), [
     { x: 0.5, y: 0.5 },
-    { x: 51 / 64, y: 70 / 64 },
+    { x: 407 / 512, y: 279 / 256 },
   ]);
 });

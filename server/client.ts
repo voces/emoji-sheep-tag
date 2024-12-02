@@ -11,6 +11,7 @@ import { colors } from "../shared/data.ts";
 import { attack, zAttack } from "./actions/attack.ts";
 import { unitOrder, zOrderEvent } from "./actions/unitOrder.ts";
 import { flushUpdates } from "./updates.ts";
+import { ping, zPing } from "./actions/ping.ts";
 
 const wrap = <T extends (...args: any[]) => unknown>(
   client: Client,
@@ -67,6 +68,7 @@ const zClientToServerMessage = z.union([
   zBuild,
   zAttack,
   zOrderEvent,
+  zPing,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -77,6 +79,7 @@ const actions = {
   build,
   attack,
   unitOrder,
+  ping,
 };
 
 export const handleSocket = (socket: WebSocket) => {

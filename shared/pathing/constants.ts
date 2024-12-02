@@ -6,7 +6,7 @@ export const PATHING_TYPES = {
 
 export const DIRECTION = {
   DOWN: 0,
-  RIGHT: 1,
+  LEFT: 1,
   UP: 2,
-  LEFT: 3,
+  RIGHT: 3,
 };

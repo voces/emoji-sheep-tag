@@ -457,7 +457,7 @@ export class PathingMap {
     // 0 down, 1 left, 2 up, 3 right
     let direction = Math.abs(0.5 - xMiss) > Math.abs(0.5 - yMiss)
       ? xMiss < 0.5 ? DIRECTION.LEFT : DIRECTION.RIGHT
-      : yMiss < 0.5 && yMiss > 0
+      : yMiss < 0.5 && yMiss >= 0
       ? DIRECTION.UP
       : DIRECTION.DOWN;
 
@@ -472,8 +472,10 @@ export class PathingMap {
     if (entity.tilemap) {
       minimalTilemap = entity.tilemap;
       offset = {
-        x: entity.tilemap.left / this.resolution,
-        y: entity.tilemap.top / this.resolution,
+        x: entity.tilemap.left / this.resolution -
+          (entity.tilemap.width % 4 === 0 ? 0 : 0.25),
+        y: entity.tilemap.top / this.resolution +
+          (entity.tilemap.height % 4 === 0 ? 0 : 0.25),
       };
     } else {
       minimalTilemap = this.pointToTilemap(
@@ -524,7 +526,9 @@ export class PathingMap {
 
       if (steps === 0) {
         steps = initialSteps;
-        if (direction === 0 || direction === 2) initialSteps++;
+        if (direction === DIRECTION.DOWN || direction === DIRECTION.UP) {
+          initialSteps++;
+        }
         direction = (direction + 1) % 4;
       } else steps--;
 

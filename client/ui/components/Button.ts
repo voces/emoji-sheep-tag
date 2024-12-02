@@ -13,14 +13,14 @@ export const Button = styled.button(({ theme, color = "green" }) => ({
   boxShadow: getBoxShadow(theme, color, 3),
   position: "relative",
   transition: "all 0.2s ease",
-  "&:hover": {
+  "&:hover, &.hover": {
     cursor: "pointer",
     transform: "translateY(-3px)",
   },
-  "&:active": {
+  "&:active, &.active": {
     transform: "translateY(2px)",
   },
-  "&:focus": {
+  "&:focus, &.focus": {
     outline: "none",
     transform: "translateY(-3px)",
     boxShadow: getBoxShadow(theme, color, 3, false),

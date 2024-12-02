@@ -4,11 +4,12 @@ import { PathingMap } from "../../shared/pathing/PathingMap.ts";
 import { currentApp } from "../contexts.ts";
 import { PathingEntity, TargetEntity } from "../../shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
+import { tiles } from "../../shared/map.ts";
 
 const pathingMaps = new WeakMap<App<Entity>, PathingMap>();
 
 export const isPathingEntity = (entity: Entity): entity is PathingEntity =>
-  !!entity.position && typeof entity.radius === "number";
+  !!entity.position && typeof entity.radius === "number" && !entity.isDoodad;
 
 export const pathingMap = () => {
   const app = currentApp();
@@ -98,10 +99,7 @@ export const updatePathing = (entity: Entity) => {
 export const addPathingSystem = (app: App<Entity>) => {
   const pathingMap = new PathingMap({
     resolution: 4,
-    pathing: Array.from(
-      { length: 50 },
-      () => Array.from({ length: 50 }, () => 0),
-    ),
+    pathing: tiles.reverse(),
   });
 
   pathingMaps.set(app, pathingMap);

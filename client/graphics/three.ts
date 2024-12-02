@@ -1,4 +1,7 @@
 import { Color, PerspectiveCamera, Scene, WebGLRenderer } from "three";
+import { center, tiles } from "../../shared/map.ts";
+import { Grid } from "./Grid.ts";
+import { stats } from "../util/Stats.ts";
 
 const canvas = document.querySelector("canvas");
 if (!canvas) throw new Error("Could not find canvas");
@@ -13,13 +16,42 @@ export const camera = new PerspectiveCamera(
 
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(globalThis.devicePixelRatio);
-renderer.setClearColor(new Color(0x63CB00));
+renderer.setClearColor(new Color(0x333333));
+// renderer.setClearColor(new Color(0x63CB00));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 camera.position.z = 9;
-camera.position.x = 25;
-camera.position.y = 25;
+camera.position.x = center.x;
+camera.position.y = center.y;
+camera.layers.enableAll();
+
+const terrain = new Grid(tiles[0].length, tiles.length);
+terrain.layers.set(2);
+terrain.position.x = center.x;
+terrain.position.y = center.y;
+scene.add(terrain);
+for (let y = 0; y < tiles.length; y++) {
+  for (let x = 0; x < tiles[y].length; x++) {
+    if (tiles[y][x]) {
+      terrain.setColor(
+        x,
+        y,
+        0.09,
+        0.04,
+        0.14,
+      );
+    } else {
+      terrain.setColor(
+        x,
+        y,
+        0.39,
+        0.80,
+        0,
+      );
+    }
+  }
+}
 
 const resize = () => {
   camera.aspect = globalThis.innerWidth / globalThis.innerHeight;
@@ -36,16 +68,28 @@ export const onRender = (fn: RenderListener) => {
   renderListeners.push(fn);
 };
 
-let last = Date.now() / 1000;
+let last = performance.now() / 1000;
+const frameTimes: number[] = [];
+let fps = 0;
 const animate = () => {
-  const time = Date.now() / 1000;
+  const time = performance.now() / 1000;
   const delta = time - last;
   last = time;
+
+  frameTimes.push(delta);
+  if (frameTimes.length > 100) frameTimes.shift();
+  fps = 1 / (frameTimes.reduce((a, b) => a + b) / frameTimes.length);
+
+  stats.begin();
 
   for (let i = 0; i < renderListeners.length; i++) {
     renderListeners[i](delta, time);
   }
 
   renderer.render(scene, camera);
+
+  stats.end();
 };
 renderer.setAnimationLoop(animate);
+
+export const getFps = () => fps;

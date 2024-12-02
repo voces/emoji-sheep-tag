@@ -10,13 +10,26 @@ import { absurd } from "../shared/util/absurd.ts";
 import { setFind } from "../server/util/set.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
 import { unitData } from "../shared/data.ts";
+import { tiles } from "../shared/map.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
     ? Math.round(value * 2) / 2
     : (Math.round(value * 2 + 0.5) - 0.5) / 2;
 
+const cursor = document.getElementById("cursor");
+if (!cursor) throw new Error("Expected cursor element");
+document.addEventListener("pointerlockchange", () => {
+  cursor.style.visibility = document.pointerLockElement && !blueprint
+    ? "visible"
+    : "hidden";
+});
+
+let hover: Element | null = null;
+
 mouse.addEventListener("mouseButtonDown", (e) => {
+  if (hover instanceof HTMLElement) hover.click();
+
   if (!selection.size) return;
 
   if (e.button === "right") {
@@ -69,6 +82,9 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       )?.id;
       app.delete(blueprint);
       blueprint = undefined;
+      cursor.style.visibility = document.pointerLockElement
+        ? "visible"
+        : "hidden";
       if (!unit) return;
       send({
         type: "build",
@@ -88,6 +104,9 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 });
 
 mouse.addEventListener("mouseMove", (e) => {
+  cursor.style.top = `${e.pixels.y}px`;
+  cursor.style.left = `${e.pixels.x}px`;
+
   if (blueprint) {
     blueprint.position = {
       x: normalize(
@@ -100,6 +119,16 @@ mouse.addEventListener("mouseMove", (e) => {
       ),
     };
   }
+
+  const next = document.elementFromPoint(e.pixels.x, e.pixels.y);
+  if (hover !== next) {
+    hover?.classList.remove("hover");
+    next?.classList.add("hover");
+    hover = next;
+  }
+
+  if (e.intersects.size) cursor.classList.add("entity");
+  else cursor.classList.remove("entity");
 });
 
 const keyboard: Record<string, boolean> = {};
@@ -120,9 +149,15 @@ let blueprint: SystemEntity<Entity, "unitType"> | undefined;
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
 
-  if (e.code === "Escape" && blueprint) {
-    app.delete(blueprint);
-    blueprint = undefined;
+  if (e.code === "Escape") {
+    if (blueprint) {
+      app.delete(blueprint);
+      blueprint = undefined;
+      cursor.style.visibility = document.pointerLockElement
+        ? "visible"
+        : "hidden";
+    }
+    return false;
   }
 
   const units: Entity[] = [];
@@ -157,6 +192,7 @@ globalThis.addEventListener("keydown", (e) => {
       owner: getLocalPlayer()?.id,
       blueprint: true,
     });
+    cursor.style.visibility = "hidden";
     return;
   }
 
@@ -176,9 +212,35 @@ globalThis.addEventListener("keyup", (e) => {
 
 app.addSystem({
   update: (delta) => {
-    const x = (keyboard.ArrowLeft ? -1 : 0) + (keyboard.ArrowRight ? 1 : 0);
-    const y = (keyboard.ArrowDown ? -1 : 0) + (keyboard.ArrowUp ? 1 : 0);
-    if (x) camera.position.x += x * delta * 10;
-    if (y) camera.position.y += y * delta * 10;
+    const x = (keyboard.ArrowLeft ? -1 : 0) + (keyboard.ArrowRight ? 1 : 0) +
+      (document.pointerLockElement
+        ? (mouse.pixels.x <= 8 ? -2 : 0) +
+          (window.innerWidth - mouse.pixels.x <= 8 ? 2 : 0)
+        : 0);
+    const y = (keyboard.ArrowDown ? -1 : 0) + (keyboard.ArrowUp ? 1 : 0) +
+      (document.pointerLockElement
+        ? (mouse.pixels.y <= 8 ? 2 : 0) +
+          (window.innerHeight - mouse.pixels.y <= 8 ? -2 : 0)
+        : 0);
+    if (x) {
+      camera.position.x = Math.min(
+        Math.max(0, camera.position.x + x * delta * 10),
+        tiles[0].length,
+      );
+    }
+    if (y) {
+      camera.position.y = Math.min(
+        Math.max(0, camera.position.y + y * delta * 10),
+        tiles.length,
+      );
+    }
   },
+});
+
+globalThis.document.body.addEventListener("click", async (e) => {
+  if (!document.pointerLockElement) {
+    await globalThis.document.body.requestPointerLock({
+      unadjustedMovement: true,
+    });
+  }
 });

@@ -22,6 +22,7 @@ export const unitData: Record<
     | "attack"
     | "maxHealth"
     | "actions"
+    | "isDoodad"
   >
   | undefined
 > = {
@@ -52,27 +53,32 @@ export const unitData: Record<
   },
   hut: {
     radius: 0.5,
-    tilemap: { map: Array(16).fill(1), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 120,
   },
   tinyHut: {
     radius: 0.25,
-    tilemap: { map: Array(4).fill(1), top: -1, left: -1, width: 2, height: 2 },
+    tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     maxHealth: 20,
   },
   wideHut: {
     radius: 0.75,
-    tilemap: { map: Array(36).fill(1), top: -3, left: -3, width: 6, height: 6 },
+    tilemap: { map: Array(36).fill(3), top: -3, left: -3, width: 6, height: 6 },
     maxHealth: 120,
   },
   rotundHut: {
     radius: 1,
-    tilemap: { map: Array(64).fill(1), top: -4, left: -4, width: 8, height: 8 },
+    tilemap: { map: Array(64).fill(3), top: -4, left: -4, width: 8, height: 8 },
     maxHealth: 200,
+  },
+  fence: {
+    radius: 0.25,
+    tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
+    isDoodad: true,
   },
 };
 
-export const BUILD_RADIUS = 0.75;
+export const BUILD_RADIUS = 0.7;
 
 export const colors: string[] = [
   "#FF0303",

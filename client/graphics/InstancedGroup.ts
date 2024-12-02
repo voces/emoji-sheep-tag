@@ -28,13 +28,13 @@ export class InstancedGroup extends Group {
     this.innerCount = count;
     for (const child of group.children) {
       if (child instanceof Mesh) {
-        this.children.push(
-          new InstancedMesh(
-            child.geometry,
-            child.material,
-            count,
-          ),
+        const mesh = new InstancedMesh(
+          child.geometry,
+          child.material,
+          count,
         );
+        this.children.push(mesh);
+        mesh.layers.mask = this.layers.mask;
       }
     }
     for (let i = 0; i < count; i++) {
@@ -46,6 +46,7 @@ export class InstancedGroup extends Group {
     const next = this.children.map((c) => {
       if (!(c instanceof InstancedMesh)) return c;
       const next = new InstancedMesh(c.geometry, c.material, value);
+      next.layers.mask = this.layers.mask;
       for (let i = 0; i < value; i++) {
         next.instanceMatrix.copyArray(c.instanceMatrix.array);
         dummy.matrix.setPosition(Infinity, Infinity, Infinity);
@@ -75,7 +76,7 @@ export class InstancedGroup extends Group {
     return this.innerCount;
   }
 
-  clear() {
+  override clear() {
     this.count = 0;
     return this;
   }

@@ -5,6 +5,9 @@ import { app, Entity } from "./ecs.ts";
 import { type ClientToServerMessage } from "../server/client.ts";
 import { zTeam } from "../shared/zod.ts";
 import { camera } from "./graphics/three.ts";
+import { center } from "../shared/map.ts";
+import { stats } from "./util/Stats.ts";
+import { MS } from "../../.cache/deno/npm/registry.npmjs.org/@types/stylis/4.2.5/index.d.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -57,7 +60,7 @@ const zUpdate = z.object({
         binding: z.array(z.string()).optional(),
       }),
     ]),
-  ).optional(),
+  ).readonly().optional(),
   attack: z.object({
     damage: z.number(),
     range: z.number(),
@@ -65,6 +68,8 @@ const zUpdate = z.object({
     cooldown: z.number(),
     damagePoint: z.number(),
   }).optional(),
+  isDoodad: z.boolean().nullable().optional(),
+
   swing: z.object({
     time: z.number(),
     source: z.object({ x: z.number(), y: z.number() }),
@@ -135,6 +140,12 @@ const zStop = z.object({
   type: z.literal("stop"),
 });
 
+const zPong = z.object({
+  type: z.literal("pong"),
+  time: z.number(),
+  data: z.unknown(),
+});
+
 const zMessage = z.union([
   zStart,
   zUpdates,
@@ -142,6 +153,7 @@ const zMessage = z.union([
   zJoin,
   zLeave,
   zStop,
+  zPong,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;
@@ -168,8 +180,8 @@ const handlers = {
   },
   start: (data: z.TypeOf<typeof zStart>) => {
     stateVar("playing");
-    camera.position.x = 25;
-    camera.position.y = 25;
+    camera.position.x = center.x;
+    camera.position.y = center.y;
   },
   stop: () => {
     stateVar("lobby");
@@ -191,9 +203,24 @@ const handlers = {
   },
   leave: (data: z.TypeOf<typeof zLeave>) =>
     playersVar((players) => players.filter((p) => p.id !== data.player)),
+  pong: ({ data }: z.TypeOf<typeof zPong>) => {
+    if (typeof data === "number") {
+      stats.msPanel.update(performance.now() - data, 100);
+    }
+  },
 };
 
 let ws: WebSocket;
+
+const delay = (fn: () => void) => {
+  if (typeof latency !== "number" && typeof noise !== "number") {
+    return fn();
+  }
+
+  const delay = (typeof latency === "number" ? latency : 0) +
+    (typeof noise === "number" ? Math.random() * noise : 0);
+  setTimeout(fn, delay);
+};
 
 const connect = () => {
   ws = new WebSocket(
@@ -215,15 +242,27 @@ const connect = () => {
       throw err;
     }
     // console.log(data);
-    handlers[data.type](data as any);
+
+    delay(() => handlers[data.type](data as any));
   });
 };
 connect();
 
+declare global {
+  var latency: unknown;
+  var noise: unknown;
+}
+
 export const send = (message: ClientToServerMessage) => {
-  // setTimeout(
-  // () =>
-  ws.send(JSON.stringify(message));
-  // 100 + Math.random() * 50,
-  // );
+  delay(() => {
+    try {
+      ws.send(JSON.stringify(message));
+    } catch {}
+  });
 };
+
+setInterval(() => {
+  if (!ws.OPEN) return;
+  const time = performance.now();
+  send({ type: "ping", data: time });
+}, 1000);

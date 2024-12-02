@@ -7,8 +7,9 @@ import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
 import { flushUpdates } from "../updates.ts";
-import { Entity } from "../../shared/types.ts";
 import { init } from "../st/data.ts";
+import { center, initEntities } from "../../shared/map.ts";
+import { unitData } from "../../shared/data.ts";
 
 export const zStart = z.object({ type: z.literal("start") });
 
@@ -28,6 +29,7 @@ export const start = (client: Client) => {
     else if (sheep.size + 1 < wolves.size) sheep.add(player);
     else wolves.add(player);
   }
+  console.log({ pool, sheep, wolves });
   const { ecs, lookup } = newEcs();
   lobby.round = {
     sheep,
@@ -52,6 +54,18 @@ export const start = (client: Client) => {
       wolves: Array.from(wolves, (c) => c.id),
     });
 
+    for (const unitType in initEntities) {
+      for (
+        const [x, y] of initEntities[unitType as keyof typeof initEntities]
+      ) {
+        ecs.add({
+          unitType,
+          position: { x, y },
+          ...unitData[unitType],
+        });
+      }
+    }
+
     timeout(() => {
       const lobby = lobbyContext.context;
       if (!lobby.round) return;
@@ -60,16 +74,18 @@ export const start = (client: Client) => {
         newUnit(
           owner.id,
           "sheep",
-          25 + 3 * Math.cos(r),
-          25 + 3 * Math.sin(r),
+          center.x + 3 * Math.cos(r),
+          center.y + 3 * Math.sin(r),
         );
       }
 
       timeout(() => {
         const lobby = lobbyContext.context;
         if (!lobby.round) return;
-        for (const owner of wolves) newUnit(owner.id, "wolf", 25, 25);
-      }, 2);
+        for (const owner of wolves) {
+          newUnit(owner.id, "wolf", center.x, center.y);
+        }
+      }, 1.8);
     }, 0.3);
   });
 };

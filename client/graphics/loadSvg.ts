@@ -15,7 +15,11 @@ import { scene } from "./three.ts";
 
 const loader = new SVGLoader();
 
-export const loadSvg = (svg: string, scale: number, count = 0) => {
+export const loadSvg = (
+  svg: string,
+  scale: number,
+  { count = 0, layer }: { count?: number; layer?: number } = {},
+) => {
   scale /= 36 * 2; // SVGs are 36x36, and we want a sheep to be size 1
 
   const data = loader.parse(svg);
@@ -63,6 +67,7 @@ export const loadSvg = (svg: string, scale: number, count = 0) => {
 
   // Make instanced
   const igroup = new InstancedGroup(group, count);
+  if (typeof layer === "number") igroup.traverse((o) => o.layers.set(layer));
   scene.add(igroup);
   return igroup;
 };

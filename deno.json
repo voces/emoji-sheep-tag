@@ -6,9 +6,8 @@
     "lib": [
       "deno.window", "dom"
     ],
-    "jsx": "react",
-    "jsxFactory": "React.createElement",
-    "jsxFragmentFactory": "React.Fragment"
+    "jsx": "react-jsx",
+    "jsxImportSource": "npm:react"
   },
   "fmt": {
     "indentWidth": 2

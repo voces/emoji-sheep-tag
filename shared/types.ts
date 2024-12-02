@@ -55,6 +55,8 @@ export type Entity = {
     /** Seconds between an attack starting and damage occurring */
     readonly damagePoint: number;
   };
+  /** A doodad cannot be clicked */
+  isDoodad?: boolean | null;
 
   // Attacking
   swing?: {
