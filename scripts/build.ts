@@ -21,6 +21,8 @@ const textPlugin = {
   },
 } satisfies Plugin;
 
+const decoder = new TextDecoder();
+
 export const build = async () => {
   const start = performance.now();
 
@@ -30,29 +32,51 @@ export const build = async () => {
 
   const document: Document = dom.window.document;
 
-  const script = document.querySelector('script[src="main.js"]');
+  const main = document.querySelector("script#main");
+  if (!main) throw new Error("Could not find main script");
 
-  if (!script) throw new Error("Could not find main script");
+  const worker = document.querySelector("script#worker");
+  if (!worker) throw new Error("Could not find worker script");
 
-  script.removeAttribute("src");
-  script.textContent = new TextDecoder().decode(
-    (await esbuild.build({
-      bundle: true,
-      target: "chrome123",
-      format: "esm",
-      entryPoints: ["client/index.ts"],
-      write: false,
-      sourcemap: "inline",
-      plugins: [
-        textPlugin,
-        ...denoPlugins({ configPath: await Deno.realPath("deno.json") }),
-      ],
-      jsx: "automatic",
-      jsxFactory: "React.createElement",
-      jsxFragment: "React.Fragment",
-      jsxImportSource: "npm:react",
-    })).outputFiles[0].contents,
-  );
+  const files = (await esbuild.build({
+    bundle: true,
+    target: "chrome123",
+    format: "esm",
+    entryPoints: ["client/index.ts", "server/local.ts"],
+    write: false,
+    sourcemap: "inline",
+    plugins: [
+      textPlugin,
+      ...denoPlugins({ configPath: await Deno.realPath("deno.json") }),
+    ],
+    jsx: "automatic",
+    jsxFactory: "React.createElement",
+    jsxFragment: "React.Fragment",
+    jsxImportSource: "npm:react",
+    outdir: "dist",
+  })).outputFiles;
+
+  main.textContent = decoder.decode(files[0].contents);
+  worker.textContent = decoder.decode(files[1].contents);
+
+  // script.textContent = new TextDecoder().decode(
+  //   (await esbuild.build({
+  //     bundle: true,
+  //     target: "chrome123",
+  //     format: "esm",
+  //     entryPoints: ["client/index.ts"],
+  //     write: false,
+  //     sourcemap: "inline",
+  //     plugins: [
+  //       textPlugin,
+  //       ...denoPlugins({ configPath: await Deno.realPath("deno.json") }),
+  //     ],
+  //     jsx: "automatic",
+  //     jsxFactory: "React.createElement",
+  //     jsxFragment: "React.Fragment",
+  //     jsxImportSource: "npm:react",
+  //   })).outputFiles[0].contents,
+  // );
 
   await ensureDir("dist");
 

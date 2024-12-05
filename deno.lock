@@ -403,5 +403,10 @@
     "https://esm.sh/v135/xmlchars@2.2.0/denonext/xml/1.0/ed5.js": "60f8f018eb1d79d69a41324155b7d9f52f1058b37060b28acc1dfc49446e549d",
     "https://esm.sh/v135/xmlchars@2.2.0/denonext/xml/1.1/ed2.js": "ba7d1fe5694f62469c4b293a1fadad332c637cbcfbc74147a296475c2ff8ad3d",
     "https://esm.sh/v135/xmlchars@2.2.0/denonext/xmlns/1.0/ed3.js": "929d15ffc72d56c8909f87e7df8288f060bda0256622e8e95c24f0decb06adc7"
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:react@*"
+    ]
   }
 }

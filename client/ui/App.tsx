@@ -1,67 +1,48 @@
-import { styled } from "npm:styled-components";
-import { Card } from "./components/Card.ts";
 import { useReactiveVar } from "./hooks/useVar.tsx";
-import { Player, playersVar } from "./vars/players.ts";
 import { stateVar } from "./vars/state.ts";
 import { ThemeProvider } from "npm:styled-components";
 import { theme } from "./theme.ts";
-import { ColorPicker } from "./components/ColorPicker.ts";
-import { Box } from "./components/Box.ts";
+import { Fragment } from "npm:react";
+import { Lobby } from "./pages/Lobby.tsx";
+import { Card } from "./components/Card.ts";
 import { Button } from "./components/Button.ts";
-import { send } from "../client.ts";
+import { loadLocal } from "../local.ts";
 
-const PlayerRow = ({ name, color }: Player) => (
-  <Box $gap={4}>
-    <ColorPicker
-      value={color}
-      onChange={(e) => {
-        console.log(e.currentTarget.value);
-      }}
-    />
-    <span>{name}</span>
-  </Box>
+const Intro = () => (
+  <Card
+    style={{
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+    }}
+  >
+    Connecting...
+  </Card>
 );
 
-const Players = () => {
-  const players = useReactiveVar(playersVar);
+const Menu = () => (
+  <Card
+    style={{
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      textAlign: "center",
+    }}
+  >
+    <h1>Server offline</h1>
+    <Button onClick={loadLocal}>Single player</Button>
+  </Card>
+);
 
-  return (
-    <Card color="blue" style={{ width: "30%", height: "60%" }}>
-      <div>Players</div>
-      <div>
-        {players.map((p) => <PlayerRow key={p.name} {...p} />)}
-      </div>
-    </Card>
-  );
-};
+const Game = () => <div>Game</div>;
 
-const Settings = () => {
-  return (
-    <Card color="purple" style={{ width: "40%", height: "60%" }}>
-      <Button onClick={() => send({ type: "start" })}>Start</Button>
-    </Card>
-  );
-};
-
-const LobbyContainer = styled.div({
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 24,
-});
-const Lobby = () => {
-  return (
-    <LobbyContainer>
-      <Players />
-      <Settings />
-    </LobbyContainer>
-  );
-};
-
-const Game = () => {
-  return <div>Game</div>;
+const pages = {
+  intro: Intro,
+  menu: Menu,
+  lobby: Lobby,
+  playing: Game,
 };
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -70,8 +51,7 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 
 export const App = () => {
   const state = useReactiveVar(stateVar);
-
-  const Page = state === "lobby" ? Lobby : Game;
+  const Page = pages[state];
 
   return (
     <Wrapper>

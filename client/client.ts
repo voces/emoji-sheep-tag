@@ -7,7 +7,7 @@ import { zTeam } from "../shared/zod.ts";
 import { camera } from "./graphics/three.ts";
 import { center } from "../shared/map.ts";
 import { stats } from "./util/Stats.ts";
-import { MS } from "../../.cache/deno/npm/registry.npmjs.org/@types/stylis/4.2.5/index.d.ts";
+import { LocalWebSocket } from "./local.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -210,7 +210,7 @@ const handlers = {
   },
 };
 
-let ws: WebSocket;
+let ws: WebSocket | LocalWebSocket;
 
 const delay = (fn: () => void) => {
   if (typeof latency !== "number" && typeof noise !== "number") {
@@ -222,12 +222,15 @@ const delay = (fn: () => void) => {
   setTimeout(fn, delay);
 };
 
+let server = location.host;
+export const setServer = (value: string) => server = value;
+
 const connect = () => {
-  ws = new WebSocket(
-    `ws${location.protocol === "https:" ? "s" : ""}//${location.host}`,
+  ws = server === "local" ? new LocalWebSocket() : new WebSocket(
+    `ws${location.protocol === "https:" ? "s" : ""}//${server}`,
   );
   ws.addEventListener("close", () => {
-    stateVar("intro");
+    stateVar((prev) => prev === "intro" ? "menu" : prev);
     connect();
   });
   ws.addEventListener("message", (e) => {
@@ -262,7 +265,7 @@ export const send = (message: ClientToServerMessage) => {
 };
 
 setInterval(() => {
-  if (!ws.OPEN) return;
+  if (ws.readyState !== WebSocket.OPEN) return;
   const time = performance.now();
   send({ type: "ping", data: time });
 }, 1000);

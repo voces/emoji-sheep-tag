@@ -29,7 +29,11 @@ export const start = (client: Client) => {
     else if (sheep.size + 1 < wolves.size) sheep.add(player);
     else wolves.add(player);
   }
-  console.log({ pool, sheep, wolves });
+  console.log({
+    pool: pool.map((p) => p.id),
+    sheep: Array.from(sheep, (p) => p.id),
+    wolves: Array.from(wolves, (p) => p.id),
+  });
   const { ecs, lookup } = newEcs();
   lobby.round = {
     sheep,

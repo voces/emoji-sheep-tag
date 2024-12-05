@@ -45,7 +45,7 @@ export const unitData: Record<
     pathing: 1,
     attack: {
       damage: 100,
-      range: 0.4,
+      range: 0.31, // roughly minimum to hit via corner now...
       rangeMotionBuffer: 1,
       cooldown: 1.2,
       damagePoint: 0.3,

@@ -1,10 +1,10 @@
 {
   "tasks": {
-    "dev": "deno run -A --watch --inspect server/index.ts --dev"
+    "dev": "deno run -A --watch server/index.ts --dev"
   },
   "compilerOptions": {
     "lib": [
-      "deno.window", "dom"
+      "deno.window", "dom", "webworker"
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "npm:react"

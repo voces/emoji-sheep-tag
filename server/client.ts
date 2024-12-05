@@ -12,6 +12,27 @@ import { attack, zAttack } from "./actions/attack.ts";
 import { unitOrder, zOrderEvent } from "./actions/unitOrder.ts";
 import { flushUpdates } from "./updates.ts";
 import { ping, zPing } from "./actions/ping.ts";
+import "./events/death.ts";
+import "./st/index.ts";
+import "./systems/autoAttack.ts";
+import "./systems/kd.ts";
+
+type SocketEventMap = {
+  close: unknown;
+  error: unknown;
+  message: { data: unknown };
+  open: unknown;
+};
+
+type Socket = {
+  readyState: number;
+  send: (data: string) => void;
+  close: () => void;
+  addEventListener: <K extends keyof SocketEventMap>(
+    type: K,
+    listener: (this: Socket, ev: SocketEventMap[K]) => void,
+  ) => void;
+};
 
 const wrap = <T extends (...args: any[]) => unknown>(
   client: Client,
@@ -28,14 +49,14 @@ const wrap = <T extends (...args: any[]) => unknown>(
 };
 
 let clientIndex = 0;
-export class Client {
+class Client {
   id: string;
   name: string;
   color: string;
 
   lobby?: Lobby;
 
-  constructor(readonly socket: WebSocket) {
+  constructor(readonly socket: Socket) {
     this.color = colors[clientIndex % colors.length];
     this.id = `player-${clientIndex++}`;
     this.name = `Player ${clientIndex}`;
@@ -61,6 +82,8 @@ export class Client {
     }
   }
 }
+type ClientInstance = InstanceType<typeof Client>;
+export type { ClientInstance as Client };
 
 const zClientToServerMessage = z.union([
   zStart,
@@ -82,7 +105,7 @@ const actions = {
   ping,
 };
 
-export const handleSocket = (socket: WebSocket) => {
+export const handleSocket = (socket: Socket) => {
   const client = new Client(socket);
 
   clientContext.with(client, () => {
@@ -142,8 +165,11 @@ export const handleSocket = (socket: WebSocket) => {
 
   socket.addEventListener(
     "message",
-    wrap(client, (e) => {
+    wrap<(e: SocketEventMap["message"]) => void>(client, (e) => {
       try {
+        if (typeof e.data !== "string") {
+          throw new Error("Expected data to be a string");
+        }
         const json = JSON.parse(e.data);
         // console.log("C->S", json);
         const message = zClientToServerMessage.parse(json);
