@@ -116,7 +116,9 @@ export const loadLocal = () => {
     sharedBlobURL = URL.createObjectURL(blob);
     channel.postMessage({ type: "blobUrl", url: sharedBlobURL });
   }
-  worker = new SharedWorker(sharedBlobURL);
-  worker.port.start();
+  if (!worker) {
+    worker = new SharedWorker(sharedBlobURL);
+    worker.port.start();
+  }
   setServer("local");
 };

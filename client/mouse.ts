@@ -5,12 +5,13 @@ import { InstancedGroup } from "./graphics/InstancedGroup.ts";
 import { app, Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
 
-class MouseEvent extends Event {
+export class MouseEvent extends Event {
   readonly pixels: Vector2;
   readonly percent: Vector2;
   readonly world: Vector2;
   readonly angle: number;
   readonly intersects: Set<Entity>;
+  readonly element: Element | null;
 
   constructor(name: string) {
     super(name);
@@ -20,6 +21,7 @@ class MouseEvent extends Event {
     this.world = mouse.world.clone();
     this.angle = mouse.angle;
     this.intersects = new Set(mouse.intersects);
+    this.element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
   }
 }
 

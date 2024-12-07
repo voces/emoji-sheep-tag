@@ -2,21 +2,22 @@
   "tasks": {
     "dev": "deno run -A --watch server/index.ts --dev"
   },
-  "compilerOptions": {
-    "lib": [
-      "deno.window", "dom", "webworker"
-    ],
-    "jsx": "react-jsx",
-    "jsxImportSource": "npm:react"
-  },
-  "fmt": {
-    "indentWidth": 2
-  },
   "imports": {
     "typed-event-target": "https://deno.land/x/typescript_event_target@v1.0.5/mod.ts",
     "three": "https://esm.sh/three@0.166.1",
     "three/SVGLoader.d.ts": "https://esm.sh/v135/@types/three@0.166.0/examples/jsm/loaders/SVGLoader.d.ts",
     "three/SVGLoader": "https://esm.sh/three@0.166.1/addons/loaders/SVGLoader.js",
     "jsdom": "https://esm.sh/jsdom@24.1.0"
+  },
+  "compilerOptions": {
+    "lib": [
+      "deno.window", "dom", "webworker"
+    ],
+    "jsx": "react-jsx",
+    "jsxImportSource": "npm:react",
+    "types": ["npm:@types/react"]
+  },
+  "fmt": {
+    "indentWidth": 2
   }
 }

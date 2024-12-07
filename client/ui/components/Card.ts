@@ -1,7 +1,7 @@
 import { DefaultTheme, styled } from "npm:styled-components";
 
 interface GlossyButtonProps {
-  color: keyof DefaultTheme["colors"];
+  color?: keyof DefaultTheme["colors"];
 }
 
 export const getTransparentColor = (color: string, transparency: number) =>

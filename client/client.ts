@@ -1,6 +1,6 @@
 import z from "npm:zod";
 import { playersVar } from "./ui/vars/players.ts";
-import { stateVar } from "./ui/vars/state.ts";
+import { connectionStatusVar, stateVar } from "./ui/vars/state.ts";
 import { app, Entity } from "./ecs.ts";
 import { type ClientToServerMessage } from "../server/client.ts";
 import { zTeam } from "../shared/zod.ts";
@@ -8,6 +8,7 @@ import { camera } from "./graphics/three.ts";
 import { center } from "../shared/map.ts";
 import { stats } from "./util/Stats.ts";
 import { LocalWebSocket } from "./local.ts";
+import { data } from "./data.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -163,7 +164,11 @@ const map: Record<string, Entity> = {};
 const handlers = {
   join: (data: z.TypeOf<typeof zJoin>) => {
     playersVar((prev) =>
-      stateVar() === "intro" ? data.players : [...prev, ...data.players]
+      data.players.length !== 1 || data.players.some((p) => p.local)
+        ? data.players
+        : prev.some((p) => p.id === data.players[0].id)
+        ? prev
+        : [...prev, data.players[0]]
     );
     stateVar(data.status);
     if (data.status === "lobby") {
@@ -178,7 +183,10 @@ const handlers = {
   },
   slotChange: (data: z.TypeOf<typeof zSlotChange>) => {
   },
-  start: (data: z.TypeOf<typeof zStart>) => {
+  start: (e: z.TypeOf<typeof zStart>) => {
+    const players = playersVar();
+    data.sheep = players.filter((p) => e.sheep.includes(p.id));
+    data.wolves = players.filter((p) => e.wolves.includes(p.id));
     stateVar("playing");
     camera.position.x = center.x;
     camera.position.y = center.y;
@@ -210,7 +218,7 @@ const handlers = {
   },
 };
 
-let ws: WebSocket | LocalWebSocket;
+let ws: WebSocket | LocalWebSocket | undefined;
 
 const delay = (fn: () => void) => {
   if (typeof latency !== "number" && typeof noise !== "number") {
@@ -225,14 +233,15 @@ const delay = (fn: () => void) => {
 let server = location.host;
 export const setServer = (value: string) => server = value;
 
-const connect = () => {
+export const connect = () => {
   ws = server === "local" ? new LocalWebSocket() : new WebSocket(
     `ws${location.protocol === "https:" ? "s" : ""}//${server}`,
   );
   ws.addEventListener("close", () => {
-    stateVar((prev) => prev === "intro" ? "menu" : prev);
+    connectionStatusVar("disconnected");
     connect();
   });
+  ws.addEventListener("open", () => connectionStatusVar("connected"));
   ws.addEventListener("message", (e) => {
     const json = JSON.parse(e.data);
     let data: ServerToClientMessage;
@@ -249,7 +258,6 @@ const connect = () => {
     delay(() => handlers[data.type](data as any));
   });
 };
-connect();
 
 declare global {
   var latency: unknown;
@@ -259,13 +267,13 @@ declare global {
 export const send = (message: ClientToServerMessage) => {
   delay(() => {
     try {
-      ws.send(JSON.stringify(message));
+      ws?.send(JSON.stringify(message));
     } catch {}
   });
 };
 
 setInterval(() => {
-  if (ws.readyState !== WebSocket.OPEN) return;
+  if (ws?.readyState !== WebSocket.OPEN) return;
   const time = performance.now();
   send({ type: "ping", data: time });
 }, 1000);

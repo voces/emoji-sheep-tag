@@ -56,3 +56,6 @@ export const isEnemy = (source: Entity, target: Entity) => {
   const targetIsSheep = data.sheep.some((s) => s.client.id === target.owner);
   return sourceIsSheep !== targetIsSheep;
 };
+
+export const isAlly = (source: Entity, target: Entity) =>
+  !isEnemy(source, target);

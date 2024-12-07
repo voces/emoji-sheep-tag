@@ -1,4 +1,4 @@
-import { mouse } from "./mouse.ts";
+import { mouse, MouseButtonEvent } from "./mouse.ts";
 import { send } from "./client.ts";
 import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
@@ -11,6 +11,7 @@ import { setFind } from "../server/util/set.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
 import { unitData } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
+import { isEnemy } from "./api/unit.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -25,45 +26,45 @@ document.addEventListener("pointerlockchange", () => {
     : "hidden";
 });
 
-let hover: Element | null = null;
+const handleSmartTarget = (e: MouseButtonEvent) => {
+  const target = e.intersects.values().next().value!;
+  const selections = selection.clone();
+
+  // Do not target self? At least for move/attack
+  for (const s of selections) if (s === target) selections.delete(s);
+  if (!selections.size) return false;
+
+  const { attackers, movers } = selections.group((e) =>
+    e.attack && isEnemy(e, target) ? "attackers" as const : "movers" as const
+  );
+
+  if (attackers?.size) {
+    send({
+      type: "attack",
+      units: Array.from(attackers, (e) => e.id),
+      target: target.id,
+    });
+  }
+
+  if (movers?.size) {
+    // Should follow
+    send({
+      type: "move",
+      units: Array.from(movers, (e) => e.id),
+      target: target.movementSpeed ? target.id : e.world,
+    });
+  }
+
+  return true;
+};
 
 mouse.addEventListener("mouseButtonDown", (e) => {
-  if (hover instanceof HTMLElement) hover.click();
+  if (e.element instanceof HTMLElement) e.element.click();
 
   if (!selection.size) return;
 
   if (e.button === "right") {
-    if (e.intersects.size) {
-      const intersects = Array.from(e.intersects);
-      const selections = selection.clone();
-
-      // Do not target self? At least for move/attack
-      for (const s of selections) if (e.intersects.has(s)) selections.delete(s);
-      if (!selections.size) return;
-
-      const { attackers, movers } = selections.group((e) =>
-        e.attack ? "attackers" as const : "movers" as const
-      );
-
-      if (attackers?.size) {
-        send({
-          type: "attack",
-          units: Array.from(attackers, (e) => e.id),
-          target: intersects[0].id,
-        });
-      }
-
-      if (movers?.size) {
-        // Should follow
-        send({
-          type: "move",
-          units: Array.from(movers, (e) => e.id),
-          target: intersects[0].id,
-        });
-      }
-
-      return;
-    }
+    if (e.intersects.size && handleSmartTarget(e)) return;
 
     send({
       type: "move",
@@ -103,6 +104,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   }
 });
 
+let hover: Element | null = null;
 mouse.addEventListener("mouseMove", (e) => {
   cursor.style.top = `${e.pixels.y}px`;
   cursor.style.left = `${e.pixels.x}px`;
@@ -120,11 +122,10 @@ mouse.addEventListener("mouseMove", (e) => {
     };
   }
 
-  const next = document.elementFromPoint(e.pixels.x, e.pixels.y);
-  if (hover !== next) {
+  if (hover !== e.element) {
     hover?.classList.remove("hover");
-    next?.classList.add("hover");
-    hover = next;
+    e.element?.classList.add("hover");
+    hover = e.element;
   }
 
   if (e.intersects.size) cursor.classList.add("entity");
@@ -144,19 +145,36 @@ const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
   }
 };
 
+globalThis.addEventListener("keyup", (e) => {
+  console.log("keyup", e.code);
+});
+
+globalThis.addEventListener("keypress", (e) => {
+  console.log("keypress", e.code);
+});
+
+const handleEscape = () => {
+  if (blueprint) {
+    app.delete(blueprint);
+    blueprint = undefined;
+    cursor.style.visibility = document.pointerLockElement
+      ? "visible"
+      : "hidden";
+  }
+};
+
+document.addEventListener("pointerlockchange", (e) => {
+  if (!document.pointerLockElement) handleEscape();
+});
+
 let blueprintIndex = 0;
 let blueprint: SystemEntity<Entity, "unitType"> | undefined;
 globalThis.addEventListener("keydown", (e) => {
+  console.log("key down?", e.code);
   keyboard[e.code] = true;
 
   if (e.code === "Escape") {
-    if (blueprint) {
-      app.delete(blueprint);
-      blueprint = undefined;
-      cursor.style.visibility = document.pointerLockElement
-        ? "visible"
-        : "hidden";
-    }
+    handleEscape();
     return false;
   }
 
