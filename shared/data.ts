@@ -16,6 +16,7 @@ export const unitData: Record<
   | Pick<
     Entity,
     | "movementSpeed"
+    | "turnSpeed"
     | "radius"
     | "pathing"
     | "tilemap"
@@ -28,6 +29,7 @@ export const unitData: Record<
 > = {
   sheep: {
     movementSpeed: 3,
+    turnSpeed: 3 * Math.PI,
     radius: 0.25,
     pathing: 1,
     actions: [

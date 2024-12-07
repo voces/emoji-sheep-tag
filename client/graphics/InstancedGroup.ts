@@ -1,12 +1,18 @@
 import {
+  Box3,
   Color,
   Group,
   InstancedMesh,
+  Intersection,
   Material,
   Matrix4,
   Mesh,
   Object3D,
+  Ray,
+  Raycaster,
 } from "three";
+import { normalizeAngle } from "../../shared/pathing/math.ts";
+import { BVH } from "./BVH.ts";
 
 const dummy = new Object3D();
 const dummyColor = new Color();
@@ -18,10 +24,13 @@ const hasPlayerColor = (material: Material | Material[]) =>
     ? material.some((m: Material) => m.userData.player)
     : (material as Material).userData.player;
 
+const _tempBox = new Box3();
+
 export class InstancedGroup extends Group {
   private map: Record<string, number> = {};
   private reverseMap: string[] = [];
   private innerCount: number;
+  private bvh = new BVH();
 
   constructor(group: Group, count: number = 1) {
     super();
@@ -50,8 +59,8 @@ export class InstancedGroup extends Group {
       for (let i = 0; i < value; i++) {
         next.instanceMatrix.copyArray(c.instanceMatrix.array);
         dummy.matrix.setPosition(Infinity, Infinity, Infinity);
-        for (let i = this.innerCount; i < value; i++) {
-          next.setMatrixAt(i, dummy.matrix);
+        for (let n = this.innerCount; n < value; n++) {
+          next.setMatrixAt(n, dummy.matrix);
         }
 
         if (c.instanceColor) {
@@ -140,9 +149,24 @@ export class InstancedGroup extends Group {
         child.instanceMatrix.needsUpdate = true;
       }
     }
+    this.updateBvhInstance(index, matrix);
   }
 
-  setPositionAt(index: number | string, x: number, y: number) {
+  private updateBvhInstance(index: number, matrix: Matrix4) {
+    // Check if we should remove or add/update in BVH
+    // Detect if matrix is "infinite" - typically you'd check elements or the position
+    if (!this.isFiniteMatrix(matrix)) {
+      // Remove from BVH
+      this.bvh.removeInstance(index);
+    } else {
+      // Compute bounding box
+      const bbox = this.computeInstanceBoundingBox(index);
+      // Add or update in BVH
+      this.bvh.addOrUpdateInstance(index, bbox);
+    }
+  }
+
+  setPositionAt(index: number | string, x: number, y: number, angle?: number) {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
@@ -152,11 +176,10 @@ export class InstancedGroup extends Group {
           dummy.quaternion,
           dummy.scale,
         );
-        // Applies to structures; should maybe ignore when coming from an update?
-        if (dummy.position.x - 1e-5 > x && dummy.scale.x !== 1) {
-          dummy.scale.x = 1;
-        } else if (dummy.position.x + 1e-5 < x && dummy.scale.x !== -1) {
-          dummy.scale.x = -1;
+        if (typeof angle === "number") {
+          angle = Math.abs(normalizeAngle(angle));
+          if (angle + 1e-05 < Math.PI / 2) dummy.scale.x = -1;
+          else if (angle - 1e-05 > Math.PI / 2) dummy.scale.x = 1;
         }
         dummy.position.set(x, y, 0);
         dummy.updateMatrix();
@@ -166,6 +189,7 @@ export class InstancedGroup extends Group {
         child.computeBoundingSphere();
       }
     }
+    this.updateBvhInstance(index, dummy.matrix);
   }
 
   setPlayerColorAt(
@@ -193,6 +217,116 @@ export class InstancedGroup extends Group {
       if (child instanceof InstancedMesh) {
         child.setColorAt(index, color);
         if (child.instanceColor) child.instanceColor.needsUpdate = true;
+      }
+    }
+  }
+
+  // Utility: compute the bounding box for a single instance index
+  // by unioning the bounding boxes of all children for that instance.
+  private computeInstanceBoundingBox(index: number): Box3 {
+    let first = true;
+    _tempBox.makeEmpty();
+
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh) {
+        // Each child has the same number of instances
+        // Get the child's geometry bounding box
+        const geoBox = child.geometry.boundingBox || (() => {
+          throw new Error(
+            "Expected child geometry to have bounding box precomputed",
+          );
+        });
+        // this.computeGeometryBoundingBox(child.geometry);
+
+        // Apply the instance's matrix to the geometry bounding box
+        const matrix = new Matrix4();
+        child.getMatrixAt(index, matrix);
+
+        const transformedBox = new Box3().copy(geoBox).applyMatrix4(matrix);
+        if (first) {
+          _tempBox.copy(transformedBox);
+          first = false;
+        } else {
+          _tempBox.union(transformedBox);
+        }
+      }
+    }
+
+    return _tempBox.clone();
+  }
+
+  private isFiniteMatrix(m: Matrix4): boolean {
+    // Check the position or any element if it's infinite
+    // We'll just check translation components (m.elements[12,13,14]) for simplicity
+    const e = m.elements;
+    return Number.isFinite(e[12]) && Number.isFinite(e[13]) &&
+      Number.isFinite(e[14]);
+  }
+
+  // Raycast override:
+  // We use our BVH to find candidate instances that might intersect the ray.
+  // Then we do a more detailed intersection test on those instances.
+  override raycast(raycaster: Raycaster, intersects: Intersection[]) {
+    // Convert raycaster to a Ray in world space
+    const ray = new Ray().copy(raycaster.ray);
+
+    // Query the BVH for candidate instances
+    const candidates = this.bvh.raycast(ray);
+
+    for (const candidate of candidates) {
+      // For each candidate instance, test intersection against all children:
+      for (const child of this.children) {
+        if (child instanceof InstancedMesh) {
+          // Get the matrix for this instance
+          const instanceMatrix = new Matrix4();
+          child.getMatrixAt(candidate, instanceMatrix);
+
+          // We need to transform the ray into the instance's local space
+          const invMat = new Matrix4().copy(instanceMatrix).invert();
+          const localRay = new Ray().copy(ray).applyMatrix4(invMat);
+
+          // Perform intersection test with child's geometry
+          this.raycastInstancedMesh(
+            child,
+            localRay,
+            candidate,
+            raycaster,
+            intersects,
+          );
+        }
+      }
+    }
+
+    return false;
+  }
+
+  // Raycast against an individual InstancedMesh instance
+  private raycastInstancedMesh(
+    instMesh: InstancedMesh,
+    localRay: Ray,
+    index: number,
+    raycaster: Raycaster,
+    intersects: Intersection[],
+  ) {
+    // Reuse or create a Mesh with the same geometry and material to use the built-in intersect
+    // Transform is already baked into localRay, so treat geometry as if at origin.
+    const testMesh = new Mesh(instMesh.geometry, instMesh.material as Material);
+    const localIntersects: Intersection[] = [];
+    testMesh.raycast(
+      { ...raycaster, ray: localRay } as Raycaster,
+      localIntersects,
+    );
+
+    // Transform intersection points back to world space and add to final intersects
+    if (localIntersects.length > 0) {
+      const instanceMatrix = new Matrix4();
+      instMesh.getMatrixAt(index, instanceMatrix);
+
+      for (const hit of localIntersects) {
+        hit.point.applyMatrix4(instanceMatrix);
+        hit.object = this; // The object hit is the InstancedGroup itself, or keep as instMesh if desired
+        hit.instanceId = index; // Keep track of which instance was hit
+        intersects.push(hit);
       }
     }
   }

@@ -22,7 +22,7 @@ onInit((game) => {
       });
 
     for (const [target] of nearest) {
-      const path = calcPath(e, target.id, { mode: "attack" });
+      const path = calcPath(e, target.id, { mode: "attack" }).slice(1);
       if (
         path.length && path[path.length - 1].x === e.position.x &&
         path[path.length - 1].y === e.position.y

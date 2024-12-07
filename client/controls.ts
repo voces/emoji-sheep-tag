@@ -145,14 +145,6 @@ const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
   }
 };
 
-globalThis.addEventListener("keyup", (e) => {
-  console.log("keyup", e.code);
-});
-
-globalThis.addEventListener("keypress", (e) => {
-  console.log("keypress", e.code);
-});
-
 const handleEscape = () => {
   if (blueprint) {
     app.delete(blueprint);
@@ -170,7 +162,6 @@ document.addEventListener("pointerlockchange", (e) => {
 let blueprintIndex = 0;
 let blueprint: SystemEntity<Entity, "unitType"> | undefined;
 globalThis.addEventListener("keydown", (e) => {
-  console.log("key down?", e.code);
   keyboard[e.code] = true;
 
   if (e.code === "Escape") {

@@ -198,3 +198,46 @@ const distanceBetweenStructures = (
 
   return minDistance;
 };
+
+/** Normalizes an angle to the range (-π, π]. */
+export const normalizeAngle = (angle: number): number => {
+  angle = angle % (2 * Math.PI);
+  if (angle > Math.PI) angle -= 2 * Math.PI;
+  if (angle <= -Math.PI) angle += 2 * Math.PI;
+  return angle;
+};
+
+/** Computes the smallest difference between two angles, returning a value in (-π, π]. */
+export const angleDifference = (a: number, b: number): number =>
+  normalizeAngle(b - a);
+
+export const tweenAbsAngles = (a: number, b: number, delta: number) => {
+  const TWO_PI = Math.PI * 2;
+
+  // Normalize angles into [0, 2π)
+  let A = a % TWO_PI;
+  let B = b % TWO_PI;
+  if (A < 0) A += TWO_PI;
+  if (B < 0) B += TWO_PI;
+
+  // Find the shortest difference
+  let diff = B - A;
+  if (diff > Math.PI) {
+    diff -= TWO_PI;
+  } else if (diff < -Math.PI) {
+    diff += TWO_PI;
+  }
+
+  // If delta is large enough to overshoot, just return B
+  if (Math.abs(diff) <= delta) {
+    return B;
+  }
+
+  // Move closer to B by delta
+  if (diff > 0) {
+    return (A + delta) % TWO_PI;
+  } else {
+    // diff < 0
+    return (A - delta + TWO_PI) % TWO_PI;
+  }
+};

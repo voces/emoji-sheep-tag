@@ -38,12 +38,14 @@ export type Entity = {
   owner?: string;
 
   position?: { readonly x: number; readonly y: number };
+  facing?: number;
 
   // Data
   health?: number;
   maxHealth?: number;
   mana?: number;
   movementSpeed?: number;
+  turnSpeed?: number;
   actions?: ReadonlyArray<UnitDataAction>;
   attack?: {
     readonly damage: number;

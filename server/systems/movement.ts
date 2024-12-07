@@ -2,8 +2,10 @@ import { App } from "jsr:@verit/ecs";
 import { Entity } from "../../shared/types.ts";
 import { lookup } from "./lookup.ts";
 import {
+  angleDifference,
   distanceBetweenEntities,
   distanceBetweenPoints,
+  tweenAbsAngles,
 } from "../../shared/pathing/math.ts";
 import { calcPath, pathable } from "./pathing.ts";
 
@@ -19,7 +21,7 @@ const repath = (e: Entity) => {
     e,
     e.action.target,
     { mode: e.action.attacking ? "attack" : undefined },
-  );
+  ).slice(1);
   if (
     newPath.length === e.action.path.length &&
     e.action.path.every((p, i) => p.x === newPath[i].x && p.y === newPath[i].y)
@@ -31,7 +33,7 @@ const repath = (e: Entity) => {
         mode: e.action.attacking ? "attack" : undefined,
         removeMovingEntities: false,
       },
-    );
+    ).slice(1);
   }
   if (newPath.length < 1) return delete (e as Entity).action;
   e.action = {
@@ -82,6 +84,26 @@ export const addUnitMovementSystem = (app: App<Entity>) => {
       }
 
       let target = e.action.path[0];
+
+      if (e.turnSpeed) {
+        let facing = e.facing ?? Math.PI * 3 / 2;
+        const targetAngle = Math.atan2(
+          target.y - e.position.y,
+          target.x - e.position.x,
+        );
+        const diff = Math.abs(angleDifference(facing, targetAngle));
+        if (diff > 1e-07) {
+          const maxTurn = e.turnSpeed * delta;
+          e.facing = diff < maxTurn
+            ? targetAngle
+            : tweenAbsAngles(facing, targetAngle, maxTurn);
+        }
+        if (diff > Math.PI / 2) {
+          delta = Math.max(0, delta - (diff - Math.PI / 2) / e.turnSpeed);
+        }
+      }
+
+      if (delta === 0) return;
 
       let movement = e.movementSpeed * delta;
 

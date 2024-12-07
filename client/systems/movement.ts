@@ -1,6 +1,8 @@
 import {
+  angleDifference,
   distanceBetweenPoints,
   squaredDistanceBetweenPoints,
+  tweenAbsAngles,
 } from "../../shared/pathing/math.ts";
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
@@ -32,6 +34,20 @@ app.addSystem({
     }
 
     target = e.action.path[0];
+
+    if (e.turnSpeed) {
+      let facing = e.facing ?? Math.PI * 3 / 2;
+      const targetAngle = Math.atan2(
+        target.y - e.position.y,
+        target.x - e.position.x,
+      );
+      const diff = Math.abs(angleDifference(facing, targetAngle));
+      if (diff > Math.PI / 2) {
+        delta = Math.max(0, delta - (diff - Math.PI / 2) / e.turnSpeed);
+      }
+    }
+
+    if (delta === 0) return;
 
     let movement = e.movementSpeed * delta;
 

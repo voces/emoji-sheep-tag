@@ -41,6 +41,7 @@ export const tempUnit = (
   unitType: type,
   owner,
   position: { x, y },
+  facing: Math.PI * 3 / 2,
   ...(typeof unitData[type]?.maxHealth === "number"
     ? { health: unitData[type]?.maxHealth }
     : undefined),

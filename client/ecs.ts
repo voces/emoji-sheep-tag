@@ -25,4 +25,4 @@ export const app = newApp<Entity>({
 });
 (globalThis as any).app = app;
 
-onRender((delta) => app.update(delta));
+onRender((delta, time) => app.update(delta, time));

@@ -48,6 +48,8 @@ const zUpdate = z.object({
   mana: z.number().optional(),
   position: zPoint.readonly().optional(),
   movementSpeed: z.number().optional(),
+  facing: z.number().optional(),
+  turnSpeed: z.number().optional(),
   actions: z.array(
     z.union([
       z.object({

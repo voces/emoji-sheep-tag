@@ -1,5 +1,5 @@
 import { assertEquals } from "jsr:@std/assert";
-import { distanceBetweenEntities } from "./math.ts";
+import { distanceBetweenEntities, tweenAbsAngles } from "./math.ts";
 
 const sheep = {
   id: "sheep-1",
@@ -100,5 +100,20 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
       position: { x: 23, y: 24.5 },
     }),
     0.3938092025505249,
+  );
+});
+
+Deno.test("tweenAbsAngles", () => {
+  assertEquals(tweenAbsAngles(0, Math.PI / 2, Math.PI / 4), Math.PI / 4);
+  assertEquals(tweenAbsAngles(0, -Math.PI / 2, Math.PI / 4), Math.PI * 7 / 4);
+  assertEquals(tweenAbsAngles(-Math.PI / 4, Math.PI / 4, Math.PI / 4), 0);
+  assertEquals(tweenAbsAngles(Math.PI / 4, -Math.PI / 4, Math.PI / 4), 0);
+  assertEquals(
+    tweenAbsAngles(Math.PI * 3 / 4, Math.PI * 5 / 4, Math.PI / 4),
+    Math.PI,
+  );
+  assertEquals(
+    tweenAbsAngles(Math.PI * 5 / 4, Math.PI * 3 / 4, Math.PI / 4),
+    Math.PI,
   );
 });

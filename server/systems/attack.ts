@@ -64,7 +64,7 @@ export const addAttackSystem = (app: Game) => {
             (target.isMoving ? e.attack.rangeMotionBuffer * 0.1 : 0)
       ) {
         if ((counter + offset) % 17 > 0) return;
-        const path = calcPath(e, e.action.target, { mode: "attack" });
+        const path = calcPath(e, e.action.target, { mode: "attack" }).slice(1);
         if (
           !path.length ||
           (path[path.length - 1].x === e.position.x &&

@@ -95,13 +95,6 @@ app.addSystem({
         const movement = (e.movementSpeed ?? 0) / getFps();
         const jerk = delta / movement;
 
-        const angle = Math.atan2(
-          e.position.y - prev.y,
-          e.position.x - prev.x,
-        );
-
-        console.log("moving", getDirection(angle));
-
         if (jerk > 1.05 && jerk < 15) {
           const angle = Math.atan2(
             e.position.y - prev.y,
@@ -110,15 +103,9 @@ app.addSystem({
           const dist = movement * 1.05;
           const x = prev.x + dist * Math.cos(angle);
           const y = prev.y + dist * Math.sin(angle);
-          console.log(
-            "correct",
-            Math.round(jerk * 100) / 100,
-          );
-          collections[e.unitType]?.setPositionAt(e.id, x, y);
+          collections[e.unitType]?.setPositionAt(e.id, x, y, e.facing);
           prevPositions.set(e, { x, y });
           return;
-        } else if (jerk > 3) {
-          console.log("HUGE jerk", jerk);
         }
       }
     }

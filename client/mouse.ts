@@ -76,18 +76,20 @@ const plane = new Plane(new Vector3(0, 0, 1), 0);
 
 const world3 = new Vector3();
 
+let lastIntersectUpdate = performance.now() / 1000;
+
 const updateIntersects = () => {
+  lastIntersectUpdate = performance.now() / 1000;
   raycaster.layers.set(0);
   const intersects = raycaster.intersectObject(scene, true);
   if (intersects.length) {
     const set = new Set<Entity>();
     for (const intersect of intersects) {
-      const parent = intersect.object.parent;
       if (
-        !(parent instanceof InstancedGroup) ||
+        !(intersect.object instanceof InstancedGroup) ||
         typeof intersect.instanceId !== "number"
       ) continue;
-      const id = parent.getId(intersect.instanceId);
+      const id = intersect.object.getId(intersect.instanceId);
       if (!id) continue;
       const entity = lookup[id];
       if (!entity || entity.blueprint) continue;
@@ -137,5 +139,6 @@ globalThis.addEventListener("pointerdown", (event) =>
 
 globalThis.addEventListener("contextmenu", (e) => e.preventDefault());
 
-let counter = 0;
-app.addSystem({ update: () => (counter++ % 15 === 0) && updateIntersects() });
+app.addSystem({
+  update: (_, time) => (time - lastIntersectUpdate > 0.2) && updateIntersects(),
+});
