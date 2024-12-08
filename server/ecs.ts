@@ -98,7 +98,7 @@ export const newEcs = () => {
         };
         const proxy = new Proxy(entity, {
           set: (target, prop, value) => {
-            if ((target as any)[prop] == value) return true;
+            if ((target as any)[prop] === value) return true;
             (target as any)[prop] = value;
             app.onEntityPropChange(proxy, prop as any);
             update(target.id, prop as keyof Entity, value);

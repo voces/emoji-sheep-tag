@@ -15,24 +15,24 @@ export const addAttackSystem = (app: Game) => {
       offset++;
 
       if (e.action?.type !== "attack" || !e.position) {
-        delete (e as Entity).isAttacking;
         if (e.swing) delete e.swing;
+        delete (e as Entity).isAttacking;
         return;
       }
 
       if (!e.attack) {
-        delete e.action;
-        delete (e as Entity).isAttacking;
         if (e.swing) delete e.swing;
+        delete (e as Entity).isAttacking;
+        delete e.action;
         return;
       }
 
       const target = lookup(e.action.target);
 
       if (!target || !target.position || target.health === 0) {
-        delete e.action;
-        delete (e as Entity).isAttacking;
         if (e.swing) delete e.swing;
+        delete (e as Entity).isAttacking;
+        delete e.action;
         return;
       }
 
@@ -58,11 +58,7 @@ export const addAttackSystem = (app: Game) => {
         return;
       }
 
-      if (
-        distanceBetweenEntities(e, target) >
-          e.attack.range +
-            (target.isMoving ? e.attack.rangeMotionBuffer * 0.1 : 0)
-      ) {
+      if (distanceBetweenEntities(e, target) > e.attack.range) {
         if ((counter + offset) % 17 > 0) return;
         const path = calcPath(e, e.action.target, { mode: "attack" }).slice(1);
         if (
@@ -88,6 +84,19 @@ export const addAttackSystem = (app: Game) => {
 
       if ((e.lastAttack ?? 0) + e.attack.cooldown <= time) {
         e.swing = { time, source: e.position, target: target.position };
+      }
+    },
+  });
+
+  app.addSystem({
+    props: ["position", "action", "isMoving", "attack"],
+    onChange: (e) => {
+      if (e.action.type !== "walk" || !e.queue?.length) return;
+      const next = e.queue[0];
+      if (next.type !== "attack") return;
+      const target = lookup(next.target);
+      if (target && distanceBetweenEntities(e, target) < e.attack.range) {
+        delete (e as Entity).action;
       }
     },
   });

@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run -A --watch server/index.ts --dev"
+    "dev": "deno run -A --watch --inspect server/index.ts --dev"
   },
   "imports": {
     "typed-event-target": "https://deno.land/x/typescript_event_target@v1.0.5/mod.ts",

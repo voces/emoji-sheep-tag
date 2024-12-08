@@ -1,11 +1,12 @@
 import { SystemEntity } from "https://jsr.io/@verit/ecs/0.6.1/src/System.ts";
 import { app, Entity } from "../ecs.ts";
-import { isLocalPlayer } from "../ui/vars/players.ts";
+import { getLocalPlayer } from "../ui/vars/players.ts";
+import { isAlly } from "../api/unit.ts";
 
 const blueprints = new Map<Entity, Entity[]>();
 
 const entitiesFromQueue = (e: SystemEntity<Entity, "queue" | "owner">) =>
-  isLocalPlayer(e.owner) &&
+  isAlly(e, getLocalPlayer()!) &&
   blueprints.set(
     e,
     e.queue.filter((a) => a.type === "build").map((a) =>

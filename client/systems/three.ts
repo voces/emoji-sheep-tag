@@ -66,14 +66,6 @@ app.addSystem({
   },
 });
 
-function getDirection(angle: number) {
-  // Normalize the angle to the range [-π, π]
-  const normalizedAngle = (angle + Math.PI) % (2 * Math.PI) - Math.PI;
-
-  // Determine direction
-  return Math.abs(normalizedAngle) <= Math.PI / 2 ? "right" : "left";
-}
-
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
 // Reflect logical position to render position
 app.addSystem({

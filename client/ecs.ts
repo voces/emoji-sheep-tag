@@ -15,6 +15,7 @@ export const app = newApp<Entity>({
         return true;
       },
       deleteProperty: (target, prop) => {
+        if ((target as any)[prop] == null) return true;
         delete (target as any)[prop];
         app.onEntityPropChange(proxy, prop as any);
         return true;

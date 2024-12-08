@@ -45,6 +45,7 @@ export type Entity = {
   maxHealth?: number;
   mana?: number;
   movementSpeed?: number;
+  /** Radians per second */
   turnSpeed?: number;
   actions?: ReadonlyArray<UnitDataAction>;
   attack?: {

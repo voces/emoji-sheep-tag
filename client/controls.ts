@@ -161,6 +161,12 @@ document.addEventListener("pointerlockchange", (e) => {
 
 let blueprintIndex = 0;
 let blueprint: SystemEntity<Entity, "unitType"> | undefined;
+export const clearBlueprint = (
+  fn?: (blueprint: SystemEntity<Entity, "unitType">) => void,
+) => {
+  if (blueprint && (!fn || fn(blueprint))) handleEscape();
+};
+
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
 
@@ -243,6 +249,9 @@ app.addSystem({
         tiles.length,
       );
     }
+
+    if (mouse.intersects.size) cursor.classList.add("entity");
+    else cursor.classList.remove("entity");
   },
 });
 

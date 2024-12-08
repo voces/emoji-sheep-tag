@@ -42,8 +42,8 @@ app.addSystem({
         target.x - e.position.x,
       );
       const diff = Math.abs(angleDifference(facing, targetAngle));
-      if (diff > Math.PI / 2) {
-        delta = Math.max(0, delta - (diff - Math.PI / 2) / e.turnSpeed);
+      if (diff > Math.PI / 3) {
+        delta = Math.max(0, delta - (diff - Math.PI / 3) / e.turnSpeed);
       }
     }
 

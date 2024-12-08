@@ -29,7 +29,7 @@ export const unitData: Record<
 > = {
   sheep: {
     movementSpeed: 3,
-    turnSpeed: 3 * Math.PI,
+    turnSpeed: 15,
     radius: 0.25,
     pathing: 1,
     actions: [
@@ -43,12 +43,13 @@ export const unitData: Record<
   },
   wolf: {
     movementSpeed: 3.1,
+    turnSpeed: 11,
     radius: 0.5,
     pathing: 1,
     attack: {
       damage: 100,
-      range: 0.31, // roughly minimum to hit via corner now...
-      rangeMotionBuffer: 1,
+      range: 0.32, // roughly minimum to hit via corner
+      rangeMotionBuffer: 0.92,
       cooldown: 1.2,
       damagePoint: 0.3,
     },
