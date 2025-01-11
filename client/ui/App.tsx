@@ -21,7 +21,6 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 
 const Disconnected = () => {
   const connectionStatus = useReactiveVar(connectionStatusVar);
-  console.log("Disconnected", connectionStatus);
   if (connectionStatus !== "disconnected") return null;
   return (
     <Card

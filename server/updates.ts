@@ -32,3 +32,7 @@ export const flushUpdates = () => {
     updates = {};
   }
 };
+
+export const clearUpdates = () => {
+  updates = {};
+};

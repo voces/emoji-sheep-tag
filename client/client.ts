@@ -130,6 +130,7 @@ const zJoin = z.object({
     color: z.string(),
     team: zTeam,
     local: z.boolean().optional().default(false),
+    host: z.boolean().optional().default(false),
   }).array(),
   updates: zUpdate.array(),
 });

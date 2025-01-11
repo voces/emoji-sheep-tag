@@ -42,6 +42,12 @@ app.addSystem({
         target.x - e.position.x,
       );
       const diff = Math.abs(angleDifference(facing, targetAngle));
+      if (diff > 1e-07) {
+        const maxTurn = e.turnSpeed * delta;
+        e.facing = diff < maxTurn
+          ? targetAngle
+          : tweenAbsAngles(facing, targetAngle, maxTurn);
+      }
       if (diff > Math.PI / 3) {
         delta = Math.max(0, delta - (diff - Math.PI / 3) / e.turnSpeed);
       }

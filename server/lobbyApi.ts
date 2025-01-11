@@ -2,11 +2,14 @@ import { ServerToClientMessage } from "../client/client.ts";
 import { Client } from "./client.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { deleteLobby } from "./lobby.ts";
+import { clearUpdates } from "./updates.ts";
 
 export const endRound = () => {
   const lobby = lobbyContext.context;
+  lobby.round?.clearInterval();
   lobby.round = undefined;
   lobby.status = "lobby";
+  clearUpdates();
 };
 
 export const send = (message: ServerToClientMessage) => {

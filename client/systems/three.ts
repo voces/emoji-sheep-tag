@@ -14,6 +14,7 @@ import hutSvg from "../assets/hut.svg";
 //@deno-types="../assets/svg.d.ts"
 import fenceSvg from "../assets/fence.svg";
 import { getFps } from "../graphics/three.ts";
+import { SystemEntity } from "jsr:@verit/ecs";
 
 const sheep = loadSvg(sheepSvg, 1);
 const wolf = loadSvg(wolfSvg, 2);
@@ -67,46 +68,65 @@ app.addSystem({
 });
 
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
-// Reflect logical position to render position
-app.addSystem({
-  props: ["id", "unitType", "position"],
-  onAdd: (e) => {
-    prevPositions.set(e, e.position);
-    collections[e.unitType]?.setPositionAt(
-      e.id,
-      e.position.x,
-      e.position.y,
-    );
-  },
-  onChange: (e) => {
-    if (e.isMoving) {
-      const prev = prevPositions.get(e);
-      if (prev) {
-        const delta =
-          ((prev.x - e.position.x) ** 2 + (prev.y - e.position.y) ** 2) ** 0.5;
-        const movement = (e.movementSpeed ?? 0) / getFps();
-        const jerk = delta / movement;
 
-        if (jerk > 1.05 && jerk < 15) {
-          const angle = Math.atan2(
-            e.position.y - prev.y,
-            e.position.x - prev.x,
-          );
-          const dist = movement * 1.05;
-          const x = prev.x + dist * Math.cos(angle);
-          const y = prev.y + dist * Math.sin(angle);
-          collections[e.unitType]?.setPositionAt(e.id, x, y, e.facing);
-          prevPositions.set(e, { x, y });
-          return;
-        }
+const onChange = (
+  e: SystemEntity<Entity, "unitType"> & {
+    readonly position: { x: number; y: number };
+    readonly facing?: number;
+  },
+) => {
+  if (e.isMoving) {
+    const prev = prevPositions.get(e);
+    if (prev) {
+      const delta =
+        ((prev.x - e.position.x) ** 2 + (prev.y - e.position.y) ** 2) ** 0.5;
+      const movement = (e.movementSpeed ?? 0) / getFps();
+      const jerk = delta / movement;
+
+      if (jerk > 1.05 && jerk < 15) {
+        const angle = Math.atan2(
+          e.position.y - prev.y,
+          e.position.x - prev.x,
+        );
+        const dist = movement * 1.05;
+        const x = prev.x + dist * Math.cos(angle);
+        const y = prev.y + dist * Math.sin(angle);
+        collections[e.unitType]?.setPositionAt(e.id, x, y, e.facing);
+        prevPositions.set(e, { x, y });
+        return;
       }
     }
+  }
+  collections[e.unitType]?.setPositionAt(
+    e.id,
+    e.position.x,
+    e.position.y,
+    e.facing,
+  );
+  prevPositions.set(e, e.position);
+};
+
+// Reflect logical position to render position
+app.addSystem({
+  props: ["unitType", "position"],
+  onAdd: (e: SystemEntity<Entity, "unitType" | "position">) => {
+    prevPositions.set(e, e.position);
     collections[e.unitType]?.setPositionAt(
       e.id,
       e.position.x,
       e.position.y,
+      e.facing,
     );
-    prevPositions.set(e, e.position);
   },
+  onChange,
   onRemove: (e) => collections[e.unitType!]?.delete(e.id),
+});
+
+app.addSystem({
+  props: ["unitType", "facing"],
+  onChange: (e) => {
+    if (e.position) {
+      onChange(e as SystemEntity<Entity, "unitType" | "position" | "facing">);
+    }
+  },
 });

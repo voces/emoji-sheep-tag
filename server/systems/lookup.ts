@@ -6,7 +6,7 @@ const data = new WeakMap<App<Entity>, Record<string, Entity | undefined>>();
 
 export const lookup = (entityId: string) => {
   const app = lobbyContext.context.round?.ecs;
-  if (!app) throw new Error("No round in progress");
+  if (!app) return;
   const entity = data.get(app)?.[entityId];
   // if (!entity) throw new Error(`Could not find entity ${entityId}`);
   return entity;

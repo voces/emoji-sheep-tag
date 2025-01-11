@@ -123,6 +123,7 @@ export const handleSocket = (socket: Socket) => {
             name: client.name,
             color: client.color,
             team: "pending",
+            host: true,
           }],
           updates: [],
         });
@@ -153,6 +154,7 @@ export const handleSocket = (socket: Socket) => {
             color: p.color,
             team: client.lobby!.settings.teams.get(client)! ?? "pending",
             local: p === client ? true : undefined,
+            host: client.lobby?.host === p,
           }),
         ),
         updates: Array.from(
@@ -173,7 +175,9 @@ export const handleSocket = (socket: Socket) => {
         const json = JSON.parse(e.data);
         // console.log("C->S", json);
         const message = zClientToServerMessage.parse(json);
-        actions[message.type](client, message as any);
+        try {
+          actions[message.type](client, message as any);
+        } catch {}
         flushUpdates();
       } catch (err) {
         console.error(err);

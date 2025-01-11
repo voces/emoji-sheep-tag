@@ -1,7 +1,7 @@
 import { styled } from "npm:styled-components";
 import { Card } from "../components/Card.ts";
 import { useReactiveVar } from "../hooks/useVar.tsx";
-import { Player, playersVar } from "../vars/players.ts";
+import { getLocalPlayer, Player, playersVar } from "../vars/players.ts";
 import { ColorPicker } from "../components/ColorPicker.ts";
 import { Box } from "../components/Box.ts";
 import { Button } from "../components/Button.ts";
@@ -36,7 +36,9 @@ const Players = () => {
 const Settings = () => (
   <Card color="purple" style={{ width: "40%", height: "60%" }}>
     <Button
-      onClick={() => send({ type: "start" })}
+      onClick={() =>
+        send({ type: "start" })}
+      disabled={!getLocalPlayer()?.host}
     >
       Start
     </Button>

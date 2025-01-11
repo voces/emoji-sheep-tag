@@ -22,3 +22,7 @@ export const setSome = <T>(
   for (const element of set) if (fn(element)) return true;
   return false;
 };
+
+export const setFirst = <T>(set: ReadonlySet<T>) => {
+  for (const element of set) return element;
+};

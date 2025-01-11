@@ -12,19 +12,12 @@ import { SystemEntity } from "jsr:@verit/ecs";
 import { unitData } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
 import { isEnemy } from "./api/unit.ts";
+import { updateCursor } from "./graphics/cursor.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
     ? Math.round(value * 2) / 2
     : (Math.round(value * 2 + 0.5) - 0.5) / 2;
-
-const cursor = document.getElementById("cursor");
-if (!cursor) throw new Error("Expected cursor element");
-document.addEventListener("pointerlockchange", () => {
-  cursor.style.visibility = document.pointerLockElement && !blueprint
-    ? "visible"
-    : "hidden";
-});
 
 const handleSmartTarget = (e: MouseButtonEvent) => {
   const target = e.intersects.values().next().value!;
@@ -83,9 +76,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       )?.id;
       app.delete(blueprint);
       blueprint = undefined;
-      cursor.style.visibility = document.pointerLockElement
-        ? "visible"
-        : "hidden";
+      updateCursor();
       if (!unit) return;
       send({
         type: "build",
@@ -106,9 +97,6 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 
 let hover: Element | null = null;
 mouse.addEventListener("mouseMove", (e) => {
-  cursor.style.top = `${e.pixels.y}px`;
-  cursor.style.left = `${e.pixels.x}px`;
-
   if (blueprint) {
     blueprint.position = {
       x: normalize(
@@ -128,8 +116,7 @@ mouse.addEventListener("mouseMove", (e) => {
     hover = e.element;
   }
 
-  if (e.intersects.size) cursor.classList.add("entity");
-  else cursor.classList.remove("entity");
+  updateCursor(true);
 });
 
 const keyboard: Record<string, boolean> = {};
@@ -149,9 +136,7 @@ const handleEscape = () => {
   if (blueprint) {
     app.delete(blueprint);
     blueprint = undefined;
-    cursor.style.visibility = document.pointerLockElement
-      ? "visible"
-      : "hidden";
+    updateCursor();
   }
 };
 
@@ -166,6 +151,7 @@ export const clearBlueprint = (
 ) => {
   if (blueprint && (!fn || fn(blueprint))) handleEscape();
 };
+export const hasBlueprint = () => !!blueprint;
 
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
@@ -207,7 +193,7 @@ globalThis.addEventListener("keydown", (e) => {
       owner: getLocalPlayer()?.id,
       blueprint: true,
     });
-    cursor.style.visibility = "hidden";
+    updateCursor();
     return;
   }
 
@@ -250,8 +236,7 @@ app.addSystem({
       );
     }
 
-    if (mouse.intersects.size) cursor.classList.add("entity");
-    else cursor.classList.remove("entity");
+    updateCursor();
   },
 });
 

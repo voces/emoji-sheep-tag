@@ -141,7 +141,7 @@ export class InstancedGroup extends Group {
     return this.reverseMap[index];
   }
 
-  setMatrixAt(index: number | string, matrix: Matrix4) {
+  private setMatrixAt(index: number | string, matrix: Matrix4) {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
@@ -177,9 +177,13 @@ export class InstancedGroup extends Group {
           dummy.scale,
         );
         if (typeof angle === "number") {
-          angle = Math.abs(normalizeAngle(angle));
-          if (angle + 1e-05 < Math.PI / 2) dummy.scale.x = -1;
-          else if (angle - 1e-05 > Math.PI / 2) dummy.scale.x = 1;
+          const norm = normalizeAngle(angle);
+          const flip = norm < (Math.PI / 2) && norm > (Math.PI / -2);
+          dummy.rotation.z = flip ? Math.PI - norm : norm + Math.PI;
+          dummy.rotation.x = flip ? Math.PI : 0;
+        } else {
+          dummy.rotation.z = 0;
+          dummy.rotation.x = 0;
         }
         dummy.position.set(x, y, 0);
         dummy.updateMatrix();
