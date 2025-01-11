@@ -117,9 +117,10 @@ export const addUnitMovementSystem = (app: App<Entity>) => {
           e.position = { ...target };
           delete (e as Entity).isMoving;
           if (
-            !("id" in targetEntity) ||
-            !targetEntity.movementSpeed ||
-            e.action.attacking
+            (!("id" in targetEntity) ||
+              !targetEntity.movementSpeed ||
+              // Attack system might have already cleared
+              e.action.attacking) && e.action?.type === "walk"
           ) delete e.action;
           return;
         }

@@ -13,6 +13,7 @@ import {
 } from "three";
 import { normalizeAngle } from "../../shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
+import { number } from "../../../.cache/deno/npm/registry.npmjs.org/@types/prop-types/15.7.12/index.d.ts";
 
 const dummy = new Object3D();
 const dummyColor = new Color();
@@ -47,7 +48,7 @@ export class InstancedGroup extends Group {
       }
     }
     for (let i = 0; i < count; i++) {
-      this.setPositionAt(i, Infinity, Infinity);
+      this.setPositionAt(i, Infinity, Infinity, undefined, Infinity);
     }
   }
 
@@ -107,7 +108,7 @@ export class InstancedGroup extends Group {
         this.setMatrixAt(id, dummy.matrix);
       }
 
-      this.setPositionAt(swapId, Infinity, Infinity);
+      this.setPositionAt(swapId, Infinity, Infinity, undefined, Infinity);
 
       const colorInstancedMesh = this.children.find((c): c is InstancedMesh =>
         c instanceof InstancedMesh &&
@@ -166,7 +167,13 @@ export class InstancedGroup extends Group {
     }
   }
 
-  setPositionAt(index: number | string, x: number, y: number, angle?: number) {
+  setPositionAt(
+    index: number | string,
+    x: number,
+    y: number,
+    angle?: number,
+    z?: number,
+  ) {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
@@ -185,7 +192,11 @@ export class InstancedGroup extends Group {
           dummy.rotation.z = 0;
           dummy.rotation.x = 0;
         }
-        dummy.position.set(x, y, 0);
+        dummy.position.set(
+          x,
+          y,
+          z ?? (Number.isFinite(dummy.position.z) ? dummy.position.z : 0),
+        );
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);
         child.instanceMatrix.needsUpdate = true;
@@ -194,6 +205,21 @@ export class InstancedGroup extends Group {
       }
     }
     this.updateBvhInstance(index, dummy.matrix);
+  }
+
+  getPositionAt(index: number | string) {
+    if (typeof index === "string") index = this.getIndex(index);
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh) {
+        child.getMatrixAt(index, dummy.matrix);
+        dummy.matrix.decompose(
+          dummy.position,
+          dummy.quaternion,
+          dummy.scale,
+        );
+        return dummy.position.clone();
+      }
+    }
   }
 
   setPlayerColorAt(

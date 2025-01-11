@@ -47,7 +47,7 @@ export const unitData: Record<
     radius: 0.5,
     pathing: 1,
     attack: {
-      damage: 100,
+      damage: 70,
       range: 0.32, // roughly minimum to hit via corner
       rangeMotionBuffer: 0.92,
       cooldown: 1.2,
@@ -67,7 +67,7 @@ export const unitData: Record<
   wideHut: {
     radius: 0.75,
     tilemap: { map: Array(36).fill(3), top: -3, left: -3, width: 6, height: 6 },
-    maxHealth: 120,
+    maxHealth: 140,
   },
   rotundHut: {
     radius: 1,

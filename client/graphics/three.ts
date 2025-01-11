@@ -30,6 +30,7 @@ const terrain = new Grid(tiles[0].length, tiles.length);
 terrain.layers.set(2);
 terrain.position.x = center.x;
 terrain.position.y = center.y;
+terrain.position.z = -0.01;
 scene.add(terrain);
 for (let y = 0; y < tiles.length; y++) {
   for (let x = 0; x < tiles[y].length; x++) {

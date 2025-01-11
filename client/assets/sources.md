@@ -1,0 +1,7 @@
+- https://iconduck.com/emojis/97154/sheep
+- https://iconduck.com/emojis/97196/wolf-face
+- https://iconduck.com/emojis/98625/hut
+- https://www.svgrepo.com/svg/90719/fence
+- https://www.svgrepo.com/svg/405378/fire
+- https://www.svgrepo.com/svg/405006/collision
+- https://www.svgrepo.com/svg/321226/plate-claw

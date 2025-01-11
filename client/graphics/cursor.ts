@@ -35,8 +35,8 @@ const getCursorVariant = (intersect: Entity | undefined) => {
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return "neutral";
   if (intersect.owner === localPlayer.id) return "control";
-  if (isAlly(intersect, intersect)) return "ally";
-  if (isEnemy(intersect, intersect)) return "enemy";
+  if (isAlly(intersect, localPlayer)) return "ally";
+  if (isEnemy(intersect, localPlayer)) return "enemy";
   return "neutral";
 };
 

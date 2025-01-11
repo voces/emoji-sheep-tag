@@ -13,6 +13,12 @@ import wolfSvg from "../assets/wolf.svg";
 import hutSvg from "../assets/hut.svg";
 //@deno-types="../assets/svg.d.ts"
 import fenceSvg from "../assets/fence.svg";
+//@deno-types="../assets/svg.d.ts"
+import fireSvg from "../assets/fire.svg";
+//@deno-types="../assets/svg.d.ts"
+import clawSvg from "../assets/claw.svg";
+//@deno-types="../assets/svg.d.ts"
+import collisionSvg from "../assets/collision.svg";
 import { getFps } from "../graphics/three.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
 
@@ -23,6 +29,9 @@ const tinyHut = loadSvg(hutSvg, 1);
 const wideHut = loadSvg(hutSvg, 3);
 const rotundHut = loadSvg(hutSvg, 4);
 const fence = loadSvg(fenceSvg, 0.07, { layer: 2 });
+const fire = loadSvg(fireSvg, 1, { layer: 2 });
+const claw = loadSvg(clawSvg, 0.05, { layer: 2 });
+const collision = loadSvg(collisionSvg, 2, { layer: 2 });
 
 const collections: Record<string, InstancedGroup | undefined> = {
   sheep,
@@ -32,7 +41,11 @@ const collections: Record<string, InstancedGroup | undefined> = {
   wideHut,
   rotundHut,
   fence,
+  fire,
+  claw,
+  collision,
 };
+Object.assign(globalThis, { collections });
 
 const color = new Color();
 const color2 = new Color();
@@ -91,7 +104,7 @@ const onChange = (
         const dist = movement * 1.05;
         const x = prev.x + dist * Math.cos(angle);
         const y = prev.y + dist * Math.sin(angle);
-        collections[e.unitType]?.setPositionAt(e.id, x, y, e.facing);
+        collections[e.unitType]?.setPositionAt(e.id, x, y, e.facing, e.zIndex);
         prevPositions.set(e, { x, y });
         return;
       }
@@ -102,6 +115,7 @@ const onChange = (
     e.position.x,
     e.position.y,
     e.facing,
+    e.zIndex,
   );
   prevPositions.set(e, e.position);
 };
@@ -116,6 +130,7 @@ app.addSystem({
       e.position.x,
       e.position.y,
       e.facing,
+      e.zIndex,
     );
   },
   onChange,

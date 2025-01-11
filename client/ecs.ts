@@ -2,11 +2,14 @@ import { newApp } from "jsr:@verit/ecs";
 import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "../shared/types.ts";
 
-export type Entity = CommonEntity & { selected?: boolean; blueprint?: boolean };
+export type Entity = CommonEntity & {
+  selected?: boolean;
+  blueprint?: boolean;
+  zIndex?: number;
+};
 
 export const app = newApp<Entity>({
   newEntity: (entity) => {
-    console.log("newEntity", entity);
     if (!entity.id) throw new Error("Expected entity to have an id");
     const proxy = new Proxy(entity as Entity, {
       set: (target, prop, value) => {

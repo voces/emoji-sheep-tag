@@ -237,11 +237,13 @@ let server = location.host;
 export const setServer = (value: string) => server = value;
 
 export const connect = () => {
+  if (ws) return;
   ws = server === "local" ? new LocalWebSocket() : new WebSocket(
     `ws${location.protocol === "https:" ? "s" : ""}//${server}`,
   );
   ws.addEventListener("close", () => {
     connectionStatusVar("disconnected");
+    ws = undefined;
     connect();
   });
   ws.addEventListener("open", () => connectionStatusVar("connected"));
