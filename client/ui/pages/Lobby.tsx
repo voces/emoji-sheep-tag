@@ -2,18 +2,17 @@ import { styled } from "npm:styled-components";
 import { Card } from "../components/Card.ts";
 import { useReactiveVar } from "../hooks/useVar.tsx";
 import { getLocalPlayer, Player, playersVar } from "../vars/players.ts";
-import { ColorPicker } from "../components/ColorPicker.ts";
+import { ColorPicker } from "../components/ColorPicker.tsx";
 import { Box } from "../components/Box.ts";
 import { Button } from "../components/Button.ts";
 import { send } from "../../client.ts";
-import { ChangeEvent } from "npm:@types/react";
 
 const PlayerRow = ({ name, color }: Player) => (
   <Box $gap={4}>
     <ColorPicker
       value={color}
-      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-        console.log(e.currentTarget.value);
+      onChange={(e) => {
+        send({ type: "generic", event: { type: "colorChange", color: e } });
       }}
     />
     <span>{name}</span>

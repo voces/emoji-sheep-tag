@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "npm:react";
 import { mouse, MouseButtonEvent } from "../../mouse.ts";
 import { Card } from "./Card.ts";
 
-const Container = styled(Card)(({ theme, color = "green" }) => ({
+const Container = styled(Card)(({ theme, color = "blue" }) => ({
   position: "static",
   color: "inherit",
   font: "inherit",
@@ -23,7 +23,6 @@ const Container = styled(Card)(({ theme, color = "green" }) => ({
     pointerEvents: "none",
   },
 }));
-Container.defaultProps = { color: "green" };
 
 const Menu = styled(Card)({
   position: "absolute",
@@ -64,7 +63,7 @@ const Option = <T,>(
 );
 
 export const Select = <T,>(
-  { color, placeholder, value, onChange, options }: {
+  { color = "green", placeholder, value, onChange, options }: {
     color?: string;
     placeholder?: React.ReactNode;
     value: T | undefined;

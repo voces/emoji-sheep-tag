@@ -12,13 +12,17 @@ const zLocalBlobMessage = z.union([
 ]);
 channel.addEventListener("message", (e) => {
   const message = zLocalBlobMessage.parse(e.data);
-  if (message.type === "blobUrl") sharedBlobURL = message.url;
-  else if (message.type === "request") {
+  if (message.type === "blobUrl") {
+    console.log("received blob");
+    sharedBlobURL = message.url;
+  } else if (message.type === "request") {
     if (sharedBlobURL) {
+      console.log("sending blob");
       channel.postMessage({ type: "blobUrl", url: sharedBlobURL });
     }
   }
 });
+channel.postMessage({ type: "request" });
 
 // LocalWebSocket.ts
 type SocketEventMap = {
@@ -114,7 +118,9 @@ export const loadLocal = () => {
     if (!workerScript) throw new Error("Could not locate worker script");
     const blob = new Blob([workerScript], { type: "application/javascript" });
     sharedBlobURL = URL.createObjectURL(blob);
+    console.log("creating blob");
     channel.postMessage({ type: "blobUrl", url: sharedBlobURL });
+    console.log("sending blob");
   }
   if (!worker) {
     worker = new SharedWorker(sharedBlobURL);

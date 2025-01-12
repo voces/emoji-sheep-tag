@@ -54,9 +54,16 @@ export class UnitDeathEvent extends Event {
   }
 }
 
+export class ColorChangeEvent extends Event {
+  constructor(readonly client: string, readonly color: string) {
+    super("colorChange");
+  }
+}
+
 type GameEvents = {
   unitOrder: UnitOrderEvent;
   unitDeath: UnitDeathEvent;
+  colorChange: ColorChangeEvent;
 };
 
 class GameTarget extends TypedEventTarget<GameEvents> {

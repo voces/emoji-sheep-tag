@@ -115,10 +115,10 @@ const zUpdates = z.object({
   updates: z.union([zUpdate, zDelete]).array(),
 });
 
-const zSlotChange = z.object({
-  type: z.literal("slotChange"),
+const zColorChange = z.object({
+  type: z.literal("colorChange"),
   id: z.string(),
-  slot: z.number(),
+  color: z.string(),
 });
 
 const zJoin = z.object({
@@ -154,7 +154,7 @@ const zPong = z.object({
 const zMessage = z.union([
   zStart,
   zUpdates,
-  zSlotChange,
+  zColorChange,
   zJoin,
   zLeave,
   zStop,
@@ -185,7 +185,10 @@ const handlers = {
       else map[update.id] = app.add(props);
     }
   },
-  slotChange: (data: z.TypeOf<typeof zSlotChange>) => {
+  colorChange: (data: z.TypeOf<typeof zColorChange>) => {
+    playersVar((players) =>
+      players.map((p) => p.id === data.id ? { ...p, color: data.color } : p)
+    );
   },
   start: (e: z.TypeOf<typeof zStart>) => {
     const players = playersVar();

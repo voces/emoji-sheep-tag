@@ -16,6 +16,8 @@ import "./events/death.ts";
 import "./st/index.ts";
 import "./systems/autoAttack.ts";
 import "./systems/kd.ts";
+import { generic, zGenericEvent } from "./actions/generic.ts";
+import { setSome } from "./util/set.ts";
 
 type SocketEventMap = {
   close: unknown;
@@ -57,7 +59,7 @@ class Client {
   lobby?: Lobby;
 
   constructor(readonly socket: Socket) {
-    this.color = colors[clientIndex % colors.length];
+    this.color = colors[0];
     this.id = `player-${clientIndex++}`;
     this.name = `Player ${clientIndex}`;
   }
@@ -92,6 +94,7 @@ const zClientToServerMessage = z.union([
   zAttack,
   zOrderEvent,
   zPing,
+  zGenericEvent,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -103,6 +106,7 @@ const actions = {
   attack,
   unitOrder,
   ping,
+  generic,
 };
 
 export const handleSocket = (socket: Socket) => {
@@ -115,6 +119,9 @@ export const handleSocket = (socket: Socket) => {
       const lobby = client.lobby = result.value;
       lobbyContext.with(client.lobby, () => {
         lobby.settings.teams.set(client, "pending");
+        client.color = colors.find((c) =>
+          !setSome(lobby.players, (p) => p.color === c)
+        ) ?? client.color;
         send({
           type: "join",
           status: lobby.status,
@@ -177,7 +184,9 @@ export const handleSocket = (socket: Socket) => {
         const message = zClientToServerMessage.parse(json);
         try {
           actions[message.type](client, message as any);
-        } catch {}
+        } catch (err) {
+          console.error(err);
+        }
         flushUpdates();
       } catch (err) {
         console.error(err);
