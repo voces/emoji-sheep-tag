@@ -55,7 +55,6 @@ export class InstancedGroup extends Group {
     }
     for (let i = 0; i < count; i++) {
       this.setPositionAt(i, Infinity, Infinity, undefined, Infinity);
-      this.setScaleAt(i, 1);
     }
   }
 
@@ -67,7 +66,6 @@ export class InstancedGroup extends Group {
       for (let i = 0; i < value; i++) {
         next.instanceMatrix.copyArray(c.instanceMatrix.array);
         dummy.matrix.setPosition(Infinity, Infinity, Infinity);
-        dummy.matrix.makeScale(1, 1, 1);
         for (let n = this.innerCount; n < value; n++) {
           next.setMatrixAt(n, dummy.matrix);
         }
@@ -117,7 +115,6 @@ export class InstancedGroup extends Group {
       }
 
       this.setPositionAt(swapId, Infinity, Infinity, undefined, Infinity);
-      this.setScaleAt(swapId, 1);
 
       const colorInstancedMesh = this.children.find((c): c is InstancedMesh =>
         c instanceof InstancedMesh &&
@@ -132,7 +129,6 @@ export class InstancedGroup extends Group {
       this.reverseMap[index] = swapId;
     } else {
       dummy.matrix.setPosition(Infinity, Infinity, Infinity);
-      dummy.matrix.makeScale(1, 1, 1);
       this.setMatrixAt(index, dummy.matrix);
     }
 
@@ -145,6 +141,8 @@ export class InstancedGroup extends Group {
     const index = this.reverseMap.push(id) - 1;
     this.map[id] = index;
     if (index + 1 > this.count) this.count = (index + 1) * 2;
+    dummy.matrix.identity();
+    this.setMatrixAt(index, dummy.matrix);
     return index;
   }
 

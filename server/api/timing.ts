@@ -1,4 +1,5 @@
 import { clientContext, lobbyContext } from "../contexts.ts";
+import { flushUpdates } from "../updates.ts";
 
 /**
  * @param cb
@@ -12,7 +13,11 @@ export const timeout = (cb: () => void, timeout: number) => {
     () =>
       lobbyContext.with(lobby, () => {
         if (!lobby.round?.ecs) return clearTimeout(t);
-        clientContext.with(client, cb);
+        try {
+          clientContext.with(client, cb);
+        } finally {
+          flushUpdates();
+        }
       }),
     timeout * 1000,
   );
@@ -26,7 +31,11 @@ export const interval = (cb: () => void, interval: number) => {
     () =>
       lobbyContext.with(lobby, () => {
         if (!lobby.round?.ecs) return clearInterval(i);
-        clientContext.with(client, cb);
+        try {
+          clientContext.with(client, cb);
+        } finally {
+          flushUpdates();
+        }
       }),
     interval * 1000,
   );

@@ -59,7 +59,6 @@ export const addAttackSystem = (app: Game) => {
       }
 
       if (distanceBetweenEntities(e, target) > e.attack.range) {
-        console.log(distanceBetweenEntities(e, target), e.attack.range);
         if ((counter + offset) % 17 > 0) return;
         const path = calcPath(e, e.action.target, { mode: "attack" }).slice(1);
         if (

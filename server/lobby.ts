@@ -49,6 +49,7 @@ type Round = {
   lookup: Record<string, Entity | undefined>;
   sheep: Set<Client>;
   wolves: Set<Client>;
+  start: number;
   clearInterval: () => void;
 };
 
@@ -69,18 +70,21 @@ Object.assign(globalThis, { lobbies });
 
 export const deleteLobby = (lobby: Lobby) => {
   lobbies.delete(lobby);
+  lobby.round?.clearInterval();
+  delete lobby.round;
+  console.log(new Date(), "Lobby deleted", lobby.name);
 };
 
 let lobbyIndex = 0;
-export const newLobby = () => {
+export const newLobby = (host?: Client) => {
   const lobby: Lobby = {
-    players: new Set(),
-    host: undefined,
+    players: new Set(host ? [host] : []),
+    host: host,
     name: `lobby-${lobbyIndex++}`,
     settings: { teams: new Map() },
     status: "lobby",
   };
-  console.log("Lobby created", lobby);
+  console.log(new Date(), "Lobby", lobby.name, "created with host", host?.id);
   lobbies.add(lobby);
   return lobby;
 };

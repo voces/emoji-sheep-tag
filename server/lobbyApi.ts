@@ -6,6 +6,7 @@ import { clearUpdates } from "./updates.ts";
 
 export const endRound = () => {
   const lobby = lobbyContext.context;
+  console.log(new Date(), "Round ended in lobby", lobby.name);
   lobby.round?.clearInterval();
   lobby.round = undefined;
   lobby.status = "lobby";
@@ -13,8 +14,8 @@ export const endRound = () => {
 };
 
 export const send = (message: ServerToClientMessage) => {
-  // console.log("S->C", message);
   const lobby = lobbyContext.context;
+  // console.log("S->Cs", message, lobby?.players.size, lobby?.name);
   const serialized = JSON.stringify(message);
   for (const p of lobby.players) p.rawSend(serialized);
 };
@@ -22,6 +23,7 @@ export const send = (message: ServerToClientMessage) => {
 /** Causes the local player to leave their current lobby. */
 export const leave = (client?: Client) => {
   client ??= clientContext.context;
+  console.log(new Date(), "Client", client.id, "left");
   const lobby = lobbyContext.context;
   lobby.players.delete(client);
   // Kill the lobby

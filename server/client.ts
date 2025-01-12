@@ -111,39 +111,40 @@ const actions = {
 
 export const handleSocket = (socket: Socket) => {
   const client = new Client(socket);
+  console.log(new Date(), "Client", client.id, "connected");
 
   clientContext.with(client, () => {
-    if (lobbies.size) {
-      const result = lobbies.values().next();
-      if (result.done) throw new Error("Expected lobby");
-      const lobby = client.lobby = result.value;
-      lobbyContext.with(client.lobby, () => {
-        lobby.settings.teams.set(client, "pending");
-        client.color = colors.find((c) =>
-          !setSome(lobby.players, (p) => p.color === c)
-        ) ?? client.color;
-        send({
-          type: "join",
-          status: lobby.status,
-          players: [{
-            id: client.id,
-            name: client.name,
-            color: client.color,
-            team: "pending",
-            host: false,
-          }],
-          updates: [],
-        });
-        lobby.players.add(client);
+    if (!lobbies.size) return client.lobby = newLobby(client);
+
+    const result = lobbies.values().next();
+    if (result.done) throw new Error("Expected lobby");
+    const lobby = client.lobby = result.value;
+    lobbyContext.with(client.lobby, () => {
+      lobby.settings.teams.set(client, "pending");
+      client.color = colors.find((c) =>
+        !setSome(lobby.players, (p) => p.color === c)
+      ) ?? client.color;
+      send({
+        type: "join",
+        status: lobby.status,
+        players: [{
+          id: client.id,
+          name: client.name,
+          color: client.color,
+          team: "pending",
+          host: false,
+        }],
+        updates: [],
       });
-    } else {
-      const lobby = client.lobby = newLobby();
-      lobbyContext.with(lobby, () => {
-        lobby.players.add(client);
-        lobby.host = client;
-        console.log("Client made host", lobby.name, client.id);
-      });
-    }
+      lobby.players.add(client);
+      console.log(
+        new Date(),
+        "Client",
+        client.id,
+        "added to lobby",
+        lobby.name,
+      );
+    });
   });
 
   socket.addEventListener(
@@ -187,10 +188,11 @@ export const handleSocket = (socket: Socket) => {
         } catch (err) {
           console.error(err);
         }
-        flushUpdates();
       } catch (err) {
         console.error(err);
         clientContext.with(client, () => leave());
+      } finally {
+        flushUpdates();
       }
     }),
   );

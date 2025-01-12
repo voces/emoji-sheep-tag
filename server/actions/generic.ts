@@ -21,8 +21,6 @@ export const generic = (
   client: Client,
   event: z.TypeOf<typeof zGenericEvent>,
 ) => {
-  console.log("generic", event);
-
   if (event.event.type === "colorChange") {
     client.color = event.event.color;
     send({ type: "colorChange", id: client.id, color: event.event.color });

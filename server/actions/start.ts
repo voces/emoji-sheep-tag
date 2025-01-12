@@ -6,7 +6,6 @@ import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
-import { flushUpdates } from "../updates.ts";
 import { init } from "../st/data.ts";
 import { center, initEntities } from "../../shared/map.ts";
 import { unitData } from "../../shared/data.ts";
@@ -19,7 +18,9 @@ export const start = (client: Client) => {
     !lobby || lobby.host !== client ||
     lobby.status === "playing"
   ) return;
-  console.log("Starting round");
+
+  console.log(new Date(), "Round started in lobby", lobby.name);
+
   lobby.status = "playing";
   const sheep = new Set<Client>();
   const wolves = new Set<Client>();
@@ -29,21 +30,15 @@ export const start = (client: Client) => {
     else if (sheep.size + 1 < wolves.size) sheep.add(player);
     else wolves.add(player);
   }
-  console.log({
-    pool: pool.map((p) => p.id),
-    sheep: Array.from(sheep, (p) => p.id),
-    wolves: Array.from(wolves, (p) => p.id),
-  });
+
   const { ecs, lookup } = newEcs();
   lobby.round = {
     sheep,
     wolves,
     ecs,
     lookup,
-    clearInterval: interval(() => {
-      ecs.update();
-      flushUpdates();
-    }, 0.05),
+    start: Date.now(),
+    clearInterval: interval(() => ecs.update(), 0.05),
   };
 
   lobbyContext.with(lobby, () => {
@@ -71,8 +66,8 @@ export const start = (client: Client) => {
     }
 
     timeout(() => {
-      const lobby = lobbyContext.context;
-      if (!lobby.round) return;
+      const lobby2 = lobbyContext.context;
+      if (!lobby2.round) return;
       const r = Math.random() * Math.PI * 2;
       for (const owner of sheep) {
         newUnit(
