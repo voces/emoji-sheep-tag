@@ -9,6 +9,7 @@ export type Player = {
 };
 
 export const playersVar = makeVar<Player[]>([]);
+Object.assign(globalThis, { playersVar });
 
 export const getLocalPlayer = () => playersVar().find((p) => p.local);
 

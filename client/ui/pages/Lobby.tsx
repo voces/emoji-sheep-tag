@@ -33,17 +33,19 @@ const Players = () => {
   );
 };
 
-const Settings = () => (
-  <Card color="purple" style={{ width: "40%", height: "60%" }}>
-    <Button
-      onClick={() =>
-        send({ type: "start" })}
-      disabled={!getLocalPlayer()?.host}
-    >
-      Start
-    </Button>
-  </Card>
-);
+const Settings = () => {
+  useReactiveVar(playersVar); // update when host changes
+  return (
+    <Card color="purple" style={{ width: "40%", height: "60%" }}>
+      <Button
+        onClick={() => send({ type: "start" })}
+        disabled={!getLocalPlayer()?.host}
+      >
+        Start
+      </Button>
+    </Card>
+  );
+};
 
 const LobbyContainer = styled.div({
   position: "absolute",

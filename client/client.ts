@@ -138,6 +138,7 @@ const zJoin = z.object({
 const zLeave = z.object({
   type: z.literal("leave"),
   player: z.string(),
+  host: z.string().optional(),
 });
 
 const zStop = z.object({
@@ -213,7 +214,11 @@ const handlers = {
     }
   },
   leave: (data: z.TypeOf<typeof zLeave>) =>
-    playersVar((players) => players.filter((p) => p.id !== data.player)),
+    playersVar((players) =>
+      players.filter((p) => p.id !== data.player).map((p) =>
+        !p.host && data.host === p.id ? { ...p, host: true } : p
+      )
+    ),
   pong: ({ data }: z.TypeOf<typeof zPong>) => {
     if (typeof data === "number") {
       stats.msPanel.update(performance.now() - data, 100);

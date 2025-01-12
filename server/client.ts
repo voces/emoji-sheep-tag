@@ -123,7 +123,7 @@ export const handleSocket = (socket: Socket) => {
             name: client.name,
             color: client.color,
             team: "pending",
-            host: true,
+            host: false,
           }],
           updates: [],
         });

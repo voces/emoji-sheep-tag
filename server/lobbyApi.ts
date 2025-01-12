@@ -35,7 +35,7 @@ export const leave = (client?: Client) => {
   }
 
   // Send leave event
-  send({ type: "leave", player: client.id });
+  send({ type: "leave", player: client.id, host: lobby.host?.id });
 
   // Make player leave lobby
   if (lobby.round) {

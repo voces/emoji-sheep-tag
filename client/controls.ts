@@ -27,17 +27,9 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
   for (const s of selections) if (s === target) selections.delete(s);
   if (!selections.size) return false;
 
-  console.log(
-    selections.values().next().value,
-    target,
-    isEnemy(selections.values().next().value!, target),
-  );
-
   const { attackers, movers } = selections.group((e) =>
     e.attack && isEnemy(e, target) ? "attackers" as const : "movers" as const
   );
-
-  console.log({ attackers, movers });
 
   if (attackers?.size) {
     send({
