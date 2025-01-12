@@ -19,6 +19,10 @@ import fireSvg from "../assets/fire.svg";
 import clawSvg from "../assets/claw.svg";
 //@deno-types="../assets/svg.d.ts"
 import collisionSvg from "../assets/collision.svg";
+//@deno-types="../assets/svg.d.ts"
+import flowersSvg from "../assets/flowers.svg";
+//@deno-types="../assets/svg.d.ts"
+import grassSvg from "../assets/grass.svg";
 import { getFps } from "../graphics/three.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
 
@@ -28,10 +32,12 @@ const hut = loadSvg(hutSvg, 2);
 const tinyHut = loadSvg(hutSvg, 1);
 const wideHut = loadSvg(hutSvg, 3);
 const rotundHut = loadSvg(hutSvg, 4);
-const fence = loadSvg(fenceSvg, 0.07, { layer: 2 });
+const fence = loadSvg(fenceSvg, 0.07, { layer: 2, zIndex: -0.004 });
 const fire = loadSvg(fireSvg, 1, { layer: 2 });
-const claw = loadSvg(clawSvg, 0.05, { layer: 2 });
-const collision = loadSvg(collisionSvg, 2, { layer: 2 });
+const claw = loadSvg(clawSvg, 0.05, { layer: 2, zIndex: 0.25 });
+const collision = loadSvg(collisionSvg, 2, { layer: 2, zIndex: -0.001 });
+const flowers = loadSvg(flowersSvg, 0.25, { layer: 2, zIndex: -0.002 });
+const grass = loadSvg(grassSvg, 0.75, { layer: 2, zIndex: -0.003 });
 
 const collections: Record<string, InstancedGroup | undefined> = {
   sheep,
@@ -44,6 +50,8 @@ const collections: Record<string, InstancedGroup | undefined> = {
   fire,
   claw,
   collision,
+  flowers,
+  grass,
 };
 Object.assign(globalThis, { collections });
 
@@ -52,25 +60,30 @@ const color2 = new Color();
 const blue = new Color(0x0000ff);
 const white = new Color("white");
 
+const updateColor = (e: Entity) => {
+  if (!e.unitType) return;
+  const collection = collections[e.unitType];
+  if (!collection) return;
+  const hex = e.playerColor ??
+    playersVar().find((p) => p.id === e.owner)?.color;
+  if (!hex) return;
+  color.set(hex);
+  if (e.blueprint) {
+    color2.set(color);
+    color2.lerp(white, 0.8);
+    color2.lerp(blue, 0.6);
+    collection.setVertexColorAt(e.id, color2);
+    collection.setPlayerColorAt(e.id, color, false);
+  } else {
+    collection.setPlayerColorAt(e.id, color);
+  }
+};
+
 // Auto select unit
 app.addSystem({
   props: ["id", "unitType", "owner"],
   onAdd: (e) => {
-    const collection = collections[e.unitType];
-    if (!collection) return;
-    const p = playersVar().find((p) => p.id === e.owner);
-    if (p) {
-      color.set(p.color);
-      if (e.blueprint) {
-        color2.set(color);
-        color2.lerp(white, 0.8);
-        color2.lerp(blue, 0.6);
-        collection.setVertexColorAt(e.id, color2);
-        collection.setPlayerColorAt(e.id, color, false);
-      } else {
-        collection.setPlayerColorAt(e.id, color);
-      }
-    }
+    updateColor(e);
     if (
       isLocalPlayer(e.owner) &&
       (e.unitType === "sheep" || e.unitType === "wolf")
@@ -82,7 +95,7 @@ app.addSystem({
 
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
 
-const onChange = (
+const onPositionOrRotationChange = (
   e: SystemEntity<Entity, "unitType"> & {
     readonly position: { x: number; y: number };
     readonly facing?: number;
@@ -133,7 +146,7 @@ app.addSystem({
       e.zIndex,
     );
   },
-  onChange,
+  onChange: onPositionOrRotationChange,
   onRemove: (e) => collections[e.unitType!]?.delete(e.id),
 });
 
@@ -141,7 +154,27 @@ app.addSystem({
   props: ["unitType", "facing"],
   onChange: (e) => {
     if (e.position) {
-      onChange(e as SystemEntity<Entity, "unitType" | "position" | "facing">);
+      onPositionOrRotationChange(
+        e as SystemEntity<Entity, "unitType" | "position" | "facing">,
+      );
     }
   },
+});
+
+// Apply playerColor override
+app.addSystem({
+  props: ["unitType", "playerColor"],
+  onAdd: updateColor,
+  onChange: updateColor,
+});
+
+const updateScale = (e: SystemEntity<Entity, "unitType" | "scale">) => {
+  const collection = collections[e.unitType];
+  if (!collection) return;
+  collection.setScaleAt(e.id, e.scale);
+};
+app.addSystem({
+  props: ["unitType", "scale"],
+  onAdd: updateScale,
+  onChange: updateScale,
 });

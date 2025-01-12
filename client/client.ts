@@ -1,11 +1,11 @@
 import z from "npm:zod";
-import { playersVar } from "./ui/vars/players.ts";
+import { getLocalPlayer, playersVar } from "./ui/vars/players.ts";
 import { connectionStatusVar, stateVar } from "./ui/vars/state.ts";
 import { app, Entity } from "./ecs.ts";
 import { type ClientToServerMessage } from "../server/client.ts";
 import { zTeam } from "../shared/zod.ts";
 import { camera } from "./graphics/three.ts";
-import { center } from "../shared/map.ts";
+import { center, tiles } from "../shared/map.ts";
 import { stats } from "./util/Stats.ts";
 import { LocalWebSocket } from "./local.ts";
 import { data } from "./data.ts";
@@ -165,6 +165,32 @@ export type ServerToClientMessage = z.input<typeof zMessage>;
 
 const map: Record<string, Entity> = {};
 
+const checkNearPathing = (
+  x: number,
+  y: number,
+  near: number,
+  pathing: number,
+) => {
+  if (tiles[Math.floor(y)]?.[Math.floor(x)] & pathing) return true;
+  if (tiles[Math.floor(y + near)]?.[Math.floor(x)] & pathing) return true;
+  if (tiles[Math.floor(y - near)]?.[Math.floor(x)] & pathing) return true;
+  if (tiles[Math.floor(y)]?.[Math.floor(x + near)] & pathing) return true;
+  if (tiles[Math.floor(y + near)]?.[Math.floor(x + near)] & pathing) {
+    return true;
+  }
+  if (tiles[Math.floor(y - near)]?.[Math.floor(x + near)] & pathing) {
+    return true;
+  }
+  if (tiles[Math.floor(y)]?.[Math.floor(x - near)] & pathing) return true;
+  if (tiles[Math.floor(y + near)]?.[Math.floor(x - near)] & pathing) {
+    return true;
+  }
+  if (tiles[Math.floor(y - near)]?.[Math.floor(x - near)] & pathing) {
+    return true;
+  }
+  return false;
+};
+
 const handlers = {
   join: (data: z.TypeOf<typeof zJoin>) => {
     playersVar((prev) =>
@@ -197,6 +223,38 @@ const handlers = {
     stateVar("playing");
     camera.position.x = center.x;
     camera.position.y = center.y;
+    for (let i = 0; i < tiles[0].length * tiles.length / 3; i++) {
+      const x = Math.random() * tiles[0].length;
+      const y = Math.random() * tiles.length;
+      const r = Math.round(37 + (Math.random() - 0.5) * 30);
+      const g = Math.round(102 + (Math.random() - 0.5) * 45);
+      if (checkNearPathing(x, y, 0.25, 255)) continue;
+      app.add({
+        id: `grass-${crypto.randomUUID()}`,
+        unitType: "grass",
+        position: { x, y },
+        playerColor: `#${r.toString(16)}${g.toString(16)}00`,
+        facing: Math.round(Math.random()) * Math.PI,
+      });
+    }
+    for (let i = 0; i < tiles[0].length * tiles.length / 20; i++) {
+      const x = Math.random() * tiles[0].length;
+      const y = Math.random() * tiles.length;
+      if (checkNearPathing(x, y, 0.25, 255)) continue;
+      const r = Math.random();
+      const g = Math.random();
+      const b = Math.random();
+      const scale = Math.min(1 / r, 1 / g, 1 / b) * 255;
+      app.add({
+        id: `flowers-${crypto.randomUUID()}`,
+        unitType: "flowers",
+        position: { x, y },
+        playerColor: `#${Math.floor(r * scale).toString(16).padStart(2, "0")}${
+          Math.floor(g * scale).toString(16).padStart(2, "0")
+        }${Math.floor(b * scale).toString(16).padStart(2, "0")}`,
+        facing: Math.round(Math.random()) * Math.PI,
+      });
+    }
   },
   stop: () => {
     stateVar("lobby");

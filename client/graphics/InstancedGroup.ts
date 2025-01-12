@@ -32,9 +32,15 @@ export class InstancedGroup extends Group {
   private reverseMap: string[] = [];
   private innerCount: number;
   private bvh = new BVH();
+  private defaultZ: number;
 
-  constructor(group: Group, count: number = 1) {
+  constructor(
+    group: Group,
+    count: number = 1,
+    { defaultZ }: { defaultZ?: number } = {},
+  ) {
     super();
+    this.defaultZ = defaultZ ?? 0;
     this.innerCount = count;
     for (const child of group.children) {
       if (child instanceof Mesh) {
@@ -49,6 +55,7 @@ export class InstancedGroup extends Group {
     }
     for (let i = 0; i < count; i++) {
       this.setPositionAt(i, Infinity, Infinity, undefined, Infinity);
+      this.setScaleAt(i, 1);
     }
   }
 
@@ -60,6 +67,7 @@ export class InstancedGroup extends Group {
       for (let i = 0; i < value; i++) {
         next.instanceMatrix.copyArray(c.instanceMatrix.array);
         dummy.matrix.setPosition(Infinity, Infinity, Infinity);
+        dummy.matrix.makeScale(1, 1, 1);
         for (let n = this.innerCount; n < value; n++) {
           next.setMatrixAt(n, dummy.matrix);
         }
@@ -109,6 +117,7 @@ export class InstancedGroup extends Group {
       }
 
       this.setPositionAt(swapId, Infinity, Infinity, undefined, Infinity);
+      this.setScaleAt(swapId, 1);
 
       const colorInstancedMesh = this.children.find((c): c is InstancedMesh =>
         c instanceof InstancedMesh &&
@@ -123,6 +132,7 @@ export class InstancedGroup extends Group {
       this.reverseMap[index] = swapId;
     } else {
       dummy.matrix.setPosition(Infinity, Infinity, Infinity);
+      dummy.matrix.makeScale(1, 1, 1);
       this.setMatrixAt(index, dummy.matrix);
     }
 
@@ -195,7 +205,10 @@ export class InstancedGroup extends Group {
         dummy.position.set(
           x,
           y,
-          z ?? (Number.isFinite(dummy.position.z) ? dummy.position.z : 0),
+          z ??
+            (Number.isFinite(dummy.position.z)
+              ? dummy.position.z
+              : this.defaultZ),
         );
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);
@@ -247,6 +260,26 @@ export class InstancedGroup extends Group {
       if (child instanceof InstancedMesh) {
         child.setColorAt(index, color);
         if (child.instanceColor) child.instanceColor.needsUpdate = true;
+      }
+    }
+  }
+
+  setScaleAt(index: number | string, scale: number) {
+    if (typeof index === "string") index = this.getIndex(index);
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh) {
+        child.getMatrixAt(index, dummy.matrix);
+        dummy.matrix.decompose(
+          dummy.position,
+          dummy.quaternion,
+          dummy.scale,
+        );
+        dummy.scale.setScalar(scale);
+        dummy.updateMatrix();
+        child.setMatrixAt(index, dummy.matrix);
+        child.instanceMatrix.needsUpdate = true;
+        child.computeBoundingBox();
+        child.computeBoundingSphere();
       }
     }
   }

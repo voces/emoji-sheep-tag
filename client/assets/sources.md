@@ -5,3 +5,5 @@
 - https://www.svgrepo.com/svg/405378/fire
 - https://www.svgrepo.com/svg/405006/collision
 - https://www.svgrepo.com/svg/321226/plate-claw
+- https://www.svgrepo.com/svg/436421/flowers-white
+- https://www.svgrepo.com/svg/499200/grass

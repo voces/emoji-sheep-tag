@@ -211,30 +211,38 @@ globalThis.addEventListener("keyup", (e) => {
   delete keyboard[e.code];
 });
 
+let startPan: number | undefined;
 app.addSystem({
-  update: (delta) => {
-    const x = (keyboard.ArrowLeft ? -1 : 0) + (keyboard.ArrowRight ? 1 : 0) +
+  update: (delta, time) => {
+    let x = (keyboard.ArrowLeft ? -1 : 0) + (keyboard.ArrowRight ? 1 : 0) +
       (document.pointerLockElement
-        ? (mouse.pixels.x <= 8 ? -2 : 0) +
-          (window.innerWidth - mouse.pixels.x <= 8 ? 2 : 0)
+        ? (mouse.pixels.x <= 12 ? -2 : 0) +
+          (window.innerWidth - mouse.pixels.x <= 12 ? 2 : 0)
         : 0);
-    const y = (keyboard.ArrowDown ? -1 : 0) + (keyboard.ArrowUp ? 1 : 0) +
+    let y = (keyboard.ArrowDown ? -1 : 0) + (keyboard.ArrowUp ? 1 : 0) +
       (document.pointerLockElement
-        ? (mouse.pixels.y <= 8 ? 2 : 0) +
-          (window.innerHeight - mouse.pixels.y <= 8 ? -2 : 0)
+        ? (mouse.pixels.y <= 12 ? 2 : 0) +
+          (window.innerHeight - mouse.pixels.y <= 12 ? -2 : 0)
         : 0);
+    const panDuration = typeof startPan === "number" ? (time - startPan) : 0;
     if (x) {
+      x *= 1 + 1.3 * Math.exp(-10 * panDuration) + (panDuration / 5) ** 0.5 -
+        0.32;
       camera.position.x = Math.min(
         Math.max(0, camera.position.x + x * delta * 10),
         tiles[0].length,
       );
     }
     if (y) {
+      y *= 1 + 1.3 * Math.exp(-10 * panDuration) + (panDuration / 5) ** 0.5 -
+        0.32;
       camera.position.y = Math.min(
         Math.max(0, camera.position.y + y * delta * 10),
         tiles.length,
       );
     }
+    if ((x || y) && typeof startPan !== "number") startPan = time;
+    else if (!x && !y && typeof startPan === "number") startPan = undefined;
 
     updateCursor();
   },

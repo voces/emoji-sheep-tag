@@ -59,25 +59,6 @@ export const build = async () => {
   main.textContent = decoder.decode(files[0].contents);
   worker.textContent = decoder.decode(files[1].contents);
 
-  // script.textContent = new TextDecoder().decode(
-  //   (await esbuild.build({
-  //     bundle: true,
-  //     target: "chrome123",
-  //     format: "esm",
-  //     entryPoints: ["client/index.ts"],
-  //     write: false,
-  //     sourcemap: "inline",
-  //     plugins: [
-  //       textPlugin,
-  //       ...denoPlugins({ configPath: await Deno.realPath("deno.json") }),
-  //     ],
-  //     jsx: "automatic",
-  //     jsxFactory: "React.createElement",
-  //     jsxFragment: "React.Fragment",
-  //     jsxImportSource: "npm:react",
-  //   })).outputFiles[0].contents,
-  // );
-
   await ensureDir("dist");
 
   await Deno.writeTextFile("dist/index.html", dom.serialize());

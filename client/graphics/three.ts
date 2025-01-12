@@ -38,16 +38,16 @@ for (let y = 0; y < tiles.length; y++) {
       terrain.setColor(
         x,
         y,
-        0.09,
-        0.04,
-        0.14,
+        0.07,
+        0.03,
+        0.12,
       );
     } else {
       terrain.setColor(
         x,
         y,
-        0.39,
-        0.80,
+        0.15,
+        0.40,
         0,
       );
     }
