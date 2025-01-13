@@ -24,12 +24,20 @@ export const start = (client: Client) => {
   lobby.status = "playing";
   const sheep = new Set<Client>();
   const wolves = new Set<Client>();
-  const pool = Array.from(lobby.players);
-  for (const player of pool) {
-    if (!sheep.size) sheep.add(player);
-    else if (sheep.size + 1 < wolves.size) sheep.add(player);
-    else wolves.add(player);
+  const pool = new Set(lobby.players);
+  const desiredSize = Math.max(Math.floor((pool.size - 1) / 2), 1);
+  while (sheep.size < desiredSize) {
+    const scLowest = Math.min(...Array.from(pool, (p) => p.sheepCount));
+    const scPool = Array.from(pool).filter((p) => p.sheepCount === scLowest);
+    while (scPool.length && sheep.size < desiredSize) {
+      const i = Math.floor(Math.random() * scPool.length);
+      sheep.add(scPool[i]);
+      scPool[i].sheepCount++;
+      pool.delete(scPool[i]);
+      scPool.splice(1, 1);
+    }
   }
+  for (const p of pool) wolves.add(p);
 
   const { ecs, lookup } = newEcs();
   lobby.round = {

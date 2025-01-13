@@ -102,6 +102,10 @@ const zUpdate = z.object({
   // Actions
   action: zAction.nullable().optional(),
   queue: zAction.array().readonly().nullable().optional(),
+
+  // Art
+  model: z.string().optional(),
+  modelScale: z.number().optional(),
 }).strict();
 
 const zDelete = z.object({

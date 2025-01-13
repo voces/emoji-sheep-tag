@@ -9,27 +9,100 @@
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><text x='50%' y='50%' font-size='32' text-anchor='middle' dominant-baseline='central'>🐑</text></svg>" />
 
   <style>
+    :root {
+      color-scheme: dark;
+      --color-primary: hsl(202, 86%, 40%);
+      --color-body: white;
+      --color-background: #333;
+      --color-border: black;
+      --color-shadow: #222;
+    }
+
     * {
       box-sizing: border-box;
+      margin: 0;
     }
 
     body {
-      margin: 0;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
       font-size: 1.2rem;
       font-family: 'Trebuchet MS', sans-serif;
-      color: white;
+      color: var(--color-body);
       overflow: hidden;
-      text-shadow: 0 0 2px black;
+      text-shadow: 0 0 2px var(--color-border);
+      background-color: var(--color-background);
+    }
+
+    img,
+    picture,
+    video,
+    canvas,
+    svg {
+      display: block;
+      max-width: 100%;
+    }
+
+    input,
+    button,
+    textarea,
+    select {
+      font: inherit;
+      padding: 0;
+      border: 0;
+      background-color: var(--color-body);
+      color: var(--color-border);
+    }
+
+    button[disabled] {
+      background-color: hsl(from var(--color-body) h s calc(l - 30));
+      color: hsl(from var(--color-border) h s calc(l + 30));
+    }
+
+    button.hover:not([disabled]) {
+      background-color: hsl(from var(--color-body) h s calc(l - 10));
+      box-shadow: var(--color-shadow) 1px 1px 4px 1px;
+    }
+
+    p,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      overflow-wrap: break-word;
+    }
+
+    p {
+      text-wrap: pretty;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      text-wrap: balance;
     }
 
     canvas {
       position: absolute;
     }
 
-    #main {
+    #ui {
+      /* isolation: isolate; */
       position: absolute;
       inset: 0;
       z-index: 1;
+    }
+
+    .abs-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%)
     }
 
     #cursor {
@@ -45,6 +118,49 @@
     #cursor.entity {
       filter: hue-rotate(90deg);
     }
+
+    .card {
+      background-color: var(--color-background);
+      box-shadow: var(--color-shadow) 1px 1px 4px 1px;
+      padding: 16px;
+    }
+
+    .v-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 8px
+    }
+
+    .h-stack {
+      display: flex;
+      gap: 8px
+    }
+
+    .command {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border: 4px outset var(--color-body);
+      overflow: hidden;
+      background-color: var(--color-shadow);
+    }
+
+    .command.hover,
+    .command:has(.hover) {
+      border-style: inset;
+    }
+
+    .command>div:nth-child(2) {
+      position: absolute;
+      top: 0;
+      right: 2px;
+      line-height: 1;
+      font-size: 80%;
+    }
+
+    .hide-empty:empty {
+      display: none;
+    }
   </style>
 
 </head>
@@ -53,7 +169,7 @@
   <canvas></canvas>
   <script id="main" type="module"></script>
   <script id="worker" type="text/plain"></script>
-  <div id="main"></div>
+  <div id="ui"></div>
   <svg id="cursor" width="800" height="800" viewBox="0 0 512 512" xml:space="preserve"
     xmlns="http://www.w3.org/2000/svg">
     <path

@@ -7,7 +7,6 @@ export type Entity = CommonEntity & {
   blueprint?: boolean;
   zIndex?: number;
   playerColor?: string;
-  scale?: number;
 };
 
 export const app = newApp<Entity>({

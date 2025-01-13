@@ -58,6 +58,8 @@ class Client {
 
   lobby?: Lobby;
 
+  sheepCount = 0;
+
   constructor(readonly socket: Socket) {
     this.color = colors[0];
     this.id = `player-${clientIndex++}`;
@@ -136,6 +138,9 @@ export const handleSocket = (socket: Socket) => {
         }],
         updates: [],
       });
+      client.sheepCount = Math.max(
+        ...Array.from(lobby.players, (p) => p.sheepCount),
+      );
       lobby.players.add(client);
       console.log(
         new Date(),

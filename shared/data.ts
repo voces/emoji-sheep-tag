@@ -24,6 +24,8 @@ export const unitData: Record<
     | "maxHealth"
     | "actions"
     | "isDoodad"
+    | "model"
+    | "modelScale"
   >
   | undefined
 > = {
@@ -60,16 +62,22 @@ export const unitData: Record<
     maxHealth: 120,
   },
   tinyHut: {
+    model: "hut",
+    modelScale: 0.5,
     radius: 0.25,
     tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     maxHealth: 20,
   },
   wideHut: {
+    model: "hut",
+    modelScale: 1.5,
     radius: 0.75,
     tilemap: { map: Array(36).fill(3), top: -3, left: -3, width: 6, height: 6 },
     maxHealth: 140,
   },
   rotundHut: {
+    model: "hut",
+    modelScale: 2,
     radius: 1,
     tilemap: { map: Array(64).fill(3), top: -4, left: -4, width: 8, height: 8 },
     maxHealth: 200,

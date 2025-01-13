@@ -26,7 +26,7 @@ export const loadSvg = (
 ) => {
   scale /= 36 * 2; // SVGs are 36x36, and we want a sheep to be size 1
 
-  const data = loader.parse(svg);
+  const data = loader.parse(svg.replace(/currentColor/g, "white"));
 
   // Create geometry
   const group = new Group();

@@ -35,6 +35,8 @@ export type UnitDataAction = {
 export type Entity = {
   id: string;
   unitType?: string;
+  model?: string;
+  modelScale?: number;
   owner?: string;
 
   position?: { readonly x: number; readonly y: number };

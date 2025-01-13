@@ -35,6 +35,10 @@ self.onconnect = (e) => {
   const port = e.ports[0];
   port.start();
 
+  // let timeout = setTimeout(() => {
+  //   client.socket.close();
+  // }, 5000);
+
   port.onmessage = (event) => {
     const data = event.data;
     const client = clients.get(data.id);

@@ -1,4 +1,23 @@
+type ExtendedSetEventMap<T> = {
+  add: T;
+  delete: T;
+};
+
 export class ExtendedSet<T> extends Set<T> {
+  private eventListeners?: { [key: string]: Function[] } = {};
+
+  override add(value: T): this {
+    super.add(value);
+    this.dispatchEvent("add", value);
+    return this;
+  }
+
+  override delete(value: T): boolean {
+    const result = super.delete(value);
+    if (result) this.dispatchEvent("delete", value);
+    return result;
+  }
+
   /** Returns true if `predicate` returns a truthy value for any element. */
   some(predicate: (value: T) => unknown) {
     for (const entity of this) if (predicate(entity)) return true;
@@ -15,6 +34,10 @@ export class ExtendedSet<T> extends Set<T> {
 
   clone() {
     return new ExtendedSet(this);
+  }
+
+  first() {
+    for (const element of this) return element;
   }
 
   group<U>(
@@ -73,5 +96,28 @@ export class ExtendedSet<T> extends Set<T> {
       }
     }
     return container;
+  }
+
+  addEventListener<K extends keyof ExtendedSetEventMap<T>>(
+    type: K,
+    listener: (ev: ExtendedSetEventMap<T>[K]) => void,
+  ) {
+    if (!this.eventListeners) this.eventListeners = {};
+    if (!this.eventListeners[type]) {
+      this.eventListeners[type] = [];
+    }
+    this.eventListeners[type].push(listener);
+  }
+
+  private dispatchEvent<K extends keyof ExtendedSetEventMap<T>>(
+    type: K,
+    event: ExtendedSetEventMap<T>[K],
+  ) {
+    if (!this.eventListeners) this.eventListeners = {};
+    if (this.eventListeners[type]) {
+      this.eventListeners[type]?.forEach((listener) =>
+        listener.call(this, event)
+      );
+    }
   }
 }

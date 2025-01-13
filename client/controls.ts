@@ -52,7 +52,16 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
 };
 
 mouse.addEventListener("mouseButtonDown", (e) => {
-  if (e.element instanceof HTMLElement) e.element.click();
+  if (e.element instanceof Element && e.element.id !== "ui") {
+    e.element.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      }),
+    );
+    return;
+  }
 
   if (!selection.size) return;
 
@@ -191,6 +200,8 @@ globalThis.addEventListener("keydown", (e) => {
         ),
       },
       owner: getLocalPlayer()?.id,
+      model: unitData[action.unitType]?.model,
+      modelScale: unitData[action.unitType]?.modelScale,
       blueprint: true,
     });
     updateCursor();

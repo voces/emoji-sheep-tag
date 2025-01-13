@@ -3,39 +3,40 @@ import { styled } from "npm:styled-components";
 import React, { useState } from "react";
 import { colors } from "../../../shared/data.ts";
 
-const Wrapper = styled.button(({ theme }) => ({
+const Wrapper = styled.div(({ theme }) => ({
   width: "1cap",
   height: "1cap",
   border: 0,
   padding: 0,
   fontSize: "inherit",
   position: "relative",
-  "&.hover": {
-    border: "1px solid black",
-    boxShadow: "black 1px 1px",
+  "&.hover, &:hover": {
+    boxShadow: "var(--color-shadow) 1px 1px 1px 2px",
   },
 }));
 
 const PickerCard = styled.div({
   position: "absolute",
-  background: "white",
-  top: 20,
-  boxShadow: "black 1px 1px 3px",
+  background: "var(--color-body)",
+  border: "1px solid var(--color-border)",
+  top: 28,
+  boxShadow: "var(--color-shadow) 1px 1px 3px",
   display: "grid",
   gridTemplateColumns: "repeat(6, 2cap)",
   gridTemplateRows: "repeat(4, 2cap)",
   gap: 4,
   padding: 4,
+  zIndex: 1,
 });
 
 const Color = styled.span<{ color: string; selected: boolean }>((
   { color, selected },
 ) => ({
   backgroundColor: color,
-  border: selected ? "1px solid black" : undefined,
+  border: "1px solid var(--color-border)",
+  boxShadow: selected ? "var(--color-shadow) 1px 1px" : undefined,
   "&.hover": {
-    border: "1px solid black",
-    boxShadow: "black 1px 1px",
+    boxShadow: "var(--color-border) 1px 1px",
   },
 }));
 
@@ -44,10 +45,11 @@ export const ColorPicker = (
 ) => {
   const [visible, setVisible] = useState(false);
   return (
-    <Wrapper
-      style={{ background: value }}
-      onClick={() => setVisible((v) => !v)}
-    >
+    <div style={{ position: "relative" }}>
+      <Wrapper
+        style={{ background: value }}
+        onClick={() => setVisible((v) => !v)}
+      />
       {visible && (
         <PickerCard onClick={(e: Event) => e.stopPropagation()}>
           {colors.map((c) => (
@@ -63,6 +65,6 @@ export const ColorPicker = (
           ))}
         </PickerCard>
       )}
-    </Wrapper>
+    </div>
   );
 };

@@ -4,10 +4,7 @@ import { ThemeProvider } from "npm:styled-components";
 import { theme } from "./theme.ts";
 import { Lobby } from "./pages/Lobby.tsx";
 import { Menu } from "./pages/Menu.tsx";
-import { Card } from "./components/Card.ts";
-import { position } from "../../../.cache/deno/npm/registry.npmjs.org/@types/stylis/4.2.5/index.d.ts";
-
-const Game = () => <div>Game</div>;
+import { Game } from "./pages/Game.tsx";
 
 const pages = {
   menu: Menu,
@@ -23,16 +20,9 @@ const Disconnected = () => {
   const connectionStatus = useReactiveVar(connectionStatusVar);
   if (connectionStatus !== "disconnected") return null;
   return (
-    <Card
-      style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-      }}
-    >
+    <div className="abs-center card">
       Disconnected! Reconnecting...
-    </Card>
+    </div>
   );
 };
 

@@ -1,6 +1,7 @@
 import { z } from "npm:zod";
 import { setServer } from "./client.ts";
 
+// Note: this breaks the last client connected to the worker disconnects before an unconnected client connects
 const channel = new BroadcastChannel("local-blob");
 let sharedBlobURL: string | undefined;
 const zLocalBlobMessage = z.union([
@@ -13,11 +14,9 @@ const zLocalBlobMessage = z.union([
 channel.addEventListener("message", (e) => {
   const message = zLocalBlobMessage.parse(e.data);
   if (message.type === "blobUrl") {
-    console.log("received blob");
     sharedBlobURL = message.url;
   } else if (message.type === "request") {
     if (sharedBlobURL) {
-      console.log("sending blob");
       channel.postMessage({ type: "blobUrl", url: sharedBlobURL });
     }
   }
@@ -57,6 +56,14 @@ export class LocalWebSocket {
       this.readyState = 1; // OPEN
       this.dispatchEvent("open", {});
     }, 0);
+
+    globalThis.addEventListener(
+      "beforeunload",
+      () => {
+        this.port.postMessage({ type: "close", id: this.id });
+        this.port.close();
+      },
+    );
   }
 
   send(data: string) {
@@ -71,6 +78,7 @@ export class LocalWebSocket {
     this.readyState = 3; // CLOSED
     this.port.postMessage({ type: "close", id: this.id });
     this.dispatchEvent("close", {});
+    this.port.close();
   }
 
   addEventListener<K extends keyof SocketEventMap>(
@@ -118,12 +126,10 @@ export const loadLocal = () => {
     if (!workerScript) throw new Error("Could not locate worker script");
     const blob = new Blob([workerScript], { type: "application/javascript" });
     sharedBlobURL = URL.createObjectURL(blob);
-    console.log("creating blob");
     channel.postMessage({ type: "blobUrl", url: sharedBlobURL });
-    console.log("sending blob");
   }
   if (!worker) {
-    worker = new SharedWorker(sharedBlobURL);
+    worker = new SharedWorker(sharedBlobURL, { name: "emoji-sheep-tag" });
     worker.port.start();
   }
   setServer("local");

@@ -17,7 +17,6 @@ export const camera = new PerspectiveCamera(
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(globalThis.devicePixelRatio);
 renderer.setClearColor(new Color(0x333333));
-// renderer.setClearColor(new Color(0x63CB00));
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 

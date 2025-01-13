@@ -4,7 +4,9 @@ type ReactiveVar<T> = ((newValue?: T | ((oldValue: T) => T)) => T) & {
   subscribe: (callback: (newValue: T, prevValue: T) => void) => () => void;
 };
 
-export const makeVar = <T extends object | string | number | boolean>(
+export const makeVar = <
+  T extends object | string | number | boolean | undefined,
+>(
   initialValue: T,
 ): ReactiveVar<T> => {
   let value = initialValue;

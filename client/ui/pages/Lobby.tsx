@@ -1,14 +1,10 @@
-import { styled } from "npm:styled-components";
-import { Card } from "../components/Card.ts";
 import { useReactiveVar } from "../hooks/useVar.tsx";
 import { getLocalPlayer, Player, playersVar } from "../vars/players.ts";
 import { ColorPicker } from "../components/ColorPicker.tsx";
-import { Box } from "../components/Box.ts";
-import { Button } from "../components/Button.ts";
 import { send } from "../../client.ts";
 
 const PlayerRow = ({ name, color }: Player) => (
-  <Box $gap={4}>
+  <div className="h-stack" style={{ alignItems: "center" }}>
     <ColorPicker
       value={color}
       onChange={(e) => {
@@ -16,48 +12,43 @@ const PlayerRow = ({ name, color }: Player) => (
       }}
     />
     <span>{name}</span>
-  </Box>
+  </div>
 );
 
 const Players = () => {
   const players = useReactiveVar(playersVar);
 
   return (
-    <Card color="blue" style={{ width: "30%", height: "60%" }}>
+    <div className="card" style={{ width: "60%", overflow: "auto" }}>
       <div>Players</div>
-      <div>
-        {players.map((p) => <PlayerRow key={p.name} {...p} />)}
-      </div>
-    </Card>
+      {players.map((p) => <PlayerRow key={p.name} {...p} />)}
+    </div>
   );
 };
 
 const Settings = () => {
   useReactiveVar(playersVar); // update when host changes
   return (
-    <Card color="purple" style={{ width: "40%", height: "60%" }}>
-      <Button
+    <div
+      className="card v-stack"
+      style={{ width: "40%", flexDirection: "column-reverse" }}
+    >
+      <button
         onClick={() => send({ type: "start" })}
         disabled={!getLocalPlayer()?.host}
       >
         Start
-      </Button>
-    </Card>
+      </button>
+    </div>
   );
 };
 
-const LobbyContainer = styled.div({
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 24,
-});
-
 export const Lobby = () => (
-  <LobbyContainer>
+  <div
+    className="abs-center h-stack"
+    style={{ gap: 24, width: "min(95%, 800px)", height: "min(95%, 600px)" }}
+  >
     <Players />
     <Settings />
-  </LobbyContainer>
+  </div>
 );

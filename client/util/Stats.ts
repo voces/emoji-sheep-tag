@@ -85,7 +85,7 @@ const newStats = () => {
 
   let container = document.createElement("div");
   container.style.cssText =
-    "position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000";
+    "position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000;width:80px";
   container.addEventListener("click", (event) => {
     event.preventDefault();
     showPanel(++mode % container.children.length);
@@ -120,7 +120,7 @@ const newStats = () => {
     memPanel = addPanel(newPanel("MB", "#f08", "#201"));
   }
 
-  showPanel(0);
+  showPanel(1);
 
   const end = () => {
     frames++;
