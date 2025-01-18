@@ -13,12 +13,11 @@ app.addSystem({
   props: ["selected"],
   entities: selection,
   onRemove: () => {
-    clearBlueprint((b) => {
-      console.log(Array.from(selection));
-      return !selection.some((s) =>
+    clearBlueprint((b) =>
+      !selection.some((s) =>
         s.actions?.some((a) => a.type === "build" && a.unitType === b.unitType)
-      );
-    });
+      )
+    );
   },
 });
 

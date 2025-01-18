@@ -13,6 +13,8 @@ import { unitData } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
 import { isEnemy } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
+import { playSound } from "./api/sound.ts";
+import { pick } from "./util/pick.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -66,6 +68,11 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   if (!selection.size) return;
 
   if (e.button === "right") {
+    if (selection.size) {
+      const source = selection.first()?.position;
+      if (source) playSound(pick("click1", "click2", "click3", "click4"), 0.01);
+    }
+
     if (e.intersects.size && handleSmartTarget(e)) return;
 
     send({
@@ -87,6 +94,12 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       blueprint = undefined;
       updateCursor();
       if (!unit) return;
+      if (selection.size) {
+        const source = selection.first()?.position;
+        if (source) {
+          playSound(pick("click1", "click2", "click3", "click4"), 0.01);
+        }
+      }
       send({
         type: "build",
         unit,

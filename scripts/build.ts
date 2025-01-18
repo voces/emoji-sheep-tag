@@ -1,8 +1,8 @@
 import jsdom from "jsdom";
-import { ensureDir } from "jsr:@std/fs";
+import { copy, ensureDir } from "jsr:@std/fs";
 import esbuild, { type Plugin } from "npm:esbuild";
 import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
-import { join, relative } from "jsr:@std/path";
+import { basename, join, relative } from "jsr:@std/path";
 
 const textPlugin = {
   name: "text",
@@ -20,6 +20,32 @@ const textPlugin = {
     }));
   },
 } satisfies Plugin;
+
+export const audioCopyPlugin = {
+  name: "audio-copy",
+  setup(build: any) {
+    build.onResolve({ filter: /\.(mp3|wav|ogg)$/ }, (args: any) => {
+      return {
+        path: relative(Deno.cwd(), join(args.resolveDir, args.path)),
+        namespace: "audio",
+      };
+    });
+
+    build.onLoad({ filter: /.*/, namespace: "audio" }, async (args: any) => {
+      const outdir = build.initialOptions.outdir || "dist";
+      const destDir = join(outdir, "assets");
+      const fileName = basename(args.path);
+
+      await Deno.mkdir(destDir, { recursive: true });
+      await copy(args.path, join(destDir, fileName), { overwrite: true });
+
+      return {
+        contents: `./assets/${fileName}`,
+        loader: "text",
+      };
+    });
+  },
+};
 
 const decoder = new TextDecoder();
 
@@ -47,6 +73,7 @@ export const build = async () => {
     sourcemap: "inline",
     plugins: [
       textPlugin,
+      audioCopyPlugin,
       ...denoPlugins({ configPath: await Deno.realPath("deno.json") }),
     ],
     jsx: "automatic",

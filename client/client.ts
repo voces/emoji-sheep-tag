@@ -1,5 +1,5 @@
 import z from "npm:zod";
-import { getLocalPlayer, playersVar } from "./ui/vars/players.ts";
+import { playersVar } from "./ui/vars/players.ts";
 import { connectionStatusVar, stateVar } from "./ui/vars/state.ts";
 import { app, Entity } from "./ecs.ts";
 import { type ClientToServerMessage } from "../server/client.ts";
@@ -106,6 +106,13 @@ const zUpdate = z.object({
   // Art
   model: z.string().optional(),
   modelScale: z.number().optional(),
+  sounds: z.object({
+    attack: z.array(z.string()).optional(),
+    death: z.array(z.string()).optional(),
+    ready: z.array(z.string()).optional(),
+    what: z.array(z.string()).optional(),
+    yes: z.array(z.string()).optional(),
+  }).optional(),
 }).strict();
 
 const zDelete = z.object({
@@ -175,21 +182,29 @@ const checkNearPathing = (
   near: number,
   pathing: number,
 ) => {
-  if (tiles[Math.floor(y)]?.[Math.floor(x)] & pathing) return true;
-  if (tiles[Math.floor(y + near)]?.[Math.floor(x)] & pathing) return true;
-  if (tiles[Math.floor(y - near)]?.[Math.floor(x)] & pathing) return true;
-  if (tiles[Math.floor(y)]?.[Math.floor(x + near)] & pathing) return true;
-  if (tiles[Math.floor(y + near)]?.[Math.floor(x + near)] & pathing) {
+  if (tiles[Math.floor(y)]?.[Math.floor(x)] ?? 255 & pathing) return true;
+  if (tiles[Math.floor(y + near)]?.[Math.floor(x)] ?? 255 & pathing) {
     return true;
   }
-  if (tiles[Math.floor(y - near)]?.[Math.floor(x + near)] & pathing) {
+  if (tiles[Math.floor(y - near)]?.[Math.floor(x)] ?? 255 & pathing) {
     return true;
   }
-  if (tiles[Math.floor(y)]?.[Math.floor(x - near)] & pathing) return true;
-  if (tiles[Math.floor(y + near)]?.[Math.floor(x - near)] & pathing) {
+  if (tiles[Math.floor(y)]?.[Math.floor(x + near)] ?? 255 & pathing) {
     return true;
   }
-  if (tiles[Math.floor(y - near)]?.[Math.floor(x - near)] & pathing) {
+  if (tiles[Math.floor(y + near)]?.[Math.floor(x + near)] ?? 255 & pathing) {
+    return true;
+  }
+  if (tiles[Math.floor(y - near)]?.[Math.floor(x + near)] ?? 255 & pathing) {
+    return true;
+  }
+  if (tiles[Math.floor(y)]?.[Math.floor(x - near)] ?? 255 & pathing) {
+    return true;
+  }
+  if (tiles[Math.floor(y + near)]?.[Math.floor(x - near)] ?? 255 & pathing) {
+    return true;
+  }
+  if (tiles[Math.floor(y - near)]?.[Math.floor(x - near)] ?? 255 & pathing) {
     return true;
   }
   return false;

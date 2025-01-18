@@ -313,6 +313,8 @@
     }
   },
   "redirects": {
+    "https://esm.sh/@types/three@0.166.0/addons/helpers/PositionalAudioHelper.d.ts": "https://esm.sh/v135/@types/three@0.166.0/addons/helpers/PositionalAudioHelper.d.ts",
+    "https://esm.sh/v135/@types/three@~0.166/addons/helpers/PositionalAudioHelper~.d.ts": "https://esm.sh/v135/@types/three@0.166.0/addons/helpers/PositionalAudioHelper~.d.ts",
     "https://esm.sh/v135/@types/three@~0.166/addons/loaders/SVGLoader~.d.ts": "https://esm.sh/v135/@types/three@0.166.0/addons/loaders/SVGLoader~.d.ts",
     "https://esm.sh/v135/@types/three@~0.166/index.d.ts": "https://esm.sh/v135/@types/three@0.166.0/index.d.ts"
   },
@@ -321,6 +323,7 @@
     "https://deno.land/x/typescript_event_target@v1.0.5/src/TypedEventTarget.ts": "a3c472e4480584cc30b5b82a16317565897d36e487fdecac6f967b91b6d91bb7",
     "https://esm.sh/jsdom@24.1.0": "b5ed3379438a23a7e56458971c57b265ac8a031048f7801d8de6a5563618b6db",
     "https://esm.sh/three@0.166.1": "404db06a64a075b1fde0a4915c68424279d5451410ee165b159d5cc628609a23",
+    "https://esm.sh/three@0.166.1/addons/helpers/PositionalAudioHelper.js": "f7acfb6bfddc095926f3e63f0a7da174095cea8bd39ff1c04153f2a075fb0152",
     "https://esm.sh/three@0.166.1/addons/loaders/SVGLoader.js": "d77124ac8c45637a559e98d4a81d13cb0c2cb86595cf4a170f0b65590f6ca192",
     "https://esm.sh/v135/agent-base@7.1.0/denonext/agent-base.mjs": "0cfda332cb4694510eaeaa42dc88eed2223a9e6bed7352727a15ff163ee6b285",
     "https://esm.sh/v135/agent-base@7.1.1/denonext/agent-base.mjs": "e7f92e882f955036b3054644e3b01623bfe61065102ddfffb98099966dad628c",
@@ -359,6 +362,7 @@
     "https://esm.sh/v135/safer-buffer@2.1.2/denonext/safer-buffer.mjs": "ce0e787812c668ba082ad5b75958490c714b6e05836bd5b6013d9f75727c006f",
     "https://esm.sh/v135/saxes@6.0.0/denonext/saxes.mjs": "c788baa838835a5122681fee10909b16677ef3574fffd610a0c980321a95302d",
     "https://esm.sh/v135/symbol-tree@3.2.4/denonext/symbol-tree.mjs": "67199d1e47bd6e5b7d2715dd04d25658061c95fc4464f7d200b6aab9e439b5f4",
+    "https://esm.sh/v135/three@0.166.1/denonext/addons/helpers/PositionalAudioHelper.js": "b31c184d5e6630238a47a4fb57bff0b0e3a158156b0e62aea0f58d42eac90dcb",
     "https://esm.sh/v135/three@0.166.1/denonext/addons/loaders/SVGLoader.js": "81bcabcd668f10dfad03064260645ce569a37fea6ee9737bbd370063f5e31875",
     "https://esm.sh/v135/three@0.166.1/denonext/three.mjs": "35fec0bd12b5d30bd3c6fce8c4e47ec2025e0577f994bcdd31cc1a62f47ad3ea",
     "https://esm.sh/v135/tough-cookie@4.1.4/denonext/tough-cookie.mjs": "ae1e1d4b4e06675b732f72306588719bbb65c5345fd0ccb5cceca2833ec08992",

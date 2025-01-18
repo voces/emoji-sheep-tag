@@ -26,6 +26,7 @@ export const unitData: Record<
     | "isDoodad"
     | "model"
     | "modelScale"
+    | "sounds"
   >
   | undefined
 > = {
@@ -42,6 +43,7 @@ export const unitData: Record<
       { type: "auto", order: "destroyLastFarm", binding: ["KeyX"] },
     ],
     maxHealth: 20,
+    sounds: { what: ["sheep1", "sheep2", "sheep3"], death: ["splat1"] },
   },
   wolf: {
     movementSpeed: 3.1,
@@ -60,6 +62,7 @@ export const unitData: Record<
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 120,
+    sounds: { death: ["explosion1"] },
   },
   tinyHut: {
     model: "hut",
@@ -67,6 +70,7 @@ export const unitData: Record<
     radius: 0.25,
     tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     maxHealth: 20,
+    sounds: { death: ["explosion1"] },
   },
   wideHut: {
     model: "hut",
@@ -74,6 +78,7 @@ export const unitData: Record<
     radius: 0.75,
     tilemap: { map: Array(36).fill(3), top: -3, left: -3, width: 6, height: 6 },
     maxHealth: 140,
+    sounds: { death: ["explosion1"] },
   },
   rotundHut: {
     model: "hut",
@@ -81,6 +86,7 @@ export const unitData: Record<
     radius: 1,
     tilemap: { map: Array(64).fill(3), top: -4, left: -4, width: 8, height: 8 },
     maxHealth: 200,
+    sounds: { death: ["explosion1"] },
   },
   fence: {
     radius: 0.25,

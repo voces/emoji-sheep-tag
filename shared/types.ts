@@ -35,9 +35,14 @@ export type UnitDataAction = {
 export type Entity = {
   id: string;
   unitType?: string;
+  owner?: string;
+
   model?: string;
   modelScale?: number;
-  owner?: string;
+  sounds?: {
+    death?: string[];
+    what?: string[];
+  };
 
   position?: { readonly x: number; readonly y: number };
   facing?: number;

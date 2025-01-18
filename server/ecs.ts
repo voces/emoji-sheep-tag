@@ -49,7 +49,7 @@ export class UnitOrderEvent extends Event {
 }
 
 export class UnitDeathEvent extends Event {
-  constructor(readonly unit: Entity, readonly killer: Entity) {
+  constructor(readonly unit: Entity, readonly killer: Entity | undefined) {
     super("unitDeath");
   }
 }
@@ -60,7 +60,7 @@ export class ColorChangeEvent extends Event {
   }
 }
 
-type GameEvents = {
+export type GameEvents = {
   unitOrder: UnitOrderEvent;
   unitDeath: UnitDeathEvent;
   colorChange: ColorChangeEvent;

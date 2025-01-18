@@ -84,7 +84,6 @@ const Action = ({ action }: { action: UnitDataAction }) => {
 
 export const Game = () => {
   const selection = useReactiveVar(selectionVar);
-  console.log(selection?.id, selection?.actions);
   return (
     <>
       <div

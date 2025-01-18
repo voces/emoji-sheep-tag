@@ -7,23 +7,23 @@ import { playersVar } from "../ui/vars/players.ts";
 import { getFps } from "../graphics/three.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
 
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import sheep from "../assets/sheep.svg";
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import wolf from "../assets/wolf.svg";
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import hut from "../assets/hut.svg";
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import fence from "../assets/fence.svg";
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import fire from "../assets/fire.svg";
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import claw from "../assets/claw.svg";
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import collision from "../assets/collision.svg";
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import flowers from "../assets/flowers.svg";
-//@deno-types="../assets/svg.d.ts"
+//@deno-types="../assets/asset.d.ts"
 import grass from "../assets/grass.svg";
 
 export const svgs: Record<string, string> = {

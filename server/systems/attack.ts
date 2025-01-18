@@ -1,9 +1,21 @@
 import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
 import { distanceBetweenEntities } from "../../shared/pathing/math.ts";
 import { Entity } from "../../shared/types.ts";
-import { Game, UnitDeathEvent } from "../ecs.ts";
+import { Game } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 import { calcPath } from "./pathing.ts";
+
+let damageSource: Entity | undefined;
+const withDamageSource = <T>(e: Entity, fn: () => T) => {
+  const prev = damageSource;
+  damageSource = e;
+  try {
+    return fn();
+  } finally {
+    damageSource = prev;
+  }
+};
+export const getDamageSource = () => damageSource;
 
 export const addAttackSystem = (app: Game) => {
   let counter = 0;
@@ -46,13 +58,9 @@ export const addAttackSystem = (app: Game) => {
           delete e.swing;
           e.lastAttack = time;
           if (target.health) {
-            target.health = Math.max(0, target.health - e.attack.damage);
-            if (target.health === 0) {
-              app.dispatchTypedEvent(
-                "unitDeath",
-                new UnitDeathEvent(target, e),
-              );
-            }
+            withDamageSource(e, () => {
+              target.health = Math.max(0, target.health! - e.attack!.damage);
+            });
           }
         }
         return;

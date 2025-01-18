@@ -1,4 +1,10 @@
-import { Color, PerspectiveCamera, Scene, WebGLRenderer } from "three";
+import {
+  AudioListener,
+  Color,
+  PerspectiveCamera,
+  Scene,
+  WebGLRenderer,
+} from "three";
 import { center, tiles } from "../../shared/map.ts";
 import { Grid } from "./Grid.ts";
 import { stats } from "../util/Stats.ts";
@@ -13,6 +19,7 @@ export const camera = new PerspectiveCamera(
   0.1,
   1000,
 );
+Object.assign(globalThis, { camera });
 
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(globalThis.devicePixelRatio);
@@ -24,6 +31,10 @@ camera.position.z = 9;
 camera.position.x = center.x;
 camera.position.y = center.y;
 camera.layers.enableAll();
+
+export const listener = new AudioListener();
+Object.assign(globalThis, { listener });
+camera.add(listener);
 
 const terrain = new Grid(tiles[0].length, tiles.length);
 terrain.layers.set(2);

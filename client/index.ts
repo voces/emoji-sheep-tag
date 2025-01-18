@@ -6,6 +6,7 @@ import "./systems/autoSelect.ts";
 import "./systems/three.ts";
 import "./systems/movement.ts";
 import "./systems/attack.ts";
+import "./systems/sounds.ts";
 import "./systems/blueprints.ts";
 import "./systems/fire.ts";
 import "./systems/swing.ts";

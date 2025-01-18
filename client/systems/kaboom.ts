@@ -4,6 +4,7 @@ app.addSystem({
   props: ["health", "tilemap", "position"],
   onRemove: (e) => {
     if (!e.position) return;
+
     const kaboom = app.add({
       id: `kaboom-${crypto.randomUUID()}`,
       unitType: "collision",
