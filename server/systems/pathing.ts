@@ -2,14 +2,12 @@ import { App } from "jsr:@verit/ecs";
 import { Entity } from "../../shared/types.ts";
 import { PathingMap } from "../../shared/pathing/PathingMap.ts";
 import { currentApp } from "../contexts.ts";
-import { PathingEntity, TargetEntity } from "../../shared/pathing/types.ts";
+import { TargetEntity } from "../../shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
 import { tiles } from "../../shared/map.ts";
+import { isPathingEntity } from "../../shared/pathing/util.ts";
 
 const pathingMaps = new WeakMap<App<Entity>, PathingMap>();
-
-export const isPathingEntity = (entity: Entity): entity is PathingEntity =>
-  !!entity.position && typeof entity.radius === "number" && !entity.isDoodad;
 
 export const pathingMap = () => {
   const app = currentApp();

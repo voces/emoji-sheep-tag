@@ -6,7 +6,8 @@ import { GameEvents } from "../server/ecs.ts";
 
 export type Entity = CommonEntity & {
   selected?: boolean;
-  blueprint?: boolean;
+  /** Blueprint color */
+  blueprint?: number;
   zIndex?: number;
   playerColor?: string;
 };

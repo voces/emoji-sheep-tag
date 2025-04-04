@@ -1,12 +1,10 @@
+import { tempUnit } from "../../shared/api/unit.ts";
 import { unitData } from "../../shared/data.ts";
+import { isPathingEntity } from "../../shared/pathing/util.ts";
 import { Entity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
 import { data } from "../st/data.ts";
-import {
-  isPathingEntity,
-  pathingMap,
-  updatePathing,
-} from "../systems/pathing.ts";
+import { pathingMap, updatePathing } from "../systems/pathing.ts";
 
 export const build = (builder: Entity, type: string, x: number, y: number) => {
   const app = currentApp();
@@ -30,24 +28,6 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
   // Relocate entity if position not valid
   updatePathing(builder);
 };
-
-export const tempUnit = (
-  owner: string,
-  type: string,
-  x: number,
-  y: number,
-): Entity => ({
-  id: "",
-  unitType: type,
-  owner,
-  position: { x, y },
-  facing: Math.PI,
-  ...(typeof unitData[type]?.maxHealth === "number"
-    ? { health: unitData[type]?.maxHealth }
-    : undefined),
-  isIdle: true,
-  ...unitData[type],
-});
 
 export const newUnit = (owner: string, type: string, x: number, y: number) =>
   currentApp().add(tempUnit(owner, type, x, y));

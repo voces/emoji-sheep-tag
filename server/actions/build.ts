@@ -4,10 +4,11 @@ import { z } from "npm:zod";
 import { BUILD_RADIUS } from "../../shared/data.ts";
 import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
 import { Entity } from "../../shared/types.ts";
-import { build as buildUnit, tempUnit } from "../api/unit.ts";
+import { build as buildUnit } from "../api/unit.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { calcPath, pathable, withPathingMap } from "../systems/pathing.ts";
+import { tempUnit } from "../../shared/api/unit.ts";
 
 export const zBuild = z.object({
   type: z.literal("build"),

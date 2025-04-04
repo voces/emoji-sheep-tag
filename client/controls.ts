@@ -11,7 +11,7 @@ import { setFind } from "../server/util/set.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
 import { unitData } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
-import { isEnemy } from "./api/unit.ts";
+import { canBuild, isEnemy } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
 import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
@@ -53,6 +53,17 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
   return true;
 };
 
+const getBuilderFromBlueprint = () => {
+  if (!blueprint) return;
+  const unitType = blueprint.unitType;
+  return setFind(
+    selection,
+    (u) =>
+      u.actions?.some((a) => a.type === "build" && a.unitType === unitType) ??
+        false,
+  );
+};
+
 mouse.addEventListener("mouseButtonDown", (e) => {
   if (e.element instanceof Element && e.element.id !== "ui") {
     e.element.dispatchEvent(
@@ -70,7 +81,11 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   if (e.button === "right") {
     if (selection.size) {
       const source = selection.first()?.position;
-      if (source) playSound(pick("click1", "click2", "click3", "click4"), 0.01);
+      if (source) {
+        playSound(pick("click1", "click2", "click3", "click4"), {
+          volume: 0.1,
+        });
+      }
     }
 
     if (e.intersects.size && handleSmartTarget(e)) return;
@@ -83,36 +98,30 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   } else if (e.button === "left") {
     if (blueprint) {
       const unitType = blueprint.unitType;
-      const unit = setFind(
-        selection,
-        (u) =>
-          u.actions?.some((a) =>
-            a.type === "build" && a.unitType === unitType
-          ) ?? false,
-      )?.id;
+      const unit = getBuilderFromBlueprint();
+      if (!unit) return;
+      const x = normalize(
+        e.world.x,
+        (unitData[unitType]?.tilemap?.width ?? 0) % 4 === 0,
+      );
+      const y = normalize(
+        e.world.y,
+        (unitData[unitType]?.tilemap?.height ?? 0) % 4 === 0,
+      );
+      if (!canBuild(unit, unitType, x, y)) return;
+
       app.delete(blueprint);
       blueprint = undefined;
       updateCursor();
-      if (!unit) return;
       if (selection.size) {
         const source = selection.first()?.position;
         if (source) {
-          playSound(pick("click1", "click2", "click3", "click4"), 0.01);
+          playSound(pick("click1", "click2", "click3", "click4"), {
+            volume: 0.1,
+          });
         }
       }
-      send({
-        type: "build",
-        unit,
-        buildType: unitType,
-        x: normalize(
-          e.world.x,
-          (unitData[unitType]?.tilemap?.width ?? 0) % 4 === 0,
-        ),
-        y: normalize(
-          e.world.y,
-          (unitData[unitType]?.tilemap?.height ?? 0) % 4 === 0,
-        ),
-      });
+      send({ type: "build", unit: unit.id, buildType: unitType, x, y });
     }
   }
 });
@@ -120,16 +129,20 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 let hover: Element | null = null;
 mouse.addEventListener("mouseMove", (e) => {
   if (blueprint) {
-    blueprint.position = {
-      x: normalize(
-        e.world.x,
-        (unitData[blueprint.unitType]?.tilemap?.width ?? 0) % 4 === 0,
-      ),
-      y: normalize(
-        e.world.y,
-        (unitData[blueprint.unitType]?.tilemap?.height ?? 0) % 4 === 0,
-      ),
-    };
+    const builder = getBuilderFromBlueprint();
+    if (!builder) return;
+    const x = normalize(
+      e.world.x,
+      (unitData[blueprint.unitType]?.tilemap?.width ?? 0) % 4 === 0,
+    );
+    const y = normalize(
+      e.world.y,
+      (unitData[blueprint.unitType]?.tilemap?.height ?? 0) % 4 === 0,
+    );
+    blueprint.position = { x, y };
+    blueprint.blueprint = canBuild(builder, blueprint.unitType, x, y)
+      ? 0x0000ff
+      : 0xff0000;
   }
 
   if (hover !== e.element) {
@@ -199,23 +212,24 @@ globalThis.addEventListener("keydown", (e) => {
 
   if (action.type === "build") {
     if (blueprint) app.delete(blueprint);
+    const x = normalize(
+      mouse.world.x,
+      (unitData[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
+    );
+    const y = normalize(
+      mouse.world.y,
+      (unitData[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
+    );
     blueprint = app.add({
       id: `blueprint-${blueprintIndex}`,
       unitType: action.unitType,
-      position: {
-        x: normalize(
-          mouse.world.x,
-          (unitData[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
-        ),
-        y: normalize(
-          mouse.world.y,
-          (unitData[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
-        ),
-      },
+      position: { x, y },
       owner: getLocalPlayer()?.id,
       model: unitData[action.unitType]?.model,
       modelScale: unitData[action.unitType]?.modelScale,
-      blueprint: true,
+      blueprint: canBuild(units[0], action.unitType, x, y)
+        ? 0x0000ff
+        : 0xff0000,
     });
     updateCursor();
     return;

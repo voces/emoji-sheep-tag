@@ -53,8 +53,8 @@ Object.assign(globalThis, { collections });
 
 const color = new Color();
 const color2 = new Color();
-const blue = new Color(0x0000ff);
 const white = new Color("white");
+const temp = new Color(0x0000ff);
 
 const updateColor = (e: Entity) => {
   if (!e.unitType) return;
@@ -64,10 +64,11 @@ const updateColor = (e: Entity) => {
     playersVar().find((p) => p.id === e.owner)?.color;
   if (!hex) return;
   color.set(hex);
-  if (e.blueprint) {
+  if (typeof e.blueprint === "number") {
+    temp.setHex(e.blueprint);
     color2.set(color);
     color2.lerp(white, 0.8);
-    color2.lerp(blue, 0.6);
+    color2.lerp(temp, 0.6);
     collection.setVertexColorAt(e.id, color2);
     collection.setPlayerColorAt(e.id, color, false);
   } else {
@@ -78,6 +79,12 @@ const updateColor = (e: Entity) => {
 app.addSystem({
   props: ["id", "unitType", "owner"],
   onAdd: updateColor,
+  onChange: updateColor,
+});
+
+app.addSystem({
+  props: ["blueprint"],
+  onChange: (e) => e.unitType && e.owner && updateColor(e),
 });
 
 const prevPositions = new WeakMap<Entity, Entity["position"]>();

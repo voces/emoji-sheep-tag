@@ -62,6 +62,8 @@ export type Entity = {
     readonly rangeMotionBuffer: number;
     /** Seconds between attacks starting */
     readonly cooldown: number;
+    /** Seconds between an attack starting and an attack being committed (can miss) */
+    readonly backswing: number;
     /** Seconds between an attack starting and damage occurring */
     readonly damagePoint: number;
   };

@@ -43,17 +43,21 @@ export const playSoundAt = (
   return sound;
 };
 
-export const playSound = (soundKey: string, volume = 1) => {
+export const playSound = (
+  soundKey: string,
+  { volume = 1, loop = false }: { volume?: number; loop?: boolean } = {},
+) => {
   const soundPath = sounds[soundKey];
   const sound = new Audio(listener);
   scene.add(sound);
 
   const setupSound = () => {
     sound.setBuffer(audioCache[soundPath]);
-    sound.setLoop(false);
+    sound.setLoop(loop);
     sound.setVolume(volume);
+    sound.gain.gain.setValueAtTime(volume, 0);
     sound.play();
-    sound.onEnded = () => sound.removeFromParent();
+    if (!loop) sound.onEnded = () => sound.removeFromParent();
   };
 
   if (audioCache[soundPath]) {
@@ -99,11 +103,8 @@ export const playEntitySound = (
 };
 
 const startAmbient = () => {
-  const sound = playSound("ambientBirds", 0.01);
+  const sound = playSound("ambientBirds", { volume: 0.05, loop: true });
   sound.onEnded = () => void 0;
-  sound.stop();
-  sound.setLoop(true);
-  sound.play();
 
   document.removeEventListener("click", startAmbient);
   document.removeEventListener("keydown", startAmbient);

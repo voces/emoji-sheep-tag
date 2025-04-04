@@ -4,5 +4,9 @@
   "editor.detectIndentation": false,
   "files.associations": {
     "*.svg": "html"
-  }
+  },
+  "cSpell.words": [
+    "pathable",
+    "pathing"
+  ]
 }

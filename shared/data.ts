@@ -55,6 +55,7 @@ export const unitData: Record<
       range: 0.32, // roughly minimum to hit via corner
       rangeMotionBuffer: 0.92,
       cooldown: 1.2,
+      backswing: 0.15,
       damagePoint: 0.3,
     },
   },

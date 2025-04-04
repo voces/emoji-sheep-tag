@@ -49,14 +49,28 @@ export const addAttackSystem = (app: Game) => {
       }
 
       if (e.swing) {
+        // Abort if target too far before backswing
         if (
+          e.swing.time + e.attack.backswing > time &&
           e.attack.rangeMotionBuffer > 0 &&
           distanceBetweenPoints(target.position, e.swing.target) >
             e.attack.rangeMotionBuffer
-        ) delete e.swing;
-        else if (e.swing.time + e.attack.damagePoint <= time) {
-          delete e.swing;
+        ) return delete e.swing;
+
+        // Swing if damage point reached
+        if (e.swing.time + e.attack.damagePoint <= time) {
+          const swingTarget = e.swing.target;
           e.lastAttack = time;
+          delete e.swing;
+
+          // Miss if target too far
+          if (
+            e.attack.rangeMotionBuffer > 0 &&
+            distanceBetweenPoints(target.position, swingTarget) >
+              e.attack.rangeMotionBuffer
+          ) return;
+
+          // Otherwise damage target
           if (target.health) {
             withDamageSource(e, () => {
               target.health = Math.max(0, target.health! - e.attack!.damage);
