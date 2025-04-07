@@ -198,6 +198,43 @@
       box-shadow: color-mix(in oklab, var(--color-shadow) 20%, transparent) 1px 1px 4px 1px;
     }
 
+    #palette {
+      position: absolute;
+      top: 20px;
+      width: 400px;
+      left: calc(50% - 200px);
+      opacity: 0;
+      transition: all 100ms ease-in-out;
+      pointer-events: none;
+    }
+
+    #palette.open {
+      opacity: 1;
+      pointer-events: initial;
+    }
+
+    #palette>div.hover,
+    #palette>div:has(.hover) {
+      background-color: var(--color-shadow);
+      margin: 0 -16px;
+      padding: 0 16px;
+    }
+
+    #palette>div>div:nth-of-type(2) {
+      font-size: 70%;
+      color: color-mix(in oklab, var(--color-body) 70%, transparent);
+    }
+
+    #palette .focused {
+      background-color: var(--color-shadow);
+      margin: 0 -16px;
+      padding: 0 16px;
+    }
+
+    .highlight {
+      color: color-mix(in oklab, var(--color-body) 30%, var(--color-primary))
+    }
+
     @keyframes fadeOut {
       to {
         opacity: 0;

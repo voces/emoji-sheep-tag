@@ -178,3 +178,5 @@ const newStats = () => {
 
 export const stats = newStats();
 document.body.appendChild(stats.dom);
+stats.dom.id = "stats";
+stats.dom.style.display = "none";

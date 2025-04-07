@@ -11,6 +11,7 @@ export const endRound = () => {
   lobby.round = undefined;
   lobby.status = "lobby";
   clearUpdates();
+  send({ type: "stop" });
 };
 
 export const send = (message: ServerToClientMessage) => {
@@ -40,7 +41,10 @@ export const leave = (client?: Client) => {
   send({ type: "leave", player: client.id, host: lobby.host?.id });
 
   // Make player leave lobby
-  if (lobby.round) {
+  if (
+    lobby.round &&
+    (lobby.round.sheep.has(client) || lobby.round?.wolves.has(client))
+  ) {
     lobby.round.sheep.delete(client);
     lobby.round.wolves.delete(client);
 

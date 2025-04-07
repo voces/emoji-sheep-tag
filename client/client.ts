@@ -221,6 +221,10 @@ const checkNearPathing = (
 
 const handlers = {
   join: (data: z.TypeOf<typeof zJoin>) => {
+    const prevPlayers = playersVar();
+    const newPlayers = data.players.filter((p) =>
+      prevPlayers.some((p2) => p2.id !== p.id)
+    );
     playersVar((prev) =>
       data.players.length !== 1 || data.players.some((p) => p.local)
         ? data.players
@@ -228,6 +232,13 @@ const handlers = {
         ? prev
         : [...prev, data.players[0]]
     );
+    if (newPlayers.length) {
+      addChatMessage(`${
+        new Intl.ListFormat().format(
+          newPlayers.map((p) => `|c${p.color}|${p.name}|`),
+        )
+      } ${newPlayers.length > 1 ? "have" : "has"} joined the game!`);
+    }
     stateVar(data.status);
     if (data.status === "lobby") {
       console.log("status lobby");
@@ -302,12 +313,15 @@ const handlers = {
       }
     }
   },
-  leave: (data: z.TypeOf<typeof zLeave>) =>
+  leave: (data: z.TypeOf<typeof zLeave>) => {
+    const p = playersVar().find((p) => p.id === data.player);
     playersVar((players) =>
       players.filter((p) => p.id !== data.player).map((p) =>
         !p.host && data.host === p.id ? { ...p, host: true } : p
       )
-    ),
+    );
+    if (p) addChatMessage(`|c${p.color}|${p.name}| has left the game!`);
+  },
   pong: ({ data }: z.TypeOf<typeof zPong>) => {
     if (typeof data === "number") {
       stats.msPanel.update(performance.now() - data, 100);
@@ -315,9 +329,7 @@ const handlers = {
   },
   chat: ({ player, message }: z.TypeOf<typeof zChat>) => {
     const p = playersVar().find((p) => p.id === player);
-    addChatMessage(
-      player ? `|c${p?.color ?? "white"}|${player}|: ${message}` : message,
-    );
+    addChatMessage(p ? `|c${p.color}|${p.name}|: ${message}` : message);
   },
 };
 

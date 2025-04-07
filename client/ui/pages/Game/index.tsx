@@ -6,6 +6,7 @@ import { unitData } from "../../../../shared/data.ts";
 import { svgs } from "../../../systems/three.ts";
 import { getLocalPlayer } from "../../vars/players.ts";
 import { Chat } from "./Chat.tsx";
+import { CommandPalette } from "./CommandPalette.tsx";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -86,6 +87,7 @@ export const Game = () => {
   const selection = useReactiveVar(selectionVar);
   return (
     <>
+      <CommandPalette />
       <Chat />
       <div
         className="card h-stack hide-empty"

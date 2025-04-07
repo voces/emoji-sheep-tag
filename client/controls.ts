@@ -16,6 +16,8 @@ import { updateCursor } from "./graphics/cursor.ts";
 import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
+import { showCommandPaletteVar } from "./ui/pages/Game/CommandPalette.tsx";
+import { stateVar } from "./ui/vars/state.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -78,6 +80,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   }
 
   if (showChatBoxVar() === "open") showChatBoxVar("dismissed");
+  if (showCommandPaletteVar() === "open") showCommandPaletteVar("dismissed");
 
   if (!selection.size) return;
 
@@ -194,16 +197,41 @@ export const hasBlueprint = () => !!blueprint;
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
 
-  if (e.code === "Enter") {
-    showChatBoxVar((v) => {
-      if (v === "closed" || v === "dismissed") return "open";
-      if (v === "open") return "sent";
-      return v;
-    });
-    e.preventDefault();
-    return false;
+  // In game menus: chat & palette
+  if (stateVar() === "playing") {
+    if (e.code === "Enter") {
+      if (showCommandPaletteVar() === "open") {
+        showCommandPaletteVar("sent");
+        return false;
+      }
+
+      showChatBoxVar((v) => {
+        if (v === "closed" || v === "dismissed") return "open";
+        if (v === "open") return "sent";
+        return v;
+      });
+      e.preventDefault();
+      return false;
+    }
+    if (
+      e.code === "Slash" && showChatBoxVar() !== "open" &&
+      showCommandPaletteVar() === "closed"
+    ) {
+      e.preventDefault();
+      showCommandPaletteVar("open");
+      return false;
+    }
+    if (
+      (showChatBoxVar() === "open" || showCommandPaletteVar() === "open") &&
+      !("fromHud" in e)
+    ) {
+      if (
+        showCommandPaletteVar() === "open" && e.key === "ArrowUp" ||
+        e.key === "ArrowDown"
+      ) e.preventDefault();
+      return false;
+    }
   }
-  if (showChatBoxVar() === "open" && !("fromHud" in e)) return false;
 
   if (e.code === "Escape") {
     handleEscape();
@@ -266,12 +294,16 @@ globalThis.addEventListener("keyup", (e) => {
 let startPan: number | undefined;
 app.addSystem({
   update: (delta, time) => {
-    let x = (keyboard.ArrowLeft ? -1 : 0) + (keyboard.ArrowRight ? 1 : 0) +
+    const skipKeyboard = showCommandPaletteVar() === "open";
+
+    let x = (keyboard.ArrowLeft && !skipKeyboard ? -1 : 0) +
+      (keyboard.ArrowRight && !skipKeyboard ? 1 : 0) +
       (document.pointerLockElement
         ? (mouse.pixels.x <= 12 ? -2 : 0) +
           (window.innerWidth - mouse.pixels.x <= 12 ? 2 : 0)
         : 0);
-    let y = (keyboard.ArrowDown ? -1 : 0) + (keyboard.ArrowUp ? 1 : 0) +
+    let y = (keyboard.ArrowDown && !skipKeyboard ? -1 : 0) +
+      (keyboard.ArrowUp && !skipKeyboard ? 1 : 0) +
       (document.pointerLockElement
         ? (mouse.pixels.y <= 12 ? 2 : 0) +
           (window.innerHeight - mouse.pixels.y <= 12 ? -2 : 0)

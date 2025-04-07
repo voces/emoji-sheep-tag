@@ -30,7 +30,7 @@ export const Chat = () => {
     else inputRef.current?.blur();
 
     if (showChatBox === "sent") {
-      if (inputRef.current) {
+      if (inputRef.current?.value) {
         send({ type: "chat", message: inputRef.current.value });
         inputRef.current.value = "";
       }

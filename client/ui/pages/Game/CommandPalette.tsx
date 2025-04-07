@@ -1,0 +1,210 @@
+//@deno-types="npm:@types/react"
+import { useEffect, useMemo, useRef, useState } from "react";
+import { send } from "../../../client.ts";
+import { makeVar, useReactiveVar } from "../../hooks/useVar.tsx";
+import { addChatMessage } from "./Chat.tsx";
+import { useMemoWithPrevious } from "../../hooks/useMemoWithPrevious.ts";
+
+export const showCommandPaletteVar = makeVar<
+  "closed" | "open" | "sent" | "dismissed"
+>("closed");
+
+type Command = {
+  name: string;
+  description: string;
+  prompts?: string[];
+  callback: (...args: string[]) => void;
+};
+
+type CommandOption =
+  & Omit<Command, "name" | "description">
+  & {
+    originalName: string;
+    name: (string | React.JSX.Element)[] | string;
+    description: (string | React.JSX.Element)[] | string;
+  };
+
+const highlightText = (text: string, query: string) => {
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  let lastIndex = 0;
+  const result = [];
+
+  // Loop through each character in the query
+  for (let i = 0; i < lowerQuery.length; i++) {
+    const char = lowerQuery[i];
+    // Find the next occurrence of the character starting from lastIndex
+    const matchIndex = lowerText.indexOf(char, lastIndex);
+    if (matchIndex === -1) {
+      // If a character from the query isn't found, stop highlighting.
+      break;
+    }
+    // Append any text between the previous match and this one (not highlighted)
+    if (matchIndex > lastIndex) {
+      result.push(text.slice(lastIndex, matchIndex));
+    }
+    // Append the matched character wrapped in a span for highlighting
+    result.push(
+      <span key={matchIndex} className="highlight">
+        {text.charAt(matchIndex)}
+      </span>,
+    );
+    lastIndex = matchIndex + 1;
+  }
+  // Append the remaining part of the text after the last match
+  result.push(text.slice(lastIndex));
+  return result;
+};
+
+export const CommandPalette = () => {
+  const showCommandPalette = useReactiveVar(showCommandPaletteVar);
+  const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [focused, setFocused] = useState<string | undefined>();
+  const [prompt, setPrompt] = useState("");
+  const [inputs, setInputs] = useState<string[]>([]);
+
+  const commands = useMemo((): Command[] => [
+    {
+      name: "Cancel round",
+      description: "Cancels the current round",
+      callback: () => send({ type: "cancel" }),
+    },
+    {
+      name: "Set latency",
+      description: "Artificially increase latency",
+      prompts: ["Latency (MS)"],
+      callback: (latency) =>
+        addChatMessage(
+          `Latency set to ${globalThis.latency = parseFloat(latency)}ms.`,
+        ),
+    },
+    {
+      name: "Set noise",
+      description: "Artificially increase noise on latency",
+      prompts: ["Noise (MS)"],
+      callback: (noise) =>
+        addChatMessage(`Noise set to ${globalThis.noise = parseFloat(noise)}.`),
+    },
+    {
+      name: "Toggle stats",
+      description: "Show or hide latency, memory, and frames per second",
+      callback: () => {
+        const stats = document.getElementById("stats");
+        if (!stats) return;
+        stats.style.display = stats.style.display === "none" ? "" : "none";
+      },
+    },
+  ], []);
+
+  const filteredCommands = useMemoWithPrevious<CommandOption[]>((prev) => {
+    if (prompt) return prev ?? [];
+    const regexp = new RegExp(input.toLowerCase().split("").join(".*"), "i");
+    const matches: CommandOption[] = [];
+    for (let i = 0; i < commands.length && matches.length < 10; i++) {
+      const nameMatches = commands[i].name.match(regexp);
+      const descriptionMatches = commands[i].description.match(regexp);
+      if (nameMatches || descriptionMatches) {
+        matches.push({
+          ...commands[i],
+          originalName: commands[i].name,
+          name: nameMatches
+            ? highlightText(commands[i].name, input)
+            : [commands[i].name],
+          description: descriptionMatches
+            ? highlightText(commands[i].description, input)
+            : [commands[i].description],
+        } as CommandOption);
+      }
+    }
+    return matches;
+  }, [input]);
+
+  useEffect(() => {
+    if (
+      !filteredCommands.some((c) => c.originalName === focused) &&
+      filteredCommands.length
+    ) {
+      setFocused(filteredCommands[0]?.originalName);
+    }
+  }, [filteredCommands]);
+
+  const close = () => {
+    showCommandPaletteVar("closed");
+    setTimeout(() => {
+      setInputs([]);
+      setInput("");
+      setPrompt("");
+    }, 100);
+    inputRef.current?.blur();
+  };
+
+  useEffect(() => {
+    if (showCommandPalette === "sent") {
+      const command = filteredCommands.find((c) => c.originalName === focused);
+      if (command) {
+        if (command.prompts) {
+          const curIdx = command.prompts.indexOf(prompt);
+          if (curIdx < command.prompts.length - 1) {
+            setPrompt(command.prompts[curIdx + 1]);
+            setInput("");
+            showCommandPaletteVar("open");
+            if (curIdx !== -1) setInputs((prev) => [...prev, input]);
+            return;
+          }
+        }
+        command.callback(...inputs, input);
+      }
+      close();
+    } else if (showCommandPalette === "dismissed") close();
+    else if (showCommandPalette === "open") inputRef.current?.focus();
+  }, [showCommandPalette]);
+
+  return (
+    <div id="palette" className={`card v-stack ${showCommandPalette}`}>
+      <input
+        placeholder={prompt}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        ref={inputRef}
+        onKeyDown={(e) => {
+          if (prompt) return;
+          if (e.code === "ArrowUp" && filteredCommands.length) {
+            setFocused(
+              filteredCommands.at(
+                filteredCommands.findIndex((c) => c.originalName === focused) -
+                  1,
+              )?.originalName,
+            );
+          } else if (e.code === "ArrowDown" && filteredCommands.length) {
+            setFocused(
+              filteredCommands[
+                (filteredCommands.findIndex((c) => c.originalName === focused) +
+                  1) % filteredCommands.length
+              ]?.originalName,
+            );
+          }
+        }}
+      />
+      {!prompt && filteredCommands.map((c) => (
+        <div
+          key={c.originalName}
+          className={focused === c.originalName ? "focused" : undefined}
+          onClick={() => {
+            setFocused(c.originalName);
+            if (c.prompts?.length) {
+              setPrompt(c.prompts[0]);
+              setInput("");
+            } else {
+              c.callback();
+              close();
+            }
+          }}
+        >
+          <div>{c.name}</div>
+          <div>{c.description}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
