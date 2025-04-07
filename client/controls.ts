@@ -15,6 +15,7 @@ import { canBuild, isEnemy } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
 import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
+import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -75,6 +76,8 @@ mouse.addEventListener("mouseButtonDown", (e) => {
     );
     return;
   }
+
+  if (showChatBoxVar() === "open") showChatBoxVar("dismissed");
 
   if (!selection.size) return;
 
@@ -190,6 +193,17 @@ export const hasBlueprint = () => !!blueprint;
 
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
+
+  if (e.code === "Enter") {
+    showChatBoxVar((v) => {
+      if (v === "closed" || v === "dismissed") return "open";
+      if (v === "open") return "sent";
+      return v;
+    });
+    e.preventDefault();
+    return false;
+  }
+  if (showChatBoxVar() === "open" && !("fromHud" in e)) return false;
 
   if (e.code === "Escape") {
     handleEscape();

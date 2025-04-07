@@ -1,10 +1,11 @@
-import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
-import { app, Entity } from "../../ecs.ts";
-import { selection } from "../../systems/autoSelect.ts";
-import { UnitDataAction } from "../../../shared/types.ts";
-import { unitData } from "../../../shared/data.ts";
-import { svgs } from "../../systems/three.ts";
-import { getLocalPlayer } from "../vars/players.ts";
+import { makeVar, useReactiveVar } from "../../hooks/useVar.tsx";
+import { app, Entity } from "../../../ecs.ts";
+import { selection } from "../../../systems/autoSelect.ts";
+import { UnitDataAction } from "../../../../shared/types.ts";
+import { unitData } from "../../../../shared/data.ts";
+import { svgs } from "../../../systems/three.ts";
+import { getLocalPlayer } from "../../vars/players.ts";
+import { Chat } from "./Chat.tsx";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -30,15 +31,14 @@ const Command = (
   <div
     className="command"
     onClick={() => {
-      console.log(binding);
       if (!binding?.length) return;
-      document.dispatchEvent(
-        new KeyboardEvent("keydown", {
-          code: binding[0],
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
+      const event = new KeyboardEvent("keydown", {
+        code: binding[0],
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, "fromHud", { value: true });
+      document.dispatchEvent(event);
     }}
   >
     {iconType === "svg" && icon && (
@@ -86,6 +86,7 @@ export const Game = () => {
   const selection = useReactiveVar(selectionVar);
   return (
     <>
+      <Chat />
       <div
         className="card h-stack hide-empty"
         style={{

@@ -4,7 +4,7 @@ import { ThemeProvider } from "npm:styled-components";
 import { theme } from "./theme.ts";
 import { Lobby } from "./pages/Lobby.tsx";
 import { Menu } from "./pages/Menu.tsx";
-import { Game } from "./pages/Game.tsx";
+import { Game } from "./pages/Game/index.tsx";
 
 const pages = {
   menu: Menu,

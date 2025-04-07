@@ -161,6 +161,48 @@
     .hide-empty:empty {
       display: none;
     }
+
+    #chat {
+      position: absolute;
+      bottom: 130px;
+      left: 20px;
+      pointer-events: none;
+    }
+
+    #chat>div {
+      opacity: 1;
+      animation: fadeOut 3s ease forwards;
+      animation-delay: 7s;
+    }
+
+    #chat>input {
+      background: transparent;
+      color: inherit;
+      text-shadow: 0 0 2px var(--color-border);
+      opacity: 0;
+      transition: all 100ms ease-in-out;
+      outline: none;
+      padding-left: 4px;
+      margin-left: -4px;
+    }
+
+    #chat>input.open {
+      opacity: 1;
+      background-color: color-mix(in oklab, var(--color-background) 70%, transparent);
+      box-shadow: color-mix(in oklab, var(--color-shadow) 70%, transparent) 1px 1px 4px 1px;
+    }
+
+    #chat>input.dismissed {
+      opacity: 0.5;
+      background-color: color-mix(in oklab, var(--color-background) 20%, transparent);
+      box-shadow: color-mix(in oklab, var(--color-shadow) 20%, transparent) 1px 1px 4px 1px;
+    }
+
+    @keyframes fadeOut {
+      to {
+        opacity: 0;
+      }
+    }
   </style>
 
 </head>

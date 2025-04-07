@@ -1,4 +1,5 @@
-import { useEffect, useState } from "npm:react";
+//@deno-types="npm:@types/react"
+import { useEffect, useState } from "react";
 
 type ReactiveVar<T> = ((newValue?: T | ((oldValue: T) => T)) => T) & {
   subscribe: (callback: (newValue: T, prevValue: T) => void) => () => void;

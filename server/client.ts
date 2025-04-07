@@ -19,6 +19,7 @@ import "./systems/kd.ts";
 import "./systems/death.ts";
 import { generic, zGenericEvent } from "./actions/generic.ts";
 import { setSome } from "./util/set.ts";
+import { chat, zChat } from "./actions/chat.ts";
 
 type SocketEventMap = {
   close: unknown;
@@ -98,6 +99,7 @@ const zClientToServerMessage = z.union([
   zOrderEvent,
   zPing,
   zGenericEvent,
+  zChat,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -110,6 +112,7 @@ const actions = {
   unitOrder,
   ping,
   generic,
+  chat,
 };
 
 export const handleSocket = (socket: Socket) => {

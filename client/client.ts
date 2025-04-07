@@ -9,6 +9,7 @@ import { center, tiles } from "../shared/map.ts";
 import { stats } from "./util/Stats.ts";
 import { LocalWebSocket } from "./local.ts";
 import { data } from "./data.ts";
+import { addChatMessage } from "./ui/pages/Game/Chat.tsx";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -70,6 +71,7 @@ const zUpdate = z.object({
     rangeMotionBuffer: z.number(),
     cooldown: z.number(),
     damagePoint: z.number(),
+    backswing: z.number(),
   }).optional(),
   isDoodad: z.boolean().nullable().optional(),
 
@@ -162,6 +164,12 @@ const zPong = z.object({
   data: z.unknown(),
 });
 
+const zChat = z.object({
+  type: z.literal("chat"),
+  player: z.string().optional(),
+  message: z.string(),
+});
+
 const zMessage = z.union([
   zStart,
   zUpdates,
@@ -170,6 +178,7 @@ const zMessage = z.union([
   zLeave,
   zStop,
   zPong,
+  zChat,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;
@@ -303,6 +312,12 @@ const handlers = {
     if (typeof data === "number") {
       stats.msPanel.update(performance.now() - data, 100);
     }
+  },
+  chat: ({ player, message }: z.TypeOf<typeof zChat>) => {
+    const p = playersVar().find((p) => p.id === player);
+    addChatMessage(
+      player ? `|c${p?.color ?? "white"}|${player}|: ${message}` : message,
+    );
   },
 };
 
