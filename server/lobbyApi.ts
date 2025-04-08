@@ -8,7 +8,8 @@ export const endRound = () => {
   const lobby = lobbyContext.context;
   console.log(new Date(), "Round ended in lobby", lobby.name);
   lobby.round?.clearInterval();
-  lobby.round = undefined;
+  // Don't want to clear the round in middle of a cycle
+  queueMicrotask(() => lobby.round = undefined);
   lobby.status = "lobby";
   clearUpdates();
   send({ type: "stop" });
