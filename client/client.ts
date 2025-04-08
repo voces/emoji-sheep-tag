@@ -35,6 +35,7 @@ const zAction = z.union([
     type: z.literal("attack"),
     target: z.string(),
   }),
+  z.object({ type: z.literal("hold") }),
 ]).readonly();
 
 const zUpdate = z.object({

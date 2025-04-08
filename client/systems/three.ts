@@ -25,6 +25,8 @@ import collision from "../assets/collision.svg";
 import flowers from "../assets/flowers.svg";
 //@deno-types="../assets/asset.d.ts"
 import grass from "../assets/grass.svg";
+//@deno-types="../assets/asset.d.ts"
+import suspend from "../assets/suspend.svg";
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -36,6 +38,7 @@ export const svgs: Record<string, string> = {
   collision,
   flowers,
   grass,
+  suspend,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

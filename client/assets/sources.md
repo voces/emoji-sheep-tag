@@ -9,6 +9,7 @@
 - https://www.svgrepo.com/svg/321226/plate-claw
 - https://www.svgrepo.com/svg/436421/flowers-white
 - https://www.svgrepo.com/svg/499200/grass
+- https://iconduck.com/icons/112372/system-suspend
 
 # Audio
 

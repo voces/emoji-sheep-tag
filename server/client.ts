@@ -21,6 +21,7 @@ import { generic, zGenericEvent } from "./actions/generic.ts";
 import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
+import "./actions/hold.ts";
 
 type SocketEventMap = {
   close: unknown;

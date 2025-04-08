@@ -19,6 +19,8 @@ type Action = Readonly<
   } | {
     readonly type: "attack";
     readonly target: string;
+  } | {
+    readonly type: "hold";
   }
 >;
 

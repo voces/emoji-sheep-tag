@@ -58,6 +58,9 @@ export const unitData: Record<
       backswing: 0.15,
       damagePoint: 0.3,
     },
+    actions: [
+      { type: "auto", order: "hold", binding: ["KeyH"] },
+    ],
   },
   hut: {
     radius: 0.5,
