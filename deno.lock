@@ -319,8 +319,8 @@
   "remote": {
     "https://deno.land/x/typescript_event_target@v1.0.5/mod.ts": "0eabf51a32ecbc66ef5f81852a69b76687579c3b6a3f8e26306d44d1a22d0a49",
     "https://deno.land/x/typescript_event_target@v1.0.5/src/TypedEventTarget.ts": "a3c472e4480584cc30b5b82a16317565897d36e487fdecac6f967b91b6d91bb7",
-    "https://esm.sh/jsdom@24.1.0": "b5ed3379438a23a7e56458971c57b265ac8a031048f7801d8de6a5563618b6db",
-    "https://esm.sh/three@0.166.1": "404db06a64a075b1fde0a4915c68424279d5451410ee165b159d5cc628609a23",
+    "https://esm.sh/jsdom@24.1.0&pin=v135": "b5ed3379438a23a7e56458971c57b265ac8a031048f7801d8de6a5563618b6db",
+    "https://esm.sh/three@0.166.1&pin=v135": "404db06a64a075b1fde0a4915c68424279d5451410ee165b159d5cc628609a23",
     "https://esm.sh/three@0.166.1/addons/loaders/SVGLoader.js": "d77124ac8c45637a559e98d4a81d13cb0c2cb86595cf4a170f0b65590f6ca192",
     "https://esm.sh/v135/agent-base@7.1.0/denonext/agent-base.mjs": "0cfda332cb4694510eaeaa42dc88eed2223a9e6bed7352727a15ff163ee6b285",
     "https://esm.sh/v135/agent-base@7.1.1/denonext/agent-base.mjs": "e7f92e882f955036b3054644e3b01623bfe61065102ddfffb98099966dad628c",
