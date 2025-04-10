@@ -18,6 +18,7 @@ import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
 import { showCommandPaletteVar } from "./ui/pages/Game/CommandPalette.tsx";
 import { stateVar } from "./ui/vars/state.ts";
+import { newCircleIndicator } from "./systems/orderIndicators.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -42,6 +43,10 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
       units: Array.from(attackers, (e) => e.id),
       target: target.id,
     });
+    newCircleIndicator({
+      x: target.position?.x ?? e.world.x,
+      y: target.position?.y ?? e.world.y,
+    }, { color: "#dd3333", scale: target.radius ? target.radius * 4 : 1 });
   }
 
   if (movers?.size) {
@@ -51,6 +56,12 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
       units: Array.from(movers, (e) => e.id),
       target: target.movementSpeed ? target.id : e.world,
     });
+    if (!attackers?.size) {
+      newCircleIndicator({
+        x: target.movementSpeed ? target.position?.x ?? e.world.x : e.world.x,
+        y: target.movementSpeed ? target.position?.y ?? e.world.y : e.world.y,
+      });
+    }
   }
 
   return true;
@@ -101,6 +112,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       units: Array.from(selection, (e) => e.id),
       target: e.world,
     });
+    newCircleIndicator({ x: e.world.x, y: e.world.y });
   } else if (e.button === "left") {
     if (blueprint) {
       const unitType = blueprint.unitType;

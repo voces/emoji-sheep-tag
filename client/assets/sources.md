@@ -10,6 +10,7 @@
 - https://www.svgrepo.com/svg/436421/flowers-white
 - https://www.svgrepo.com/svg/499200/grass
 - https://iconduck.com/icons/112372/system-suspend
+- https://iconduck.com/icons/11983/circle
 
 # Audio
 
