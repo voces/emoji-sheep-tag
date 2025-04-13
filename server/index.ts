@@ -9,7 +9,10 @@ else await (await import("../scripts/build.ts")).build();
 
 const dist = await Deno.realPath("dist");
 
-Deno.serve(async (req) => {
+const rawPort = Deno.env.get("PORT");
+const port = rawPort ? parseInt(rawPort) : undefined;
+
+Deno.serve({ port }, async (req) => {
   const url = new URL(req.url);
   const { pathname } = url;
   const filepath = resolve(dist, pathname.slice(1));
