@@ -25,7 +25,7 @@ Deno.serve({ port }, async (req) => {
   }
 
   const upgrade = req.headers.get("upgrade") || "";
-  if (upgrade !== "websocket") new Response(undefined, { status: 404 });
+  if (upgrade !== "websocket") return new Response(undefined, { status: 404 });
 
   const { socket, response } = Deno.upgradeWebSocket(req);
   handleSocket(socket);
