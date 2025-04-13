@@ -5,6 +5,7 @@ import { handleSocket } from "./client.ts";
 const isDev = Deno.args.includes("--dev");
 
 if (isDev) import("../scripts/dev.ts");
+else await (await import("../scripts/build.ts")).build();
 
 const dist = await Deno.realPath("dist");
 
