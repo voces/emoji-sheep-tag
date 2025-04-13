@@ -14,20 +14,21 @@ const port = rawPort ? parseInt(rawPort) : undefined;
 
 Deno.serve({ port }, async (req) => {
   const url = new URL(req.url);
-  const { pathname } = url;
-  const filepath = resolve(dist, pathname.slice(1));
+
+  if (req.headers.get("upgrade") === "websocket") {
+    const { socket, response } = Deno.upgradeWebSocket(req);
+    handleSocket(socket);
+    return response;
+  }
+
+  const filepath = resolve(dist, url.pathname.slice(1));
   if (
-    pathname === "/" ||
+    url.pathname === "/" ||
     (await Deno.lstat(filepath).catch(() => undefined) &&
       filepath.startsWith(dist))
   ) {
-    return serveFile(req, pathname === "/" ? "dist/index.html" : filepath);
+    return serveFile(req, url.pathname === "/" ? "dist/index.html" : filepath);
   }
 
-  const upgrade = req.headers.get("upgrade") || "";
-  if (upgrade !== "websocket") return new Response(undefined, { status: 404 });
-
-  const { socket, response } = Deno.upgradeWebSocket(req);
-  handleSocket(socket);
-  return response;
+  return new Response(undefined, { status: 404 });
 });
