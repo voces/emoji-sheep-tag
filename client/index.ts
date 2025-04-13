@@ -11,7 +11,7 @@ import "./systems/blueprints.ts";
 import "./systems/fire.ts";
 import "./systems/swing.ts";
 import "./systems/kaboom.ts";
-import "./systems/orderIndicators.ts";
+import "./systems/indicators.ts";
 import "./graphics/cursor.ts";
 
 globalThis.addEventListener("error", (e) => {

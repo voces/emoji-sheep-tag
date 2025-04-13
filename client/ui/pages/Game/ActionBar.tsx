@@ -5,6 +5,7 @@ import { UnitDataAction } from "../../../../shared/types.ts";
 import { unitData } from "../../../../shared/data.ts";
 import { svgs } from "../../../systems/three.ts";
 import { getLocalPlayer } from "../../vars/players.ts";
+import { shortcutsVar } from "../Settings.tsx";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -92,6 +93,7 @@ const Action = ({ action }: { action: UnitDataAction }) => {
 
 export const ActionBar = () => {
   const selection = useReactiveVar(selectionVar);
+  useReactiveVar(shortcutsVar);
 
   return (
     <div

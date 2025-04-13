@@ -3,13 +3,14 @@ import { getLocalPlayer, Player, playersVar } from "../vars/players.ts";
 import { ColorPicker } from "../components/ColorPicker.tsx";
 import { send } from "../../client.ts";
 
-const PlayerRow = ({ name, color }: Player) => (
+const PlayerRow = ({ name, color, id }: Player) => (
   <div className="h-stack" style={{ alignItems: "center" }}>
     <ColorPicker
       value={color}
       onChange={(e) => {
         send({ type: "generic", event: { type: "colorChange", color: e } });
       }}
+      readonly={id !== getLocalPlayer()?.id}
     />
     <span>{name}</span>
   </div>

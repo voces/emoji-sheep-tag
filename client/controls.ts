@@ -16,9 +16,12 @@ import { updateCursor } from "./graphics/cursor.ts";
 import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
-import { showCommandPaletteVar } from "./ui/pages/Game/CommandPalette.tsx";
+import { showCommandPaletteVar } from "./ui/components/CommandPalette.tsx";
 import { stateVar } from "./ui/vars/state.ts";
-import { newCircleIndicator } from "./systems/orderIndicators.ts";
+import { newIndicator } from "./systems/indicators.ts";
+import { shortcutsVar } from "./ui/pages/Settings.tsx";
+import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
+import { showSettingsVar } from "./ui/vars/showSettings.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -43,10 +46,14 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
       units: Array.from(attackers, (e) => e.id),
       target: target.id,
     });
-    newCircleIndicator({
+    newIndicator({
       x: target.position?.x ?? e.world.x,
       y: target.position?.y ?? e.world.y,
-    }, { color: "#dd3333", scale: target.radius ? target.radius * 4 : 1 });
+    }, {
+      model: "gravity",
+      color: "#dd3333",
+      scale: target.radius ? target.radius * 4 : 1,
+    });
   }
 
   if (movers?.size) {
@@ -57,10 +64,10 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
       target: target.movementSpeed ? target.id : e.world,
     });
     if (!attackers?.size) {
-      newCircleIndicator({
+      newIndicator({
         x: target.movementSpeed ? target.position?.x ?? e.world.x : e.world.x,
         y: target.movementSpeed ? target.position?.y ?? e.world.y : e.world.y,
-      });
+      }, { model: "gravity" });
     }
   }
 
@@ -79,17 +86,18 @@ const getBuilderFromBlueprint = () => {
 };
 
 mouse.addEventListener("mouseButtonDown", (e) => {
-  if (e.element instanceof Element && e.element.id !== "ui") {
-    e.element.dispatchEvent(
-      new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-      }),
-    );
+  if (
+    document.activeElement instanceof HTMLElement &&
+    document.activeElement !== e.element
+  ) document.activeElement.blur();
+
+  if (e.element instanceof HTMLElement && e.element.id !== "ui") {
+    e.element.focus();
+    e.element.click();
     return;
   }
 
+  // if (document.activeElement && document.activeElement !== e.element) document.activeElement.dispatchEvent()
   if (showChatBoxVar() === "open") showChatBoxVar("dismissed");
   if (showCommandPaletteVar() === "open") showCommandPaletteVar("dismissed");
 
@@ -112,7 +120,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       units: Array.from(selection, (e) => e.id),
       target: e.world,
     });
-    newCircleIndicator({ x: e.world.x, y: e.world.y });
+    newIndicator({ x: e.world.x, y: e.world.y }, { model: "gravity" });
   } else if (e.button === "left") {
     if (blueprint) {
       const unitType = blueprint.unitType;
@@ -172,7 +180,7 @@ mouse.addEventListener("mouseMove", (e) => {
   updateCursor(true);
 });
 
-const keyboard: Record<string, boolean> = {};
+export const keyboard: Record<string, boolean> = {};
 
 const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
   switch (a.type) {
@@ -185,7 +193,7 @@ const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
   }
 };
 
-const handleEscape = () => {
+const cancelBlueprint = () => {
   if (blueprint) {
     app.delete(blueprint);
     blueprint = undefined;
@@ -193,8 +201,8 @@ const handleEscape = () => {
   }
 };
 
-document.addEventListener("pointerlockchange", (e) => {
-  if (!document.pointerLockElement) handleEscape();
+document.addEventListener("pointerlockchange", () => {
+  if (!document.pointerLockElement) cancelBlueprint();
 });
 
 let blueprintIndex = 0;
@@ -202,51 +210,66 @@ let blueprint: SystemEntity<Entity, "unitType"> | undefined;
 export const clearBlueprint = (
   fn?: (blueprint: SystemEntity<Entity, "unitType">) => void,
 ) => {
-  if (blueprint && (!fn || fn(blueprint))) handleEscape();
+  if (blueprint && (!fn || fn(blueprint))) cancelBlueprint();
 };
 export const hasBlueprint = () => !!blueprint;
 
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
 
-  // In game menus: chat & palette
-  if (stateVar() === "playing") {
-    if (e.code === "Enter") {
-      if (showCommandPaletteVar() === "open") {
-        showCommandPaletteVar("sent");
-        return false;
-      }
+  if (showSettingsVar()) return false;
 
-      showChatBoxVar((v) => {
-        if (v === "closed" || v === "dismissed") return "open";
-        if (v === "open") return "sent";
-        return v;
-      });
-      e.preventDefault();
+  const shortcuts = shortcutsVar();
+  const checkShortcut = (shortcut: string[]) =>
+    shortcut.includes(e.code) && shortcut.every((s) => keyboard[s]);
+
+  // Submit command or chat, not modifiable
+  if (e.code === "Enter") {
+    if (showCommandPaletteVar() === "open") {
+      showCommandPaletteVar("sent");
       return false;
     }
-    if (
-      e.code === "Slash" && showChatBoxVar() !== "open" &&
-      showCommandPaletteVar() === "closed"
-    ) {
-      e.preventDefault();
-      showCommandPaletteVar("open");
-      return false;
-    }
-    if (
-      (showChatBoxVar() === "open" || showCommandPaletteVar() === "open") &&
-      !("fromHud" in e)
-    ) {
-      if (
-        showCommandPaletteVar() === "open" && e.key === "ArrowUp" ||
-        e.key === "ArrowDown"
-      ) e.preventDefault();
+
+    if (stateVar() === "playing" && showChatBoxVar() === "open") {
+      showChatBoxVar("sent");
       return false;
     }
   }
 
-  if (e.code === "Escape") {
-    handleEscape();
+  if (
+    checkShortcut(shortcuts.misc.openCommandPalette) &&
+    showChatBoxVar() !== "open" && showCommandPaletteVar() === "closed"
+  ) {
+    e.preventDefault();
+    showCommandPaletteVar("open");
+    return false;
+  }
+
+  if (
+    checkShortcut(shortcuts.misc.openChat) &&
+    showChatBoxVar() !== "open" && showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    e.preventDefault();
+    showChatBoxVar("open");
+    return false;
+  }
+
+  // Arrow keys to switch between commands; not modifiable
+  if (
+    (showChatBoxVar() === "open" || showCommandPaletteVar() === "open") &&
+    !("fromHud" in e)
+  ) {
+    if (
+      showCommandPaletteVar() === "open" && e.key === "ArrowUp" ||
+      e.key === "ArrowDown"
+    ) e.preventDefault();
+    return false;
+  }
+
+  // Cancel
+  if (checkShortcut(shortcuts.misc.cancel)) {
+    cancelBlueprint();
     return false;
   }
 
@@ -255,7 +278,10 @@ globalThis.addEventListener("keydown", (e) => {
   for (const entity of selection) {
     if (!entity.actions) continue;
     for (const a of entity.actions) {
-      if (a.binding?.[0] === e.code && (!action || isSameAction(action, a))) {
+      if (
+        (a.binding?.includes(e.code) && a.binding.every((b) => keyboard[b])) &&
+        (!action || isSameAction(action, a))
+      ) {
         action = a;
         units.push(entity);
       }
@@ -303,9 +329,20 @@ globalThis.addEventListener("keyup", (e) => {
   delete keyboard[e.code];
 });
 
+globalThis.addEventListener("blur", () => {
+  for (const key in keyboard) delete keyboard[key];
+});
+
+globalThis.addEventListener("wheel", (e) => {
+  if (showSettingsVar()) return false;
+  camera.position.z += e.deltaY > 0 ? 1 : -1;
+});
+
 let startPan: number | undefined;
 app.addSystem({
   update: (delta, time) => {
+    if (showSettingsVar()) return false;
+
     const skipKeyboard = showCommandPaletteVar() === "open";
 
     let x = (keyboard.ArrowLeft && !skipKeyboard ? -1 : 0) +
@@ -350,4 +387,32 @@ globalThis.document.body.addEventListener("click", async (e) => {
       unadjustedMovement: true,
     });
   }
+});
+
+const shortcutOverrides = (
+  e: SystemEntity<Entity, "unitType" | "actions">,
+) => {
+  const shortcuts = shortcutsVar()[e.unitType];
+  if (!shortcuts) return e;
+  let overridden = false;
+  const newActions = e.actions.map((a) => {
+    const binding = shortcuts[actionToShortcutKey(a)];
+    if (!binding) return a;
+    if (
+      a.binding?.length === binding.length &&
+      a.binding.some((v, i) => v === binding[i])
+    ) return a;
+    overridden = true;
+    return { ...a, binding };
+  });
+  if (!overridden) return;
+  e.actions = newActions;
+};
+const unitsWithActions = app.addSystem({
+  props: ["unitType", "actions"],
+  onAdd: shortcutOverrides,
+  onChange: shortcutOverrides,
+});
+shortcutsVar.subscribe((v) => {
+  for (const e of unitsWithActions.entities) shortcutOverrides(e);
 });

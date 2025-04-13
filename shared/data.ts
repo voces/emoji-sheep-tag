@@ -13,8 +13,9 @@ import { Entity } from "./types.ts";
 
 export const unitData: Record<
   string,
-  | Pick<
+  Pick<
     Entity,
+    | "name"
     | "movementSpeed"
     | "turnSpeed"
     | "radius"
@@ -28,24 +29,45 @@ export const unitData: Record<
     | "modelScale"
     | "sounds"
   >
-  | undefined
 > = {
   sheep: {
+    name: "Sheep",
     movementSpeed: 3,
     turnSpeed: 15,
     radius: 0.25,
     pathing: 1,
     actions: [
-      { type: "build", unitType: "tinyHut", binding: ["KeyT"] },
-      { type: "build", unitType: "hut", binding: ["KeyF"] },
-      { type: "build", unitType: "wideHut", binding: ["KeyW"] },
-      { type: "build", unitType: "rotundHut", binding: ["KeyR"] },
-      { type: "auto", order: "destroyLastFarm", binding: ["KeyX"] },
+      {
+        name: "Build Tiny Hut",
+        type: "build",
+        unitType: "tinyHut",
+        binding: ["KeyT"],
+      },
+      { name: "Build Hut", type: "build", unitType: "hut", binding: ["KeyF"] },
+      {
+        name: "Build Wide Hut",
+        type: "build",
+        unitType: "wideHut",
+        binding: ["KeyW"],
+      },
+      {
+        name: "Build Rotund Hut",
+        type: "build",
+        unitType: "rotundHut",
+        binding: ["KeyR"],
+      },
+      {
+        name: "Destroy last farm",
+        type: "auto",
+        order: "destroyLastFarm",
+        binding: ["KeyX"],
+      },
     ],
     maxHealth: 20,
     sounds: { what: ["sheep1", "sheep2", "sheep3"], death: ["splat1"] },
   },
   wolf: {
+    name: "Wolf",
     movementSpeed: 3.1,
     turnSpeed: 11,
     radius: 0.5,
@@ -59,16 +81,18 @@ export const unitData: Record<
       damagePoint: 0.3,
     },
     actions: [
-      { type: "auto", order: "hold", binding: ["KeyH"] },
+      { name: "Hold position", type: "auto", order: "hold", binding: ["KeyH"] },
     ],
   },
   hut: {
+    name: "Hut",
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 120,
     sounds: { death: ["explosion1"] },
   },
   tinyHut: {
+    name: "Tiny Hut",
     model: "hut",
     modelScale: 0.5,
     radius: 0.25,
@@ -77,6 +101,7 @@ export const unitData: Record<
     sounds: { death: ["explosion1"] },
   },
   wideHut: {
+    name: "Wide Hut",
     model: "hut",
     modelScale: 1.5,
     radius: 0.75,
@@ -85,6 +110,7 @@ export const unitData: Record<
     sounds: { death: ["explosion1"] },
   },
   rotundHut: {
+    name: "Rotund Hut",
     model: "hut",
     modelScale: 2,
     radius: 1,

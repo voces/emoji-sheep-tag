@@ -41,17 +41,21 @@ const Color = styled.span<{ color: string; selected: boolean }>((
 }));
 
 export const ColorPicker = (
-  { value, onChange }: { value: string; onChange: (newValue: string) => void },
+  { value, onChange, readonly }: {
+    value: string;
+    onChange: (newValue: string) => void;
+    readonly?: boolean;
+  },
 ) => {
   const [visible, setVisible] = useState(false);
   return (
     <div style={{ position: "relative" }}>
       <Wrapper
         style={{ background: value }}
-        onClick={() => setVisible((v) => !v)}
+        onClick={() => !readonly && setVisible((v) => !v)}
       />
       {visible && (
-        <PickerCard onClick={(e: Event) => e.stopPropagation()}>
+        <PickerCard onClick={(e) => e.stopPropagation()}>
           {colors.map((c) => (
             <Color
               key={c}

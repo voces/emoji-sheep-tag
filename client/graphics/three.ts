@@ -64,10 +64,29 @@ for (let y = 0; y < tiles.length; y++) {
   }
 }
 
+const BASE_FOV = 50;
+const BASE_HEIGHT = 720;
+// Convert BASE_FOV from degrees to radians and compute half-angle tangent
+const BASE_TAN = Math.tan((BASE_FOV * Math.PI) / 180 / 2);
+
 const resize = () => {
-  camera.aspect = globalThis.innerWidth / globalThis.innerHeight;
+  // Get the new window dimensions
+  const newWidth = window.innerWidth;
+  const newHeight = window.innerHeight;
+
+  // Compute the new half FOV in radians using the ratio of newHeight to BASE_HEIGHT
+  const newFovHalfRad = Math.atan((newHeight / BASE_HEIGHT) * BASE_TAN);
+
+  // The new FOV is twice the half-angle (convert back to degrees)
+  const newFovDeg = (2 * newFovHalfRad * 180) / Math.PI;
+
+  // Update camera properties:
+  camera.fov = newFovDeg;
+  camera.aspect = newWidth / newHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
+
+  // Update renderer size
+  renderer.setSize(newWidth, newHeight);
 };
 
 globalThis.addEventListener("resize", resize);

@@ -1,9 +1,10 @@
 //@deno-types="npm:@types/react"
 import { useEffect, useMemo, useRef, useState } from "react";
-import { send } from "../../../client.ts";
-import { makeVar, useReactiveVar } from "../../hooks/useVar.tsx";
-import { addChatMessage } from "./Chat.tsx";
-import { useMemoWithPrevious } from "../../hooks/useMemoWithPrevious.ts";
+import { send } from "../../client.ts";
+import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
+import { addChatMessage } from "../pages/Game/Chat.tsx";
+import { useMemoWithPrevious } from "../hooks/useMemoWithPrevious.ts";
+import { showSettingsVar } from "../vars/showSettings.ts";
 
 export const showCommandPaletteVar = makeVar<
   "closed" | "open" | "sent" | "dismissed"
@@ -69,6 +70,11 @@ export const CommandPalette = () => {
       name: "Cancel round",
       description: "Cancels the current round",
       callback: () => send({ type: "cancel" }),
+    },
+    {
+      name: "Open settings",
+      description: "Open setting menu",
+      callback: () => showSettingsVar(true),
     },
     {
       name: "Set latency",

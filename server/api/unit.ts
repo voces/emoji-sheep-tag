@@ -1,5 +1,4 @@
 import { tempUnit } from "../../shared/api/unit.ts";
-import { unitData } from "../../shared/data.ts";
 import { isPathingEntity } from "../../shared/pathing/util.ts";
 import { Entity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";

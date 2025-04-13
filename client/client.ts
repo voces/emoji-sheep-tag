@@ -44,6 +44,7 @@ const zUpdate = z.object({
 
   // Data
   unitType: z.string().optional(),
+  name: z.string().optional(),
   owner: z.string().optional(),
   health: z.number().optional(),
   maxHealth: z.number().optional(),
@@ -55,11 +56,13 @@ const zUpdate = z.object({
   actions: z.array(
     z.union([
       z.object({
+        name: z.string(),
         type: z.literal("build"),
         unitType: z.string(),
         binding: z.array(z.string()).optional(),
       }),
       z.object({
+        name: z.string(),
         type: z.literal("auto"),
         order: z.string(),
         binding: z.array(z.string()).optional(),

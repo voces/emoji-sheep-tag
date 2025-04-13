@@ -29,6 +29,8 @@ import grass from "../assets/grass.svg";
 import suspend from "../assets/suspend.svg";
 //@deno-types="../assets/asset.d.ts"
 import circle from "../assets/circle.svg";
+//@deno-types="../assets/asset.d.ts"
+import gravity from "../assets/gravity.svg";
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -54,6 +56,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   flowers: loadSvg(flowers, 0.25, { layer: 2, zIndex: -0.002 }),
   grass: loadSvg(grass, 0.75, { layer: 2, zIndex: -0.003 }),
   circle: loadSvg(circle, 0.08, { layer: 2, zIndex: 0.26 }),
+  gravity: loadSvg(gravity, 2, { layer: 2, zIndex: 0.26 }),
 };
 Object.assign(globalThis, { collections });
 

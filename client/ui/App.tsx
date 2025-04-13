@@ -5,6 +5,8 @@ import { theme } from "./theme.ts";
 import { Lobby } from "./pages/Lobby.tsx";
 import { Menu } from "./pages/Menu.tsx";
 import { Game } from "./pages/Game/index.tsx";
+import { CommandPalette } from "./components/CommandPalette.tsx";
+import { Settings } from "./pages/Settings.tsx";
 
 const pages = {
   menu: Menu,
@@ -34,6 +36,8 @@ export const App = () => {
     <Wrapper>
       <Page />
       <Disconnected />
+      <CommandPalette />
+      <Settings />
     </Wrapper>
   );
 };

@@ -25,10 +25,12 @@ type Action = Readonly<
 >;
 
 export type UnitDataAction = {
+  readonly name: string;
   readonly type: "build";
   readonly unitType: string;
   readonly binding?: string[];
 } | {
+  readonly name: string;
   readonly type: "auto";
   readonly order: string;
   readonly binding?: string[];
@@ -36,6 +38,7 @@ export type UnitDataAction = {
 
 export type Entity = {
   id: string;
+  name?: string;
   unitType?: string;
   owner?: string;
 

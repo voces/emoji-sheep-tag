@@ -48,10 +48,19 @@
     textarea,
     select {
       font: inherit;
-      padding: 0;
+      padding: 0 4px;
       border: 0;
-      background-color: var(--color-body);
       color: var(--color-border);
+    }
+
+    input,
+    textarea {
+      background-color: hsl(from var(--color-body) h s calc(l - 12));
+    }
+
+    button,
+    select {
+      background-color: hsl(from var(--color-body) h s calc(l - 10));
     }
 
     button[disabled] {
@@ -59,8 +68,13 @@
       color: hsl(from var(--color-border) h s calc(l + 30));
     }
 
-    button.hover:not([disabled]) {
-      background-color: hsl(from var(--color-body) h s calc(l - 10));
+    input.hover:not([disabled]) {
+      background-color: hsl(from var(--color-body) h s calc(l - 5));
+    }
+
+    button.hover:not([disabled]),
+    input:focus:not([disabled]) {
+      background-color: var(--color-body);
       box-shadow: var(--color-shadow) 1px 1px 4px 1px;
     }
 
@@ -233,6 +247,13 @@
 
     .highlight {
       color: color-mix(in oklab, var(--color-body) 30%, var(--color-primary))
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background-color: color-mix(in oklab, var(--color-border) 40%, transparent);
+      backdrop-filter: blur(3px);
     }
 
     @keyframes fadeOut {

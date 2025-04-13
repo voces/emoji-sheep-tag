@@ -1,7 +1,12 @@
 //@deno-types="npm:@types/react"
 import { useEffect, useState } from "react";
 
-type ReactiveVar<T> = ((newValue?: T | ((oldValue: T) => T)) => T) & {
+type SetValue<T> = undefined extends T ? T | ((oldValue: T) => T) // Allow explicit `undefined` if T already includes it.
+  : Exclude<T, undefined> | ((oldValue: T) => T); // Otherwise, exclude it.
+
+type ReactiveVar<T> = {
+  (): T;
+  (newValue: SetValue<T>): T;
   subscribe: (callback: (newValue: T, prevValue: T) => void) => () => void;
 };
 
@@ -18,19 +23,22 @@ export const makeVar = <
     return () => listeners.delete(callback);
   };
 
-  const fn = (newValue?: T | ((oldValue: T) => T)) => {
-    if (newValue) {
+  const fn = (...args: [T | ((oldValue: T) => T)]) => {
+    if (args.length) {
+      const newValue = args[0];
       const oldValue = value;
       const actualNewValue = typeof newValue === "function"
         ? newValue(value)
         : newValue;
       value = actualNewValue;
-      for (const listener of listeners) listener(actualNewValue, oldValue);
+      if (oldValue !== actualNewValue) {
+        for (const listener of listeners) listener(actualNewValue, oldValue);
+      }
     }
     return value;
   };
 
-  return Object.assign(fn, { subscribe }) as ReactiveVar<T>;
+  return Object.assign(fn, { subscribe }) as unknown as ReactiveVar<T>;
 };
 
 export const useReactiveVar = <T,>(reactiveVar: ReactiveVar<T>): T => {
