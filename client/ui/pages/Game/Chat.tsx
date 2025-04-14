@@ -6,6 +6,10 @@ import { ColorMarkdown } from "../../components/Markdown.tsx";
 
 const chatLogVar = makeVar<{ id: string; message: string }[]>([]);
 export const addChatMessage = (message: string) => {
+  // Not sure why I can't use playSound directly, but esbuild gets mad about the import
+  globalThis.dispatchEvent(
+    new CustomEvent("sound", { detail: { path: "thud2", volume: 0.1 } }),
+  );
   chatLogVar(
     (log) => [...log, {
       id: crypto.randomUUID(),

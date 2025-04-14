@@ -31,7 +31,7 @@ channel.postMessage({ type: "request" });
 type SocketEventMap = {
   close: unknown;
   error: unknown;
-  message: { data: any };
+  message: { data: unknown };
   open: unknown;
 };
 

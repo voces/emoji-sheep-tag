@@ -13,7 +13,7 @@ import { unitData } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
 import { canBuild, isEnemy } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
-import { playSound } from "./api/sound.ts";
+import { playSoundAt } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
 import { showCommandPaletteVar } from "./ui/components/CommandPalette.tsx";
@@ -107,9 +107,12 @@ mouse.addEventListener("mouseButtonDown", (e) => {
     if (selection.size) {
       const source = selection.first()?.position;
       if (source) {
-        playSound(pick("click1", "click2", "click3", "click4"), {
-          volume: 0.1,
-        });
+        playSoundAt(
+          pick("click1", "click2", "click3", "click4"),
+          e.world.x,
+          e.world.y,
+          0.1,
+        );
       }
     }
 
@@ -142,9 +145,12 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       if (selection.size) {
         const source = selection.first()?.position;
         if (source) {
-          playSound(pick("click1", "click2", "click3", "click4"), {
-            volume: 0.1,
-          });
+          playSoundAt(
+            pick("click1", "click2", "click3", "click4"),
+            e.world.x,
+            e.world.y,
+            0.1,
+          );
         }
       }
       send({ type: "build", unit: unit.id, buildType: unitType, x, y });

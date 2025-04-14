@@ -4,48 +4,52 @@ import esbuild, { type Plugin } from "npm:esbuild";
 import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
 import { basename, join, relative } from "jsr:@std/path";
 
-const textPlugin = {
-  name: "text",
+const assetInlinePlugin = {
+  name: "asset-inline",
   setup(build) {
     build.onResolve(
       { filter: /\.svg$/ },
       async (args) => ({
         path: relative(Deno.cwd(), join(args.resolveDir, args.path)),
-        namespace: "text",
+        namespace: "asset-inline",
       }),
     );
-    build.onLoad({ filter: /\.svg$/, namespace: "text" }, async (args) => ({
-      contents: await Deno.readTextFile(args.path),
-      loader: "text",
-    }));
+    build.onLoad(
+      { filter: /\.svg$/, namespace: "asset-inline" },
+      async (args) => ({
+        contents: await Deno.readTextFile(args.path),
+        loader: "text",
+      }),
+    );
   },
 } satisfies Plugin;
 
-export const audioCopyPlugin = {
-  name: "audio-copy",
-  setup(build: any) {
-    build.onResolve({ filter: /\.(mp3|wav|ogg)$/ }, (args: any) => {
-      return {
-        path: relative(Deno.cwd(), join(args.resolveDir, args.path)),
-        namespace: "audio",
-      };
-    });
+export const assetCopyPlugin = {
+  name: "asset-copy",
+  setup(build) {
+    build.onResolve({ filter: /\.(mp3|wav|ogg)$/ }, (args) => ({
+      path: relative(Deno.cwd(), join(args.resolveDir, args.path)),
+      namespace: "asset-copy",
+    }));
 
-    build.onLoad({ filter: /.*/, namespace: "audio" }, async (args: any) => {
-      const outdir = build.initialOptions.outdir || "dist";
-      const destDir = join(outdir, "assets");
-      const fileName = basename(args.path);
+    build.onLoad(
+      { filter: /.*/, namespace: "asset-copy" },
+      async (args) => {
+        const outdir = build.initialOptions.outdir || "dist";
+        const destDir = join(outdir, "assets");
+        const fileName = basename(args.path);
 
-      await Deno.mkdir(destDir, { recursive: true });
-      await copy(args.path, join(destDir, fileName), { overwrite: true });
+        await Deno.mkdir(destDir, { recursive: true });
+        await copy(args.path, join(destDir, fileName), { overwrite: true });
 
-      return {
-        contents: `./assets/${fileName}`,
-        loader: "text",
-      };
-    });
+        return {
+          contents: `./assets/${fileName}`,
+          loader: "text",
+        };
+      },
+    );
   },
-};
+} satisfies Plugin;
 
 const decoder = new TextDecoder();
 
@@ -72,8 +76,8 @@ export const build = async () => {
     write: false,
     sourcemap: "inline",
     plugins: [
-      textPlugin,
-      audioCopyPlugin,
+      assetInlinePlugin,
+      assetCopyPlugin,
       ...denoPlugins({ configPath: await Deno.realPath("deno.json") }),
     ],
     jsx: "automatic",

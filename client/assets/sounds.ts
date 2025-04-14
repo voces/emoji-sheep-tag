@@ -11,6 +11,8 @@ import splat1 from "./splat1.mp3";
 //@deno-types="./asset.d.ts"
 import thud1 from "./thud1.mp3";
 //@deno-types="./asset.d.ts"
+import thud2 from "./thud2.mp3";
+//@deno-types="./asset.d.ts"
 import swipe1 from "./swipe1.mp3";
 //@deno-types="./asset.d.ts"
 import construction1 from "./construction1.mp3";
@@ -32,6 +34,7 @@ export const sounds: Record<string, string> = {
   explosion1,
   splat1,
   thud1,
+  thud2,
   swipe1,
   construction1,
   click1,

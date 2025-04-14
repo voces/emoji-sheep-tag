@@ -5,6 +5,7 @@ import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
 import { addChatMessage } from "../pages/Game/Chat.tsx";
 import { useMemoWithPrevious } from "../hooks/useMemoWithPrevious.ts";
 import { showSettingsVar } from "../vars/showSettings.ts";
+import { stateVar } from "../vars/state.ts";
 
 export const showCommandPaletteVar = makeVar<
   "closed" | "open" | "sent" | "dismissed"
@@ -13,6 +14,7 @@ export const showCommandPaletteVar = makeVar<
 type Command = {
   name: string;
   description: string;
+  valid?: () => boolean;
   prompts?: string[];
   callback: (...args: string[]) => void;
 };
@@ -69,6 +71,7 @@ export const CommandPalette = () => {
     {
       name: "Cancel round",
       description: "Cancels the current round",
+      valid: () => stateVar() === "playing",
       callback: () => send({ type: "cancel" }),
     },
     {
@@ -108,23 +111,27 @@ export const CommandPalette = () => {
     const regexp = new RegExp(input.toLowerCase().split("").join(".*"), "i");
     const matches: CommandOption[] = [];
     for (let i = 0; i < commands.length && matches.length < 10; i++) {
-      const nameMatches = commands[i].name.match(regexp);
-      const descriptionMatches = commands[i].description.match(regexp);
-      if (nameMatches || descriptionMatches) {
+      const command = commands[i];
+      const nameMatches = command.name.match(regexp);
+      const descriptionMatches = command.description.match(regexp);
+      if (
+        (typeof command.valid !== "function" || command.valid()) &&
+        (nameMatches || descriptionMatches)
+      ) {
         matches.push({
-          ...commands[i],
-          originalName: commands[i].name,
+          ...command,
+          originalName: command.name,
           name: nameMatches
-            ? highlightText(commands[i].name, input)
-            : [commands[i].name],
+            ? highlightText(command.name, input)
+            : [command.name],
           description: descriptionMatches
-            ? highlightText(commands[i].description, input)
-            : [commands[i].description],
+            ? highlightText(command.description, input)
+            : [command.description],
         } as CommandOption);
       }
     }
     return matches;
-  }, [input]);
+  }, [input, showCommandPalette]);
 
   useEffect(() => {
     if (

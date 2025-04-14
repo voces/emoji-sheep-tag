@@ -3,6 +3,7 @@ import { listener } from "../graphics/three.ts";
 import { scene } from "../graphics/three.ts";
 import { Entity } from "../ecs.ts";
 import { sounds } from "../assets/sounds.ts";
+import { z } from "npm:zod";
 
 const audioCache: Record<string, AudioBuffer> = {}; // Cache for loaded audio buffers
 const audioLoader = new AudioLoader();
@@ -114,3 +115,15 @@ const startAmbient = () => {
 document.addEventListener("click", startAmbient);
 document.addEventListener("keydown", startAmbient);
 document.addEventListener("touchstart", startAmbient);
+
+const zSoundDetail = z.object({
+  path: z.string(),
+  volume: z.number().optional(),
+});
+globalThis.addEventListener("sound", (e) => {
+  if (!(e instanceof CustomEvent)) return;
+  const result = zSoundDetail.safeParse(e.detail);
+  if (!result.success) return;
+  const detail = result.data;
+  playSound(detail.path, { volume: detail.volume });
+});
