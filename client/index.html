@@ -256,6 +256,14 @@
       backdrop-filter: blur(3px);
     }
 
+    .positional {
+      pointer-events: none;
+    }
+
+    .positional>*:not(.positional) {
+      pointer-events: auto;
+    }
+
     @keyframes fadeOut {
       to {
         opacity: 0;

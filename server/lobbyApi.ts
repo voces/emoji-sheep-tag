@@ -3,16 +3,33 @@ import { Client } from "./client.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { deleteLobby } from "./lobby.ts";
 import { clearUpdates } from "./updates.ts";
+import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 
-export const endRound = () => {
+export const endRound = (canceled = false) => {
   const lobby = lobbyContext.context;
+  if (!lobby.round) return;
   console.log(new Date(), "Round ended in lobby", lobby.name);
-  lobby.round?.clearInterval();
+  lobby.round.clearInterval();
   // Don't want to clear the round in middle of a cycle
   queueMicrotask(() => lobby.round = undefined);
   lobby.status = "lobby";
   clearUpdates();
-  send({ type: "stop" });
+  const round = {
+    sheep: Array.from(lobby.round.sheep, (p) => p.id),
+    wolves: Array.from(lobby.round.wolves, (p) => p.id),
+    duration: Date.now() - lobby.round.start,
+  };
+  if (!canceled) lobby.rounds.push(round);
+  send({
+    type: "stop",
+    players: canceled
+      ? Array.from(
+        lobby.players,
+        (p) => ({ id: p.id, sheepCount: p.sheepCount }),
+      )
+      : undefined,
+    round: canceled ? undefined : round,
+  });
 };
 
 export const send = (message: ServerToClientMessage) => {
@@ -39,7 +56,12 @@ export const leave = (client?: Client) => {
   }
 
   // Send leave event
-  send({ type: "leave", player: client.id, host: lobby.host?.id });
+  send({
+    type: "leave",
+    player: client.id,
+    host: lobby.host?.id,
+    format: computeDesiredFormat(lobby),
+  });
 
   // Make player leave lobby
   if (

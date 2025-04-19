@@ -9,5 +9,5 @@ export const zCancel = z.object({
 export const cancel = (client: Client) => {
   if (client.lobby?.host !== client || !client.lobby.round) return;
   for (const sheep of client.lobby.round.sheep) sheep.sheepCount--;
-  endRound();
+  endRound(true);
 };

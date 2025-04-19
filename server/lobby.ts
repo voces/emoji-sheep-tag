@@ -60,6 +60,7 @@ export type Lobby = {
   settings: LobbySettings;
   status: LobbyStatus;
   round?: Round;
+  rounds: { sheep: string[]; wolves: string[]; duration: number }[];
 };
 
 // type GEvent = {};
@@ -83,6 +84,7 @@ export const newLobby = (host?: Client) => {
     name: `lobby-${lobbyIndex++}`,
     settings: { teams: new Map() },
     status: "lobby",
+    rounds: [],
   };
   console.log(new Date(), "Lobby", lobby.name, "created with host", host?.id);
   lobbies.add(lobby);

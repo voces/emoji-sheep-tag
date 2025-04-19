@@ -13,7 +13,7 @@ import { unitData } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
 import { canBuild, isEnemy } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
-import { playSoundAt } from "./api/sound.ts";
+import { playSound, playSoundAt } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
 import { showCommandPaletteVar } from "./ui/components/CommandPalette.tsx";
@@ -98,8 +98,8 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   }
 
   // if (document.activeElement && document.activeElement !== e.element) document.activeElement.dispatchEvent()
-  if (showChatBoxVar() === "open") showChatBoxVar("dismissed");
-  if (showCommandPaletteVar() === "open") showCommandPaletteVar("dismissed");
+  // if (showChatBoxVar() === "open") showChatBoxVar("dismissed");
+  // if (showCommandPaletteVar() === "open") showCommandPaletteVar("dismissed");
 
   if (!selection.size) return;
 
@@ -229,22 +229,14 @@ globalThis.addEventListener("keydown", (e) => {
   const checkShortcut = (shortcut: string[]) =>
     shortcut.includes(e.code) && shortcut.every((s) => keyboard[s]);
 
-  // Submit command or chat, not modifiable
-  if (e.code === "Enter") {
-    if (showCommandPaletteVar() === "open") {
-      showCommandPaletteVar("sent");
-      return false;
-    }
-
-    if (stateVar() === "playing" && showChatBoxVar() === "open") {
-      showChatBoxVar("sent");
-      return false;
-    }
-  }
+  if (
+    document.activeElement instanceof HTMLInputElement &&
+    (document.activeElement.value || e.shiftKey || e.ctrlKey || e.metaKey)
+  ) return;
 
   if (
     checkShortcut(shortcuts.misc.openCommandPalette) &&
-    showChatBoxVar() !== "open" && showCommandPaletteVar() === "closed"
+    showCommandPaletteVar() === "closed"
   ) {
     e.preventDefault();
     showCommandPaletteVar("open");
@@ -322,6 +314,19 @@ globalThis.addEventListener("keydown", (e) => {
   }
 
   if (action.type === "auto") {
+    if (units.length === 0 && units[0].position) {
+      playSoundAt(
+        pick("click1", "click2", "click3", "click4"),
+        units[0].position.x,
+        units[0].position.y,
+        0.1,
+      );
+    } else {
+      playSound(pick("click1", "click2", "click3", "click4"), {
+        volume: 0.1,
+      });
+    }
+
     send({
       type: "unitOrder",
       order: action.order,
@@ -340,7 +345,13 @@ globalThis.addEventListener("blur", () => {
 });
 
 globalThis.addEventListener("wheel", (e) => {
-  if (showSettingsVar()) return false;
+  if (
+    document.elementFromPoint(
+      mouse.pixels.x,
+      mouse.pixels.y,
+    )?.id !== "ui"
+  ) return false;
+
   camera.position.z += e.deltaY > 0 ? 1 : -1;
 });
 

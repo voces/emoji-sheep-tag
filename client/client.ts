@@ -9,13 +9,15 @@ import { center, tiles } from "../shared/map.ts";
 import { stats } from "./util/Stats.ts";
 import { LocalWebSocket } from "./local.ts";
 import { data } from "./data.ts";
-import { addChatMessage } from "./ui/pages/Game/Chat.tsx";
+import { addChatMessage } from "./ui/vars/chat.ts";
+import { roundsVar } from "./ui/vars/rounds.ts";
+import { formatVar } from "./ui/vars/format.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
 const zStart = z.object({
   type: z.literal("start"),
-  sheep: z.string().array(),
+  sheep: z.object({ id: z.string(), sheepCount: z.number() }).array(),
   wolves: z.string().array(),
 });
 
@@ -138,6 +140,14 @@ const zColorChange = z.object({
   color: z.string(),
 });
 
+const zRound = z.object({
+  sheep: z.string().array(),
+  wolves: z.string().array(),
+  duration: z.number(),
+});
+
+export const zFormat = z.object({ sheep: z.number(), wolves: z.number() });
+
 const zJoin = z.object({
   type: z.literal("join"),
   status: z.union([z.literal("lobby"), z.literal("playing")]),
@@ -148,18 +158,27 @@ const zJoin = z.object({
     team: zTeam,
     local: z.boolean().optional().default(false),
     host: z.boolean().optional().default(false),
+    sheepCount: z.number(),
   }).array(),
+  format: zFormat,
   updates: zUpdate.array(),
+  rounds: zRound.array().optional(),
 });
 
 const zLeave = z.object({
   type: z.literal("leave"),
   player: z.string(),
   host: z.string().optional(),
+  format: zFormat,
 });
 
 const zStop = z.object({
   type: z.literal("stop"),
+  // Sent if round canceled to revert sheepCount
+  players: z.object({ id: z.string(), sheepCount: z.number() }).array()
+    .optional(),
+  // Sent if round not canceled
+  round: zRound.optional(),
 });
 
 const zPong = z.object({
@@ -236,6 +255,7 @@ const handlers = {
         ? prev
         : [...prev, data.players[0]]
     );
+    formatVar(data.format);
     if (newPlayers.length) {
       addChatMessage(`${
         new Intl.ListFormat().format(
@@ -253,6 +273,7 @@ const handlers = {
       if (update.id in map) Object.assign(map[update.id], props);
       else map[update.id] = app.add(props);
     }
+    if (data.rounds) roundsVar(data.rounds);
   },
   colorChange: (data: z.TypeOf<typeof zColorChange>) => {
     playersVar((players) =>
@@ -260,8 +281,13 @@ const handlers = {
     );
   },
   start: (e: z.TypeOf<typeof zStart>) => {
-    const players = playersVar();
-    data.sheep = players.filter((p) => e.sheep.includes(p.id));
+    const players = playersVar((players) =>
+      players.map((p) => {
+        const s = e.sheep.find((s) => s.id === p.id);
+        return s ? { ...p, sheepCount: s.sheepCount } : p;
+      })
+    );
+    data.sheep = players.filter((p) => e.sheep.some((s) => s.id === p.id));
     data.wolves = players.filter((p) => e.wolves.includes(p.id));
     stateVar("playing");
     camera.position.x = center.x;
@@ -299,9 +325,18 @@ const handlers = {
       });
     }
   },
-  stop: () => {
+  stop: (d: z.TypeOf<typeof zStop>) => {
     stateVar("lobby");
     for (const entity of app.entities) app.delete(entity);
+    if (d.players) {
+      playersVar((players) =>
+        players.map((p) => {
+          const u = d.players?.find((p2) => p2.id === p.id);
+          return u ? { ...p, sheepCount: u.sheepCount } : p;
+        })
+      );
+    }
+    if (d.round) roundsVar((r) => [...r, d.round!]);
   },
   updates: (data: z.TypeOf<typeof zUpdates>) => {
     for (const update of data.updates) {
@@ -325,6 +360,7 @@ const handlers = {
       )
     );
     if (p) addChatMessage(`|c${p.color}|${p.name}| has left the game!`);
+    formatVar(data.format);
   },
   pong: ({ data }: z.TypeOf<typeof zPong>) => {
     if (typeof data === "number") {

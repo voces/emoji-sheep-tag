@@ -22,6 +22,7 @@ import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
 import "./actions/hold.ts";
+import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 
 type SocketEventMap = {
   close: unknown;
@@ -134,6 +135,9 @@ export const handleSocket = (socket: Socket) => {
       client.color = colors.find((c) =>
         !setSome(lobby.players, (p) => p.color === c)
       ) ?? client.color;
+      client.sheepCount = Math.max(
+        ...Array.from(lobby.players, (p) => p.sheepCount),
+      );
       send({
         type: "join",
         status: lobby.status,
@@ -143,12 +147,14 @@ export const handleSocket = (socket: Socket) => {
           color: client.color,
           team: "pending",
           host: false,
+          sheepCount: client.sheepCount,
         }],
+        format: computeDesiredFormat({
+          ...lobby,
+          players: new Set([...lobby.players, client]),
+        }),
         updates: [],
       });
-      client.sheepCount = Math.max(
-        ...Array.from(lobby.players, (p) => p.sheepCount),
-      );
       lobby.players.add(client);
       console.log(
         new Date(),
@@ -176,12 +182,15 @@ export const handleSocket = (socket: Socket) => {
             team: client.lobby!.settings.teams.get(client)! ?? "pending",
             local: p === client ? true : undefined,
             host: client.lobby?.host === p,
+            sheepCount: client.sheepCount,
           }),
         ),
+        format: computeDesiredFormat(client.lobby),
         updates: Array.from(
           client.lobby.round?.ecs.entities ?? [],
           (e) => ({ type: "unit", ...e }),
         ),
+        rounds: client.lobby.rounds,
       });
     }),
   );

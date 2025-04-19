@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { send } from "../../client.ts";
 import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
-import { addChatMessage } from "../pages/Game/Chat.tsx";
+import { addChatMessage } from "../vars/chat.ts";
 import { useMemoWithPrevious } from "../hooks/useMemoWithPrevious.ts";
 import { showSettingsVar } from "../vars/showSettings.ts";
 import { stateVar } from "../vars/state.ts";
@@ -69,15 +69,15 @@ export const CommandPalette = () => {
 
   const commands = useMemo((): Command[] => [
     {
+      name: "Open settings",
+      description: "Open setting menu",
+      callback: () => showSettingsVar(true),
+    },
+    {
       name: "Cancel round",
       description: "Cancels the current round",
       valid: () => stateVar() === "playing",
       callback: () => send({ type: "cancel" }),
-    },
-    {
-      name: "Open settings",
-      description: "Open setting menu",
-      callback: () => showSettingsVar(true),
     },
     {
       name: "Set latency",
@@ -181,6 +181,7 @@ export const CommandPalette = () => {
         onChange={(e) => setInput(e.target.value)}
         ref={inputRef}
         onKeyDown={(e) => {
+          if (e.code === "Enter") return showCommandPaletteVar("sent");
           if (prompt) return;
           if (e.code === "ArrowUp" && filteredCommands.length) {
             setFocused(
@@ -198,6 +199,7 @@ export const CommandPalette = () => {
             );
           }
         }}
+        onBlur={() => showCommandPaletteVar("dismissed")}
       />
       {!prompt && filteredCommands.map((c) => (
         <div

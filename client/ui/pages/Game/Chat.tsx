@@ -3,22 +3,7 @@ import { useEffect, useRef } from "react";
 import { makeVar, useReactiveVar } from "../../hooks/useVar.tsx";
 import { send } from "../../../client.ts";
 import { ColorMarkdown } from "../../components/Markdown.tsx";
-
-const chatLogVar = makeVar<{ id: string; message: string }[]>([]);
-export const addChatMessage = (message: string) => {
-  // Not sure why I can't use playSound directly, but esbuild gets mad about the import
-  globalThis.dispatchEvent(
-    new CustomEvent("sound", { detail: { path: "thud2", volume: 0.1 } }),
-  );
-  chatLogVar(
-    (log) => [...log, {
-      id: crypto.randomUUID(),
-      timestamp: Date.now(),
-      message,
-    }],
-  );
-  setTimeout(() => chatLogVar((log) => log.slice(1)), 10000);
-};
+import { chatLogVar, chatValueVar } from "../../vars/chat.ts";
 
 export const showChatBoxVar = makeVar<"closed" | "open" | "sent" | "dismissed">(
   "closed",
@@ -27,6 +12,7 @@ export const showChatBoxVar = makeVar<"closed" | "open" | "sent" | "dismissed">(
 export const Chat = () => {
   const chatLog = useReactiveVar(chatLogVar);
   const showChatBox = useReactiveVar(showChatBoxVar);
+  const chatValue = useReactiveVar(chatValueVar);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -36,7 +22,7 @@ export const Chat = () => {
     if (showChatBox === "sent") {
       if (inputRef.current?.value) {
         send({ type: "chat", message: inputRef.current.value });
-        inputRef.current.value = "";
+        chatValueVar("");
       }
       showChatBoxVar("closed");
     }
@@ -46,14 +32,30 @@ export const Chat = () => {
     }
   }, [showChatBox]);
 
+  const now = Date.now();
+
   return (
     <div id="chat">
-      {chatLog.map((log) => (
+      {chatLog.filter((log) => now - log.timestamp < 10_000).map((log) => (
         <div key={log.id}>
           <ColorMarkdown text={log.message} />
         </div>
       ))}
-      <input className={showChatBox} ref={inputRef} maxLength={150} />
+      <input
+        autoFocus
+        className={showChatBox}
+        ref={inputRef}
+        maxLength={150}
+        value={chatValue}
+        onInput={(e) => chatValueVar(e.currentTarget.value)}
+        onKeyDown={(e) => {
+          queueMicrotask(() => {
+            if (e.code !== "Enter") return;
+            showChatBoxVar("sent");
+          });
+        }}
+        onBlur={() => showChatBoxVar("dismissed")}
+      />
     </div>
   );
 };

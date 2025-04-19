@@ -57,7 +57,7 @@ export const start = (client: Client) => {
 
     send({
       type: "start",
-      sheep: Array.from(sheep, (c) => c.id),
+      sheep: Array.from(sheep, (c) => ({ id: c.id, sheepCount: c.sheepCount })),
       wolves: Array.from(wolves, (c) => c.id),
     });
 

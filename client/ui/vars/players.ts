@@ -6,6 +6,7 @@ export type Player = {
   color: string;
   local?: boolean;
   host?: boolean;
+  sheepCount: number;
 };
 
 export const playersVar = makeVar<Player[]>([]);
