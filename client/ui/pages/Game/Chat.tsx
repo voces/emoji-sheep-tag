@@ -49,7 +49,7 @@ export const Chat = () => {
         value={chatValue}
         onInput={(e) => chatValueVar(e.currentTarget.value)}
         onKeyDown={(e) => {
-          queueMicrotask(() => {
+          setTimeout(() => {
             if (e.code !== "Enter") return;
             showChatBoxVar("sent");
           });
