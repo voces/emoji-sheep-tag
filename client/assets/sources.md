@@ -12,6 +12,7 @@
 - https://iconduck.com/icons/112372/system-suspend
 - https://iconduck.com/icons/11983/circle
 - https://www.svgrepo.com/svg/324490/center-gravity-weight-physics
+- https://iconduck.com/emojis/98624/hindu-temple
 
 # Audio
 

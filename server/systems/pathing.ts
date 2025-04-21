@@ -6,6 +6,7 @@ import { TargetEntity } from "../../shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
 import { tiles } from "../../shared/map.ts";
 import { isPathingEntity } from "../../shared/pathing/util.ts";
+import { mapContentType } from "https://jsr.io/@luca/esbuild-deno-loader/0.11.1/src/shared.ts";
 
 const pathingMaps = new WeakMap<App<Entity>, PathingMap>();
 
@@ -22,12 +23,14 @@ export const withPathingMap = <T>(fn: (pathingMap: PathingMap) => T) =>
 export const calcPath = (
   entity: Entity,
   target: string | { x: number; y: number },
-  { mode, removeMovingEntities }: {
+  { distanceFromTarget, mode, removeMovingEntities }: {
+    distanceFromTarget?: number;
     mode?: "attack";
     removeMovingEntities?: boolean;
   } = {},
 ) => {
   if (!isPathingEntity(entity)) return [];
+  if (!pathingMap().pathable(entity)) return [];
   if (typeof target === "string") {
     const targetEntity = lookup(target);
     if (!targetEntity?.position) return [];
@@ -35,15 +38,15 @@ export const calcPath = (
       entity,
       targetEntity as TargetEntity,
       {
-        distance: mode === "attack"
+        distanceFromTarget: (mode === "attack"
           ? Math.max(
             0,
-            (entity.attack?.range ?? 0) -
+            (distanceFromTarget ?? entity.attack?.range ?? 0) -
               (targetEntity.isMoving
                 ? (targetEntity.movementSpeed ?? 0) * 0.2
                 : 0),
           )
-          : undefined,
+          : distanceFromTarget),
         removeMovingEntities,
       },
     );
@@ -51,7 +54,7 @@ export const calcPath = (
   return pathingMap().path(
     entity,
     target,
-    undefined,
+    { distanceFromTarget },
   );
 };
 
@@ -81,7 +84,7 @@ export const nearestPathing = (
   );
 };
 
-export const updatePathing = (entity: Entity) => {
+export const updatePathing = (entity: Entity, max = Infinity) => {
   const p = pathingMap();
   if (!isPathingEntity(entity)) return;
   if (p.pathable(entity)) return;
@@ -89,9 +92,11 @@ export const updatePathing = (entity: Entity) => {
     entity,
     () => p.nearestSpiralPathing(entity.position.x, entity.position.y, entity),
   );
-  if (nearest.x !== entity.position.x || nearest.y !== entity.position.y) {
-    entity.position = nearest;
-  }
+  if (
+    (nearest.x !== entity.position.x || nearest.y !== entity.position.y) &&
+    ((nearest.x - entity.position.x) ** 2 +
+            (nearest.y - entity.position.y) ** 2) ** 0.5 < max
+  ) entity.position = nearest;
 };
 
 export const addPathingSystem = (app: App<Entity>) => {

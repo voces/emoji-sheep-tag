@@ -181,6 +181,7 @@ export const CommandPalette = () => {
         onChange={(e) => setInput(e.target.value)}
         ref={inputRef}
         onKeyDown={(e) => {
+          e.stopPropagation();
           if (e.code === "Enter") return showCommandPaletteVar("sent");
           if (prompt) return;
           if (e.code === "ArrowUp" && filteredCommands.length) {

@@ -31,6 +31,8 @@ import suspend from "../assets/suspend.svg";
 import circle from "../assets/circle.svg";
 //@deno-types="../assets/asset.d.ts"
 import gravity from "../assets/gravity.svg";
+//@deno-types="../assets/asset.d.ts"
+import hinduTemple from "../assets/hindu-temple.svg";
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -43,6 +45,7 @@ export const svgs: Record<string, string> = {
   flowers,
   grass,
   suspend,
+  hinduTemple,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -57,6 +60,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   grass: loadSvg(grass, 0.75, { layer: 2, zIndex: -0.003 }),
   circle: loadSvg(circle, 0.08, { layer: 2, zIndex: 0.26 }),
   gravity: loadSvg(gravity, 2, { layer: 2, zIndex: 0.26 }),
+  hinduTemple: loadSvg(hinduTemple, 1.75),
 };
 Object.assign(globalThis, { collections });
 

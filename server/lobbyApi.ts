@@ -35,8 +35,13 @@ export const endRound = (canceled = false) => {
 export const send = (message: ServerToClientMessage) => {
   const lobby = lobbyContext.context;
   // console.log("S->Cs", message, lobby?.players.size, lobby?.name);
-  const serialized = JSON.stringify(message);
-  for (const p of lobby.players) p.rawSend(serialized);
+  try {
+    const serialized = JSON.stringify(message);
+    for (const p of lobby.players) p.rawSend(serialized);
+  } catch (err) {
+    console.dir(message, { depth: 10 });
+    throw err;
+  }
 };
 
 /** Causes the local player to leave their current lobby. */

@@ -1,4 +1,4 @@
-import { App, newApp } from "jsr:@verit/ecs";
+import { App, newApp, System } from "jsr:@verit/ecs";
 import { addQueueSystem } from "./systems/queues.ts";
 import { addLookupSystem } from "./systems/lookup.ts";
 import { addActionTagSystem } from "./systems/actionTags.ts";
@@ -85,6 +85,75 @@ class GameTarget extends TypedEventTarget<GameEvents> {
     app.entities.delete(child);
 
     remove(child.id);
+  }
+
+  #entityChanges = new Map<
+    Entity,
+    Map<System<Entity, never>, Set<keyof Entity>>
+  >();
+
+  onEntityPropChange(entity: Entity, property: keyof Entity) {
+    const willFlush = this.#entityChanges.size === 0;
+
+    const app = this as unknown as Game;
+    // Ignore changes on entities not added
+    if (!app.entities.has(entity)) return;
+
+    const systems = app.propMap[property] as
+      | System<Entity, never>[]
+      | undefined;
+    if (!systems) return;
+
+    let changes = this.#entityChanges.get(entity);
+
+    if (!changes) {
+      changes = new Map();
+      this.#entityChanges.set(entity, changes);
+    }
+
+    for (const system of systems) {
+      const existing = changes.get(system);
+      // Add the property to the list of changed properties so we know what to look for
+      if (existing) existing.add(property);
+      else changes.set(system, new Set([property]));
+    }
+
+    if (willFlush) this.flushChanges();
+  }
+
+  flushChanges() {
+    while (this.#entityChanges.size) {
+      const [entity, changes] = this.#entityChanges.entries().next().value!;
+
+      while (changes.size) {
+        const [system, props] = changes.entries().next().value as [
+          System<Entity, never>,
+          Set<keyof Entity>,
+        ];
+        changes.delete(system);
+
+        // Already in the system; either a change or removal
+        if (system.entities.has(entity)) {
+          // If every modified prop is present, it's a change
+          if (Array.from(props).every((p) => entity[p] != null)) {
+            system.onChange?.(entity);
+
+            // Otherwise it's a removal
+          } else {
+            system.entities.delete(entity);
+            system.onRemove?.(entity);
+          }
+        }
+
+        // Not in the system; may be an add
+        if (system.props?.every((p) => entity[p] != null)) {
+          system.entities.add(entity);
+          system.onAdd?.(entity);
+        }
+      }
+
+      this.#entityChanges.delete(entity);
+    }
   }
 }
 

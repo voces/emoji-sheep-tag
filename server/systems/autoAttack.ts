@@ -2,12 +2,8 @@ import { SystemEntity } from "jsr:@verit/ecs";
 import { onInit } from "../ecs.ts";
 import { Entity } from "../../shared/types.ts";
 import { getEntitiesInRange } from "./kd.ts";
-import { isEnemy } from "../api/unit.ts";
-import {
-  distanceBetweenEntities,
-  distanceBetweenPoints,
-} from "../../shared/pathing/math.ts";
-import { calcPath } from "./pathing.ts";
+import { isEnemy, orderAttack } from "../api/unit.ts";
+import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
 
 onInit((game) => {
   const idleCheck = (e: SystemEntity<Entity, "attack" | "position">) => {
@@ -24,20 +20,7 @@ onInit((game) => {
         return a[1] - b[1];
       });
 
-    for (const [target] of nearest) {
-      if (distanceBetweenEntities(e, target) < e.attack.range) {
-        e.action = { type: "attack", target: target.id };
-        break;
-      }
-      const path = calcPath(e, target.id, { mode: "attack" }).slice(1);
-      if (
-        !path.length || (path[path.length - 1].x === e.position.x &&
-          path[path.length - 1].y === e.position.y)
-      ) continue;
-      e.action = { type: "walk", target: target.id, path, attacking: true };
-      e.queue = [{ type: "attack", target: target.id }];
-      break;
-    }
+    for (const [target] of nearest) if (orderAttack(e, target)) break;
   };
 
   let counter = 0;

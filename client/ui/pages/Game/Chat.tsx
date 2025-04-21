@@ -49,10 +49,9 @@ export const Chat = () => {
         value={chatValue}
         onInput={(e) => chatValueVar(e.currentTarget.value)}
         onKeyDown={(e) => {
-          setTimeout(() => {
-            if (e.code !== "Enter") return;
-            showChatBoxVar("sent");
-          });
+          e.stopPropagation();
+          if (e.code !== "Enter") return;
+          showChatBoxVar("sent");
         }}
         onBlur={() => showChatBoxVar("dismissed")}
       />

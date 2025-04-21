@@ -4,13 +4,12 @@ import { z } from "npm:zod";
 import { Entity } from "../../shared/types.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
-import { calcPath } from "../systems/pathing.ts";
-import { zPoint } from "../../shared/zod.ts";
+import { orderAttack as orderAttack } from "../api/unit.ts";
 
 export const zAttack = z.object({
   type: z.literal("attack"),
   units: z.string().array(),
-  target: z.union([zPoint, z.string()]),
+  target: z.string(), // TODO: support attack-move?
 });
 
 export const attack = (
@@ -32,21 +31,9 @@ export const attack = (
     delete u.action;
     delete u.queue;
 
-    const targetPos = typeof target === "string"
-      ? round.lookup[target]?.position
-      : target;
-    if (!targetPos) return;
+    const targetEntity = round.lookup[target];
+    if (!targetEntity) return;
 
-    // Path to target and attack
-    const path = calcPath(u, target, { mode: "attack" }).slice(1);
-    if (!path.length) return;
-    u.action = {
-      type: "walk",
-      target: typeof target === "string" ? target : path[path.length - 1],
-      distanceFromTarget: u.attack.range,
-      path,
-      attacking: true,
-    };
-    if (typeof target === "string") u.queue = [{ type: "attack", target }];
+    orderAttack(u, targetEntity);
   });
 };

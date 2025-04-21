@@ -116,7 +116,15 @@ const Chat = () => {
   }, [chatLog]);
 
   return (
-    <div className="card v-stack" style={{ height: 180, paddingTop: 0 }}>
+    <div
+      className="card v-stack"
+      style={{
+        height: 200,
+        paddingTop: 0,
+        maxHeight: `calc(100vh - 300px)`,
+        minHeight: 85,
+      }}
+    >
       <div
         style={{
           overflow: "auto",
@@ -152,7 +160,7 @@ const Chat = () => {
 export const Lobby = () => (
   <div
     className="abs-center h-stack positional"
-    style={{ gap: 24, width: "min(95%, 800px)", height: "min(95%, 600px)" }}
+    style={{ gap: 24, width: "min(95%, 900px)", height: "min(95%, 800px)" }}
   >
     <div className="v-stack positional" style={{ width: "60%", gap: 24 }}>
       <Players />

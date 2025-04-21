@@ -40,6 +40,14 @@ const zAction = z.union([
   z.object({ type: z.literal("hold") }),
 ]).readonly();
 
+const zTilemap = z.object({
+  top: z.number(),
+  left: z.number(),
+  height: z.number(),
+  width: z.number(),
+  map: z.number().array(),
+});
+
 const zUpdate = z.object({
   type: z.literal("unit"),
   id: z.string(),
@@ -91,6 +99,7 @@ const zUpdate = z.object({
   // Tags
   isMoving: z.boolean().nullable().optional(),
   isAttacking: z.boolean().nullable().optional(),
+  isBuilding: z.boolean().nullable().optional(),
   isIdle: z.boolean().nullable().optional(),
 
   // Pathing
@@ -98,13 +107,8 @@ const zUpdate = z.object({
   pathing: z.number().optional(),
   requiresPathing: z.number().optional(),
   blocksPathing: z.number().optional(),
-  tilemap: z.object({
-    top: z.number(),
-    left: z.number(),
-    height: z.number(),
-    width: z.number(),
-    map: z.number().array(),
-  }).optional(),
+  tilemap: zTilemap.optional(),
+  requiresTilemap: zTilemap.optional(),
   structure: z.boolean().optional(),
 
   // Actions
@@ -265,7 +269,6 @@ const handlers = {
     }
     stateVar(data.status);
     if (data.status === "lobby") {
-      console.log("status lobby");
       for (const entity of app.entities) app.delete(entity);
     }
     for (const update of data.updates) {

@@ -20,7 +20,10 @@ const repath = (e: Entity) => {
   let newPath = calcPath(
     e,
     e.action.target,
-    { mode: e.action.attacking ? "attack" : undefined },
+    {
+      mode: e.action.attacking ? "attack" : undefined,
+      distanceFromTarget: e.action.distanceFromTarget,
+    },
   ).slice(1);
   if (
     newPath.length === e.action.path.length &&
@@ -32,6 +35,7 @@ const repath = (e: Entity) => {
       {
         mode: e.action.attacking ? "attack" : undefined,
         removeMovingEntities: false,
+        distanceFromTarget: e.action.distanceFromTarget,
       },
     ).slice(1);
   }

@@ -20,9 +20,10 @@ export const getEntitiesInRange = (x: number, y: number, radius: number) => {
   const points = data.kd.rangeSearchCircle(x, y, radius);
   return points.map((p) => {
     const entity = data.pointToEntityMap.get(p);
-    if (!entity) throw new Error("Expected point to map to an entity");
+    // This may happen due to synchronous removal + call?
+    if (!entity) console.warn("Expected point to map to an entity");
     return entity;
-  });
+  }).filter(<T>(v: T | undefined): v is T => !!v);
 };
 
 onInit((game) => {

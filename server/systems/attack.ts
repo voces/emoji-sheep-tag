@@ -1,4 +1,9 @@
-import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
+import { date } from "npm:zod";
+import {
+  angleDifference,
+  distanceBetweenPoints,
+  tweenAbsAngles,
+} from "../../shared/pathing/math.ts";
 import { distanceBetweenEntities } from "../../shared/pathing/math.ts";
 import { Entity } from "../../shared/types.ts";
 import { Game } from "../ecs.ts";
@@ -23,7 +28,7 @@ export const addAttackSystem = (app: Game) => {
   app.addSystem({
     props: ["isAttacking"],
     update: () => offset = -1,
-    updateChild: (e, _, time) => {
+    updateChild: (e, delta, time) => {
       offset++;
 
       if (e.action?.type !== "attack" || !e.position) {
@@ -56,6 +61,8 @@ export const addAttackSystem = (app: Game) => {
           distanceBetweenPoints(target.position, e.swing.target) >
             e.attack.rangeMotionBuffer
         ) return delete e.swing;
+
+        // TODO: add mid-swing turning; if not ±60°, delay swing by that amount
 
         // Swing if damage point reached
         if (e.swing.time + e.attack.damagePoint <= time) {
@@ -103,6 +110,28 @@ export const addAttackSystem = (app: Game) => {
         };
         return;
       }
+
+      // Face target
+      if (e.turnSpeed) {
+        let facing = e.facing ?? Math.PI * 3 / 2;
+        const targetAngle = Math.atan2(
+          target.position.y - e.position.y,
+          target.position.x - e.position.x,
+        );
+        const diff = Math.abs(angleDifference(facing, targetAngle));
+        if (diff > 1e-07) {
+          const maxTurn = e.turnSpeed * delta;
+          e.facing = diff < maxTurn
+            ? targetAngle
+            : tweenAbsAngles(facing, targetAngle, maxTurn);
+        }
+        // Must be facing ±60°
+        if (diff > Math.PI / 3) {
+          delta = Math.max(0, delta - (diff - Math.PI / 3) / e.turnSpeed);
+        }
+      }
+
+      if (delta === 0) return;
 
       if ((e.lastAttack ?? 0) + e.attack.cooldown <= time) {
         e.swing = { time, source: e.position, target: target.position };

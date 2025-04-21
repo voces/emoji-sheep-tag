@@ -86,6 +86,7 @@ export type Entity = {
   // Tags
   isMoving?: boolean | null;
   isAttacking?: boolean | null;
+  isBuilding?: boolean | null;
   isIdle?: boolean | null;
 
   // Pathing
@@ -96,6 +97,8 @@ export type Entity = {
   /** Override `pathing` when blocking tiles. */
   blocksPathing?: Pathing;
   tilemap?: Footprint;
+  /** Override `tilemap` for require checks. */
+  requiresTilemap?: Footprint;
 
   // Actions
   action?: Action | null;

@@ -254,11 +254,9 @@ export class PathingMap {
 
     const xTile = this.xWorldToTile(xWorld);
     const yTile = this.yWorldToTile(yWorld);
-    const map = entity.tilemap ??
+    const map = entity.requiresTilemap ?? entity.tilemap ??
       this.pointToTilemap(xWorld, yWorld, entity.radius, {
-        type: entity.requiresPathing === undefined
-          ? entity.pathing
-          : entity.requiresPathing,
+        type: entity.requiresPathing ?? entity.pathing,
       });
 
     return this.withoutEntity(entity, () => this._pathable(map, xTile, yTile));
@@ -290,30 +288,35 @@ export class PathingMap {
     entity: PathingEntity,
     test?: (tile: Tile) => boolean,
   ): Point {
+    return this.nearestPathingGen(xWorld, yWorld, entity, test).next().value!;
+  }
+
+  /**
+   * Given an initial position `(xWorld, yWorld)`, returns the nearest points
+   * the entity can be placed, measured by euclidean distance (thus would form
+   * a circle instead of square for repeated placements).
+   */
+  private *nearestPathingGen(
+    xWorld: number,
+    yWorld: number,
+    entity: PathingEntity,
+    test?: (tile: Tile) => boolean,
+  ): Generator<Point, Point> {
     const tile = this.entityToTile(entity, { x: xWorld, y: yWorld });
 
     // If initial position is fine, push it
     if (
       this._pathable(
-        entity.tilemap ||
-          this.pointToTilemap(
-            xWorld,
-            yWorld,
-            entity.radius,
-            {
-              includeOutOfBounds: true,
-              type: entity.requiresPathing === undefined
-                ? entity.pathing
-                : entity.requiresPathing,
-            },
-          ),
+        entity.requiresTilemap ?? entity.tilemap ??
+          this.pointToTilemap(xWorld, yWorld, entity.radius, {
+            includeOutOfBounds: true,
+            type: entity.requiresPathing ?? entity.pathing,
+          }),
         tile.x,
         tile.y,
         test,
       )
-    ) {
-      return { x: xWorld, y: yWorld };
-    }
+    ) return { x: xWorld, y: yWorld };
 
     // Calculate input from non-entity input
     const target = { x: xWorld, y: yWorld };
@@ -323,7 +326,7 @@ export class PathingMap {
       ? entity.pathing
       : entity.requiresPathing;
     if (pathing === undefined) throw new Error("entity has no pathing");
-    const minimalTilemap = entity.tilemap ??
+    const minimalTilemap = entity.requiresTilemap ?? entity.tilemap ??
       this.pointToTilemap(
         entity.radius,
         entity.radius,
@@ -350,6 +353,8 @@ export class PathingMap {
     start.__np = distance(target, offset(start.world));
     heap.push(start);
 
+    let prev: Point | undefined;
+
     // Find a node!
     while (heap.length) {
       const current = heap.pop();
@@ -358,7 +363,8 @@ export class PathingMap {
         current.pathable(pathing) &&
         this._pathable(minimalTilemap, current.x, current.y, test)
       ) {
-        return offset(current.world);
+        if (prev) yield prev;
+        prev = offset(current.world);
       }
 
       current.nodes.forEach((neighbor) => {
@@ -371,7 +377,7 @@ export class PathingMap {
     }
 
     // Found nothing, return input
-    return { x: xWorld, y: yWorld };
+    return prev ?? { x: xWorld, y: yWorld };
   }
 
   private _layer(xTile: number, yTile: number): number | undefined {
@@ -422,12 +428,10 @@ export class PathingMap {
     let attemptLayer = this._layer(xTile, yTile);
 
     if (layer === attemptLayer) {
-      if (entity.tilemap) {
-        if (this._pathable(entity.tilemap, xTile, yTile)) {
-          return {
-            x: this.xTileToWorld(xTile),
-            y: this.yTileToWorld(yTile),
-          };
+      const tilemap = entity.requiresTilemap ?? entity.tilemap;
+      if (tilemap) {
+        if (this._pathable(tilemap, xTile, yTile)) {
+          return { x: this.xTileToWorld(xTile), y: this.yTileToWorld(yTile) };
         }
       } else if (
         this._pathable(
@@ -445,9 +449,7 @@ export class PathingMap {
           xTile,
           yTile,
         )
-      ) {
-        return { x: xWorld, y: yWorld };
-      }
+      ) return { x: xWorld, y: yWorld };
     }
 
     const xMiss = Math.abs(xWorld * this.resolution - xTile);
@@ -462,31 +464,26 @@ export class PathingMap {
       : DIRECTION.DOWN;
 
     let steps = 0;
-    const stride = entity.tilemap ? 2 : 1;
+    const stride = entity.requiresTilemap ?? entity.tilemap ? 2 : 1;
     let initialSteps = 0;
 
     let remainingTries = MAX_TRIES;
 
-    let minimalTilemap;
+    let minimalTilemap = entity.requiresTilemap ?? entity.tilemap;
     let offset;
-    if (entity.tilemap) {
-      minimalTilemap = entity.tilemap;
+    if (minimalTilemap) {
       offset = {
-        x: entity.tilemap.left / this.resolution -
-          (entity.tilemap.width % 4 === 0 ? 0 : 0.25),
-        y: entity.tilemap.top / this.resolution +
-          (entity.tilemap.height % 4 === 0 ? 0 : 0.25),
+        x: minimalTilemap.left / this.resolution -
+          (minimalTilemap.width % 4 === 0 ? 0 : 0.25),
+        y: minimalTilemap.top / this.resolution +
+          (minimalTilemap.height % 4 === 0 ? 0 : 0.25),
       };
     } else {
       minimalTilemap = this.pointToTilemap(
         entity.radius,
         entity.radius,
         entity.radius,
-        {
-          type: entity.requiresPathing === undefined
-            ? entity.pathing
-            : entity.requiresPathing,
-        },
+        { type: entity.requiresPathing ?? entity.pathing },
       );
       offset = {
         x: entity.radius % (1 / this.resolution),
@@ -703,15 +700,21 @@ export class PathingMap {
   path(
     entity: PathingEntity,
     target: TargetEntity | Readonly<Point>,
-    { start = entity.position, distance, removeMovingEntities = true }: {
+    {
+      start = entity.position,
+      distanceFromTarget,
+      removeMovingEntities = true,
+    }: {
       start?: Point;
-      distance?: number;
+      distanceFromTarget?: number;
       removeMovingEntities?: boolean;
     } = {},
   ): Point[] {
     if (typeof entity.radius !== "number") {
       throw new Error("Can only path find radial entities");
     }
+
+    if (distanceFromTarget) distanceFromTarget *= this.resolution;
 
     const cache: Cache = {
       _linearPathable: memoize((...args) => this._linearPathable(...args)),
@@ -758,17 +761,20 @@ export class PathingMap {
     const targetPathable = targetTile &&
       targetTile.pathable(pathing) &&
       this.pathable(entity, targetPosition.x, targetPosition.y);
+    const endNearestPathingGen = targetPathable
+      ? undefined
+      : this.nearestPathingGen(targetPosition.x, targetPosition.y, entity);
     const endTile = targetPathable ? targetTile : (() => {
-      const { x, y } = this.nearestPathing(
-        targetPosition.x,
-        targetPosition.y,
-        entity,
-      );
+      const { x, y } = endNearestPathingGen!.next().value;
       return this.grid[
         Math.round((y - offset) * this.resolution)
       ][Math.round((x - offset) * this.resolution)];
     })();
-    const endReal = targetPathable
+    const targetReal = {
+      x: targetPosition.x * this.resolution,
+      y: targetPosition.y * this.resolution,
+    };
+    const targetClosestReal = targetPathable
       ? {
         x: targetPosition.x * this.resolution,
         y: targetPosition.y * this.resolution,
@@ -782,16 +788,17 @@ export class PathingMap {
       return [
         { x: start.x, y: start.y },
         {
-          x: endReal.x / this.resolution,
-          y: endReal.y / this.resolution,
+          x: targetClosestReal.x / this.resolution,
+          y: targetClosestReal.y / this.resolution,
         },
       ];
     }
 
     // If already in range, just return start
     if (
-      typeof distance === "number" && "position" in target &&
-      distanceBetweenEntities(entity, target) < distance
+      typeof distanceFromTarget === "number" && "position" in target &&
+      distanceBetweenEntities(entity, target) * this.resolution <
+        distanceFromTarget
     ) {
       if (removed) this.addEntity(entity);
       for (const entity of removedMovingEntities) this.addEntity(entity);
@@ -803,6 +810,55 @@ export class PathingMap {
     const h = (a: Point, b: Point) =>
       Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
 
+    const endHeap = new BinaryHeap(
+      (node: Tile) => node.__endRealPlusEstimatedCost ?? 0,
+    );
+    // This won't desync anything.
+    // eslint-disable-next-line no-restricted-syntax
+    const endTag = Math.random();
+    let endBest = endTile;
+    endHeap.push(endTile);
+    endTile.__endTag = endTag;
+    endTile.__endRealCostFromOrigin = distanceFromTarget
+      ? Math.max(
+        h(targetReal, endTile) - distanceFromTarget,
+        0,
+      )
+      : h(targetClosestReal, endTile);
+    endTile.__endEstimatedCostRemaining = h(endTile, startReal);
+    endTile.__endRealPlusEstimatedCost = endTile.__endEstimatedCostRemaining +
+      endTile.__endRealCostFromOrigin;
+    endTile.__endVisited = false;
+    endTile.__endClosed = false;
+    endTile.__endParent = null;
+
+    if (endNearestPathingGen && distanceFromTarget) {
+      let { x, y } = endNearestPathingGen.next().value;
+      let tile = this.grid[
+        Math.round((y - offset) * this.resolution)
+      ][Math.round((x - offset) * this.resolution)];
+      // TODO: This is unbounded and does not scale!
+      while (h(targetReal, tile) < distanceFromTarget) {
+        if (cache._pathable(minimalTilemap, tile.x, tile.y)) {
+          endHeap.push(tile);
+          tile.__endTag = endTag;
+          tile.__endRealCostFromOrigin = 0;
+          tile.__endEstimatedCostRemaining = h(tile, startReal);
+          tile.__endRealPlusEstimatedCost = tile.__endEstimatedCostRemaining +
+            tile.__endRealCostFromOrigin;
+          tile.__endVisited = false;
+          tile.__endClosed = false;
+          tile.__endParent = null;
+        }
+
+        // Prime next
+        ({ x, y } = endNearestPathingGen.next().value);
+        tile = this.grid[
+          Math.round((y - offset) * this.resolution)
+        ][Math.round((x - offset) * this.resolution)];
+      }
+    }
+
     const startHeap = new BinaryHeap(
       (node: Tile) => node.__startRealPlusEstimatedCost ?? 0,
     );
@@ -813,30 +869,13 @@ export class PathingMap {
     startHeap.push(startTile);
     startTile.__startTag = startTag;
     startTile.__startRealCostFromOrigin = h(startReal, startTile);
-    startTile.__startEstimatedCostRemaining = h(startTile, endReal);
+    startTile.__startEstimatedCostRemaining = h(startTile, endHeap[0]);
     startTile.__startRealPlusEstimatedCost =
       startTile.__startEstimatedCostRemaining +
       startTile.__startRealCostFromOrigin;
     startTile.__startVisited = false;
     startTile.__startClosed = false;
     startTile.__startParent = null;
-
-    const endHeap = new BinaryHeap(
-      (node: Tile) => node.__endRealPlusEstimatedCost ?? 0,
-    );
-    // This won't desync anything.
-    // eslint-disable-next-line no-restricted-syntax
-    const endTag = Math.random();
-    let endBest = endTile;
-    endHeap.push(endTile);
-    endTile.__endTag = endTag;
-    endTile.__endRealCostFromOrigin = h(endReal, endTile);
-    endTile.__endEstimatedCostRemaining = h(endTile, startReal);
-    endTile.__endRealPlusEstimatedCost = endTile.__endEstimatedCostRemaining +
-      endTile.__endRealCostFromOrigin;
-    endTile.__endVisited = false;
-    endTile.__endClosed = false;
-    endTile.__endParent = null;
 
     let checksSinceBestChange = 0;
     while (startHeap.length) {
@@ -853,13 +892,13 @@ export class PathingMap {
         startBest = endBest = startCurrent;
         break;
       } else if (
-        typeof distance === "number" && "position" in target
+        typeof distanceFromTarget === "number" && "position" in target
       ) {
         if (
           distanceBetweenEntities(
-            { ...entity, position: startCurrent.world },
-            target,
-          ) < distance
+                { ...entity, position: startCurrent.world },
+                target,
+              ) * this.resolution < distanceFromTarget
         ) {
           startBest = startCurrent;
           break;
@@ -919,7 +958,7 @@ export class PathingMap {
             neighbor.__startParent = startCurrent.__startParent;
             neighbor.__startEstimatedCostRemaining =
               neighbor.__startEstimatedCostRemaining! ||
-              h(neighbor, endReal);
+              h(neighbor, targetReal);
             neighbor.__startRealCostFromOrigin = gScore;
             neighbor.__startRealPlusEstimatedCost =
               neighbor.__startRealCostFromOrigin +
@@ -954,7 +993,7 @@ export class PathingMap {
           neighbor.__startParent = startCurrent;
           neighbor.__startEstimatedCostRemaining =
             neighbor.__startEstimatedCostRemaining! ||
-            h(neighbor, endReal);
+            h(neighbor, targetReal);
           neighbor.__startRealCostFromOrigin = gScore;
           neighbor.__startRealPlusEstimatedCost =
             neighbor.__startRealCostFromOrigin +
@@ -997,7 +1036,7 @@ export class PathingMap {
         endBest = newEndtile;
         endHeap.push(newEndtile);
         newEndtile.__endTag = endTag;
-        newEndtile.__endRealCostFromOrigin = h(endReal, newEndtile);
+        newEndtile.__endRealCostFromOrigin = h(targetReal, newEndtile);
         newEndtile.__endEstimatedCostRemaining = h(
           newEndtile,
           startReal,
@@ -1251,13 +1290,14 @@ export class PathingMap {
     // Step back with a tolerance between 99% and 100% distance to target
     // E.g., if the passed distance is 100, the path will terminate (if
     // possible) between 99 and 100 units away.
-    const tolerance = (distance ?? 0) * 0.01;
+    const tolerance = (distanceFromTarget ?? 0) * 0.01;
     if (
-      typeof distance === "number" && "position" in target && path.length > 1 &&
+      typeof distanceFromTarget === "number" && "position" in target &&
+      path.length > 1 &&
       distanceBetweenEntities(
-          { ...entity, position: path[path.length - 1] },
-          target,
-        ) < distance - tolerance
+              { ...entity, position: path[path.length - 1] },
+              target,
+            ) * this.resolution < distanceFromTarget - tolerance
     ) {
       let a = path[path.length - 1];
       let b = path[path.length - 2];
@@ -1269,10 +1309,10 @@ export class PathingMap {
         const currentDistance = distanceBetweenEntities({
           ...entity,
           position: mid,
-        }, target);
-        const diff = distance - currentDistance;
+        }, target) * this.resolution;
+        const diff = distanceFromTarget - currentDistance;
         if (diff >= 0 && diff <= tolerance) break;
-        if (currentDistance < distance) a = mid;
+        if (currentDistance < distanceFromTarget) a = mid;
         else b = mid;
       }
       if (mid && itrs < 15) path[path.length - 1] = mid;
@@ -1432,15 +1472,10 @@ export class PathingMap {
       const endTile = this.worldToTile(endWorld);
 
       if (startTile === endTile) {
-        const map = entity.tilemap ??
-          this.pointToTilemap(
-            startWorld.x,
-            startWorld.y,
-            entity.radius,
-            {
-              type: pathing,
-            },
-          );
+        const map = entity.requiresTilemap ?? entity.tilemap ??
+          this.pointToTilemap(startWorld.x, startWorld.y, entity.radius, {
+            type: pathing,
+          });
 
         return this.withoutEntity(
           entity,
@@ -1629,16 +1664,9 @@ export class PathingMap {
     const tiles = [];
     const position = entity.position;
     const { map, top, left, width, height } = entity.tilemap ??
-      this.pointToTilemap(
-        position.x,
-        position.y,
-        entity.radius,
-        {
-          type: entity.blocksPathing === undefined
-            ? entity.pathing
-            : entity.blocksPathing,
-        },
-      );
+      this.pointToTilemap(position.x, position.y, entity.radius, {
+        type: entity.blocksPathing ?? entity.pathing,
+      });
     const tileX = this.xWorldToTile(position.x);
     const tileY = this.yWorldToTile(position.y);
     for (let y = top; y < top + height; y++) {
@@ -1660,7 +1688,7 @@ export class PathingMap {
    * it from tiles it no longer intersects and adding it to tiles it now
    * intersects.
    * Note: This will not reflect changes to the entity's pathing type. An
-   * entities pathing type is treatede as immutable.
+   * entity's pathing type is treated as immutable.
    */
   updateEntity(entity: PathingEntity): void {
     if (!this.entities.has(entity)) return;
@@ -1668,16 +1696,9 @@ export class PathingMap {
     const newTiles: Tile[] = [];
     const position = entity.position;
     const { map, top, left, width, height } = entity.tilemap ??
-      this.pointToTilemap(
-        position.x,
-        position.y,
-        entity.radius,
-        {
-          type: entity.blocksPathing === undefined
-            ? entity.pathing
-            : entity.blocksPathing,
-        },
-      );
+      this.pointToTilemap(position.x, position.y, entity.radius, {
+        type: entity.blocksPathing ?? entity.pathing,
+      });
     const tileX = this.xWorldToTile(position.x);
     const tileY = this.yWorldToTile(position.y);
     for (let y = top; y < top + height; y++) {

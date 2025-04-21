@@ -13,3 +13,8 @@ export type Footprint = {
 
 export type PathingEntity = SystemEntity<Entity, "position" | "radius">;
 export type TargetEntity = SystemEntity<Entity, "position">;
+
+export type PeekingIterator<T> = Iterator<T> & {
+  /** Look at the next value without consuming it. */
+  peek(): T | undefined;
+};

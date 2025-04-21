@@ -2,7 +2,6 @@ import { angleDifference, tweenAbsAngles } from "../../shared/pathing/math.ts";
 import { app } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 
-// TODO: this should be done on the backend and shouldn't be able to swing backwards
 app.addSystem({
   props: ["isAttacking"],
   updateChild: (e, delta) => {

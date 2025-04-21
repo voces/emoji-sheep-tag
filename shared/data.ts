@@ -21,6 +21,7 @@ export const unitData: Record<
     | "radius"
     | "pathing"
     | "tilemap"
+    | "requiresTilemap"
     | "attack"
     | "maxHealth"
     | "actions"
@@ -37,12 +38,6 @@ export const unitData: Record<
     radius: 0.25,
     pathing: 1,
     actions: [
-      {
-        name: "Build Tiny Hut",
-        type: "build",
-        unitType: "tinyHut",
-        binding: ["KeyT"],
-      },
       { name: "Build Hut", type: "build", unitType: "hut", binding: ["KeyF"] },
       {
         name: "Build Wide Hut",
@@ -55,6 +50,18 @@ export const unitData: Record<
         type: "build",
         unitType: "rotundHut",
         binding: ["KeyR"],
+      },
+      {
+        name: "Build Tiny Hut",
+        type: "build",
+        unitType: "tinyHut",
+        binding: ["KeyT"],
+      },
+      {
+        name: "Build Stack Hut",
+        type: "build",
+        unitType: "stackHut",
+        binding: ["KeyS"],
       },
       {
         name: "Destroy last farm",
@@ -118,14 +125,27 @@ export const unitData: Record<
     maxHealth: 200,
     sounds: { death: ["explosion1"] },
   },
+  stackHut: {
+    name: "Stack Hut",
+    model: "hinduTemple",
+    radius: 0.5,
+    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    requiresTilemap: {
+      map: Array(16).fill(4),
+      top: -2,
+      left: -2,
+      width: 4,
+      height: 4,
+    },
+    maxHealth: 15,
+    sounds: { death: ["explosion1"] },
+  },
   fence: {
     radius: 0.25,
     tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     isDoodad: true,
   },
 };
-
-export const BUILD_RADIUS = 0.7;
 
 export const colors: string[] = [
   "#ff0303",

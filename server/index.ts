@@ -2,7 +2,7 @@ import { serveFile } from "jsr:@std/http/file-server";
 import { resolve } from "jsr:@std/path";
 import { handleSocket } from "./client.ts";
 
-const isDev = Deno.args.includes("--dev");
+const isDev = Deno.args.includes("--dev") || true;
 
 if (isDev) import("../scripts/dev.ts");
 else await (await import("../scripts/build.ts")).build();

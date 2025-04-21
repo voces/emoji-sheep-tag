@@ -1,5 +1,4 @@
 // import { Grid } from "./grid.ts";
-import { position } from "../../../.cache/deno/npm/registry.npmjs.org/@types/stylis/4.2.5/index.d.ts";
 import { PathingMap } from "./PathingMap.ts";
 import { assertEquals } from "jsr:@std/assert";
 
@@ -71,8 +70,11 @@ Deno.test("distance to target corner", () => {
   const solver = new PathingMap({ resolution: 4, pathing: [[0, 0], [0, 0]] });
   solver.addEntity(sheep);
   solver.addEntity(wolf);
-  assertEquals(solver.path(wolf, sheep, { distance: Math.SQRT2 - 1 }), [
-    { x: 0.5, y: 0.5 },
-    { x: 407 / 512, y: 279 / 256 },
-  ]);
+  assertEquals(
+    solver.path(wolf, sheep, { distanceFromTarget: Math.SQRT2 - 1 }),
+    [
+      { x: 0.5, y: 0.5 },
+      { x: 407 / 512, y: 279 / 256 },
+    ],
+  );
 });
