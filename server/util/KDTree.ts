@@ -25,23 +25,16 @@ export class KdTree {
       point: Point,
       depth: number,
     ): KdTreeNode => {
-      if (node === null) {
-        return new KdTreeNode(point, depth % 2);
-      }
+      if (node === null) return new KdTreeNode(point, depth % 2);
 
-      const axis = node.axis;
-      if (axis === 0) {
+      if (node.axis === 0) {
         if (point.x < node.point.x) {
           node.left = addRec(node.left, point, depth + 1);
-        } else {
-          node.right = addRec(node.right, point, depth + 1);
-        }
+        } else node.right = addRec(node.right, point, depth + 1);
       } else {
         if (point.y < node.point.y) {
           node.left = addRec(node.left, point, depth + 1);
-        } else {
-          node.right = addRec(node.right, point, depth + 1);
-        }
+        } else node.right = addRec(node.right, point, depth + 1);
       }
 
       return node;
@@ -55,10 +48,11 @@ export class KdTree {
    * @param point The point to delete.
    */
   delete(point: Point): void {
+    let found = false;
+
     const deleteRec = (
       node: KdTreeNode | null,
       point: Point,
-      depth: number,
     ): KdTreeNode | null => {
       if (node === null) return null;
 
@@ -66,41 +60,36 @@ export class KdTree {
 
       // Check if this is the node to delete
       if (node.point.x === point.x && node.point.y === point.y) {
+        found = true;
         // If the node has a right child, find the minimum in the right subtree
         if (node.right !== null) {
-          const minNode = this.findMin(node.right, axis, depth + 1);
+          const minNode = this.findMin(node.right, axis);
           node.point = minNode.point;
-          node.right = deleteRec(node.right, minNode.point, depth + 1);
+          node.right = deleteRec(node.right, minNode.point);
         } // Else if the node has a left child, find the minimum in the left subtree
         else if (node.left !== null) {
-          const minNode = this.findMin(node.left, axis, depth + 1);
+          const minNode = this.findMin(node.left, axis);
           node.point = minNode.point;
-          node.right = deleteRec(node.left, minNode.point, depth + 1);
+          node.right = deleteRec(node.left, minNode.point);
           node.left = null;
         } // Else, it's a leaf node
-        else {
-          return null;
-        }
+        else return null;
       } else {
         if (axis === 0) {
-          if (point.x < node.point.x) {
-            node.left = deleteRec(node.left, point, depth + 1);
-          } else {
-            node.right = deleteRec(node.right, point, depth + 1);
-          }
+          if (point.x < node.point.x) node.left = deleteRec(node.left, point);
+          else node.right = deleteRec(node.right, point);
         } else {
-          if (point.y < node.point.y) {
-            node.left = deleteRec(node.left, point, depth + 1);
-          } else {
-            node.right = deleteRec(node.right, point, depth + 1);
-          }
+          if (point.y < node.point.y) node.left = deleteRec(node.left, point);
+          else node.right = deleteRec(node.right, point);
         }
       }
 
       return node;
     };
 
-    this.root = deleteRec(this.root, point, 0);
+    this.root = deleteRec(this.root, point);
+
+    if (!found) console.warn("Did not find point in kd tree!");
   }
 
   /**
@@ -117,31 +106,21 @@ export class KdTree {
    * Finds the node with minimum value along a given axis.
    * @param node The subtree root.
    * @param axis The axis to compare.
-   * @param depth The current depth.
    */
   private findMin(
     node: KdTreeNode | null,
     axis: number,
-    depth: number,
   ): KdTreeNode {
-    if (node === null) {
-      throw new Error("Node cannot be null");
-    }
+    if (node === null) throw new Error("Node cannot be null");
 
     const currentAxis = node.axis;
 
     if (currentAxis === axis) {
-      if (node.left === null) {
-        return node;
-      }
-      return this.findMin(node.left, axis, depth + 1);
+      if (node.left === null) return node;
+      return this.findMin(node.left, axis);
     } else {
-      const leftMin = node.left
-        ? this.findMin(node.left, axis, depth + 1)
-        : node;
-      const rightMin = node.right
-        ? this.findMin(node.right, axis, depth + 1)
-        : node;
+      const leftMin = node.left ? this.findMin(node.left, axis) : node;
+      const rightMin = node.right ? this.findMin(node.right, axis) : node;
 
       let minNode = node;
       if (axis === 0) {

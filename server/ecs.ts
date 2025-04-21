@@ -143,10 +143,8 @@ class GameTarget extends TypedEventTarget<GameEvents> {
             system.entities.delete(entity);
             system.onRemove?.(entity);
           }
-        }
-
-        // Not in the system; may be an add
-        if (system.props?.every((p) => entity[p] != null)) {
+          // Not in the system; may be an add
+        } else if (system.props?.every((p) => entity[p] != null)) {
           system.entities.add(entity);
           system.onAdd?.(entity);
         }

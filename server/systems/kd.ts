@@ -5,11 +5,11 @@ import { currentApp } from "../contexts.ts";
 import { Game, onInit } from "../ecs.ts";
 import { KdTree } from "../util/KDTree.ts";
 
-const dataMap = new WeakMap<
+export const dataMap = new WeakMap<
   Game,
   {
-    entityToPointMap: WeakMap<SystemEntity<Entity, "position">, Point>;
-    pointToEntityMap: WeakMap<Point, SystemEntity<Entity, "position">>;
+    entityToPointMap: Map<SystemEntity<Entity, "position">, Point>;
+    pointToEntityMap: Map<Point, SystemEntity<Entity, "position">>;
     kd: KdTree;
   }
 >();
@@ -27,11 +27,11 @@ export const getEntitiesInRange = (x: number, y: number, radius: number) => {
 };
 
 onInit((game) => {
-  const entityToPointMap = new WeakMap<
+  const entityToPointMap = new Map<
     SystemEntity<Entity, "position">,
     Point
   >();
-  const pointToEntityMap = new WeakMap<
+  const pointToEntityMap = new Map<
     Point,
     SystemEntity<Entity, "position">
   >();
