@@ -28,7 +28,7 @@ export const addAttackSystem = (app: Game) => {
   app.addSystem({
     props: ["isAttacking"],
     update: () => offset = -1,
-    updateChild: (e, delta, time) => {
+    updateEntity: (e, delta, time) => {
       offset++;
 
       if (e.action?.type !== "attack" || !e.position) {

@@ -139,7 +139,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       );
       if (!canBuild(unit, unitType, x, y)) return;
 
-      app.delete(blueprint);
+      app.removeEntity(blueprint);
       blueprint = undefined;
       updateCursor();
       if (selection.size) {
@@ -201,7 +201,7 @@ const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
 
 const cancelBlueprint = () => {
   if (blueprint) {
-    app.delete(blueprint);
+    app.removeEntity(blueprint);
     blueprint = undefined;
     updateCursor();
   }
@@ -289,7 +289,7 @@ globalThis.addEventListener("keydown", (e) => {
   if (!action) return;
 
   if (action.type === "build") {
-    if (blueprint) app.delete(blueprint);
+    if (blueprint) app.removeEntity(blueprint);
     const x = normalize(
       mouse.world.x,
       (unitData[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
@@ -298,7 +298,7 @@ globalThis.addEventListener("keydown", (e) => {
       mouse.world.y,
       (unitData[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
     );
-    blueprint = app.add({
+    blueprint = app.addEntity({
       id: `blueprint-${blueprintIndex}`,
       unitType: action.unitType,
       position: { x, y },

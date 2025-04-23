@@ -21,7 +21,7 @@ app.addSystem({
   update: (delta, time) => {
     for (const [indicator, { birth, initialScale }] of indicators) {
       const next = initialScale - (time * 3 - birth * 3) ** 2;
-      if (next < 0.01) app.delete(indicator);
+      if (next < 0.01) app.removeEntity(indicator);
       else {
         indicator.modelScale = next;
         indicator.facing = ((next - 0.01) / 0.99) ** 0.5 * Math.PI * 2;
@@ -38,7 +38,7 @@ export const newIndicator = (
     model?: "circle" | "gravity";
   } = {},
 ) => {
-  app.add({
+  app.addEntity({
     id: `indicator-${crypto.randomUUID()}`,
     unitType: "indicator",
     model,

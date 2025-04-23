@@ -4,7 +4,7 @@ import { lookup } from "./lookup.ts";
 
 app.addSystem({
   props: ["isAttacking"],
-  updateChild: (e, delta) => {
+  updateEntity: (e, delta) => {
     if (
       !e.turnSpeed || (!e.swing && e.action?.type !== "attack") || !e.position
     ) return;
@@ -16,6 +16,7 @@ app.addSystem({
       target.x - e.position.x,
     );
 
+    // Must be facing ±60°
     const facing = e.facing ?? Math.PI * 3 / 2;
 
     const diff = Math.abs(angleDifference(facing, targetAngle));

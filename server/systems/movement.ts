@@ -8,6 +8,7 @@ import {
   tweenAbsAngles,
 } from "../../shared/pathing/math.ts";
 import { calcPath, pathable } from "./pathing.ts";
+import { facingWithin } from "../util/math.ts";
 
 const repath = (e: Entity) => {
   if (e.action?.type !== "walk") return;
@@ -50,7 +51,7 @@ export const addUnitMovementSystem = (app: App<Entity>) => {
   // Motion tweening
   app.addSystem({
     props: ["isMoving", "position"],
-    updateChild: (e, delta) => {
+    updateEntity: (e, delta) => {
       // If not moving or can't move, clear it
       if (
         !e.movementSpeed || e.action?.type !== "walk" ||
@@ -71,13 +72,15 @@ export const addUnitMovementSystem = (app: App<Entity>) => {
         return;
       }
 
-      if (
-        !targetEntity ||
+      const withinDistanceRange = !!targetEntity &&
         ("id" in targetEntity
             ? distanceBetweenEntities(e, targetEntity)
             : distanceBetweenPoints(targetEntity.position, e.position)) <=
-          (e.action.distanceFromTarget ?? 0)
-      ) {
+          (e.action.distanceFromTarget ?? 0);
+      // Must be facing ±60°
+      const withinFacingRange = !e.turnSpeed || !targetEntity.position ||
+        facingWithin(e, targetEntity.position, Math.PI / 3);
+      if (!targetEntity || (withinDistanceRange && withinFacingRange)) {
         delete (e as Entity).isMoving;
         if (
           !("id" in targetEntity) ||
@@ -88,12 +91,15 @@ export const addUnitMovementSystem = (app: App<Entity>) => {
       }
 
       let target = e.action.path[0];
+      const facingTarget = withinDistanceRange && targetEntity.position
+        ? targetEntity.position
+        : target;
 
       if (e.turnSpeed) {
         let facing = e.facing ?? Math.PI * 3 / 2;
         const targetAngle = Math.atan2(
-          target.y - e.position.y,
-          target.x - e.position.x,
+          facingTarget.y - e.position.y,
+          facingTarget.x - e.position.x,
         );
         const diff = Math.abs(angleDifference(facing, targetAngle));
         if (diff > 1e-07) {

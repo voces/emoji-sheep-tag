@@ -11,7 +11,7 @@ const entitiesFromQueue = (e: SystemEntity<Entity, "queue" | "owner">) =>
   blueprints.set(
     e,
     e.queue.filter((a) => a.type === "build").map((a) =>
-      app.add({
+      app.addEntity({
         id: `${e.id}-blueprint-${crypto.randomUUID()}`,
         unitType: a.unitType,
         model: unitData[a.unitType]?.model,
@@ -28,11 +28,11 @@ app.addSystem({
   onAdd: (e) => entitiesFromQueue(e),
   onChange: (e) => {
     const existing = blueprints.get(e);
-    if (existing) existing.forEach((e) => app.delete(e));
+    if (existing) existing.forEach((e) => app.removeEntity(e));
     entitiesFromQueue(e);
   },
   onRemove: (e) => {
     const existing = blueprints.get(e);
-    if (existing) existing.forEach((e) => app.delete(e));
+    if (existing) existing.forEach((e) => app.removeEntity(e));
   },
 });

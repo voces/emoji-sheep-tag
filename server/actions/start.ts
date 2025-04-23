@@ -65,7 +65,7 @@ export const start = (client: Client) => {
       for (
         const [x, y] of initEntities[unitType as keyof typeof initEntities]
       ) {
-        ecs.add({
+        ecs.addEntity({
           unitType,
           position: { x, y },
           ...unitData[unitType],

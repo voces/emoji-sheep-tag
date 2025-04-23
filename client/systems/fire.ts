@@ -27,7 +27,7 @@ const updateFires = (e: Entity, remove = false) => {
   }
   if (e.position) {
     for (let i = existing.length; i < fireCount; i++) {
-      const fire = app.add({
+      const fire = app.addEntity({
         id: `fire-${crypto.randomUUID()}`,
         unitType: "fire",
         position: {
@@ -40,7 +40,7 @@ const updateFires = (e: Entity, remove = false) => {
     }
   }
   for (let i = fireCount; i < existing.length; i++) {
-    app.delete(existing[i]);
+    app.removeEntity(existing[i]);
   }
   if (fireCount === 0) fires.delete(e);
   else existing.splice(fireCount);

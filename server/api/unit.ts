@@ -17,6 +17,7 @@ import {
   withPathingMap,
 } from "../systems/pathing.ts";
 import { unitData } from "../../shared/data.ts";
+import { facingWithin } from "../util/math.ts";
 
 export const build = (builder: Entity, type: string, x: number, y: number) => {
   const app = currentApp();
@@ -26,25 +27,25 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
 
   const temp = tempUnit(builder.owner!, type, x, y);
   if (!isPathingEntity(temp)) {
-    return p.withoutEntity(builder, () => app.add(temp));
+    return p.withoutEntity(builder, () => app.addEntity(temp));
   }
 
   // Make building if pathable
   const pathable = p.withoutEntity(builder, () => {
     if (!p.pathable(temp)) return false;
-    app.add(temp);
+    app.addEntity(temp);
     return true;
   });
   if (!pathable) return;
 
   // Relocate entity if position not valid
-  updatePathing(builder);
+  app.enqueue(() => updatePathing(builder));
 
   return temp;
 };
 
 export const newUnit = (owner: string, type: string, x: number, y: number) =>
-  currentApp().add(tempUnit(owner, type, x, y));
+  currentApp().addEntity(tempUnit(owner, type, x, y));
 
 export const isEnemy = (source: Entity, target: Entity) => {
   const sourceIsSheep = data.sheep.some((s) => s.client.id === source.owner);
@@ -81,11 +82,29 @@ export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
 export const orderAttack = (attacker: Entity, target: Entity): boolean => {
   updatePathing(attacker, 1);
 
-  if (!attacker.attack || !attacker.position) return false;
+  if (!attacker.attack || !attacker.position || !target.position) return false;
 
-  // Attack immediately if in range
+  // If within attack range..
   const d = distanceBetweenEntities(attacker, target);
   if (d < attacker.attack.range) {
+    // Turn if needed (must be facing ±60°)
+    // This in theory isn't needed since the attack system does turning, but it
+    // does guarantee a tick cycle
+    // if (
+    //   attacker.turnSpeed &&
+    //   !facingWithin(attacker, target.position, Math.PI / 3)
+    // ) {
+    //   attacker.action = {
+    //     type: "walk",
+    //     target: target.id,
+    //     path: [attacker.position],
+    //     attacking: true,
+    //   };
+    //   attacker.queue = [{ type: "attack", target: target.id }];
+    //   return true;
+    // }
+
+    // Otherwise attack immediately
     delete attacker.queue;
     attacker.action = { type: "attack", target: target.id };
     return true;

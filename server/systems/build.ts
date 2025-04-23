@@ -10,7 +10,7 @@ import { onInit } from "../ecs.ts";
 onInit((game) => {
   game.addSystem({
     props: ["isBuilding", "position"],
-    updateChild: (e, delta) => {
+    updateEntity: (e, delta) => {
       if (e.action?.type !== "build") return delete (e as Entity).isBuilding;
       const d = computeBuildDistance(e.action.unitType);
 

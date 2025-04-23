@@ -111,11 +111,11 @@ export const addPathingSystem = (app: App<Entity>) => {
     props: ["position", "radius"],
     onAdd: (e) => {
       pathingMap.addEntity(e);
-      updatePathing(e);
+      if (e.pathing) updatePathing(e);
     },
     onChange: (e) => {
       pathingMap.updateEntity(e);
-      updatePathing(e);
+      if (e.pathing) updatePathing(e);
     },
     onRemove: (e) => pathingMap.removeEntity(e as any),
   });

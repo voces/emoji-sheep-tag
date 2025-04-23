@@ -5,14 +5,14 @@ const swings = new WeakMap<Entity, Entity>();
 
 const updateSwing = (e: SystemEntity<Entity, "swing">) => {
   const existing = swings.get(e);
-  if (existing) app.delete(existing);
+  if (existing) app.removeEntity(existing);
 
   const direction = Math.atan2(
     e.swing.target.y - e.swing.source.y,
     e.swing.target.x - e.swing.source.x,
   );
 
-  const swing = app.add({
+  const swing = app.addEntity({
     id: `swing-${crypto.randomUUID()}`,
     unitType: "claw",
     position: {
@@ -31,7 +31,7 @@ app.addSystem({
   onRemove: (e) => {
     const swing = swings.get(e);
     if (!swing) return;
-    app.delete(swing);
+    app.removeEntity(swing);
     swings.delete(e);
   },
 });

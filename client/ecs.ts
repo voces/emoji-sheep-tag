@@ -23,7 +23,7 @@ type LocalGameEvents = {
 };
 
 class GameTarget extends TypedEventTarget<LocalGameEvents & GameEvents> {
-  constructor(readonly newEntity: (input: Partial<Entity>) => Entity) {
+  constructor(readonly initializeEntity: (input: Partial<Entity>) => Entity) {
     super();
   }
 }
@@ -36,13 +36,13 @@ export const app = newApp<Entity>(
         set: (target, prop, value) => {
           if ((target as any)[prop] === value) return true;
           (target as any)[prop] = value;
-          app.onEntityPropChange(proxy, prop as any);
+          app.queueEntityChange(proxy, prop as any);
           return true;
         },
         deleteProperty: (target, prop) => {
           if ((target as any)[prop] == null) return true;
           delete (target as any)[prop];
-          app.onEntityPropChange(proxy, prop as any);
+          app.queueEntityChange(proxy, prop as any);
           return true;
         },
       });

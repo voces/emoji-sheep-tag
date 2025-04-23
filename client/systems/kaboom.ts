@@ -5,7 +5,7 @@ app.addSystem({
   onRemove: (e) => {
     if (!e.position) return;
 
-    const kaboom = app.add({
+    const kaboom = app.addEntity({
       id: `kaboom-${crypto.randomUUID()}`,
       unitType: "collision",
       position: { x: e.position.x, y: e.position.y },
@@ -14,7 +14,7 @@ app.addSystem({
         0.25,
     });
     setTimeout(() => {
-      app.delete(kaboom);
+      app.removeEntity(kaboom);
     }, 200);
   },
 });

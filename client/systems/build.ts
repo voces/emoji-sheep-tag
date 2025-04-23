@@ -3,7 +3,7 @@ import { app } from "../ecs.ts";
 
 app.addSystem({
   props: ["isBuilding", "position"],
-  updateChild: (e, delta) => {
+  updateEntity: (e, delta) => {
     if (e.action?.type !== "build") return;
 
     // Face build target

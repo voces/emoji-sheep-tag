@@ -269,12 +269,12 @@ const handlers = {
     }
     stateVar(data.status);
     if (data.status === "lobby") {
-      for (const entity of app.entities) app.delete(entity);
+      for (const entity of app.entities) app.removeEntity(entity);
     }
     for (const update of data.updates) {
       const { type, ...props } = update;
       if (update.id in map) Object.assign(map[update.id], props);
-      else map[update.id] = app.add(props);
+      else map[update.id] = app.addEntity(props);
     }
     if (data.rounds) roundsVar(data.rounds);
   },
@@ -301,7 +301,7 @@ const handlers = {
       const r = Math.round(37 + (Math.random() - 0.5) * 30);
       const g = Math.round(102 + (Math.random() - 0.5) * 45);
       if (checkNearPathing(x, y, 0.25, 255)) continue;
-      app.add({
+      app.addEntity({
         id: `grass-${crypto.randomUUID()}`,
         unitType: "grass",
         position: { x, y },
@@ -317,7 +317,7 @@ const handlers = {
       const g = Math.random();
       const b = Math.random();
       const scale = Math.min(1 / r, 1 / g, 1 / b) * 255;
-      app.add({
+      app.addEntity({
         id: `flowers-${crypto.randomUUID()}`,
         unitType: "flowers",
         position: { x, y },
@@ -330,7 +330,7 @@ const handlers = {
   },
   stop: (d: z.TypeOf<typeof zStop>) => {
     stateVar("lobby");
-    for (const entity of app.entities) app.delete(entity);
+    for (const entity of app.entities) app.removeEntity(entity);
     if (d.players) {
       playersVar((players) =>
         players.map((p) => {
@@ -346,10 +346,10 @@ const handlers = {
       if (update.type === "unit") {
         const { type, ...props } = update;
         if (update.id in map) Object.assign(map[update.id], props);
-        else map[update.id] = app.add(props);
+        else map[update.id] = app.addEntity(props);
       } else if (update.type === "delete") {
         if (update.id in map) {
-          app.delete(map[update.id]);
+          app.removeEntity(map[update.id]);
           delete map[update.id];
         }
       }

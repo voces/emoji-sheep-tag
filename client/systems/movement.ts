@@ -10,7 +10,7 @@ import { lookup } from "./lookup.ts";
 // Movement system
 app.addSystem({
   props: ["isMoving", "position"],
-  updateChild: (e, delta) => {
+  updateEntity: (e, delta) => {
     // If not moving or can't move, clear it
     if (
       !e.movementSpeed || e.action?.type !== "walk"
