@@ -12,6 +12,7 @@ export class MouseEvent extends Event {
   readonly angle: number;
   readonly intersects: Set<Entity>;
   readonly element: Element | null;
+  readonly elements: Element[];
 
   constructor(name: string) {
     super(name);
@@ -22,6 +23,7 @@ export class MouseEvent extends Event {
     this.angle = mouse.angle;
     this.intersects = new Set(mouse.intersects);
     this.element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
+    this.elements = document.elementsFromPoint(mouse.pixels.x, mouse.pixels.y);
   }
 }
 

@@ -3,9 +3,10 @@ import { app, Entity } from "../../../ecs.ts";
 import { selection } from "../../../systems/autoSelect.ts";
 import { UnitDataAction } from "../../../../shared/types.ts";
 import { unitData } from "../../../../shared/data.ts";
-import { svgs } from "../../../systems/three.ts";
 import { getLocalPlayer } from "../../vars/players.ts";
 import { shortcutsVar } from "../Settings.tsx";
+import { SvgIcon } from "../../components/SVGIcon.tsx";
+import { useTooltip } from "../../hooks/useTooltip.tsx";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -21,57 +22,73 @@ selection.addEventListener(
 );
 
 const Command = (
-  { icon, iconType, binding, iconScale }: {
+  { name, icon, iconType, binding, iconScale }: {
+    name: string;
     icon?: string;
     iconType?: "svg";
     binding?: string[];
     iconScale?: number;
   },
-) => (
-  <div
-    className="command"
-    onClick={() => {
-      if (!binding?.length) return;
+) => {
+  const { tooltipContainerProps, tooltip } = useTooltip(name);
+
+  const handleClick = () => {
+    if (!binding?.length) return;
+
+    for (const code of binding) {
       const event = new KeyboardEvent("keydown", {
-        code: binding[0],
+        code,
         bubbles: true,
         cancelable: true,
       });
       Object.defineProperty(event, "fromHud", { value: true });
       document.dispatchEvent(event);
-    }}
-  >
-    {iconType === "svg" && icon && (
-      <div
-        style={{
-          color: getLocalPlayer()?.color,
-          transform: iconScale ? `scale(${iconScale})` : undefined,
-        }}
-        dangerouslySetInnerHTML={{
-          __html: icon,
-        }}
-      >
-      </div>
-    )}
-    {binding?.length && (
-      <div>{binding.map((b) => b.replace("Key", "")).join("")}</div>
-    )}
-  </div>
-);
+    }
+
+    for (const code of binding.toReversed()) {
+      const event = new KeyboardEvent("keyup", {
+        code,
+        bubbles: true,
+        cancelable: true,
+      });
+      Object.defineProperty(event, "fromHud", { value: true });
+      document.dispatchEvent(event);
+    }
+  };
+
+  return (
+    <div
+      className="command"
+      onClick={handleClick}
+      {...tooltipContainerProps}
+    >
+      {iconType === "svg" && icon && (
+        <SvgIcon
+          icon={icon}
+          color={getLocalPlayer()?.color}
+          scale={iconScale}
+        />
+      )}
+      {binding?.length && (
+        <div>{binding.map((b) => b.replace("Key", "")).join("")}</div>
+      )}
+      {tooltip}
+    </div>
+  );
+};
 
 const iconMap: Record<string, string> = {
-  destroyLastFarm: svgs.collision,
-  hold: svgs.suspend,
+  destroyLastFarm: "collision",
+  hold: "suspend",
 };
 
 const Action = ({ action }: { action: UnitDataAction }) => {
   if (action.type === "build") {
     return (
       <Command
+        name={action.name}
         iconType="svg"
-        icon={svgs[
-          unitData[action.unitType]?.model ?? action.unitType
-        ]}
+        icon={unitData[action.unitType]?.model ?? action.unitType}
         iconScale={unitData[action.unitType]?.modelScale}
         binding={action.binding}
       />
@@ -81,6 +98,7 @@ const Action = ({ action }: { action: UnitDataAction }) => {
   if (action.type === "auto") {
     return (
       <Command
+        name={action.name}
         iconType="svg"
         icon={iconMap[action.order]}
         binding={action.binding}

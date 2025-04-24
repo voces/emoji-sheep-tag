@@ -91,9 +91,21 @@ mouse.addEventListener("mouseButtonDown", (e) => {
     document.activeElement !== e.element
   ) document.activeElement.blur();
 
-  if (e.element instanceof HTMLElement && e.element.id !== "ui") {
+  if (
+    (e.element instanceof HTMLElement || e.element instanceof SVGElement) &&
+    e.element.id !== "ui"
+  ) {
     e.element.focus();
-    e.element.click();
+    if ("click" in e.element) e.element.click();
+    else {
+      e.element.dispatchEvent(
+        new MouseEvent("click", {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
     return;
   }
 
@@ -159,6 +171,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 });
 
 let hover: Element | null = null;
+let hovers: Element[] = [];
 mouse.addEventListener("mouseMove", (e) => {
   if (blueprint) {
     const builder = getBuilderFromBlueprint();
@@ -178,10 +191,30 @@ mouse.addEventListener("mouseMove", (e) => {
   }
 
   if (hover !== e.element) {
-    hover?.classList.remove("hover");
-    e.element?.classList.add("hover");
+    hover?.dispatchEvent(
+      new MouseEvent("mouseout", {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    e.element?.dispatchEvent(
+      new MouseEvent("mouseover", {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
     hover = e.element;
   }
+
+  for (const el of hovers) {
+    if (!e.elements.includes(el)) el?.classList.remove("hover");
+  }
+  for (const el of e.elements) {
+    if (!hovers.includes(el)) el.classList.add("hover");
+  }
+  hovers = e.elements;
 
   updateCursor(true);
 });

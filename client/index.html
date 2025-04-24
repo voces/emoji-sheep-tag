@@ -264,6 +264,18 @@
       pointer-events: auto;
     }
 
+    .tooltip {
+      position: fixed;
+      background-color: var(--color-background);
+      box-shadow: var(--color-shadow) 1px 1px 4px 1px;
+      padding: 16px;
+      transform: translate(-50%, -100%);
+      padding: 4px 8px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
     @keyframes fadeOut {
       to {
         opacity: 0;
