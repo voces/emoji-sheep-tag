@@ -21,7 +21,7 @@ const debounce = <T extends (...args: any[]) => Promise<any>>(
     });
 };
 
-const debouncedBuild = debounce(() => build().catch(console.error), 25);
+const debouncedBuild = debounce(() => build("dev").catch(console.error), 25);
 
 await debouncedBuild();
 console.log("Waiting for changes...");

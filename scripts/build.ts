@@ -53,7 +53,7 @@ export const assetCopyPlugin = {
 
 const decoder = new TextDecoder();
 
-export const build = async () => {
+export const build = async (env: "dev" | "prod") => {
   const start = performance.now();
 
   const dom = new jsdom.JSDOM(
@@ -74,7 +74,7 @@ export const build = async () => {
     format: "esm",
     entryPoints: ["client/index.ts", "server/local.ts"],
     write: false,
-    sourcemap: "inline",
+    sourcemap: env === "dev" ? "inline" : false,
     plugins: [
       assetInlinePlugin,
       assetCopyPlugin,
@@ -85,6 +85,12 @@ export const build = async () => {
     jsxFragment: "React.Fragment",
     jsxImportSource: "npm:react",
     outdir: "dist",
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(
+        env === "dev" ? "development" : "production",
+      ),
+    },
+    minify: env === "dev" ? false : true,
   })).outputFiles;
 
   main.textContent = decoder.decode(files[0].contents);
@@ -97,4 +103,4 @@ export const build = async () => {
   console.log("Built in", Math.round(performance.now() - start), "ms!");
 };
 
-if (import.meta.main) await build();
+if (import.meta.main) await build(Deno.args.includes("--dev") ? "dev" : "prod");

@@ -431,13 +431,17 @@ app.addSystem({
   },
 });
 
-globalThis.document.body.addEventListener("click", async (e) => {
-  if (!document.pointerLockElement) {
-    await globalThis.document.body.requestPointerLock({
-      unadjustedMovement: true,
-    });
-  }
-});
+for (const event of ["pointerdown", "keydown", "contextmenu"]) {
+  globalThis.document.body.addEventListener(event, async () => {
+    if (!document.pointerLockElement) {
+      try {
+        await globalThis.document.body.requestPointerLock({
+          unadjustedMovement: true,
+        });
+      } catch {}
+    }
+  });
+}
 
 const shortcutOverrides = (
   e: SystemEntity<Entity, "unitType" | "actions">,
