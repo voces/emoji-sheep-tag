@@ -5,7 +5,8 @@ import { endRound, send } from "../lobbyApi.ts";
 import { data } from "./data.ts";
 
 onInit((game) => {
-  game.addEventListener("unitDeath", ({ unit, killer }) => {
+  // TODO: consume `killer` to add stats?
+  game.addEventListener("unitDeath", ({ unit }) => {
     if (unit.unitType !== "sheep") return;
     if (!data.sheep.some((p) => (p.sheep?.health ?? 0) > 0)) {
       endRound();

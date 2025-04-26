@@ -36,7 +36,7 @@ app.addSystem({
     target = e.action.path[0];
 
     if (e.turnSpeed) {
-      let facing = e.facing ?? Math.PI * 3 / 2;
+      const facing = e.facing ?? Math.PI * 3 / 2;
       const targetAngle = Math.atan2(
         target.y - e.position.y,
         target.x - e.position.x,

@@ -44,6 +44,8 @@ export const svgs: Record<string, string> = {
   collision,
   flowers,
   grass,
+  circle,
+  gravity,
   suspend,
   hinduTemple,
 };
@@ -52,14 +54,14 @@ const collections: Record<string, InstancedGroup | undefined> = {
   sheep: loadSvg(sheep, 1),
   wolf: loadSvg(wolf, 2),
   hut: loadSvg(hut, 2),
-  fence: loadSvg(fence, 0.07, { layer: 2, zIndex: -0.004 }),
+  fence: loadSvg(fence, 0.07, { layer: 2 }),
   fire: loadSvg(fire, 1, { layer: 2 }),
-  claw: loadSvg(claw, 0.05, { layer: 2, zIndex: 0.25 }),
-  collision: loadSvg(collision, 2, { layer: 2, zIndex: -0.001 }),
-  flowers: loadSvg(flowers, 0.25, { layer: 2, zIndex: -0.002 }),
-  grass: loadSvg(grass, 0.75, { layer: 2, zIndex: -0.003 }),
-  circle: loadSvg(circle, 0.08, { layer: 2, zIndex: 0.26 }),
-  gravity: loadSvg(gravity, 2, { layer: 2, zIndex: 0.26 }),
+  claw: loadSvg(claw, 0.05, { layer: 2 }),
+  collision: loadSvg(collision, 2, { layer: 2 }),
+  flowers: loadSvg(flowers, 0.25, { layer: 2 }),
+  grass: loadSvg(grass, 0.75, { layer: 2 }),
+  circle: loadSvg(circle, 0.08, { layer: 2 }),
+  gravity: loadSvg(gravity, 2, { layer: 2 }),
   hinduTemple: loadSvg(hinduTemple, 1.75),
 };
 Object.assign(globalThis, { collections });
@@ -77,15 +79,20 @@ const updateColor = (e: Entity) => {
     playersVar().find((p) => p.id === e.owner)?.color;
   if (!hex) return;
   color.set(hex);
-  if (typeof e.blueprint === "number") {
-    temp.setHex(e.blueprint);
-    color2.set(color);
-    color2.lerp(white, 0.8);
-    color2.lerp(temp, 0.6);
-    collection.setVertexColorAt(e.id, color2);
-    collection.setPlayerColorAt(e.id, color, false);
-  } else {
-    collection.setPlayerColorAt(e.id, color);
+  if (e.owner || e.playerColor) {
+    if (typeof e.blueprint === "number") {
+      temp.setHex(e.blueprint);
+      color2.set(color);
+      color2.lerp(white, 0.8);
+      color2.lerp(temp, 0.6);
+      collection.setVertexColorAt(e.id, color2, { alpha: 0.75 });
+      collection.setPlayerColorAt(e.id, color, { overrideVertex: false });
+    } else {
+      collection.setPlayerColorAt(e.id, color, {
+        alpha: typeof e.progress === "number" ? e.progress : undefined,
+        progressiveAlpha: typeof e.progress === "number",
+      });
+    }
   }
 };
 
@@ -97,7 +104,7 @@ app.addSystem({
 
 app.addSystem({
   props: ["blueprint"],
-  onChange: (e) => e.unitType && e.owner && updateColor(e),
+  onChange: updateColor,
 });
 
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
@@ -185,4 +192,30 @@ app.addSystem({
   props: ["unitType", "modelScale"],
   onAdd: updateScale,
   onChange: updateScale,
+});
+
+app.addSystem({
+  props: ["progress", "completionTime"],
+  updateEntity: (e, delta) => {
+    if (e.progress + delta >= 1) {
+      return delete (e as Entity).progress;
+    }
+    e.progress += delta / e.completionTime;
+  },
+});
+
+const updateAlpha = (e: Entity) => {
+  const collection = collections[e.model ?? e.unitType ?? ""];
+  if (!collection) return;
+  collection.setAlphaAt(
+    e.id,
+    typeof e.progress === "number" ? e.progress : 1,
+    typeof e.progress === "number",
+  );
+};
+app.addSystem({
+  props: ["progress"],
+  onAdd: updateAlpha,
+  onChange: updateAlpha,
+  onRemove: updateAlpha,
 });

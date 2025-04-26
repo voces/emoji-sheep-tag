@@ -18,7 +18,7 @@ app.addSystem({
   },
   onRemove: (e) =>
     indicators.delete(e as SystemEntity<Entity, "unitType" | "modelScale">),
-  update: (delta, time) => {
+  update: (_, time) => {
     for (const [indicator, { birth, initialScale }] of indicators) {
       const next = initialScale - (time * 3 - birth * 3) ** 2;
       if (next < 0.01) app.removeEntity(indicator);

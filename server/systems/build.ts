@@ -21,7 +21,7 @@ onInit((game) => {
 
       // Face build target
       if (e.turnSpeed) {
-        let facing = e.facing ?? Math.PI * 3 / 2;
+        const facing = e.facing ?? Math.PI * 3 / 2;
         const targetAngle = Math.atan2(
           e.action.y - e.position.y,
           e.action.x - e.position.x,
@@ -45,6 +45,16 @@ onInit((game) => {
       // Can either work?
       (e as Entity).action = null;
       delete (e as Entity).isBuilding;
+    },
+  });
+
+  game.addSystem({
+    props: ["progress", "completionTime"],
+    updateEntity: (e, delta) => {
+      if (e.progress + delta >= 1) {
+        return delete (e as Entity).progress;
+      }
+      e.progress += delta / e.completionTime;
     },
   });
 });

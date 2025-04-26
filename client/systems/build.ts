@@ -8,7 +8,7 @@ app.addSystem({
 
     // Face build target
     if (e.turnSpeed) {
-      let facing = e.facing ?? Math.PI * 3 / 2;
+      const facing = e.facing ?? Math.PI * 3 / 2;
       const targetAngle = Math.atan2(
         e.action.y - e.position.y,
         e.action.x - e.position.x,

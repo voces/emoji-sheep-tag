@@ -62,7 +62,7 @@ export const addUnitMovementSystem = (app: App<Entity>) => {
         return;
       }
 
-      let targetEntity = typeof e.action.target === "string"
+      const targetEntity = typeof e.action.target === "string"
         ? lookup(e.action.target)
         : { position: e.action.target };
 
@@ -96,7 +96,7 @@ export const addUnitMovementSystem = (app: App<Entity>) => {
         : target;
 
       if (e.turnSpeed) {
-        let facing = e.facing ?? Math.PI * 3 / 2;
+        const facing = e.facing ?? Math.PI * 3 / 2;
         const targetAngle = Math.atan2(
           facingTarget.y - e.position.y,
           facingTarget.x - e.position.x,

@@ -26,7 +26,7 @@ try {
     set: (value) => (debugging = value),
     get: () => debugging,
   });
-} catch (err) {
+} catch {
   /* do nothing */
 }
 
@@ -86,36 +86,6 @@ interface Cache {
 // 	arena.appendChild(div);
 // 	elems.push(div);
 // };
-
-const closestCardinalDirections = (angle: number): [x: number, y: number][] => {
-  // Normalize angle between 0 and 2 * PI
-  const TWO_PI = Math.PI * 2;
-  angle = angle % TWO_PI;
-  if (angle < 0) angle += TWO_PI; // Adjust if angle is negative
-
-  // Define the cardinal directions as vectors with corresponding angles
-  const directions: { vector: [x: number, y: number]; angle: number }[] = [
-    { vector: [1, 0], angle: 0 }, // right
-    { vector: [0, 1], angle: Math.PI / 2 }, // up
-    { vector: [-1, 0], angle: Math.PI }, // left
-    { vector: [0, -1], angle: (3 * Math.PI) / 2 }, // down
-  ];
-
-  // Calculate the angular difference for each direction
-  const differences = directions.map(({ vector, angle: dirAngle }) => {
-    const diff = Math.min(
-      Math.abs(angle - dirAngle),
-      TWO_PI - Math.abs(angle - dirAngle),
-    );
-    return { vector, diff };
-  });
-
-  // Sort directions by the smallest angular difference
-  differences.sort((a, b) => a.diff - b.diff);
-
-  // Return the sorted vectors
-  return differences.map((d) => d.vector);
-};
 
 export class PathingMap {
   readonly resolution: number;

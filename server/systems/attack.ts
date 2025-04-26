@@ -1,4 +1,3 @@
-import { date } from "npm:zod";
 import {
   angleDifference,
   distanceBetweenPoints,
@@ -27,7 +26,10 @@ export const addAttackSystem = (app: Game) => {
   let offset = -1;
   app.addSystem({
     props: ["isAttacking"],
-    update: () => offset = -1,
+    update: () => {
+      offset = -1;
+      counter++;
+    },
     updateEntity: (e, delta, time) => {
       offset++;
 
@@ -80,7 +82,10 @@ export const addAttackSystem = (app: Game) => {
           // Otherwise damage target
           if (target.health) {
             withDamageSource(e, () => {
-              target.health = Math.max(0, target.health! - e.attack!.damage);
+              target.health = Math.max(
+                0,
+                target.health! - e.attack!.damage * (target.progress ? 2 : 1),
+              );
             });
           }
         }
@@ -113,7 +118,7 @@ export const addAttackSystem = (app: Game) => {
 
       // Face target
       if (e.turnSpeed) {
-        let facing = e.facing ?? Math.PI * 3 / 2;
+        const facing = e.facing ?? Math.PI * 3 / 2;
         const targetAngle = Math.atan2(
           target.position.y - e.position.y,
           target.position.x - e.position.x,

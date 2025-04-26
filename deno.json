@@ -5,7 +5,7 @@
   "imports": {
     "typed-event-target": "https://deno.land/x/typescript_event_target@v1.0.5/mod.ts",
     "three": "https://esm.sh/three@0.166.1&pin=v135",
-    "three/SVGLoader.d.ts": "https://esm.sh/v135/@types/three@0.166.0/examples/jsm/loaders/SVGLoader.d.ts&pin=v135",
+    "three/SVGLoader.d.ts": "https://esm.sh/v135/@types/three@0.166.0/examples/jsm/loaders/SVGLoader.d.ts",
     "three/SVGLoader": "https://esm.sh/three@0.166.1/addons/loaders/SVGLoader.js?pin=v135",
     "jsdom": "https://esm.sh/jsdom@24.1.0&pin=v135",
     "react": "npm:react"

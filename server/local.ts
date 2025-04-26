@@ -1,4 +1,4 @@
-declare var self: SharedWorkerGlobalScope;
+declare const self: SharedWorkerGlobalScope;
 
 import { handleSocket } from "./client.ts";
 

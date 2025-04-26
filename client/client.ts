@@ -87,6 +87,8 @@ const zUpdate = z.object({
     damagePoint: z.number(),
     backswing: z.number(),
   }).optional(),
+  completionTime: z.number().optional(),
+  progress: z.number().nullable().optional(),
   isDoodad: z.boolean().nullable().optional(),
 
   swing: z.object({
@@ -428,7 +430,9 @@ export const send = (message: ClientToServerMessage) => {
   delay(() => {
     try {
       ws?.send(JSON.stringify(message));
-    } catch {}
+    } catch {
+      // do nothing
+    }
   });
 };
 

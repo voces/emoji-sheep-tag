@@ -14,8 +14,3 @@ import "./systems/kaboom.ts";
 import "./systems/indicators.ts";
 import "./systems/build.ts";
 import "./graphics/cursor.ts";
-
-globalThis.addEventListener("error", (e) => {
-  // Add non-interrupting error notifs
-  // alert(e.message);
-});

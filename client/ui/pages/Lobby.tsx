@@ -3,13 +3,7 @@ import { getLocalPlayer, Player, playersVar } from "../vars/players.ts";
 import { ColorPicker } from "../components/ColorPicker.tsx";
 import { send } from "../../client.ts";
 //@deno-types="npm:@types/react"
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { Fragment, useCallback, useLayoutEffect, useRef } from "react";
 import { roundsVar } from "../vars/rounds.ts";
 import { formatDuration } from "../util/formatDuration.ts";
 import { chatLogVar, chatValueVar } from "../vars/chat.ts";

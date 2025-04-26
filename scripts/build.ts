@@ -9,7 +9,7 @@ const assetInlinePlugin = {
   setup(build) {
     build.onResolve(
       { filter: /\.svg$/ },
-      async (args) => ({
+      (args) => ({
         path: relative(Deno.cwd(), join(args.resolveDir, args.path)),
         namespace: "asset-inline",
       }),

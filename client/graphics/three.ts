@@ -15,7 +15,7 @@ if (!canvas) throw new Error("Could not find canvas");
 export const scene = new Scene();
 export const camera = new PerspectiveCamera(
   75,
-  window.innerWidth / window.innerHeight,
+  globalThis.innerWidth / globalThis.innerHeight,
   0.1,
   1000,
 );
@@ -24,7 +24,7 @@ Object.assign(globalThis, { camera });
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(globalThis.devicePixelRatio);
 renderer.setClearColor(new Color(0x333333));
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 camera.position.z = 9;
@@ -71,8 +71,8 @@ const BASE_TAN = Math.tan((BASE_FOV * Math.PI) / 180 / 2);
 
 const resize = () => {
   // Get the new window dimensions
-  const newWidth = window.innerWidth;
-  const newHeight = window.innerHeight;
+  const newWidth = globalThis.innerWidth;
+  const newHeight = globalThis.innerHeight;
 
   // Compute the new half FOV in radians using the ratio of newHeight to BASE_HEIGHT
   const newFovHalfRad = Math.atan((newHeight / BASE_HEIGHT) * BASE_TAN);

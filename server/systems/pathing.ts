@@ -6,7 +6,6 @@ import { TargetEntity } from "../../shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
 import { tiles } from "../../shared/map.ts";
 import { isPathingEntity } from "../../shared/pathing/util.ts";
-import { mapContentType } from "https://jsr.io/@luca/esbuild-deno-loader/0.11.1/src/shared.ts";
 
 const pathingMaps = new WeakMap<App<Entity>, PathingMap>();
 

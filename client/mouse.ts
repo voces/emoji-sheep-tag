@@ -109,18 +109,18 @@ globalThis.addEventListener("pointermove", (event) => {
   if (document.pointerLockElement) {
     mouse.pixels.x = Math.max(
       8,
-      Math.min(mouse.pixels.x + event.movementX, window.innerWidth - 8),
+      Math.min(mouse.pixels.x + event.movementX, globalThis.innerWidth - 8),
     );
     mouse.pixels.y = Math.max(
       8,
-      Math.min(mouse.pixels.y + event.movementY, window.innerHeight - 8),
+      Math.min(mouse.pixels.y + event.movementY, globalThis.innerHeight - 8),
     );
   } else {
     mouse.pixels.x = event.clientX;
     mouse.pixels.y = event.clientY;
   }
-  mouse.percent.x = mouse.pixels.x / window.innerWidth;
-  mouse.percent.y = mouse.pixels.y / window.innerHeight;
+  mouse.percent.x = mouse.pixels.x / globalThis.innerWidth;
+  mouse.percent.y = mouse.pixels.y / globalThis.innerHeight;
   cameraSpace.x = mouse.percent.x * 2 - 1;
   cameraSpace.y = mouse.percent.y * -2 + 1;
 

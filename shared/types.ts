@@ -72,6 +72,8 @@ export type Entity = {
     /** Seconds between an attack starting and damage occurring */
     readonly damagePoint: number;
   };
+  completionTime?: number;
+  progress?: number | null;
   /** A doodad cannot be clicked */
   isDoodad?: boolean | null;
 

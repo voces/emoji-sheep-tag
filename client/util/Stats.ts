@@ -1,6 +1,7 @@
 const newPanel = (name: string, fg: string, bg: string) => {
-  let min = Infinity, max = 0, round = Math.round;
-  const PR = round(window.devicePixelRatio || 1);
+  let min = Infinity, max = 0;
+  const round = Math.round;
+  const PR = round(globalThis.devicePixelRatio || 1);
 
   const WIDTH = 80 * PR,
     HEIGHT = 48 * PR,
@@ -83,7 +84,7 @@ const newPanel = (name: string, fg: string, bg: string) => {
 const newStats = () => {
   let mode = 0;
 
-  let container = document.createElement("div");
+  const container = document.createElement("div");
   container.style.cssText =
     "position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:10000;width:80px";
   container.addEventListener("click", (event) => {
@@ -112,8 +113,8 @@ const newStats = () => {
 
   let beginTime = (performance || Date).now(), prevTime = beginTime, frames = 0;
 
-  let fpsPanel = addPanel(newPanel("FPS", "#0ff", "#002"));
-  let msPanel = addPanel(newPanel("MS", "#0f0", "#020"));
+  const fpsPanel = addPanel(newPanel("FPS", "#0ff", "#002"));
+  const msPanel = addPanel(newPanel("MS", "#0f0", "#020"));
   let memPanel: ReturnType<typeof newPanel> | undefined;
 
   if (self.performance && "memory" in self.performance) {
@@ -125,7 +126,7 @@ const newStats = () => {
   const end = () => {
     frames++;
 
-    var time = (performance || Date).now();
+    const time = (performance || Date).now();
 
     // msPanel.update(time - beginTime, 200);
 
@@ -136,7 +137,7 @@ const newStats = () => {
       frames = 0;
 
       if (memPanel) {
-        var memory = "memory" in performance ? performance.memory : undefined;
+        const memory = "memory" in performance ? performance.memory : undefined;
         memPanel.update(
           (memory as { usedJSHeapSize: number }).usedJSHeapSize / 1048576,
           (memory as { jsHeapSizeLimit: number }).jsHeapSizeLimit / 1048576,

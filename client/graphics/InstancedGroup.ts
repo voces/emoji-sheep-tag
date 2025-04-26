@@ -1,7 +1,9 @@
 import {
   Box3,
   Color,
+  DynamicDrawUsage,
   Group,
+  InstancedBufferAttribute,
   InstancedMesh,
   Intersection,
   Material,
@@ -10,10 +12,10 @@ import {
   Object3D,
   Ray,
   Raycaster,
+  ShapeGeometry,
 } from "three";
 import { normalizeAngle } from "../../shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
-import { number } from "../../../.cache/deno/npm/registry.npmjs.org/@types/prop-types/15.7.12/index.d.ts";
 
 const dummy = new Object3D();
 const dummyColor = new Color();
@@ -32,22 +34,22 @@ export class InstancedGroup extends Group {
   private reverseMap: string[] = [];
   private innerCount: number;
   private bvh = new BVH();
-  private defaultZ: number;
 
-  constructor(
-    group: Group,
-    count: number = 1,
-    { defaultZ }: { defaultZ?: number } = {},
-  ) {
+  constructor(group: Group, count: number = 1, readonly svgName?: string) {
     super();
-    this.defaultZ = defaultZ ?? 0;
     this.innerCount = count;
     for (const child of group.children) {
       if (child instanceof Mesh) {
-        const mesh = new InstancedMesh(
-          child.geometry,
-          child.material,
-          count,
+        const mesh = new InstancedMesh(child.geometry, child.material, count);
+        const instanceAlphaAttr = new InstancedBufferAttribute(
+          new Float32Array(count),
+          1,
+        );
+        // instanceAlphaAttr.setUsage(DynamicDrawUsage);
+        instanceAlphaAttr.array.fill(1);
+        (child.geometry as ShapeGeometry).setAttribute(
+          "instanceAlpha",
+          instanceAlphaAttr,
         );
         this.children.push(mesh);
         mesh.layers.mask = this.layers.mask;
@@ -63,19 +65,30 @@ export class InstancedGroup extends Group {
       if (!(c instanceof InstancedMesh)) return c;
       const next = new InstancedMesh(c.geometry, c.material, value);
       next.layers.mask = this.layers.mask;
-      for (let i = 0; i < value; i++) {
-        next.instanceMatrix.copyArray(c.instanceMatrix.array);
-        dummy.matrix.setPosition(Infinity, Infinity, Infinity);
-        for (let n = this.innerCount; n < value; n++) {
-          next.setMatrixAt(n, dummy.matrix);
-        }
 
-        if (c.instanceColor) {
-          // Ensure it exists
-          next.setColorAt(0, new Color(0, 0, 0));
-          next.instanceColor!.copyArray(c.instanceColor.array);
-        }
+      next.instanceMatrix.copyArray(c.instanceMatrix.array);
+      dummy.matrix.setPosition(Infinity, Infinity, Infinity);
+      for (let n = this.innerCount; n < value; n++) {
+        next.setMatrixAt(n, dummy.matrix);
       }
+
+      if (c.instanceColor) {
+        // Ensure it exists
+        next.setColorAt(0, new Color(0, 0, 0));
+        next.instanceColor!.copyArray(c.instanceColor.array);
+      }
+
+      const geo = next.geometry as ShapeGeometry;
+      const oldAttrib = geo.getAttribute("instanceAlpha");
+      const newAttrib = new InstancedBufferAttribute(
+        new Float32Array(value),
+        1,
+      );
+      newAttrib.array.fill(1);
+      newAttrib.copyArray(oldAttrib.array);
+      newAttrib.setUsage(DynamicDrawUsage);
+      geo.setAttribute("instanceAlpha", newAttrib);
+
       return next;
     });
     for (let i = this.innerCount; i > value; i--) {
@@ -101,7 +114,7 @@ export class InstancedGroup extends Group {
     if (!(id in this.map)) return; // do nothing
     const index = this.map[id];
 
-    let swapIndex = this.reverseMap.length - 1;
+    const swapIndex = this.reverseMap.length - 1;
 
     if (swapIndex !== index) {
       const swapId = this.reverseMap[swapIndex];
@@ -203,10 +216,7 @@ export class InstancedGroup extends Group {
         dummy.position.set(
           x,
           y,
-          z ??
-            (Number.isFinite(dummy.position.z)
-              ? dummy.position.z
-              : this.defaultZ),
+          z ?? (Number.isFinite(dummy.position.z) ? dummy.position.z : 0),
         );
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);
@@ -236,9 +246,15 @@ export class InstancedGroup extends Group {
   setPlayerColorAt(
     index: number | string,
     color: Color,
-    overrideVertex = true,
+    { overrideVertex = true, alpha = 1, progressiveAlpha = false }: {
+      overrideVertex?: boolean;
+      alpha?: number;
+      /** Apply alpha element by element. */
+      progressiveAlpha?: boolean;
+    } = {},
   ) {
     if (typeof index === "string") index = this.getIndex(index);
+    const step = progressiveAlpha ? 1 / this.children.length : 1;
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
         if (hasPlayerColor(child.material)) {
@@ -248,16 +264,55 @@ export class InstancedGroup extends Group {
           child.setColorAt(index, white);
           if (child.instanceColor) child.instanceColor.needsUpdate = true;
         }
+        if (overrideVertex) {
+          const instanceAlphaAttr = (child.geometry as ShapeGeometry)
+            .getAttribute("instanceAlpha");
+          instanceAlphaAttr.setX(index, alpha > step ? 1 : alpha / step);
+          if (progressiveAlpha) alpha = Math.max(0, alpha - step);
+          instanceAlphaAttr.needsUpdate = true;
+        }
       }
     }
   }
 
-  setVertexColorAt(index: number | string, color: Color) {
+  setVertexColorAt(
+    index: number | string,
+    color: Color,
+    { alpha = 1, progressiveAlpha = false }: {
+      alpha?: number;
+      /** Apply alpha element by element. */
+      progressiveAlpha?: boolean;
+    } = {},
+  ) {
     if (typeof index === "string") index = this.getIndex(index);
+    const step = progressiveAlpha ? 1 / this.children.length : 1;
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
         child.setColorAt(index, color);
         if (child.instanceColor) child.instanceColor.needsUpdate = true;
+        const instanceAlphaAttr = (child.geometry as ShapeGeometry)
+          .getAttribute("instanceAlpha");
+        instanceAlphaAttr.setX(index, alpha > step ? 1 : alpha / step);
+        if (progressiveAlpha) alpha = Math.max(0, alpha - step);
+        instanceAlphaAttr.needsUpdate = true;
+      }
+    }
+  }
+
+  setAlphaAt(
+    index: number | string,
+    alpha: number,
+    progressiveAlpha = false,
+  ) {
+    if (typeof index === "string") index = this.getIndex(index);
+    const step = progressiveAlpha ? 1 / this.children.length : 1;
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh) {
+        const instanceAlphaAttr = (child.geometry as ShapeGeometry)
+          .getAttribute("instanceAlpha");
+        instanceAlphaAttr.setX(index, alpha > step ? 1 : alpha / step);
+        if (progressiveAlpha) alpha = Math.max(0, alpha - step);
+        instanceAlphaAttr.needsUpdate = true;
       }
     }
   }
@@ -280,6 +335,7 @@ export class InstancedGroup extends Group {
         child.computeBoundingSphere();
       }
     }
+    this.updateBvhInstance(index, dummy.matrix);
   }
 
   // Utility: compute the bounding box for a single instance index

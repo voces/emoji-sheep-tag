@@ -107,14 +107,14 @@ const startAmbient = () => {
   const sound = playSound("ambientBirds", { volume: 0.05, loop: true });
   sound.onEnded = () => void 0;
 
-  document.removeEventListener("click", startAmbient);
-  document.removeEventListener("keydown", startAmbient);
-  document.removeEventListener("touchstart", startAmbient);
+  for (const event of ["pointerdown", "keydown"]) {
+    document.removeEventListener(event, startAmbient);
+  }
 };
 
-document.addEventListener("click", startAmbient);
-document.addEventListener("keydown", startAmbient);
-document.addEventListener("touchstart", startAmbient);
+for (const event of ["pointerdown", "keydown"]) {
+  document.addEventListener(event, startAmbient);
+}
 
 const zSoundDetail = z.object({
   path: z.string(),

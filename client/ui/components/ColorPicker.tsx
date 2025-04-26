@@ -1,9 +1,9 @@
 import { styled } from "npm:styled-components";
 //@deno-types="npm:@types/react"
-import React, { useState } from "react";
+import { useState } from "react";
 import { colors } from "../../../shared/data.ts";
 
-const Wrapper = styled.div(({ theme }) => ({
+const Wrapper = styled.div({
   width: "1cap",
   height: "1cap",
   border: 0,
@@ -13,7 +13,7 @@ const Wrapper = styled.div(({ theme }) => ({
   "&.hover, &:hover": {
     boxShadow: "var(--color-shadow) 1px 1px 1px 2px",
   },
-}));
+});
 
 const PickerCard = styled.div({
   position: "absolute",

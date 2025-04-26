@@ -17,7 +17,8 @@ import {
   withPathingMap,
 } from "../systems/pathing.ts";
 import { unitData } from "../../shared/data.ts";
-import { facingWithin } from "../util/math.ts";
+
+const INITIAL_BUILDING_PROGRESS = 0.1;
 
 export const build = (builder: Entity, type: string, x: number, y: number) => {
   const app = currentApp();
@@ -25,7 +26,15 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
 
   const p = pathingMap();
 
-  const temp = tempUnit(builder.owner!, type, x, y);
+  const temp = tempUnit(
+    builder.owner!,
+    type,
+    x,
+    y,
+    unitData[type].completionTime
+      ? { progress: INITIAL_BUILDING_PROGRESS }
+      : undefined,
+  );
   if (!isPathingEntity(temp)) {
     return p.withoutEntity(builder, () => app.addEntity(temp));
   }
@@ -71,9 +80,6 @@ export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
     type: "walk",
     target: "x" in target ? target : path.at(-1)!,
     path,
-    // distanceFromTarget: typeof target === "string"
-    //   ? mover.attack?.range
-    //   : undefined,
   };
 
   return true;

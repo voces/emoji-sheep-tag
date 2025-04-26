@@ -332,7 +332,7 @@ globalThis.addEventListener("keydown", (e) => {
       (unitData[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
     );
     blueprint = app.addEntity({
-      id: `blueprint-${blueprintIndex}`,
+      id: `blueprint-${blueprintIndex++}`,
       unitType: action.unitType,
       position: { x, y },
       owner: getLocalPlayer()?.id,
@@ -399,13 +399,13 @@ app.addSystem({
       (keyboard.ArrowRight && !skipKeyboard ? 1 : 0) +
       (document.pointerLockElement
         ? (mouse.pixels.x <= 12 ? -2 : 0) +
-          (window.innerWidth - mouse.pixels.x <= 12 ? 2 : 0)
+          (globalThis.innerWidth - mouse.pixels.x <= 12 ? 2 : 0)
         : 0);
     let y = (keyboard.ArrowDown && !skipKeyboard ? -1 : 0) +
       (keyboard.ArrowUp && !skipKeyboard ? 1 : 0) +
       (document.pointerLockElement
         ? (mouse.pixels.y <= 12 ? 2 : 0) +
-          (window.innerHeight - mouse.pixels.y <= 12 ? -2 : 0)
+          (globalThis.innerHeight - mouse.pixels.y <= 12 ? -2 : 0)
         : 0);
     const panDuration = typeof startPan === "number" ? (time - startPan) : 0;
     if (x) {
@@ -467,6 +467,6 @@ const unitsWithActions = app.addSystem({
   onAdd: shortcutOverrides,
   onChange: shortcutOverrides,
 });
-shortcutsVar.subscribe((v) => {
+shortcutsVar.subscribe(() => {
   for (const e of unitsWithActions.entities) shortcutOverrides(e);
 });

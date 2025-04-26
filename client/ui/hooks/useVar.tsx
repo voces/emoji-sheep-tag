@@ -16,7 +16,7 @@ export const makeVar = <
   initialValue: T,
 ): ReactiveVar<T> => {
   let value = initialValue;
-  let listeners: Set<(newValue: T, prevValue: T) => void> = new Set();
+  const listeners: Set<(newValue: T, prevValue: T) => void> = new Set();
 
   const subscribe = (callback: (newValue: T, prevValue: T) => void) => {
     listeners.add(callback);

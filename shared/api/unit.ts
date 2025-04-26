@@ -6,6 +6,7 @@ export const tempUnit = (
   type: string,
   x: number,
   y: number,
+  extra?: Partial<Entity>,
 ): Entity => ({
   id: "",
   unitType: type,
@@ -17,4 +18,5 @@ export const tempUnit = (
     : undefined),
   isIdle: true,
   ...unitData[type],
+  ...extra,
 });

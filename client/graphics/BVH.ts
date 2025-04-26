@@ -84,14 +84,12 @@ export class BVH {
       const bvh = this;
       const node: BVHNode = {
         set parent(value: number) {
-          const prevParent = parent;
           parent = value;
           const set = new Set<BVHNode>([this]);
           let cur = this;
           if (value === -1) return;
           while (cur.parent !== -1) {
-            let next = bvh.nodes[cur.parent];
-            if (set.has(next)) debugger;
+            const next = bvh.nodes[cur.parent];
             set.add(next);
             cur = next;
           }
@@ -218,10 +216,7 @@ export class BVH {
       return;
     }
     const parent = this.nodes[leaf].parent;
-    if (parent === -1) {
-      debugger;
-      return;
-    }
+    if (parent === -1) return;
     const grandParent = this.nodes[parent].parent;
     let sibling: number;
     if (this.nodes[parent].left === leaf) {

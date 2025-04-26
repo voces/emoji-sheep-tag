@@ -10,6 +10,7 @@ export type Entity = CommonEntity & {
   blueprint?: number;
   zIndex?: number;
   playerColor?: string;
+  isKaboom?: boolean;
 };
 
 class EntityCreatedEvent extends Event {
@@ -28,10 +29,13 @@ class GameTarget extends TypedEventTarget<LocalGameEvents & GameEvents> {
   }
 }
 
+// let counter = 0;
 export const app = newApp<Entity>(
   new GameTarget(
     (entity) => {
       if (!entity.id) throw new Error("Expected entity to have an id");
+      // Newest entity on top; works with 2D graphics
+      // entity.zIndex ??= counter++ / 100000;
       const proxy = new Proxy(entity as Entity, {
         set: (target, prop, value) => {
           if ((target as any)[prop] === value) return true;
