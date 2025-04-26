@@ -205,6 +205,7 @@ app.addSystem({
 });
 
 const updateAlpha = (e: Entity) => {
+  if (!app.entities.has(e)) return;
   const collection = collections[e.model ?? e.unitType ?? ""];
   if (!collection) return;
   collection.setAlphaAt(
