@@ -1,5 +1,6 @@
 import { z } from "npm:zod";
 import { setServer } from "./client.ts";
+import { app } from "./ecs.ts";
 
 let worker: SharedWorker | undefined;
 

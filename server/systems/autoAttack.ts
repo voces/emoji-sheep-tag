@@ -25,7 +25,7 @@ onInit((game) => {
 
   let counter = 0;
   const sys = game.addSystem({
-    props: ["isIdle", "attack", "position"],
+    props: ["attack", "position"],
     onAdd: (e) => idleCheck(e),
     update: () => {
       let offset = -1;

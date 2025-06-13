@@ -27,7 +27,7 @@ export const tiles = `
                            
                            
 `.slice(1, -1).split("\n").map((r) =>
-  r.split("").map((v) => parseInt(v ?? "0"))
+  r.split("").map((v) => parseInt(v === " " ? "0" : v))
 );
 
 export const center = {

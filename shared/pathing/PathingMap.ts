@@ -698,7 +698,7 @@ export class PathingMap {
     const removedMovingEntities = new Set<PathingEntity>();
     if (removeMovingEntities) {
       for (const entity of this.entities.keys()) {
-        if (!entity.isMoving) continue;
+        if (entity.action?.type !== "walk") continue;
         removedMovingEntities.add(entity);
         this.removeEntity(entity);
       }
@@ -808,7 +808,17 @@ export class PathingMap {
         Math.round((y - offset) * this.resolution)
       ][Math.round((x - offset) * this.resolution)];
       // TODO: This is unbounded and does not scale!
-      while (h(targetReal, tile) < distanceFromTarget) {
+      while (
+        "position" in target
+          ? distanceBetweenEntities({
+                ...entity,
+                position: {
+                  x: this.xTileToWorld(tile.x),
+                  y: this.yTileToWorld(tile.y),
+                },
+              }, target) * this.resolution < distanceFromTarget
+          : h(targetReal, tile) < distanceFromTarget
+      ) {
         if (cache._pathable(minimalTilemap, tile.x, tile.y)) {
           endHeap.push(tile);
           tile.__endTag = endTag;

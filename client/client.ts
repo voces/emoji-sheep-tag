@@ -1,5 +1,5 @@
 import z from "npm:zod";
-import { playersVar } from "./ui/vars/players.ts";
+import { getPlayer, playersVar } from "./ui/vars/players.ts";
 import { connectionStatusVar, stateVar } from "./ui/vars/state.ts";
 import { app, Entity } from "./ecs.ts";
 import { type ClientToServerMessage } from "../server/client.ts";
@@ -12,6 +12,7 @@ import { data } from "./data.ts";
 import { addChatMessage } from "./ui/vars/chat.ts";
 import { roundsVar } from "./ui/vars/rounds.ts";
 import { formatVar } from "./ui/vars/format.ts";
+import { format } from "./api/player.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -92,17 +93,11 @@ const zUpdate = z.object({
   isDoodad: z.boolean().nullable().optional(),
 
   swing: z.object({
-    time: z.number(),
+    remaining: z.number(),
     source: z.object({ x: z.number(), y: z.number() }),
     target: z.object({ x: z.number(), y: z.number() }),
   }).nullable().optional(),
-  lastAttack: z.number().optional(),
-
-  // Tags
-  isMoving: z.boolean().nullable().optional(),
-  isAttacking: z.boolean().nullable().optional(),
-  isBuilding: z.boolean().nullable().optional(),
-  isIdle: z.boolean().nullable().optional(),
+  attackCooldownRemaining: z.number().nullable().optional(),
 
   // Pathing
   radius: z.number().optional(),
@@ -134,11 +129,23 @@ const zDelete = z.object({
   id: z.string(),
 });
 
+const zKill = z.object({
+  type: z.literal("kill"),
+  killer: z.object({ player: z.string(), unit: z.string() }),
+  victim: z.object({ player: z.string(), unit: z.string() }),
+});
+
+const zGameMessage = zKill;
+
+export type GameMessage = z.TypeOf<typeof zGameMessage>;
+
 // Events that come down from a loo
 const zUpdates = z.object({
   type: z.literal("updates"),
-  updates: z.union([zUpdate, zDelete]).array(),
+  updates: z.union([zUpdate, zDelete, zKill]).array(),
 });
+
+export type Update = z.TypeOf<typeof zUpdates>["updates"][number];
 
 const zColorChange = z.object({
   type: z.literal("colorChange"),
@@ -252,13 +259,16 @@ const handlers = {
   join: (data: z.TypeOf<typeof zJoin>) => {
     const prevPlayers = playersVar();
     const newPlayers = data.players.filter((p) =>
-      prevPlayers.some((p2) => p2.id !== p.id)
+      !prevPlayers.some((p2) => p2.id === p.id) && !p.local
     );
     playersVar((prev) =>
       data.players.length !== 1 || data.players.some((p) => p.local)
+        // Fully set players if we receive multiple or it includes local
         ? data.players
         : prev.some((p) => p.id === data.players[0].id)
+        // Use previous players if we receive 1 player and they are already known
         ? prev
+        // Otherwise append the one new player
         : [...prev, data.players[0]]
     );
     formatVar(data.format);
@@ -274,7 +284,7 @@ const handlers = {
       for (const entity of app.entities) app.removeEntity(entity);
     }
     for (const update of data.updates) {
-      const { type, ...props } = update;
+      const { type: _type, ...props } = update;
       if (update.id in map) Object.assign(map[update.id], props);
       else map[update.id] = app.addEntity(props);
     }
@@ -345,14 +355,29 @@ const handlers = {
   },
   updates: (data: z.TypeOf<typeof zUpdates>) => {
     for (const update of data.updates) {
-      if (update.type === "unit") {
-        const { type, ...props } = update;
-        if (update.id in map) Object.assign(map[update.id], props);
-        else map[update.id] = app.addEntity(props);
-      } else if (update.type === "delete") {
-        if (update.id in map) {
-          app.removeEntity(map[update.id]);
-          delete map[update.id];
+      switch (update.type) {
+        case "unit": {
+          if (stateVar() !== "playing") break;
+          const { type: _type, ...props } = update;
+          if (update.id in map) Object.assign(map[update.id], props);
+          else map[update.id] = app.addEntity(props);
+          break;
+        }
+        case "delete": {
+          if (stateVar() !== "playing") break;
+          if (update.id in map) {
+            app.removeEntity(map[update.id]);
+            delete map[update.id];
+          }
+          break;
+        }
+        case "kill": {
+          const killer = getPlayer(update.killer.player);
+          const victim = getPlayer(update.victim.player);
+          if (killer && victim) {
+            addChatMessage(`${format(killer)} killed ${format(victim)}`);
+          }
+          break;
         }
       }
     }
@@ -364,7 +389,7 @@ const handlers = {
         !p.host && data.host === p.id ? { ...p, host: true } : p
       )
     );
-    if (p) addChatMessage(`|c${p.color}|${p.name}| has left the game!`);
+    if (p) addChatMessage(`${format(p)} has left the game!`);
     formatVar(data.format);
   },
   pong: ({ data }: z.TypeOf<typeof zPong>) => {
@@ -411,13 +436,14 @@ export const connect = () => {
       data = zMessage.parse(json);
     } catch (err) {
       if (err instanceof z.ZodError) {
+        console.error(json);
         console.error(...err.issues);
       }
       throw err;
     }
     // console.log(data);
 
-    delay(() => handlers[data.type](data as any));
+    delay(() => handlers[data.type](data as never));
   });
 };
 

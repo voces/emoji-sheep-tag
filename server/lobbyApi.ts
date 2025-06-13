@@ -2,7 +2,6 @@ import { ServerToClientMessage } from "../client/client.ts";
 import { Client } from "./client.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { deleteLobby } from "./lobby.ts";
-import { clearUpdates } from "./updates.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 
 export const endRound = (canceled = false) => {
@@ -13,7 +12,6 @@ export const endRound = (canceled = false) => {
   // Don't want to clear the round in middle of a cycle
   queueMicrotask(() => lobby.round = undefined);
   lobby.status = "lobby";
-  clearUpdates();
   const round = {
     sheep: Array.from(lobby.round.sheep, (p) => p.id),
     wolves: Array.from(lobby.round.wolves, (p) => p.id),

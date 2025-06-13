@@ -2,7 +2,7 @@ import { App } from "jsr:@verit/ecs";
 import { Entity } from "../../shared/types.ts";
 import { PathingMap } from "../../shared/pathing/PathingMap.ts";
 import { currentApp } from "../contexts.ts";
-import { TargetEntity } from "../../shared/pathing/types.ts";
+import { PathingEntity, TargetEntity } from "../../shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
 import { tiles } from "../../shared/map.ts";
 import { isPathingEntity } from "../../shared/pathing/util.ts";
@@ -41,7 +41,7 @@ export const calcPath = (
           ? Math.max(
             0,
             (distanceFromTarget ?? entity.attack?.range ?? 0) -
-              (targetEntity.isMoving
+              (targetEntity.action?.type === "walk"
                 ? (targetEntity.movementSpeed ?? 0) * 0.2
                 : 0),
           )
@@ -62,12 +62,7 @@ export const pathable = (
   target?: { x: number; y: number },
 ) => {
   if (!isPathingEntity(entity)) return false;
-  const pm = pathingMap();
-  // TODO: withoutEntity required?
-  return pm.withoutEntity(
-    entity,
-    () => pm.pathable(entity, target?.x, target?.y),
-  );
+  return pathingMap().pathable(entity, target?.x, target?.y);
 };
 
 export const nearestPathing = (
@@ -116,6 +111,6 @@ export const addPathingSystem = (app: App<Entity>) => {
       pathingMap.updateEntity(e);
       if (e.pathing) updatePathing(e);
     },
-    onRemove: (e) => pathingMap.removeEntity(e as any),
+    onRemove: (e) => pathingMap.removeEntity(e as PathingEntity),
   });
 };

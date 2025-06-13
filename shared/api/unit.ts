@@ -16,7 +16,6 @@ export const tempUnit = (
   ...(typeof unitData[type]?.maxHealth === "number"
     ? { health: unitData[type]?.maxHealth }
     : undefined),
-  isIdle: true,
   ...unitData[type],
   ...extra,
 });

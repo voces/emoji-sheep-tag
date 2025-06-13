@@ -18,6 +18,7 @@ import "./systems/autoAttack.ts";
 import "./systems/kd.ts";
 import "./systems/death.ts";
 import "./systems/build.ts";
+import "./systems/action.ts";
 import { generic, zGenericEvent } from "./actions/generic.ts";
 import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
@@ -25,14 +26,14 @@ import { cancel, zCancel } from "./actions/stop.ts";
 import "./actions/hold.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 
-type SocketEventMap = {
+export type SocketEventMap = {
   close: unknown;
   error: unknown;
   message: { data: unknown };
   open: unknown;
 };
 
-type Socket = {
+export type Socket = {
   readyState: number;
   send: (data: string) => void;
   close: () => void;
@@ -57,7 +58,7 @@ const wrap = <T extends (...args: any[]) => unknown>(
 };
 
 let clientIndex = 0;
-class Client {
+export class Client {
   id: string;
   name: string;
   color: string;
@@ -92,8 +93,8 @@ class Client {
     }
   }
 }
-type ClientInstance = InstanceType<typeof Client>;
-export type { ClientInstance as Client };
+// type ClientInstance = InstanceType<typeof Client>;
+// export type { ClientInstance as Client };
 
 const zClientToServerMessage = z.union([
   zStart,

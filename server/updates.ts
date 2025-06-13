@@ -1,3 +1,4 @@
+import { GameMessage, Update } from "../client/client.ts";
 import { Entity } from "../shared/types.ts";
 import { send } from "./lobbyApi.ts";
 
@@ -21,18 +22,22 @@ export const remove = (entityId: string) => {
   updates[entityId] = { __delete: true } as Partial<Entity>;
 };
 
+const messages: GameMessage[] = [];
+
+export const message = (message: GameMessage) => {
+  messages.push(message);
+};
+
 export const flushUpdates = () => {
-  const updatesArray = Object.entries(updates).map(([id, update]) =>
+  const updatesArray: Update[] = Object.entries(updates).map(([id, update]) =>
     "__delete" in update
-      ? ({ type: "delete" as const, id })
-      : ({ type: "unit" as const, id, ...update })
+      ? ({ type: "delete", id })
+      : ({ type: "unit", id, ...update })
   );
+  updatesArray.push(...messages);
   if (updatesArray.length) {
     send({ type: "updates", updates: updatesArray });
     updates = {};
+    messages.splice(0);
   }
-};
-
-export const clearUpdates = () => {
-  updates = {};
 };

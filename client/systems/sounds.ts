@@ -35,6 +35,6 @@ app.addSystem({
   props: ["swing"],
   onAdd: (e) =>
     e.position && playSoundAt("swipe1", e.position.x, e.position.y, 0.3),
-  onChange: (e) =>
-    e.position && playSoundAt("swipe1", e.position.x, e.position.y, 0.3),
+  // onChange: (e) =>
+  //   e.position && playSoundAt("swipe1", e.position.x, e.position.y, 0.3),
 });

@@ -1,7 +1,7 @@
 import { SystemEntity } from "jsr:@verit/ecs";
 import { tempUnit } from "../../shared/api/unit.ts";
 import {
-  distanceBetweenEntities,
+  canSwing,
   distanceBetweenPoints,
   Point,
 } from "../../shared/pathing/math.ts";
@@ -91,25 +91,7 @@ export const orderAttack = (attacker: Entity, target: Entity): boolean => {
   if (!attacker.attack || !attacker.position || !target.position) return false;
 
   // If within attack range..
-  const d = distanceBetweenEntities(attacker, target);
-  if (d < attacker.attack.range) {
-    // Turn if needed (must be facing ±60°)
-    // This in theory isn't needed since the attack system does turning, but it
-    // does guarantee a tick cycle
-    // if (
-    //   attacker.turnSpeed &&
-    //   !facingWithin(attacker, target.position, Math.PI / 3)
-    // ) {
-    //   attacker.action = {
-    //     type: "walk",
-    //     target: target.id,
-    //     path: [attacker.position],
-    //     attacking: true,
-    //   };
-    //   attacker.queue = [{ type: "attack", target: target.id }];
-    //   return true;
-    // }
-
+  if (canSwing(attacker, target)) {
     // Otherwise attack immediately
     delete attacker.queue;
     attacker.action = { type: "attack", target: target.id };
@@ -126,7 +108,13 @@ export const orderAttack = (attacker: Entity, target: Entity): boolean => {
       path.at(-1)?.y === attacker.position.y)
   ) return false;
 
-  attacker.action = { type: "walk", target: target.id, path, attacking: true };
+  attacker.action = {
+    type: "walk",
+    target: target.id,
+    path,
+    attacking: true,
+    // distanceFromTarget: attacker.attack.range,
+  };
   attacker.queue = [{ type: "attack", target: target.id }];
   return true;
 };
@@ -185,6 +173,7 @@ export const orderBuild = (
   const path = calcPath(builder, { x, y }, {
     distanceFromTarget: buildDistance,
   }).slice(1);
+
   if (!path.length) return false;
 
   builder.action = {

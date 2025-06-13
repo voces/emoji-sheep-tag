@@ -44,10 +44,7 @@ export const makeVar = <
 export const useReactiveVar = <T,>(reactiveVar: ReactiveVar<T>): T => {
   const [value, setValue] = useState(reactiveVar());
 
-  useEffect(
-    () => reactiveVar.subscribe((newValue) => setValue(newValue)),
-    [],
-  );
+  useEffect(() => reactiveVar.subscribe(setValue), []);
 
   return value;
 };

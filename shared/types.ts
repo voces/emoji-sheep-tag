@@ -1,17 +1,19 @@
 import { Footprint, Pathing } from "./pathing/types.ts";
 
+export type WalkAction = {
+  readonly type: "walk";
+  readonly target: string | { x: number; y: number };
+  readonly path: { x: number; y: number }[];
+  readonly distanceFromTarget?: number;
+  /**
+   * If `target` is a string, will stop walking once in range. If `target` is
+   * a position, will attack nearby enemies.
+   */
+  readonly attacking?: boolean;
+};
+
 type Action = Readonly<
-  {
-    readonly type: "walk";
-    readonly target: string | { x: number; y: number };
-    readonly path: { x: number; y: number }[];
-    readonly distanceFromTarget?: number;
-    /**
-     * If `target` is a string, will stop walking once in range. If `target` is
-     * a position, will attack nearby enemies.
-     */
-    readonly attacking?: boolean;
-  } | {
+  WalkAction | {
     readonly type: "build";
     readonly unitType: string;
     readonly x: number;
@@ -79,17 +81,11 @@ export type Entity = {
 
   // Attacking
   swing?: {
-    readonly time: number;
+    readonly remaining: number;
     readonly source: { readonly x: number; readonly y: number };
     readonly target: { readonly x: number; readonly y: number };
   } | null;
-  lastAttack?: number;
-
-  // Tags
-  isMoving?: boolean | null;
-  isAttacking?: boolean | null;
-  isBuilding?: boolean | null;
-  isIdle?: boolean | null;
+  attackCooldownRemaining?: number | null;
 
   // Pathing
   radius?: number;

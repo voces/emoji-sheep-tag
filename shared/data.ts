@@ -82,8 +82,9 @@ export const unitData: Record<
     pathing: 1,
     attack: {
       damage: 70,
-      range: 0.32, // roughly minimum to hit via corner
-      rangeMotionBuffer: 0.92,
+      // TODO: check range for wolf attacking sheep via corner
+      range: 0.09, // Sheep between two huts is 0.25; this gives a bit of wiggle
+      rangeMotionBuffer: 0.93,
       cooldown: 1.2,
       backswing: 0.15,
       damagePoint: 0.3,

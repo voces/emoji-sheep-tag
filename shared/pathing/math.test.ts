@@ -17,7 +17,35 @@ Deno.test("distanceBetweenEntities > unit & unit", () => {
         position: { x: 1, y: 1 },
       },
     ),
-    Math.SQRT2 - 0.75,
+    Math.sqrt(0.25 ** 2 * 2),
+  );
+
+  assertEquals(
+    distanceBetweenEntities(
+      sheep,
+      {
+        id: "wolf-1",
+        radius: 0.5,
+        position: { x: 1, y: 0 },
+      },
+    ),
+    0.25,
+  );
+
+  assertEquals(
+    distanceBetweenEntities(
+      { id: "sheep-1", radius: 0.25, position: { x: 1, y: 1 } },
+      { id: "wolf-1", radius: 0.5, position: { x: 1, y: 1 + 1 } },
+    ),
+    0.25,
+  );
+
+  assertEquals(
+    distanceBetweenEntities(
+      { id: "sheep-1", radius: 0.25, position: { x: 1, y: 1 } },
+      { id: "wolf-1", radius: 0.5, position: { x: 1 + 1, y: 1 } },
+    ),
+    0.25,
   );
 });
 
@@ -50,7 +78,7 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
       tilemap: microHutTilemap,
       position: { x: 2, y: 0 },
     }),
-    1.5,
+    Math.sqrt(1.625 ** 2 + 0.125 ** 2),
   );
 
   assertEquals(
@@ -59,7 +87,7 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
       tilemap: microHutTilemap,
       position: { x: -2, y: 0 },
     }),
-    1.5,
+    Math.sqrt(1.625 ** 2 + 0.125 ** 2),
   );
 
   assertEquals(
@@ -68,7 +96,7 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
       tilemap: tinyHutTilemap,
       position: { x: 2, y: 0 },
     }),
-    1.25,
+    1.5,
   );
 
   assertEquals(
@@ -77,7 +105,7 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
       tilemap: tinyHutTilemap,
       position: { x: -2, y: 0 },
     }),
-    1.25,
+    1.5,
   );
 
   assertEquals(
@@ -86,7 +114,7 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
       tilemap: tinyHutTilemap,
       position: { x: 1.5, y: 1.5 },
     }),
-    Math.SQRT2 - 0.25,
+    Math.SQRT2,
   );
 
   assertEquals(
@@ -99,7 +127,7 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
       tilemap: hutTilemap,
       position: { x: 23, y: 24.5 },
     }),
-    0.3938092025505249,
+    0.75,
   );
 });
 

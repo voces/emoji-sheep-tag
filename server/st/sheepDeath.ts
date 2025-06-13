@@ -1,16 +1,22 @@
 import { start } from "../actions/start.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { onInit } from "../ecs.ts";
-import { endRound, send } from "../lobbyApi.ts";
+import { endRound } from "../lobbyApi.ts";
+import { message } from "../updates.ts";
 import { data } from "./data.ts";
 
 onInit((game) => {
-  // TODO: consume `killer` to add stats?
-  game.addEventListener("unitDeath", ({ unit }) => {
+  game.addEventListener("unitDeath", ({ unit, killer }) => {
     if (unit.unitType !== "sheep") return;
+    if (killer?.owner && unit.owner) {
+      message({
+        type: "kill",
+        killer: { player: killer.owner, unit: killer.id },
+        victim: { player: unit.owner, unit: unit.id },
+      });
+    }
     if (!data.sheep.some((p) => (p.sheep?.health ?? 0) > 0)) {
       endRound();
-      send({ type: "stop" });
 
       // Auto start
       const lobby = lobbyContext.context;

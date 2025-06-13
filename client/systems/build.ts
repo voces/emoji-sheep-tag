@@ -1,3 +1,4 @@
+import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../../shared/constants.ts";
 import { angleDifference, tweenAbsAngles } from "../../shared/pathing/math.ts";
 import { app } from "../ecs.ts";
 
@@ -8,7 +9,7 @@ app.addSystem({
 
     // Face build target
     if (e.turnSpeed) {
-      const facing = e.facing ?? Math.PI * 3 / 2;
+      const facing = e.facing ?? DEFAULT_FACING;
       const targetAngle = Math.atan2(
         e.action.y - e.position.y,
         e.action.x - e.position.x,
@@ -20,9 +21,8 @@ app.addSystem({
           ? targetAngle
           : tweenAbsAngles(facing, targetAngle, maxTurn);
       }
-      // Must be facing ±60°
-      if (diff > Math.PI / 3) {
-        delta = Math.max(0, delta - (diff - Math.PI / 3) / e.turnSpeed);
+      if (diff > MAX_ATTACK_ANGLE) {
+        delta = Math.max(0, delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed);
       }
     }
   },

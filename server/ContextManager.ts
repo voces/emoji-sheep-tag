@@ -34,7 +34,7 @@ export class ContextManager<Context extends object> {
     if (!this.currentContext) throw new Error("No context set");
     return this.currentContext;
   }
-  set context(newContext: Context) {
+  set context(newContext: Context | undefined) {
     this.currentContext = newContext;
   }
 

@@ -116,7 +116,7 @@ const onPositionOrRotationChange = (
   },
 ) => {
   const model = e.model ?? e.unitType;
-  if (e.isMoving) {
+  if (e.action?.type === "walk") {
     const prev = prevPositions.get(e);
     if (prev) {
       const delta =

@@ -30,7 +30,7 @@ export class Tile {
   __endParent?: Tile | null;
 
   /** Maps an entity to their pathing on this tile */
-  private entities: Map<PathingEntity, Pathing> = new Map();
+  entities: Map<PathingEntity, Pathing> = new Map();
 
   constructor(
     xTile: number,

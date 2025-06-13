@@ -1,5 +1,10 @@
 import { SystemEntity } from "jsr:@verit/ecs";
 import { Entity } from "../types.ts";
+import { facingWithin } from "../../server/util/math.ts";
+import { MAX_ATTACK_ANGLE } from "../constants.ts";
+import { PathingMap } from "./PathingMap.ts";
+import { tiles } from "../map.ts";
+import { Footprint } from "./types.ts";
 
 export type Point = { x: number; y: number };
 
@@ -93,110 +98,125 @@ export const distanceBetweenPoints = (a: Point, b: Point) =>
   ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
 
 type Unit = SystemEntity<Entity, "radius" | "position">;
-const isUnit = (entity: Entity): entity is Unit =>
-  typeof entity.radius === "number" && !!entity.position;
-
-type Structure = SystemEntity<Entity, "tilemap" | "position">;
-const isStructure = (entity: Entity): entity is Structure =>
-  !!entity.tilemap && !!entity.position;
 
 export const distanceBetweenEntities = (entityA: Entity, entityB: Entity) => {
-  if (isUnit(entityA) && isUnit(entityB)) {
-    return distanceBetweenUnits(entityA, entityB);
-  }
-  if (isUnit(entityA) && isStructure(entityB)) {
-    return distanceBetweenUnitAndStructure(entityA, entityB);
-  }
-  if (isStructure(entityA) && isUnit(entityB)) {
-    return distanceBetweenUnitAndStructure(entityB, entityA);
-  }
-  if (isStructure(entityA) && isStructure(entityB)) {
-    return distanceBetweenStructures(entityA, entityB);
-  }
-  if (entityA.position && entityB.position) {
-    return distanceBetweenPoints(entityA.position, entityB.position);
-  }
-  return Infinity;
-};
+  if (!entityA.position || !entityB.position) return Infinity;
 
-const distanceBetweenUnits = (unitA: Unit, unitB: Unit) => {
-  const dx = unitA.position.x - unitB.position.x;
-  const dy = unitA.position.y - unitB.position.y;
-  const centerDistance = Math.sqrt(dx * dx + dy * dy);
-  return Math.max(0, centerDistance - unitA.radius - unitB.radius);
-};
+  const aPoints = entityPoints(entityA);
+  if (!aPoints.length) return Infinity;
 
-const tileSize = 0.5; // Each tile represents 0.5 units in world space
+  const bPoints = entityPoints(entityB);
+  if (!bPoints.length) return Infinity;
 
-const distanceBetweenUnitAndStructure = (unit: Unit, structure: Structure) => {
-  let minDistance = Infinity;
-  const { width, height, left, top, map } = structure.tilemap;
-
-  // Calculate the origin (top-left corner) of the tilemap in world coordinates
-  const tilemapOriginX = structure.position.x + left * tileSize;
-  const tilemapOriginY = structure.position.y + top * tileSize;
-
-  for (let i = 0; i < width * height; i++) {
-    if (!map[i]) continue; // Only consider occupied tiles
-
-    const col = i % width;
-    const row = Math.floor(i / width);
-
-    // Calculate the tile's position in world coordinates
-    const tileMinX = tilemapOriginX + col * tileSize;
-    const tileMinY = tilemapOriginY + row * tileSize;
-    const tileMaxX = tileMinX + tileSize;
-    const tileMaxY = tileMinY + tileSize;
-
-    // Find the closest point on the tile to the unit's center
-    const closestX = Math.max(tileMinX, Math.min(unit.position.x, tileMaxX));
-    const closestY = Math.max(tileMinY, Math.min(unit.position.y, tileMaxY));
-
-    // Calculate the distance from the unit's center to this closest point
-    const dx = unit.position.x - closestX;
-    const dy = unit.position.y - closestY;
-    const distance = Math.sqrt(dx * dx + dy * dy) - unit.radius;
-
-    minDistance = Math.min(minDistance, distance);
-  }
-
-  // If the minimum distance is negative or zero, the unit and structure touch or overlap
-  return Math.max(0, minDistance);
-};
-
-const distanceBetweenStructures = (
-  structureA: Structure,
-  structureB: Structure,
-) => {
-  let minDistance = Infinity;
-  for (
-    let i = 0;
-    i < structureA.tilemap.width * structureA.tilemap.height;
-    i++
-  ) {
-    if (!structureA.tilemap.map[i]) continue;
-    const tileAx = structureA.position.x + (structureA.tilemap.left +
-          (i % structureA.tilemap.width)) / 2;
-    const tileAy = structureA.position.y + (structureA.tilemap.top +
-          Math.floor(i / structureA.tilemap.width)) / 2;
-    for (
-      let j = 0;
-      j < structureB.tilemap.width * structureB.tilemap.height;
-      j++
-    ) {
-      if (!structureB.tilemap.map[j]) continue;
-      const tileBx = structureB.position.x + (structureB.tilemap.left +
-            (j % structureB.tilemap.width)) / 2;
-      const tileBy = structureB.position.y + (structureB.tilemap.top +
-        Math.floor(j / structureB.tilemap.width) / 2);
-      const dx = tileAx - tileBx;
-      const dy = tileAy - tileBy;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      minDistance = Math.min(minDistance, distance);
+  let min = Infinity;
+  for (const a of aPoints) {
+    for (const b of bPoints) {
+      const d = ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
+      if (d < min) min = d;
     }
   }
 
-  return minDistance;
+  return min;
+};
+
+export const distanceToPoint = (entity: Entity, point: Point) => {
+  if (!entity.position) return Infinity;
+  const points = entityPoints(entity);
+  if (!points.length) return Infinity;
+
+  let min = Infinity;
+  for (const p of points) {
+    const d = ((p.x - point.x) ** 2 + (p.y - point.y) ** 2) ** 0.5;
+    if (d < min) min = d;
+  }
+
+  return min;
+};
+
+let pm: PathingMap;
+const unitToTilemap = (unit: Unit) => {
+  if (!pm) {
+    pm = new PathingMap({
+      resolution: 4,
+      pathing: tiles.reverse(),
+    });
+  }
+  return pm.pointToTilemap(unit.position.x, unit.position.y, unit.radius, {
+    type: unit.pathing,
+    includeOutOfBounds: true,
+  });
+};
+
+export const entityPoints = (entity: Entity) => {
+  if (!entity.position) return [];
+  if (entity.tilemap) {
+    const p = footprintPoints(entity.tilemap, entity.position);
+    return p.length ? p : [entity.position];
+  }
+  if (entity.radius) {
+    const p = footprintPoints(unitToTilemap(entity as Unit), entity.position);
+    return p.length ? p : [entity.position];
+  }
+  return [entity.position];
+};
+
+const tileSize = 0.25; // Each tile represents 0.25 units in world space
+
+const footprintPoints = (footprint: Footprint, position: Point) => {
+  if (!pm) {
+    pm = new PathingMap({
+      resolution: 4,
+      pathing: tiles.reverse(),
+    });
+  }
+
+  const points: Point[] = [];
+
+  const { width, height, left, top, map } = footprint;
+
+  // Calculate the origin (top-left corner) of the tilemap in world coordinates
+  const tilemapOriginX = pm.xTileToWorld(pm.xWorldToTile(position.x)) +
+    left * tileSize;
+  const tilemapOriginY = pm.yTileToWorld(pm.yWorldToTile(position.y)) +
+    top * tileSize;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!map[y * width + x]) continue;
+      // Top left; could have been included by left, above, or left-and-above
+      if (
+        (y === 0 || !map[(y - 1) * width + x]) &&
+        (y === 0 || x === 0 || !map[(y - 1) * width + x - 1]) &&
+        (x === 0 || !map[y * width + x - 1])
+      ) {
+        points.push({
+          x: x * tileSize + tilemapOriginX,
+          y: y * tileSize + tilemapOriginY,
+        });
+      }
+      // Top right; could have only been included by above
+      if (y === 0 || !map[(y - 1) * width + x]) {
+        points.push({
+          x: x * tileSize + tilemapOriginX + tileSize,
+          y: y * tileSize + tilemapOriginY,
+        });
+      }
+      // Bottom right; could not have been included by any previous iteration
+      points.push({
+        x: x * tileSize + tilemapOriginX + tileSize,
+        y: y * tileSize + tilemapOriginY + tileSize,
+      });
+      // Bottom left; could have only been included by left
+      if (x === 0 || !map[y * width + x - 1]) {
+        points.push({
+          x: x * tileSize + tilemapOriginX,
+          y: y * tileSize + tilemapOriginY + tileSize,
+        });
+      }
+    }
+  }
+
+  return points;
 };
 
 /** Normalizes an angle to the range (-π, π]. */
@@ -240,4 +260,55 @@ export const tweenAbsAngles = (a: number, b: number, delta: number) => {
     // diff < 0
     return (A - delta + TWO_PI) % TWO_PI;
   }
+};
+
+/** Checks if an entity is within range of another entity or point. */
+export const withinRange = (
+  mover: Entity,
+  target: Entity | Point,
+  range: number,
+) => {
+  if (!mover.position) return false;
+  const targetPoint = "id" in target ? target.position : target;
+  if (!targetPoint) return;
+
+  const targetEntity = "id" in target ? target : undefined;
+
+  const distance = targetEntity
+    ? distanceBetweenEntities(mover, targetEntity)
+    // Kind of a hack, but trying to use distanceToPoint for building makes the
+    // unit run around... Need a fix, but then pathing needs to be aware of
+    // distanceToPoint
+    : (mover.action?.type === "build" ||
+        (mover.action?.type === "walk" && mover.queue?.[0]?.type === "build"))
+    ? distanceBetweenPoints(mover.position, targetPoint)
+    : distanceToPoint(mover, targetPoint);
+
+  return distance <= range;
+};
+
+/**
+ * Checks if an entity can attack another entity, taking into account attack
+ * range and facing angle.
+ */
+export const canSwing = (
+  attacker: Entity,
+  target: Entity,
+  skipFacingCheck = false,
+) => {
+  if (!attacker.position || !attacker.attack || !target.position) return false;
+
+  const distance = distanceBetweenEntities(attacker, target);
+
+  if (distance > attacker.attack?.range) return false;
+
+  if (
+    !skipFacingCheck &&
+    attacker.turnSpeed &&
+    !facingWithin(attacker, target.position, MAX_ATTACK_ANGLE)
+  ) {
+    return false;
+  }
+
+  return true;
 };

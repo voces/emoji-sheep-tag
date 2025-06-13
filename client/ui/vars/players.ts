@@ -17,3 +17,6 @@ export const getLocalPlayer = () => playersVar().find((p) => p.local);
 export const isLocalPlayer = (player: Player | string) =>
   playersVar().find((p) => p.local)?.id ===
     (typeof player === "string" ? player : player.id);
+
+export const getPlayer = (playerId: string) =>
+  playersVar().find((p) => p.id === playerId);

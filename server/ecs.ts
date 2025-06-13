@@ -1,14 +1,14 @@
 import { App, newApp, System } from "jsr:@verit/ecs";
 import { addQueueSystem } from "./systems/queues.ts";
 import { addLookupSystem } from "./systems/lookup.ts";
-import { addActionTagSystem } from "./systems/actionTags.ts";
-import { addUnitMovementSystem } from "./systems/movement.ts";
+// import { addActionTagSystem } from "./systems/actionTags.ts";
+// import { addActionSystem } from "./systems/action.ts";
 import { Entity } from "../shared/types.ts";
 import { addPathingSystem } from "./systems/pathing.ts";
 import { newEntity, remove, update } from "./updates.ts";
 import { TypedEventTarget } from "typed-event-target";
 import { addPlayerEntitiesSystem } from "./systems/playerEntities.ts";
-import { addAttackSystem } from "./systems/attack.ts";
+// import { addAttackSystem } from "./systems/attack.ts";
 
 // Alphanumeric, minus 0, O, l, and I
 const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -132,11 +132,11 @@ export const newEcs = () => {
 
   const lookup = addLookupSystem(app);
   addQueueSystem(app);
-  addActionTagSystem(app);
-  addUnitMovementSystem(app);
+  // addActionTagSystem(app);
+  // addActionSystem(app);
   addPathingSystem(app);
   addPlayerEntitiesSystem(app);
-  addAttackSystem(app);
+  // addAttackSystem(app);
 
   for (const hook of initHooks) hook(app);
 

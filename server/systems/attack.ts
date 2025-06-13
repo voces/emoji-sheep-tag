@@ -1,159 +1,143 @@
+import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../../shared/constants.ts";
 import {
   angleDifference,
   distanceBetweenPoints,
+  entityPoints,
   tweenAbsAngles,
 } from "../../shared/pathing/math.ts";
 import { distanceBetweenEntities } from "../../shared/pathing/math.ts";
 import { Entity } from "../../shared/types.ts";
-import { Game } from "../ecs.ts";
+import { currentApp } from "../contexts.ts";
+import { UnitDeathEvent } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 import { calcPath } from "./pathing.ts";
 
-let damageSource: Entity | undefined;
-const withDamageSource = <T>(e: Entity, fn: () => T) => {
-  const prev = damageSource;
-  damageSource = e;
-  try {
-    return fn();
-  } finally {
-    damageSource = prev;
+export const advanceAttack = (e: Entity, delta: number): number => {
+  const app = currentApp();
+
+  if (e.action?.type !== "attack" || !e.position) {
+    if (e.swing) delete e.swing;
+    return delta;
   }
-};
-export const getDamageSource = () => damageSource;
 
-export const addAttackSystem = (app: Game) => {
-  let counter = 0;
-  let offset = -1;
-  app.addSystem({
-    props: ["isAttacking"],
-    update: () => {
-      offset = -1;
-      counter++;
-    },
-    updateEntity: (e, delta, time) => {
-      offset++;
+  if (!e.attack) {
+    if (e.swing) delete e.swing;
+    delete e.action;
+    return delta;
+  }
 
-      if (e.action?.type !== "attack" || !e.position) {
-        if (e.swing) delete e.swing;
-        delete (e as Entity).isAttacking;
-        return;
-      }
+  const target = lookup(e.action.target);
 
-      if (!e.attack) {
-        if (e.swing) delete e.swing;
-        delete (e as Entity).isAttacking;
-        delete e.action;
-        return;
-      }
+  if (!target || !target.position || target.health === 0) {
+    if (e.swing) delete e.swing;
+    delete e.action;
+    return delta;
+  }
 
-      const target = lookup(e.action.target);
+  // TODO: could be called multiple times; track total turn
+  // Face target
+  if (e.turnSpeed) {
+    const facing = e.facing ?? DEFAULT_FACING;
+    const targetAngle = Math.atan2(
+      target.position.y - e.position.y,
+      target.position.x - e.position.x,
+    );
+    const diff = Math.abs(angleDifference(facing, targetAngle));
+    if (diff > 1e-07) {
+      const maxTurn = e.turnSpeed * delta;
+      e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
+    }
+    if (diff > MAX_ATTACK_ANGLE) {
+      delta = Math.max(0, delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed);
+    }
+  }
 
-      if (!target || !target.position || target.health === 0) {
-        if (e.swing) delete e.swing;
-        delete (e as Entity).isAttacking;
-        delete e.action;
-        return;
-      }
+  // Abort swing delta consumed turning
+  if (delta === 0) return 0;
 
-      if (e.swing) {
-        // Abort if target too far before backswing
-        if (
-          e.swing.time + e.attack.backswing > time &&
-          e.attack.rangeMotionBuffer > 0 &&
-          distanceBetweenPoints(target.position, e.swing.target) >
-            e.attack.rangeMotionBuffer
-        ) return delete e.swing;
+  if (e.swing) {
+    // Abort swing if cannot reach target anymore (but only during backswing)
+    if (
+      e.swing.remaining > e.attack.backswing &&
+      distanceBetweenPoints(target.position, e.swing.target) >
+        e.attack.rangeMotionBuffer
+    ) {
+      delete e.swing;
+      return delta;
+    }
 
-        // TODO: add mid-swing turning; if not ±60°, delay swing by that amount
+    // Consume timing to carry out swing
+    const swingAmount = Math.min(e.swing.remaining, delta);
+    delta -= swingAmount;
+    e.swing = { ...e.swing, remaining: e.swing.remaining - swingAmount };
 
-        // Swing if damage point reached
-        if (e.swing.time + e.attack.damagePoint <= time) {
-          const swingTarget = e.swing.target;
-          e.lastAttack = time;
-          delete e.swing;
+    // Complete swing if damage point reached
+    if (!e.swing.remaining) {
+      // House keeping for attacks
+      e.attackCooldownRemaining = e.attack.cooldown;
+      const swingTarget = e.swing.target;
+      delete e.swing;
 
-          // Miss if target too far
-          if (
-            e.attack.rangeMotionBuffer > 0 &&
-            distanceBetweenPoints(target.position, swingTarget) >
-              e.attack.rangeMotionBuffer
-          ) return;
+      // Miss if target too far
+      if (
+        distanceBetweenPoints(target.position, swingTarget) >
+          e.attack.rangeMotionBuffer
+      ) return delta;
 
-          // Otherwise damage target
-          if (target.health) {
-            withDamageSource(e, () => {
-              target.health = Math.max(
-                0,
-                target.health! - e.attack!.damage * (target.progress ? 2 : 1),
-              );
-            });
-          }
-        }
-        return;
-      }
-
-      if (distanceBetweenEntities(e, target) > e.attack.range) {
-        if ((counter + offset) % 17 > 0) return;
-        const path = calcPath(e, e.action.target, { mode: "attack" }).slice(1);
-        if (
-          !path.length ||
-          (path[path.length - 1].x === e.position.x &&
-            path[path.length - 1].y === e.position.y)
-        ) {
-          delete (e as Entity).isAttacking;
-          delete e.action;
-          return;
-        }
-        e.queue = [e.action, ...(e.queue ?? [])];
-        delete (e as Entity).isAttacking;
-        e.action = {
-          type: "walk",
-          target: e.action.target,
-          distanceFromTarget: e.attack.range,
-          path,
-          attacking: true,
-        };
-        return;
-      }
-
-      // Face target
-      if (e.turnSpeed) {
-        const facing = e.facing ?? Math.PI * 3 / 2;
-        const targetAngle = Math.atan2(
-          target.position.y - e.position.y,
-          target.position.x - e.position.x,
+      // Otherwise damage target
+      if (target.health) {
+        target.health = Math.max(
+          0,
+          target.health! - e.attack!.damage * (target.progress ? 2 : 1),
         );
-        const diff = Math.abs(angleDifference(facing, targetAngle));
-        if (diff > 1e-07) {
-          const maxTurn = e.turnSpeed * delta;
-          e.facing = diff < maxTurn
-            ? targetAngle
-            : tweenAbsAngles(facing, targetAngle, maxTurn);
-        }
-        // Must be facing ±60°
-        if (diff > Math.PI / 3) {
-          delta = Math.max(0, delta - (diff - Math.PI / 3) / e.turnSpeed);
+        if (target.health === 0) {
+          app.dispatchTypedEvent("unitDeath", new UnitDeathEvent(target, e));
         }
       }
+    }
+    return delta;
+  }
 
-      if (delta === 0) return;
+  // Target too far, cancel attack and start walking
+  if (distanceBetweenEntities(e, target) > e.attack.range) {
+    const path = calcPath(e, e.action.target, { mode: "attack" }).slice(1);
 
-      if ((e.lastAttack ?? 0) + e.attack.cooldown <= time) {
-        e.swing = { time, source: e.position, target: target.position };
-      }
-    },
-  });
+    // If no longer pathable, give up
+    if (
+      !path.length ||
+      (path[path.length - 1].x === e.position.x &&
+        path[path.length - 1].y === e.position.y)
+    ) {
+      delete e.action;
+      return delta;
+    }
 
-  app.addSystem({
-    props: ["position", "action", "isMoving", "attack"],
-    onChange: (e) => {
-      if (e.action.type !== "walk" || !e.queue?.length) return;
-      const next = e.queue[0];
-      if (next.type !== "attack") return;
-      const target = lookup(next.target);
-      if (target && distanceBetweenEntities(e, target) < e.attack.range) {
-        delete (e as Entity).action;
-      }
-    },
-  });
+    // Otherwise start walking!
+    e.queue = [e.action, ...(e.queue ?? [])];
+    e.action = {
+      type: "walk",
+      target: e.action.target,
+      distanceFromTarget: e.attack.range,
+      path,
+      attacking: true,
+    };
+    return delta;
+  }
+
+  if (!e.attackCooldownRemaining) {
+    console.log(
+      e.position,
+      target.position,
+      distanceBetweenEntities(e, target),
+      entityPoints(e),
+      entityPoints(target),
+    );
+    e.swing = {
+      remaining: Math.max(e.attack.backswing, e.attack.damagePoint),
+      source: e.position,
+      target: target.position,
+    };
+  }
+
+  return delta;
 };
