@@ -5,13 +5,13 @@ import { Entity } from "./ecs.ts";
 import { getLocalPlayer } from "./ui/vars/players.ts";
 import { selection } from "./systems/autoSelect.ts";
 import { camera } from "./graphics/three.ts";
-import { UnitDataAction } from "../shared/types.ts";
+import { UnitDataAction, UnitDataActionTarget } from "../shared/types.ts";
 import { absurd } from "../shared/util/absurd.ts";
 import { setFind } from "../server/util/set.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
-import { unitData } from "../shared/data.ts";
+import { Classification, unitData } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
-import { canBuild, isEnemy } from "./api/unit.ts";
+import { canBuild, isEnemy, testClassification } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
 import { playSound, playSoundAt } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
@@ -22,6 +22,7 @@ import { newIndicator } from "./systems/indicators.ts";
 import { shortcutsVar } from "./ui/pages/Settings.tsx";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { showSettingsVar } from "./ui/vars/showSettings.ts";
+import { selectEntity } from "./api/selection.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -29,47 +30,96 @@ const normalize = (value: number, evenStep: boolean) =>
     : (Math.round(value * 2 + 0.5) - 0.5) / 2;
 
 const handleSmartTarget = (e: MouseButtonEvent) => {
-  const target = e.intersects.values().next().value!;
-  const selections = selection.clone();
-
-  // Do not target self? At least for move/attack
-  for (const s of selections) if (s === target) selections.delete(s);
-  if (!selections.size) return false;
-
-  const { attackers, movers } = selections.group((e) =>
-    e.attack && isEnemy(e, target) ? "attackers" as const : "movers" as const
+  const target = e.intersects.values().next().value;
+  const localPlayer = getLocalPlayer();
+  const selections = selection.clone().filter((s) =>
+    s.owner === localPlayer?.id
   );
 
-  if (attackers?.size) {
+  const orders = Array.from(
+    selections,
+    (
+      e,
+    ) =>
+      [
+        e,
+        e.actions?.filter((a): a is UnitDataActionTarget =>
+          a.type === "target" && (target
+            ? testClassification(e, target, a.targeting)
+            : typeof a.aoe === "number")
+        ).sort((a, b) => {
+          const aValue = a.smart
+            ? Object.entries(a.smart).reduce(
+              (min, [classification, priority]) => {
+                const test = (target && classification !== "ground"
+                    ? testClassification(e, target, [
+                      classification as Classification,
+                    ])
+                    : typeof a.aoe === "number" && classification === "ground")
+                  ? priority
+                  : Infinity;
+                return test < min ? test : min;
+              },
+              Infinity,
+            )
+            : Infinity;
+          const bValue = b.smart
+            ? Object.entries(b.smart).reduce(
+              (min, [classification, priority]) => {
+                const test = (target && classification !== "ground"
+                    ? testClassification(e, target, [
+                      classification as Classification,
+                    ])
+                    : typeof a.aoe === "number" && classification === "ground")
+                  ? priority
+                  : Infinity;
+                return test < min ? test : min;
+              },
+              Infinity,
+            )
+            : Infinity;
+          return aValue - bValue;
+        })[0],
+      ] as const,
+  ).filter((
+    pair,
+  ): pair is readonly [
+    SystemEntity<Entity, "selected">,
+    UnitDataActionTarget,
+  ] => !!pair[1]);
+
+  if (!orders.length) return false;
+
+  const groupedOrders = orders.reduce((groups, [unit, action]) => {
+    if (!groups[action.order]) groups[action.order] = [];
+    groups[action.order].push(unit);
+    return groups;
+  }, {} as Record<string, Entity[]>);
+
+  let targetTarget = false;
+
+  for (const order in groupedOrders) {
+    const againstTarget = target && (order !== "move" || target.movementSpeed);
+    if (againstTarget) targetTarget = true;
+
     send({
-      type: "attack",
-      units: Array.from(attackers, (e) => e.id),
-      target: target.id,
-    });
-    newIndicator({
-      x: target.position?.x ?? e.world.x,
-      y: target.position?.y ?? e.world.y,
-    }, {
-      model: "gravity",
-      color: "#dd3333",
-      scale: target.radius ? target.radius * 4 : 1,
+      type: "unitOrder",
+      units: Array.from(groupedOrders[order], (e) => e.id),
+      order: order,
+      target: againstTarget ? target.id : e.world,
     });
   }
 
-  if (movers?.size) {
-    // Should follow
-    send({
-      type: "move",
-      units: Array.from(movers, (e) => e.id),
-      target: target.movementSpeed ? target.id : e.world,
-    });
-    if (!attackers?.size) {
-      newIndicator({
-        x: target.movementSpeed ? target.position?.x ?? e.world.x : e.world.x,
-        y: target.movementSpeed ? target.position?.y ?? e.world.y : e.world.y,
-      }, { model: "gravity" });
-    }
-  }
+  newIndicator({
+    x: targetTarget ? target?.position?.x ?? e.world.x : e.world.x,
+    y: targetTarget ? target?.position?.y ?? e.world.y : e.world.y,
+  }, {
+    model: "gravity",
+    color: target && orders.some(([u]) => isEnemy(u, target))
+      ? "#dd3333"
+      : undefined,
+    scale: targetTarget && target?.radius ? target.radius * 4 : 1,
+  });
 
   return true;
 };
@@ -128,14 +178,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       }
     }
 
-    if (e.intersects.size && handleSmartTarget(e)) return;
-
-    send({
-      type: "move",
-      units: Array.from(selection, (e) => e.id),
-      target: e.world,
-    });
-    newIndicator({ x: e.world.x, y: e.world.y }, { model: "gravity" });
+    handleSmartTarget(e);
   } else if (e.button === "left") {
     if (blueprint) {
       const unitType = blueprint.unitType;
@@ -166,6 +209,8 @@ mouse.addEventListener("mouseButtonDown", (e) => {
         }
       }
       send({ type: "build", unit: unit.id, buildType: unitType, x, y });
+    } else if (e.intersects.size) {
+      selectEntity(e.intersects.values().next().value!);
     }
   }
 });
@@ -227,6 +272,8 @@ const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
       return b.type === "auto" && a.order === b.order;
     case "build":
       return b.type === "build" && a.unitType === b.unitType;
+    case "target":
+      return b.type === "target" && a.order === b.order;
     default:
       absurd(a);
   }
@@ -438,7 +485,7 @@ for (const event of ["pointerdown", "keydown", "contextmenu"]) {
         await globalThis.document.body.requestPointerLock({
           unadjustedMovement: true,
         });
-      } catch {}
+      } catch { /** do nothing */ }
     }
   });
 }

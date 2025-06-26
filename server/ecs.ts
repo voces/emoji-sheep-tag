@@ -8,6 +8,7 @@ import { addPathingSystem } from "./systems/pathing.ts";
 import { newEntity, remove, update } from "./updates.ts";
 import { TypedEventTarget } from "typed-event-target";
 import { addPlayerEntitiesSystem } from "./systems/playerEntities.ts";
+import { Point } from "../shared/pathing/math.ts";
 // import { addAttackSystem } from "./systems/attack.ts";
 
 // Alphanumeric, minus 0, O, l, and I
@@ -43,6 +44,7 @@ export class UnitOrderEvent extends Event {
     readonly unit: Entity,
     readonly player: string,
     readonly order: string,
+    readonly orderTarget?: Point | string,
   ) {
     super("unitOrder");
   }
@@ -132,11 +134,8 @@ export const newEcs = () => {
 
   const lookup = addLookupSystem(app);
   addQueueSystem(app);
-  // addActionTagSystem(app);
-  // addActionSystem(app);
   addPathingSystem(app);
   addPlayerEntitiesSystem(app);
-  // addAttackSystem(app);
 
   for (const hook of initHooks) hook(app);
 

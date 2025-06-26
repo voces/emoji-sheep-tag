@@ -1,9 +1,4 @@
-import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../../shared/constants.ts";
-import {
-  angleDifference,
-  distanceBetweenPoints,
-  tweenAbsAngles,
-} from "../../shared/pathing/math.ts";
+import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
 import { Entity } from "../../shared/types.ts";
 import { build, computeBuildDistance, orderBuild } from "../api/unit.ts";
 import { onInit } from "../ecs.ts";
@@ -23,27 +18,7 @@ export const advanceBuild = (e: Entity, delta: number): number => {
     const { unitType, x, y } = e.action;
     delete e.action;
     orderBuild(e, unitType, x, y);
-    console.log("too far!", d, distanceBetweenPoints(e.position, { x, y }));
     return delta;
-  }
-
-  // Face build target
-  if (e.turnSpeed) {
-    const facing = e.facing ?? DEFAULT_FACING;
-    const targetAngle = Math.atan2(
-      e.action.y - e.position.y,
-      e.action.x - e.position.x,
-    );
-    const diff = Math.abs(angleDifference(facing, targetAngle));
-    if (diff > 1e-07) {
-      const maxTurn = e.turnSpeed * delta;
-      e.facing = diff < maxTurn
-        ? targetAngle
-        : tweenAbsAngles(facing, targetAngle, maxTurn);
-    }
-    if (diff > MAX_ATTACK_ANGLE) {
-      delta = Math.max(0, delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed);
-    }
   }
 
   if (delta === 0) return delta;

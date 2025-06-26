@@ -185,3 +185,8 @@ export const orderBuild = (
   builder.queue = [{ type: "build", x, y, unitType: type }];
   return true;
 };
+
+export const isAlive = (unit: Entity) => {
+  if (!currentApp().entities.has(unit)) return false;
+  return typeof unit.health !== "number" || unit.health > 0;
+};

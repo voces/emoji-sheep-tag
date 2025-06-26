@@ -1,3 +1,5 @@
+import { Classification } from "./data.ts";
+import { Point } from "./pathing/math.ts";
 import { Footprint, Pathing } from "./pathing/types.ts";
 
 export type WalkAction = {
@@ -23,8 +25,27 @@ type Action = Readonly<
     readonly target: string;
   } | {
     readonly type: "hold";
+  } | {
+    readonly type: "cast";
+    readonly remaining: number;
+    readonly info: {
+      readonly type: "mirrorImage";
+      readonly positions: ReadonlyArray<Point>;
+    };
   }
 >;
+
+export type UnitDataActionTarget = {
+  readonly name: string;
+  readonly type: "target";
+  readonly order: string;
+  /** By default, actions can target everything */
+  readonly targeting?: Classification[];
+  /** `aoe` of `0` allows targeting the ground */
+  readonly aoe?: number;
+  readonly binding?: string[];
+  readonly smart?: { [key in Classification | "ground"]?: number };
+};
 
 export type UnitDataAction = {
   readonly name: string;
@@ -36,7 +57,7 @@ export type UnitDataAction = {
   readonly type: "auto";
   readonly order: string;
   readonly binding?: string[];
-};
+} | UnitDataActionTarget;
 
 export type Entity = {
   id: string;
@@ -86,6 +107,9 @@ export type Entity = {
     readonly target: { readonly x: number; readonly y: number };
   } | null;
   attackCooldownRemaining?: number | null;
+
+  isMirror?: boolean;
+  mirrors?: ReadonlyArray<string> | null;
 
   // Pathing
   radius?: number;

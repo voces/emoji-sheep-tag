@@ -104,6 +104,7 @@ app.addSystem({
 
 app.addSystem({
   props: ["blueprint"],
+  onAdd: updateColor,
   onChange: updateColor,
 });
 

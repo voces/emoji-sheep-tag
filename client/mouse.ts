@@ -94,7 +94,7 @@ const updateIntersects = () => {
       const id = intersect.object.getId(intersect.instanceId);
       if (!id) continue;
       const entity = lookup[id];
-      if (!entity || typeof entity.blueprint === "number") continue;
+      if (!entity || entity.selectable === false) continue;
       set.add(entity);
     }
     if (set.size || mouse.intersects.size) mouse.intersects = set;

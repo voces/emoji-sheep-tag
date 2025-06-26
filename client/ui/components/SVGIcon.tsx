@@ -20,7 +20,13 @@ export const SvgIcon = ({
   return (
     <div
       ref={ref}
-      style={{ color, transform: scale ? `scale(${scale})` : undefined }}
+      style={{
+        color,
+        transform: scale ? `scale(${scale})` : undefined,
+        filter: icon === "wolf"
+          ? "brightness(1.5) brightness(0.6) sepia(1) hue-rotate(160deg) saturate(5)"
+          : undefined,
+      }}
     />
   );
 };

@@ -7,5 +7,7 @@ export const zChat = z.object({
   message: z.string(),
 });
 
-export const chat = (client: Client, { message }: z.TypeOf<typeof zChat>) =>
+export const chat = (client: Client, { message }: z.TypeOf<typeof zChat>) => {
+  console.log(new Date(), client.name, message);
   send({ type: "chat", player: client.id, message });
+};

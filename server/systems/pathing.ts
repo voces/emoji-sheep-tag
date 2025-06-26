@@ -53,7 +53,7 @@ export const calcPath = (
   return pathingMap().path(
     entity,
     target,
-    { distanceFromTarget },
+    { distanceFromTarget, removeMovingEntities },
   );
 };
 

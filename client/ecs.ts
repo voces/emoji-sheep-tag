@@ -11,6 +11,7 @@ export type Entity = CommonEntity & {
   zIndex?: number;
   playerColor?: string;
   isKaboom?: boolean;
+  selectable?: boolean;
 };
 
 class EntityCreatedEvent extends Event {

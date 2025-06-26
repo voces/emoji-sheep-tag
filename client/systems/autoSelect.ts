@@ -27,7 +27,7 @@ app.addSystem({
   onAdd: (e) => {
     if (
       isLocalPlayer(e.owner) &&
-      (e.unitType === "sheep" || e.unitType === "wolf")
+      (e.unitType === "sheep" || e.unitType === "wolf") && selection.size === 0
     ) e.selected = true;
   },
 });

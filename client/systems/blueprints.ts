@@ -19,6 +19,7 @@ const entitiesFromQueue = (e: SystemEntity<Entity, "queue" | "owner">) =>
         owner: e.owner,
         position: { x: a.x, y: a.y },
         blueprint: 0x00ff,
+        selectable: false,
       })
     ),
   );

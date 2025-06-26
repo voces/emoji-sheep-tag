@@ -39,6 +39,14 @@ const zAction = z.union([
     target: z.string(),
   }),
   z.object({ type: z.literal("hold") }),
+  z.object({
+    type: z.literal("cast"),
+    remaining: z.number(),
+    info: z.object({
+      type: z.literal("mirrorImage"),
+      positions: z.array(zPoint).readonly(),
+    }),
+  }),
 ]).readonly();
 
 const zTilemap = z.object({
@@ -48,6 +56,16 @@ const zTilemap = z.object({
   width: z.number(),
   map: z.number().array(),
 });
+
+const zClassification = z.union([
+  z.literal("unit"),
+  z.literal("structure"),
+  z.literal("ally"),
+  z.literal("enemy"),
+  z.literal("neutral"),
+  z.literal("self"),
+  z.literal("other"),
+]);
 
 const zUpdate = z.object({
   type: z.literal("unit"),
@@ -78,6 +96,18 @@ const zUpdate = z.object({
         order: z.string(),
         binding: z.array(z.string()).optional(),
       }),
+      z.object({
+        name: z.string(),
+        type: z.literal("target"),
+        order: z.string(),
+        targeting: z.array(zClassification).optional(),
+        aoe: z.number().optional(),
+        binding: z.array(z.string()).optional(),
+        smart: z.record(
+          z.union([zClassification, z.literal("ground")]),
+          z.number(),
+        ).optional(),
+      }),
     ]),
   ).readonly().optional(),
   attack: z.object({
@@ -98,6 +128,9 @@ const zUpdate = z.object({
     target: z.object({ x: z.number(), y: z.number() }),
   }).nullable().optional(),
   attackCooldownRemaining: z.number().nullable().optional(),
+
+  isMirror: z.boolean().optional(),
+  mirrors: z.array(z.string()).readonly().nullable().optional(),
 
   // Pathing
   radius: z.number().optional(),

@@ -1,5 +1,14 @@
 import { Entity } from "./types.ts";
 
+export const classificationGroups = {
+  alliance: ["ally", "enemy", "neutral"],
+  structureOrUnit: ["structure", "unit"],
+  identity: ["self", "other"],
+} as const;
+export type ClassificationGroup = keyof typeof classificationGroups;
+export type Classification =
+  typeof classificationGroups[ClassificationGroup][number];
+
 // The minimum range to hit through corners is (0.125 ** 2 * 2) ** 0.5 * 2,
 // ≈0.354 This is because the edge of an entity's circle can be at the very
 // center of a its occupied grid cell. A grid cell is 0.25 x 0.25, which means
@@ -39,6 +48,15 @@ export const unitData: Record<
     radius: 0.25,
     pathing: 1,
     actions: [
+      {
+        name: "Move",
+        type: "target",
+        order: "move",
+        targeting: ["other"],
+        aoe: 0,
+        binding: ["KeyV"],
+        smart: { ground: 0, ally: 0 },
+      },
       { name: "Build Hut", type: "build", unitType: "hut", binding: ["KeyF"] },
       {
         name: "Build Wide Hut",
@@ -90,7 +108,31 @@ export const unitData: Record<
       damagePoint: 0.3,
     },
     actions: [
+      {
+        name: "Attack",
+        type: "target",
+        order: "attack",
+        targeting: ["other"],
+        aoe: 0,
+        binding: ["KeyA"],
+        smart: { enemy: 0 },
+      },
+      {
+        name: "Move",
+        type: "target",
+        order: "move",
+        targeting: ["other"],
+        aoe: 0,
+        binding: ["KeyV"],
+        smart: { ground: 0, ally: 0 },
+      },
       { name: "Hold position", type: "auto", order: "hold", binding: ["KeyH"] },
+      {
+        name: "Mirror Image",
+        type: "auto",
+        order: "mirrorImage",
+        binding: ["KeyR"],
+      },
     ],
   },
   hut: {

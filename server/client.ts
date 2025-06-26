@@ -5,10 +5,10 @@ import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { leave, send } from "./lobbyApi.ts";
 import { build, zBuild } from "./actions/build.ts";
-import { move, zMove } from "./actions/move.ts";
+import "./actions/move.ts";
 import { start, zStart } from "./actions/start.ts";
 import { colors } from "../shared/data.ts";
-import { attack, zAttack } from "./actions/attack.ts";
+import "./actions/attack.ts";
 import { unitOrder, zOrderEvent } from "./actions/unitOrder.ts";
 import { flushUpdates } from "./updates.ts";
 import { ping, zPing } from "./actions/ping.ts";
@@ -24,6 +24,7 @@ import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
 import "./actions/hold.ts";
+import "./actions/mirrorImage.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 
 export type SocketEventMap = {
@@ -43,6 +44,7 @@ export type Socket = {
   ) => void;
 };
 
+// deno-lint-ignore no-explicit-any
 const wrap = <T extends (...args: any[]) => unknown>(
   client: Client,
   fn: (...args: Parameters<T>) => ReturnType<T>,
@@ -98,9 +100,7 @@ export class Client {
 
 const zClientToServerMessage = z.union([
   zStart,
-  zMove,
   zBuild,
-  zAttack,
   zOrderEvent,
   zPing,
   zGenericEvent,
@@ -112,9 +112,7 @@ export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
 
 const actions = {
   start,
-  move,
   build,
-  attack,
   unitOrder,
   ping,
   generic,
@@ -208,6 +206,7 @@ export const handleSocket = (socket: Socket) => {
         // console.log("C->S", json);
         const message = zClientToServerMessage.parse(json);
         try {
+          // deno-lint-ignore no-explicit-any
           actions[message.type](client, message as any);
         } catch (err) {
           console.error(err);

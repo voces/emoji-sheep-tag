@@ -80,6 +80,7 @@ const Command = (
 const iconMap: Record<string, string> = {
   destroyLastFarm: "collision",
   hold: "suspend",
+  mirrorImage: "wolf",
 };
 
 const Action = ({ action }: { action: UnitDataAction }) => {
@@ -113,6 +114,8 @@ export const ActionBar = () => {
   const selection = useReactiveVar(selectionVar);
   useReactiveVar(shortcutsVar);
 
+  if (!selection || selection.owner !== getLocalPlayer()?.id) return null;
+
   return (
     <div
       className="card h-stack hide-empty"
@@ -125,7 +128,7 @@ export const ActionBar = () => {
         padding: 12,
       }}
     >
-      {selection?.actions?.map((a, i) => <Action key={i} action={a} />)}
+      {selection.actions?.map((a, i) => <Action key={i} action={a} />)}
     </div>
   );
 };

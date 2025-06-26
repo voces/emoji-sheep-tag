@@ -1,10 +1,4 @@
-import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../../shared/constants.ts";
-import {
-  angleDifference,
-  distanceBetweenPoints,
-  entityPoints,
-  tweenAbsAngles,
-} from "../../shared/pathing/math.ts";
+import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
 import { distanceBetweenEntities } from "../../shared/pathing/math.ts";
 import { Entity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
@@ -33,27 +27,6 @@ export const advanceAttack = (e: Entity, delta: number): number => {
     delete e.action;
     return delta;
   }
-
-  // TODO: could be called multiple times; track total turn
-  // Face target
-  if (e.turnSpeed) {
-    const facing = e.facing ?? DEFAULT_FACING;
-    const targetAngle = Math.atan2(
-      target.position.y - e.position.y,
-      target.position.x - e.position.x,
-    );
-    const diff = Math.abs(angleDifference(facing, targetAngle));
-    if (diff > 1e-07) {
-      const maxTurn = e.turnSpeed * delta;
-      e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
-    }
-    if (diff > MAX_ATTACK_ANGLE) {
-      delta = Math.max(0, delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed);
-    }
-  }
-
-  // Abort swing delta consumed turning
-  if (delta === 0) return 0;
 
   if (e.swing) {
     // Abort swing if cannot reach target anymore (but only during backswing)
@@ -88,7 +61,10 @@ export const advanceAttack = (e: Entity, delta: number): number => {
       if (target.health) {
         target.health = Math.max(
           0,
-          target.health! - e.attack!.damage * (target.progress ? 2 : 1),
+          target.health! -
+            e.attack!.damage * (target.progress ? 2 : 1) *
+              // Do extremely minor damage to units to trigger sound
+              (e.isMirror ? target.tilemap ? 0.25 : 0.001 : 1),
         );
         if (target.health === 0) {
           app.dispatchTypedEvent("unitDeath", new UnitDeathEvent(target, e));
@@ -125,19 +101,13 @@ export const advanceAttack = (e: Entity, delta: number): number => {
   }
 
   if (!e.attackCooldownRemaining) {
-    console.log(
-      e.position,
-      target.position,
-      distanceBetweenEntities(e, target),
-      entityPoints(e),
-      entityPoints(target),
-    );
     e.swing = {
       remaining: Math.max(e.attack.backswing, e.attack.damagePoint),
       source: e.position,
       target: target.position,
     };
+    return delta;
   }
 
-  return delta;
+  return 0;
 };

@@ -108,6 +108,7 @@ app.addSystem({
         break;
       case "build":
       case "hold":
+      case "cast":
         break;
       default:
         absurd(e.action);

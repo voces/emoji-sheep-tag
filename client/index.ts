@@ -11,5 +11,5 @@ import "./systems/fire.ts";
 import "./systems/swing.ts";
 import "./systems/kaboom.ts";
 import "./systems/indicators.ts";
-import "./systems/build.ts";
+import "./systems/mirrors.ts";
 import "./graphics/cursor.ts";

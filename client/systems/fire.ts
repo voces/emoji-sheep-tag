@@ -47,7 +47,7 @@ const updateFires = (e: Entity, remove = false) => {
 };
 
 app.addSystem({
-  props: ["health", "maxHealth"],
+  props: ["health", "maxHealth", "tilemap"],
   onAdd: updateFires,
   onChange: updateFires,
   onRemove: (e) => updateFires(e, true),
