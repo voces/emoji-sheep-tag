@@ -12,7 +12,7 @@ import { SystemEntity } from "jsr:@verit/ecs";
 import { Classification, unitData } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
 import { canBuild, isEnemy, testClassification } from "./api/unit.ts";
-import { updateCursor } from "./graphics/cursor.ts";
+import { CursorVariant, updateCursor } from "./graphics/cursor.ts";
 import { playSound, playSoundAt } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
@@ -30,7 +30,7 @@ const normalize = (value: number, evenStep: boolean) =>
     : (Math.round(value * 2 + 0.5) - 0.5) / 2;
 
 const handleSmartTarget = (e: MouseButtonEvent) => {
-  const target = e.intersects.values().next().value;
+  const target = e.intersects.first();
   const localPlayer = getLocalPlayer();
   const selections = selection.clone().filter((s) =>
     s.owner === localPlayer?.id
@@ -121,6 +121,8 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
     scale: targetTarget && target?.radius ? target.radius * 4 : 1,
   });
 
+  cancelOrder();
+
   return true;
 };
 
@@ -163,22 +165,17 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   // if (showChatBoxVar() === "open") showChatBoxVar("dismissed");
   // if (showCommandPaletteVar() === "open") showCommandPaletteVar("dismissed");
 
-  if (!selection.size) return;
-
   if (e.button === "right") {
     if (selection.size) {
-      const source = selection.first()?.position;
-      if (source) {
-        playSoundAt(
-          pick("click1", "click2", "click3", "click4"),
-          e.world.x,
-          e.world.y,
-          0.1,
-        );
-      }
-    }
+      playSoundAt(
+        pick("click1", "click2", "click3", "click4"),
+        e.world.x,
+        e.world.y,
+        0.1,
+      );
 
-    handleSmartTarget(e);
+      handleSmartTarget(e);
+    }
   } else if (e.button === "left") {
     if (blueprint) {
       const unitType = blueprint.unitType;
@@ -209,8 +206,59 @@ mouse.addEventListener("mouseButtonDown", (e) => {
         }
       }
       send({ type: "build", unit: unit.id, buildType: unitType, x, y });
+    } else if (activeOrder) {
+      const target = e.intersects.first();
+      const unitsWithTarget = selection.filter((e) =>
+        e.actions?.some((a) =>
+          a.type === "target" && a.order === activeOrder?.order &&
+          target && testClassification(e, target, a.targeting)
+        )
+      );
+      if (target && unitsWithTarget.size) {
+        send({
+          type: "unitOrder",
+          units: Array.from(unitsWithTarget, (e) => e.id),
+          order: activeOrder.order,
+          target: target.id,
+        });
+      }
+
+      const unitsWithoutTarget = selection.filter((e) =>
+        !unitsWithTarget.has(e) &&
+        e.actions?.some((a) =>
+          a.type === "target" && a.order === activeOrder?.order &&
+          typeof a.aoe === "number"
+        )
+      );
+      if (unitsWithoutTarget.size) {
+        send({
+          type: "unitOrder",
+          units: Array.from(unitsWithoutTarget, (e) => e.id),
+          order: activeOrder.order,
+          target: e.world,
+        });
+      }
+
+      if (unitsWithTarget.size || unitsWithoutTarget.size) {
+        newIndicator({
+          x: unitsWithTarget.size
+            ? target?.position?.x ?? e.world.x
+            : e.world.x,
+          y: unitsWithTarget.size
+            ? target?.position?.y ?? e.world.y
+            : e.world.y,
+        }, {
+          model: "gravity",
+          color: target && unitsWithTarget.some((u) => isEnemy(u, target))
+            ? "#dd3333"
+            : undefined,
+          scale: unitsWithTarget.size && target?.radius ? target.radius * 4 : 1,
+        });
+
+        cancelOrder();
+      }
     } else if (e.intersects.size) {
-      selectEntity(e.intersects.values().next().value!);
+      selectEntity(e.intersects.first()!);
     }
   }
 });
@@ -287,6 +335,17 @@ const cancelBlueprint = () => {
   }
 };
 
+export const cancelOrder = (
+  check?: (order: string | undefined, blueprint: string | undefined) => boolean,
+) => {
+  if (check && !check(activeOrder?.order, blueprint?.unitType)) return;
+  if (activeOrder) {
+    activeOrder = undefined;
+    updateCursor();
+  }
+  cancelBlueprint();
+};
+
 document.addEventListener("pointerlockchange", () => {
   if (!document.pointerLockElement) cancelBlueprint();
 });
@@ -299,6 +358,9 @@ export const clearBlueprint = (
   if (blueprint && (!fn || fn(blueprint))) cancelBlueprint();
 };
 export const hasBlueprint = () => !!blueprint;
+
+let activeOrder: { variant: CursorVariant; order: string } | undefined;
+export const getActiveOrder = () => activeOrder;
 
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
@@ -347,7 +409,7 @@ globalThis.addEventListener("keydown", (e) => {
 
   // Cancel
   if (checkShortcut(shortcuts.misc.cancel)) {
-    cancelBlueprint();
+    cancelOrder();
     return false;
   }
 
@@ -368,51 +430,62 @@ globalThis.addEventListener("keydown", (e) => {
 
   if (!action) return;
 
-  if (action.type === "build") {
-    if (blueprint) app.removeEntity(blueprint);
-    const x = normalize(
-      mouse.world.x,
-      (unitData[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
-    );
-    const y = normalize(
-      mouse.world.y,
-      (unitData[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
-    );
-    blueprint = app.addEntity({
-      id: `blueprint-${blueprintIndex++}`,
-      unitType: action.unitType,
-      position: { x, y },
-      owner: getLocalPlayer()?.id,
-      model: unitData[action.unitType]?.model,
-      modelScale: unitData[action.unitType]?.modelScale,
-      blueprint: canBuild(units[0], action.unitType, x, y)
-        ? 0x0000ff
-        : 0xff0000,
-    });
-    updateCursor();
-    return;
-  }
+  cancelOrder();
 
-  if (action.type === "auto") {
-    if (units.length === 0 && units[0].position) {
-      playSoundAt(
-        pick("click1", "click2", "click3", "click4"),
-        units[0].position.x,
-        units[0].position.y,
-        0.1,
-      );
-    } else {
-      playSound(pick("click1", "click2", "click3", "click4"), {
-        volume: 0.1,
+  switch (action.type) {
+    case "auto":
+      if (units.length === 0 && units[0].position) {
+        playSoundAt(
+          pick("click1", "click2", "click3", "click4"),
+          units[0].position.x,
+          units[0].position.y,
+          0.1,
+        );
+      } else {
+        playSound(pick("click1", "click2", "click3", "click4"), {
+          volume: 0.1,
+        });
+      }
+
+      send({
+        type: "unitOrder",
+        order: action.order,
+        units: units.map((u) => u.id),
       });
+      break;
+    case "build": {
+      const x = normalize(
+        mouse.world.x,
+        (unitData[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
+      );
+      const y = normalize(
+        mouse.world.y,
+        (unitData[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
+      );
+      blueprint = app.addEntity({
+        id: `blueprint-${blueprintIndex++}`,
+        unitType: action.unitType,
+        position: { x, y },
+        owner: getLocalPlayer()?.id,
+        model: unitData[action.unitType]?.model,
+        modelScale: unitData[action.unitType]?.modelScale,
+        blueprint: canBuild(units[0], action.unitType, x, y)
+          ? 0x0000ff
+          : 0xff0000,
+      });
+      updateCursor();
+      break;
     }
+    case "target":
+      activeOrder = {
+        order: action.order,
+        variant: action.order === "attack" ? "enemy" : "ally",
+      };
+      updateCursor();
+      break;
 
-    send({
-      type: "unitOrder",
-      order: action.order,
-      units: units.map((u) => u.id),
-    });
-    return;
+    default:
+      absurd(action);
   }
 });
 

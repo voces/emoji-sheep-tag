@@ -4,6 +4,7 @@ type ExtendedSetEventMap<T> = {
 };
 
 export class ExtendedSet<T> extends Set<T> {
+  // deno-lint-ignore ban-types
   private eventListeners?: { [key: string]: Function[] } = {};
 
   override add(value: T): this {
@@ -38,6 +39,13 @@ export class ExtendedSet<T> extends Set<T> {
 
   first() {
     for (const element of this) return element;
+  }
+
+  findMap<U>(mapper: (item: T) => U | undefined) {
+    for (const element of this) {
+      const result = mapper(element);
+      if (result !== undefined) return result as U;
+    }
   }
 
   group<U>(

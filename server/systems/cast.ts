@@ -22,7 +22,9 @@ export const advanceCast = (e: Entity, delta: number) => {
         const mirrors: string[] = [];
         for (const pos of e.action.info.positions.slice(1)) {
           const mirror = newUnit(e.owner, e.unitType, pos.x, pos.y);
-          console.log("mirror:", mirror.id);
+          mirror.actions = mirror.actions.filter((a) =>
+            a.type !== "auto" || a.order !== "mirrorImage"
+          );
           updatePathing(mirror);
           mirror.isMirror = true;
           mirrors.push(mirror.id);

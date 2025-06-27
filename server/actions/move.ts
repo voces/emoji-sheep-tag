@@ -1,20 +1,22 @@
+import { Point } from "../../shared/pathing/math.ts";
+import { Entity } from "../../shared/types.ts";
 import { orderMove } from "../api/unit.ts";
-import { onInit } from "../ecs.ts";
 import { lookup } from "../systems/lookup.ts";
 
-onInit((game) => {
-  game.addEventListener("unitOrder", (e) => {
-    if (e.order !== "move" || !e.unit.position) return;
+export const handleMove = (
+  unit: Entity,
+  orderTarget: string | Point | undefined,
+) => {
+  if (!unit.position || !orderTarget) return;
 
-    // Interrupt
-    delete e.unit.action;
-    delete e.unit.queue;
+  // Interrupt
+  delete unit.action;
+  delete unit.queue;
 
-    const target = typeof e.orderTarget === "string"
-      ? lookup(e.orderTarget)
-      : e.orderTarget;
-    if (!target) return;
+  const target = typeof orderTarget === "string"
+    ? lookup(orderTarget)
+    : orderTarget;
+  if (!target) return;
 
-    orderMove(e.unit, target);
-  });
-});
+  orderMove(unit, target);
+};

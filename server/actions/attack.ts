@@ -1,25 +1,27 @@
+import { Point } from "../../shared/pathing/math.ts";
+import { Entity } from "../../shared/types.ts";
 import { orderAttack as orderAttack } from "../api/unit.ts";
-import { onInit } from "../ecs.ts";
 import { lookup } from "../systems/lookup.ts";
 
-onInit((game) => {
-  game.addEventListener("unitOrder", (e) => {
-    if (e.order !== "attack" || !e.unit.attack || !e.unit.position) return;
+export const handleAttack = (
+  unit: Entity,
+  orderTarget: string | Point | undefined,
+) => {
+  if (!unit.attack || !unit.position) return;
 
-    // Interrupt
-    delete e.unit.action;
-    delete e.unit.queue;
+  // Interrupt
+  delete unit.action;
+  delete unit.queue;
 
-    const target = typeof e.orderTarget === "string"
-      ? lookup(e.orderTarget)
-      : e.orderTarget;
-    if (!target) return;
+  const target = typeof orderTarget === "string"
+    ? lookup(orderTarget)
+    : orderTarget;
+  if (!target) return;
 
-    if (!("id" in target)) {
-      console.warn("attack-move not yet implemented");
-      return;
-    }
+  if (!("id" in target)) {
+    console.warn("attack-move not yet implemented");
+    return;
+  }
 
-    orderAttack(e.unit, target);
-  });
-});
+  orderAttack(unit, target);
+};

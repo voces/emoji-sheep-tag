@@ -1,4 +1,4 @@
-import { Entity } from "./types.ts";
+import { Entity, UnitDataAction } from "./types.ts";
 
 export const classificationGroups = {
   alliance: ["ally", "enemy", "neutral"],
@@ -19,6 +19,30 @@ export type Classification =
 // pressed against the corners but still occupy them would be
 // (0.25 ** 2 * 2) ** 0.5 * 2, ≈0.707. Similar logic as above, but now we may need to
 // reach across both entire cells.
+
+const move: UnitDataAction = {
+  name: "Move",
+  type: "target",
+  order: "move",
+  targeting: ["other"],
+  aoe: 0,
+  binding: ["KeyV"],
+  smart: { ground: 0, ally: 0 },
+};
+
+const stop: UnitDataAction = {
+  name: "Stop",
+  type: "auto",
+  order: "stop",
+  binding: ["KeyZ"],
+};
+
+const selfDestruct: UnitDataAction = {
+  name: "Self destruct",
+  type: "auto",
+  order: "selfDestruct",
+  binding: ["KeyX"],
+};
 
 export const unitData: Record<
   string,
@@ -48,15 +72,8 @@ export const unitData: Record<
     radius: 0.25,
     pathing: 1,
     actions: [
-      {
-        name: "Move",
-        type: "target",
-        order: "move",
-        targeting: ["other"],
-        aoe: 0,
-        binding: ["KeyV"],
-        smart: { ground: 0, ally: 0 },
-      },
+      move,
+      stop,
       { name: "Build Hut", type: "build", unitType: "hut", binding: ["KeyF"] },
       {
         name: "Build Wide Hut",
@@ -117,15 +134,8 @@ export const unitData: Record<
         binding: ["KeyA"],
         smart: { enemy: 0 },
       },
-      {
-        name: "Move",
-        type: "target",
-        order: "move",
-        targeting: ["other"],
-        aoe: 0,
-        binding: ["KeyV"],
-        smart: { ground: 0, ally: 0 },
-      },
+      move,
+      stop,
       { name: "Hold position", type: "auto", order: "hold", binding: ["KeyH"] },
       {
         name: "Mirror Image",
@@ -142,6 +152,7 @@ export const unitData: Record<
     maxHealth: 120,
     completionTime: 0.7,
     sounds: { death: ["explosion1"] },
+    actions: [selfDestruct],
   },
   tinyHut: {
     name: "Tiny Hut",
@@ -152,6 +163,7 @@ export const unitData: Record<
     maxHealth: 20,
     completionTime: 0.5,
     sounds: { death: ["explosion1"] },
+    actions: [selfDestruct],
   },
   wideHut: {
     name: "Wide Hut",
@@ -162,6 +174,7 @@ export const unitData: Record<
     maxHealth: 140,
     completionTime: 1,
     sounds: { death: ["explosion1"] },
+    actions: [selfDestruct],
   },
   rotundHut: {
     name: "Rotund Hut",
@@ -172,6 +185,7 @@ export const unitData: Record<
     maxHealth: 200,
     completionTime: 1.5,
     sounds: { death: ["explosion1"] },
+    actions: [selfDestruct],
   },
   stackHut: {
     name: "Stack Hut",
@@ -188,6 +202,7 @@ export const unitData: Record<
     maxHealth: 15,
     completionTime: 3,
     sounds: { death: ["explosion1"] },
+    actions: [selfDestruct],
   },
   fence: {
     radius: 0.25,

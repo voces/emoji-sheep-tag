@@ -5,10 +5,8 @@ import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { leave, send } from "./lobbyApi.ts";
 import { build, zBuild } from "./actions/build.ts";
-import "./actions/move.ts";
 import { start, zStart } from "./actions/start.ts";
 import { colors } from "../shared/data.ts";
-import "./actions/attack.ts";
 import { unitOrder, zOrderEvent } from "./actions/unitOrder.ts";
 import { flushUpdates } from "./updates.ts";
 import { ping, zPing } from "./actions/ping.ts";
@@ -23,8 +21,6 @@ import { generic, zGenericEvent } from "./actions/generic.ts";
 import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
-import "./actions/hold.ts";
-import "./actions/mirrorImage.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 
 export type SocketEventMap = {

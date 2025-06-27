@@ -7,6 +7,8 @@ import { getLocalPlayer } from "../../vars/players.ts";
 import { shortcutsVar } from "../Settings.tsx";
 import { SvgIcon } from "../../components/SVGIcon.tsx";
 import { useTooltip } from "../../hooks/useTooltip.tsx";
+import { absurd } from "../../../../shared/util/absurd.ts";
+import { useListenToEntityProp } from "../../hooks/useListenToEntityProp.ts";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -22,12 +24,13 @@ selection.addEventListener(
 );
 
 const Command = (
-  { name, icon, iconType, binding, iconScale }: {
+  { name, icon, iconType, binding, iconScale, current }: {
     name: string;
     icon?: string;
     iconType?: "svg";
     binding?: string[];
     iconScale?: number;
+    current?: boolean;
   },
 ) => {
   const { tooltipContainerProps, tooltip } = useTooltip(name);
@@ -58,7 +61,8 @@ const Command = (
 
   return (
     <div
-      className="command"
+      className={["command", current ? "current" : undefined].filter(Boolean)
+        .join(" ")}
       onClick={handleClick}
       {...tooltipContainerProps}
     >
@@ -81,30 +85,40 @@ const iconMap: Record<string, string> = {
   destroyLastFarm: "collision",
   hold: "suspend",
   mirrorImage: "wolf",
+  move: "route",
+  stop: "stop",
+  attack: "claw",
+  selfDestruct: "collision",
 };
 
-const Action = ({ action }: { action: UnitDataAction }) => {
-  if (action.type === "build") {
-    return (
-      <Command
-        name={action.name}
-        iconType="svg"
-        icon={unitData[action.unitType]?.model ?? action.unitType}
-        iconScale={unitData[action.unitType]?.modelScale}
-        binding={action.binding}
-      />
-    );
-  }
-
-  if (action.type === "auto") {
-    return (
-      <Command
-        name={action.name}
-        iconType="svg"
-        icon={iconMap[action.order]}
-        binding={action.binding}
-      />
-    );
+const Action = (
+  { action, current }: { action: UnitDataAction; current: boolean },
+) => {
+  switch (action.type) {
+    case "auto":
+    case "target":
+      return (
+        <Command
+          name={action.name}
+          iconType="svg"
+          icon={iconMap[action.order]}
+          binding={action.binding}
+          current={current}
+        />
+      );
+    case "build":
+      return (
+        <Command
+          name={action.name}
+          iconType="svg"
+          icon={unitData[action.unitType]?.model ?? action.unitType}
+          iconScale={unitData[action.unitType]?.modelScale}
+          binding={action.binding}
+          current={current}
+        />
+      );
+    default:
+      absurd(action);
   }
 
   return null;
@@ -113,6 +127,7 @@ const Action = ({ action }: { action: UnitDataAction }) => {
 export const ActionBar = () => {
   const selection = useReactiveVar(selectionVar);
   useReactiveVar(shortcutsVar);
+  useListenToEntityProp(selection, "action");
 
   if (!selection || selection.owner !== getLocalPlayer()?.id) return null;
 
@@ -128,7 +143,32 @@ export const ActionBar = () => {
         padding: 12,
       }}
     >
-      {selection.actions?.map((a, i) => <Action key={i} action={a} />)}
+      {selection.actions?.map((a, i) => (
+        <Action
+          key={i}
+          action={a}
+          current={a.type === "build"
+            ? [
+              selection.action,
+              ...(selection.queue?.length ? [selection.queue[0]] : []),
+            ].some((a2) => a2?.type === "build" && a2.unitType === a.unitType)
+            : a.type === "auto"
+            ? a.order === (selection.action?.type === "cast"
+              ? selection.action.info.type
+              : selection.action?.type === "hold"
+              ? "hold"
+              : !selection.action
+              ? "stop"
+              : undefined)
+            : a.type === "target"
+            ? a.order === "attack"
+              ? selection.action?.type === "attack" ||
+                (selection.action?.type === "walk" &&
+                  selection.queue?.[0].type === "attack")
+              : a.order === "move" && selection.action?.type === "walk"
+            : false}
+        />
+      ))}
     </div>
   );
 };

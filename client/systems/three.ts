@@ -33,6 +33,10 @@ import circle from "../assets/circle.svg";
 import gravity from "../assets/gravity.svg";
 //@deno-types="../assets/asset.d.ts"
 import hinduTemple from "../assets/hindu-temple.svg";
+//@deno-types="../assets/asset.d.ts"
+import route from "../assets/route.svg";
+//@deno-types="../assets/asset.d.ts"
+import stop from "../assets/stop.svg";
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -48,6 +52,8 @@ export const svgs: Record<string, string> = {
   gravity,
   suspend,
   hinduTemple,
+  route,
+  stop,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

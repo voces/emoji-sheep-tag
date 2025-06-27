@@ -4,13 +4,14 @@ import { camera, scene } from "./graphics/three.ts";
 import { InstancedGroup } from "./graphics/InstancedGroup.ts";
 import { app, Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
+import { ExtendedSet } from "./util/ExtendedSet.ts";
 
 export class MouseEvent extends Event {
   readonly pixels: Vector2;
   readonly percent: Vector2;
   readonly world: Vector2;
   readonly angle: number;
-  readonly intersects: Set<Entity>;
+  readonly intersects: ExtendedSet<Entity>;
   readonly element: Element | null;
   readonly elements: Element[];
 
@@ -21,7 +22,7 @@ export class MouseEvent extends Event {
     this.percent = mouse.percent.clone();
     this.world = mouse.world.clone();
     this.angle = mouse.angle;
-    this.intersects = new Set(mouse.intersects);
+    this.intersects = new ExtendedSet(mouse.intersects);
     this.element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
     this.elements = document.elementsFromPoint(mouse.pixels.x, mouse.pixels.y);
   }

@@ -1,15 +1,11 @@
 import { App, newApp, System } from "jsr:@verit/ecs";
 import { addQueueSystem } from "./systems/queues.ts";
 import { addLookupSystem } from "./systems/lookup.ts";
-// import { addActionTagSystem } from "./systems/actionTags.ts";
-// import { addActionSystem } from "./systems/action.ts";
 import { Entity } from "../shared/types.ts";
 import { addPathingSystem } from "./systems/pathing.ts";
 import { newEntity, remove, update } from "./updates.ts";
 import { TypedEventTarget } from "typed-event-target";
 import { addPlayerEntitiesSystem } from "./systems/playerEntities.ts";
-import { Point } from "../shared/pathing/math.ts";
-// import { addAttackSystem } from "./systems/attack.ts";
 
 // Alphanumeric, minus 0, O, l, and I
 const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -39,17 +35,6 @@ const id = (type?: string) => {
   }
 };
 
-export class UnitOrderEvent extends Event {
-  constructor(
-    readonly unit: Entity,
-    readonly player: string,
-    readonly order: string,
-    readonly orderTarget?: Point | string,
-  ) {
-    super("unitOrder");
-  }
-}
-
 export class UnitDeathEvent extends Event {
   constructor(readonly unit: Entity, readonly killer: Entity | undefined) {
     super("unitDeath");
@@ -63,7 +48,6 @@ export class ColorChangeEvent extends Event {
 }
 
 export type GameEvents = {
-  unitOrder: UnitOrderEvent;
   unitDeath: UnitDeathEvent;
   colorChange: ColorChangeEvent;
 };
@@ -112,16 +96,18 @@ export const newEcs = () => {
         };
         const proxy = new Proxy(entity, {
           set: (target, prop, value) => {
-            if ((target as any)[prop] === value) return true;
+            if (target[prop as keyof Entity] === value) return true;
+            // deno-lint-ignore no-explicit-any
             (target as any)[prop] = value;
-            app.queueEntityChange(proxy, prop as any);
+            app.queueEntityChange(proxy, prop as keyof Entity);
             update(target.id, prop as keyof Entity, value);
             return true;
           },
           deleteProperty: (target, prop) => {
-            if ((target as any)[prop] == null) return true;
+            if (target[prop as keyof Entity] == null) return true;
+            // deno-lint-ignore no-explicit-any
             delete (target as any)[prop];
-            app.queueEntityChange(proxy, prop as any);
+            app.queueEntityChange(proxy, prop as keyof Entity);
             update(target.id, prop as keyof Entity, null);
             return true;
           },

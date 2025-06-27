@@ -13,6 +13,8 @@
 - https://iconduck.com/icons/11983/circle
 - https://www.svgrepo.com/svg/324490/center-gravity-weight-physics
 - https://iconduck.com/emojis/98624/hindu-temple
+- https://www.svgrepo.com/svg/259472/route
+- https://www.svgrepo.com/svg/500037/stop
 
 # Audio
 

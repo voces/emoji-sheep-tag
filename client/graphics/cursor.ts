@@ -1,7 +1,7 @@
 import { setFirst } from "../../server/util/set.ts";
 import { isEnemy } from "../api/unit.ts";
 import { isAlly } from "../api/unit.ts";
-import { hasBlueprint } from "../controls.ts";
+import { getActiveOrder, hasBlueprint } from "../controls.ts";
 import { Entity } from "../ecs.ts";
 import { mouse } from "../mouse.ts";
 import { getLocalPlayer } from "../ui/vars/players.ts";
@@ -10,9 +10,10 @@ const variants = {
   default: { css: "default", hue: 0 },
   control: { css: "grab", hue: 270 },
   enemy: { css: "crosshair", hue: 150 },
-  ally: { css: "pointer", hue: 330 },
+  ally: { css: "pointer", hue: 315 },
   neutral: { css: "pointer", hue: 180 },
 };
+export type CursorVariant = keyof typeof variants;
 // 0 blue
 // 30 bluepurple
 // 60 purple
@@ -31,6 +32,8 @@ if (!cursor) throw new Error("Expected cursor element");
 
 const getCursorVariant = (intersect: Entity | undefined) => {
   if (hasBlueprint()) return "hidden";
+  const active = getActiveOrder()?.variant;
+  if (active) return active;
   if (!intersect) return "default";
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return "neutral";
