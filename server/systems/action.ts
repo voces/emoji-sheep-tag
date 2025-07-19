@@ -7,6 +7,7 @@ import { lookup } from "./lookup.ts";
 import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../../shared/constants.ts";
 import { angleDifference, tweenAbsAngles } from "../../shared/pathing/math.ts";
 import { advanceCast } from "./cast.ts";
+import { orderAttack } from "../api/unit.ts";
 
 onInit((app) => {
   app.addSystem({
@@ -93,6 +94,9 @@ onInit((app) => {
             break;
           case "cast":
             delta = advanceCast(e, delta);
+            break;
+          case "attackMove":
+            orderAttack(e, e.action.target);
             break;
           default:
             absurd(e.action);

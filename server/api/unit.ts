@@ -18,6 +18,7 @@ import {
 } from "../systems/pathing.ts";
 import { unitData } from "../../shared/data.ts";
 import { FOLLOW_DISTANCE } from "../../shared/constants.ts";
+import { getEntitiesInRange } from "../systems/kd.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -89,38 +90,104 @@ export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
   return true;
 };
 
-export const orderAttack = (attacker: Entity, target: Entity): boolean => {
+const isReachableTarget = (attacker: Entity, target: Entity) => {
+  if (!attacker.position) return false;
+
+  // If within attack range...
+  if (canSwing(attacker, target)) return true;
+
+  // Cannot walk
+  if (!attacker.movementSpeed) return false;
+
+  const path = calcPath(attacker, "id" in target ? target.id : target, {
+    mode: "attack",
+  }).slice(1);
+
+  return path.length > 0 &&
+    (path.at(-1)?.x !== attacker.position.x ||
+      path.at(-1)?.y !== attacker.position.y);
+};
+
+export const acquireTarget = (e: Entity) => {
+  const pos = e.position;
+  if (!pos) return;
+  return getEntitiesInRange(pos.x, pos.y, 10)
+    .filter((e2) => isEnemy(e, e2))
+    .map((e2) => [e2, distanceBetweenPoints(pos, e2.position)] as const)
+    .sort((a, b) => {
+      if (a[0].unitType === "sheep") {
+        if (b[0].unitType !== "sheep") return -1;
+      } else if (b[0].unitType === "sheep") return 1;
+      return a[1] - b[1];
+    }).find(([e2]) => isReachableTarget(e, e2))?.[0];
+};
+
+export const orderAttack = (
+  attacker: Entity,
+  target: Entity | Point,
+): boolean => {
   updatePathing(attacker, 1);
+  if (!attacker.attack || !attacker.position) return false;
 
-  if (!attacker.attack || !attacker.position || !target.position) return false;
+  const attackTarget = "id" in target ? target : undefined;
 
-  // If within attack range..
-  if (canSwing(attacker, target)) {
-    // Otherwise attack immediately
-    delete attacker.queue;
-    attacker.action = { type: "attack", target: target.id };
+  if (attackTarget) {
+    if (!attackTarget.position) return false;
+
+    // If within attack range..
+    if (canSwing(attacker, attackTarget)) {
+      // Otherwise attack immediately
+      delete attacker.queue;
+      attacker.action = { type: "attack", target: attackTarget.id };
+      return true;
+    }
+
+    // If not in range and no movement, abort
+    if (!attacker.movementSpeed) return false;
+
+    const path = calcPath(attacker, attackTarget.id, { mode: "attack" }).slice(
+      1,
+    );
+    // No path possible
+    if (
+      !path.length || (path.at(-1)?.x === attacker.position.x &&
+        path.at(-1)?.y === attacker.position.y)
+    ) return false;
+
+    attacker.action = {
+      type: "walk",
+      target: attackTarget.id,
+      path,
+      attacking: true,
+      // distanceFromTarget: attacker.attack.range,
+    };
+    attacker.queue = [{ type: "attack", target: attackTarget.id }];
     return true;
   }
 
-  // If not in range and no movement, abort
-  if (!attacker.movementSpeed) return false;
+  if ("x" in target) {
+    const acquiredTarget = acquireTarget(attacker);
 
-  const path = calcPath(attacker, target.id, { mode: "attack" }).slice(1);
-  // No path possible
-  if (
-    !path.length || (path.at(-1)?.x === attacker.position.x &&
-      path.at(-1)?.y === attacker.position.y)
-  ) return false;
+    if (acquiredTarget) {
+      const attacking = orderAttack(attacker, acquiredTarget);
+      if (attacking) {
+        if (!attacker.queue) attacker.queue = [];
+        attacker.queue = [...attacker.queue, { type: "attackMove", target }];
+        return true;
+      }
+    }
 
-  attacker.action = {
-    type: "walk",
-    target: target.id,
-    path,
-    attacking: true,
-    // distanceFromTarget: attacker.attack.range,
-  };
-  attacker.queue = [{ type: "attack", target: target.id }];
-  return true;
+    const moving = orderMove(attacker, target);
+    if (!moving) return false;
+    delete attacker.queue;
+    if (attacker.action?.type === "walk") {
+      attacker.action = { ...attacker.action, attackMove: true };
+    }
+    return true;
+  }
+
+  console.warn("Should not be reachable");
+  return false;
 };
 
 // Minimized relative and maximized absolute such that diagonal tinies cannot

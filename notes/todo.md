@@ -1,4 +1,3 @@
-- Implement attack-move
 - Name changes
 - Login system
 - Invis Farm?

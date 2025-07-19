@@ -18,10 +18,5 @@ export const handleAttack = (
     : orderTarget;
   if (!target) return;
 
-  if (!("id" in target)) {
-    console.warn("attack-move not yet implemented");
-    return;
-  }
-
   orderAttack(unit, target);
 };

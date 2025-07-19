@@ -301,6 +301,13 @@
         z-index: 9999;
       }
 
+      .hover-highlight {
+        color: hsl(from var(--color-body) h s calc(l - 10));
+      }
+      .hover-highlight.hover {
+        color: var(--color-body);
+      }
+
       @keyframes fadeOut {
         to {
           opacity: 0;

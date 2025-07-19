@@ -12,6 +12,7 @@ export type WalkAction = {
    * a position, will attack nearby enemies.
    */
   readonly attacking?: boolean;
+  readonly attackMove?: boolean;
 };
 
 type Action = Readonly<
@@ -32,6 +33,9 @@ type Action = Readonly<
       readonly type: "mirrorImage";
       readonly positions: ReadonlyArray<Point>;
     };
+  } | {
+    readonly type: "attackMove";
+    readonly target: Point;
   }
 >;
 

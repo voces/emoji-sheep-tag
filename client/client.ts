@@ -47,6 +47,10 @@ const zAction = z.union([
       positions: z.array(zPoint).readonly(),
     }),
   }),
+  z.object({
+    type: z.literal("attackMove"),
+    target: zPoint,
+  }),
 ]).readonly();
 
 const zTilemap = z.object({

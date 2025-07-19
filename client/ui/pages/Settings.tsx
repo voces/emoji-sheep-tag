@@ -4,9 +4,10 @@ import { pluck } from "../../util/pluck.ts";
 import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
 import { unitData } from "../../../shared/data.ts";
 //@deno-types="npm:@types/react"
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { actionToShortcutKey } from "../../util/actionToShortcutKey.ts";
 import { showSettingsVar } from "../vars/showSettings.ts";
+import Collapse from "../components/Collapse.tsx";
 
 const localStorageShortcuts = (() => {
   try {
@@ -85,6 +86,63 @@ const formatShortcut = (shortcut: string[]) =>
       .replace("Backquote", "`")
   ).join(" + ");
 
+const Section = (
+  { section, shortcuts, setBinding }: {
+    section: string;
+    shortcuts: Record<string, string[]>;
+    setBinding: (shortcut: string, binding: string[]) => Shortcuts;
+  },
+) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="v-stack">
+      <h2 onClick={() => setIsOpen(!isOpen)} className="hover-highlight">
+        <span style={{ display: "inline-block", width: "2ch" }}>
+          {isOpen ? "▼" : "▶"}
+        </span>
+        {section === "misc" ? "Misc" : unitData[section].name ?? section}
+      </h2>
+      <Collapse className="v-stack" isOpen={isOpen}>
+        {Object.entries(shortcuts).map(([key, shortcut]) => (
+          <div key={key} className="h-stack">
+            <p style={{ flex: 1, flexBasis: 1 }}>
+              {miscNames[key as keyof typeof miscNames] ??
+                unitData[section].actions?.find((a) =>
+                  actionToShortcutKey(a) === key
+                )?.name}
+            </p>
+            <div
+              className="h-stack"
+              style={{ flex: 1, flexBasis: 1, justifyContent: "end" }}
+            >
+              <input
+                value={formatShortcut(shortcut)}
+                style={{ width: "100%", maxWidth: 150 }}
+                onChange={() => {}}
+                onKeyDown={(e) => {
+                  setBinding(
+                    key,
+                    Array.from(new Set([...Object.keys(keyboard), e.code])),
+                  );
+                  e.preventDefault();
+                }}
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setBinding(key, defaultBindings[section][key])}
+              >
+                ↺
+              </button>
+            </div>
+          </div>
+        ))}
+      </Collapse>
+    </div>
+  );
+};
+
 const Shortcuts = () => {
   const sections = useReactiveVar(shortcutsVar);
 
@@ -103,50 +161,16 @@ const Shortcuts = () => {
       }}
     >
       {Object.entries(sections).map(([section, shortcuts]) => (
-        <div key={section} className="v-stack">
-          <h2>
-            {section === "misc" ? "Misc" : unitData[section].name ?? section}
-          </h2>
-          {Object.entries(shortcuts).map(([key, shortcut]) => {
-            const setBinding = (binding: string[]) =>
-              shortcutsVar({
-                ...sections,
-                [section]: { ...shortcuts, [key]: binding },
-              });
-
-            return (
-              <div key={key} className="h-stack">
-                <p style={{ flex: 1, flexBasis: 1 }}>
-                  {miscNames[key as keyof typeof miscNames] ??
-                    unitData[section].actions?.find((a) =>
-                      actionToShortcutKey(a) === key
-                    )?.name}
-                </p>
-                <div
-                  className="h-stack"
-                  style={{ flex: 1, flexBasis: 1, justifyContent: "end" }}
-                >
-                  <input
-                    value={formatShortcut(shortcut)}
-                    style={{ width: "100%", maxWidth: 150 }}
-                    onChange={() => {}}
-                    onKeyDown={(e) => {
-                      setBinding(
-                        Array.from(new Set([...Object.keys(keyboard), e.code])),
-                      );
-                      e.preventDefault();
-                    }}
-                  />
-                  <button
-                    onClick={() => setBinding(defaultBindings[section][key])}
-                  >
-                    ↺
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <Section
+          key={section}
+          section={section}
+          shortcuts={shortcuts}
+          setBinding={(shortcut, binding) =>
+            shortcutsVar({
+              ...sections,
+              [section]: { ...shortcuts, [shortcut]: binding },
+            })}
+        />
       ))}
     </div>
   );
@@ -171,6 +195,7 @@ export const Settings = () => {
           <Shortcuts />
         </div>
         <button
+          type="button"
           style={{ marginLeft: "auto", padding: "0 32px" }}
           onClick={() => showSettingsVar(false)}
         >
