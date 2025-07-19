@@ -6,6 +6,7 @@ import { addChatMessage } from "../vars/chat.ts";
 import { useMemoWithPrevious } from "../hooks/useMemoWithPrevious.ts";
 import { showSettingsVar } from "../vars/showSettings.ts";
 import { stateVar } from "../vars/state.ts";
+import { flags } from "../../flags.ts";
 
 export const showCommandPaletteVar = makeVar<
   "closed" | "open" | "sent" | "dismissed"
@@ -104,7 +105,16 @@ export const CommandPalette = () => {
         stats.style.display = stats.style.display === "none" ? "" : "none";
       },
     },
-  ], []);
+    {
+      name: `${flags.debugPathing ? "Disable" : "Enable"} path debugging`,
+      description: `${flags.debugPathing ? "Hide" : "Show"} pathing traces`,
+      callback: () => {
+        flags.debugPathing = !flags.debugPathing;
+        if (flags.debugPathing) localStorage.setItem("debug-pathing", "true");
+        else localStorage.removeItem("debug-pathing");
+      },
+    },
+  ], [flags.debugPathing]);
 
   const filteredCommands = useMemoWithPrevious<CommandOption[]>((prev) => {
     if (prompt) return prev ?? [];

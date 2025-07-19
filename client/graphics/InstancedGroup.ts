@@ -130,10 +130,9 @@ export class InstancedGroup extends Group {
       this.setPositionAt(swapId, Infinity, Infinity, undefined, Infinity);
 
       const colorInstancedMesh = this.children.find((c): c is InstancedMesh =>
-        c instanceof InstancedMesh &&
-        hasPlayerColor(c.material)
+        c instanceof InstancedMesh && hasPlayerColor(c.material)
       );
-      if (colorInstancedMesh) {
+      if (colorInstancedMesh && colorInstancedMesh.instanceColor?.array) {
         colorInstancedMesh.getColorAt(swapIndex, dummyColor);
         this.setPlayerColorAt(id, dummyColor);
       }

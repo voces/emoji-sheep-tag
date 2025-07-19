@@ -1,6 +1,7 @@
 import { DIRECTION, PATHING_TYPES } from "./constants.ts";
 import { BinaryHeap } from "./BinaryHeap.ts";
 import {
+  angleDifference,
   behind,
   distanceBetweenEntities,
   infront,
@@ -13,6 +14,10 @@ import {
 import { memoize } from "./memoize.ts";
 import { Tile } from "./Tile.ts";
 import { Footprint, Pathing, PathingEntity, TargetEntity } from "./types.ts";
+import {
+  PATHING_WALK_ANGLE_DIFFERENCE,
+  PATHING_WALK_IGNORE_DISTANCE,
+} from "../constants.ts";
 
 let debugging = false;
 // const elems: HTMLElement[] = [];
@@ -697,10 +702,27 @@ export class PathingMap {
 
     const removedMovingEntities = new Set<PathingEntity>();
     if (removeMovingEntities) {
-      for (const entity of this.entities.keys()) {
-        if (entity.action?.type !== "walk") continue;
-        removedMovingEntities.add(entity);
-        this.removeEntity(entity);
+      for (const e of this.entities.keys()) {
+        if (e.action?.type !== "walk") continue;
+        const dist = distanceBetweenEntities(e, entity);
+        const aDist = Math.abs(angleDifference(
+          Math.atan2(
+            e.action.path[0].y - e.position.y,
+            e.action.path[0].x - e.position.x,
+          ),
+          Math.atan2(
+            ("x" in target ? target.y : target.position.y) -
+              entity.position.y,
+            ("x" in target ? target.x : target.position.x) -
+              entity.position.x,
+          ),
+        ));
+        if (
+          dist < PATHING_WALK_IGNORE_DISTANCE &&
+          aDist > PATHING_WALK_ANGLE_DIFFERENCE
+        ) continue;
+        removedMovingEntities.add(e);
+        this.removeEntity(e);
       }
     }
 

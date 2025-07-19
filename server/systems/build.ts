@@ -14,7 +14,6 @@ export const advanceBuild = (e: Entity, delta: number): number => {
 
   // No longer in range; get in range
   if (distanceBetweenPoints(e.position, e.action) > d) {
-    // delete e.action;
     const { unitType, x, y } = e.action;
     delete e.action;
     orderBuild(e, unitType, x, y);

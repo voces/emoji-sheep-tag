@@ -19,14 +19,15 @@ const withinActionRange = (e: Entity, point: Point) => {
   return true;
 };
 
-const repath = (e: Entity) => {
-  if (e.action?.type !== "walk") return;
+const repath = (e: Entity): Entity => {
+  if (e.action?.type !== "walk") return e;
 
   // If attacking-walking, skip to attack if within range
   if (e.action.attacking && typeof e.action.target === "string") {
     const target = lookup(e.action.target);
     if (target && withinRange(e, target, e.attack?.range ?? 0)) {
-      return delete e.action;
+      delete e.action;
+      return e;
     }
   }
 
@@ -40,7 +41,7 @@ const repath = (e: Entity) => {
     },
   ).slice(1);
 
-  // Same path, try to recalculate with moving entities (IDK what this fixed)
+  // Same path, try to recalculate without moving entities (IDK what this fixed)
   if (
     newPath.length === e.action.path.length &&
     e.action.path.every((p, i) =>
@@ -65,7 +66,11 @@ const repath = (e: Entity) => {
     newPath.length < 1 ||
     newPath.length === 1 && newPath[0].x === e.position?.x &&
       newPath[0].y === e.position.y
-  ) return delete e.action;
+  ) {
+    if (isFollowing(e.action)) return e;
+    delete e.action;
+    return e;
+  }
 
   // New path!
   e.action = {
@@ -75,6 +80,8 @@ const repath = (e: Entity) => {
       : newPath.at(-1) ?? e.action.target,
     path: newPath,
   };
+
+  return e;
 };
 
 const isFollowing = (action: WalkAction) =>
@@ -84,7 +91,7 @@ const isFollowing = (action: WalkAction) =>
 export const advanceMovement = (e: Entity, delta: number): number => {
   if (e.action?.type !== "walk") return delta;
 
-  if (typeof e.action.target === "string") repath(e);
+  if (typeof e.action.target === "string") e = repath(e);
   if (e.action?.type !== "walk") return delta;
 
   // If movement not possible, clear action
@@ -147,13 +154,19 @@ export const advanceMovement = (e: Entity, delta: number): number => {
     // End of path
     if (e.action.path.length === 1) {
       // If end position isn't pathable, try to repath
-      if (!pathable(e, target)) return (repath(e), delta);
+      if (!pathable(e, target)) {
+        e = repath(e);
+        return e.action?.type === "walk" && isFollowing(e.action) ? 0 : delta;
+      }
 
       // Update end position
       e.position = { ...target };
 
       // Repath if we're targeting something (attacking or following a unit)
-      if (typeof e.action.target === "string") return (repath(e), delta);
+      if (typeof e.action.target === "string") {
+        e = repath(e);
+        return e.action?.type === "walk" && isFollowing(e.action) ? 0 : delta;
+      }
 
       // If we're not targeting something, we reached the end; advance
       delete e.action;
@@ -181,7 +194,10 @@ export const advanceMovement = (e: Entity, delta: number): number => {
     };
 
   // If end position isn't pathable, try to repath
-  if (!pathable(e, newPosition)) return (repath(e), delta);
+  if (!pathable(e, newPosition)) {
+    e = repath(e);
+    return delta;
+  }
 
   e.position = newPosition;
 

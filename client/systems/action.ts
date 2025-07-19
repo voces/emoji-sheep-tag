@@ -7,6 +7,7 @@ import {
 import { absurd } from "../../shared/util/absurd.ts";
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
+import { clearDebugCircles, updateDebugCircles } from "../util/pathingDebug.ts";
 
 const advanceWalk = (e: Entity, delta: number) => {
   if (
@@ -22,24 +23,6 @@ const advanceWalk = (e: Entity, delta: number) => {
 
   target = e.action.path[0];
 
-  if (e.turnSpeed) {
-    const facing = e.facing ?? DEFAULT_FACING;
-    const targetAngle = Math.atan2(
-      target.y - e.position.y,
-      target.x - e.position.x,
-    );
-    const diff = Math.abs(angleDifference(facing, targetAngle));
-    if (diff > 1e-07) {
-      const maxTurn = e.turnSpeed * delta;
-      e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
-    }
-    if (diff > MAX_ATTACK_ANGLE) {
-      delta = Math.max(0, delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed);
-    }
-  }
-
-  if (delta === 0) return;
-
   let movement = e.movementSpeed * delta;
 
   // Tween along movement
@@ -53,11 +36,10 @@ const advanceWalk = (e: Entity, delta: number) => {
     }
 
     movement -= remaining;
-    target = e.action.path[1];
+    [last, target] = e.action.path;
     e.action = { ...e.action, path: e.action.path.slice(1) };
     remaining = distanceBetweenPoints(target, last);
     p = movement / remaining;
-    last = target;
   }
 
   e.position = p < 1
@@ -71,41 +53,43 @@ const advanceWalk = (e: Entity, delta: number) => {
     };
 };
 
-const advanceAttack = (e: Entity, delta: number) => {
-  if (e.action?.type !== "attack") return;
-
-  if (
-    !e.turnSpeed || (!e.swing && e.action?.type !== "attack") || !e.position
-  ) return;
-
-  const target = lookup[e.action?.type === "attack" ? e.action.target : ""]
-    ?.position;
-  if (!target) return;
-
-  const facing = e.facing ?? DEFAULT_FACING;
-  const targetAngle = Math.atan2(
-    target.y - e.position.y,
-    target.x - e.position.x,
-  );
-  const diff = Math.abs(angleDifference(facing, targetAngle));
-  if (diff > 1e-07) {
-    const maxTurn = e.turnSpeed * delta;
-    e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
-  }
-
-  return;
-};
-
 app.addSystem({
   props: ["action"],
   updateEntity: (e, delta) => {
+    // Turn; consume delta if target point is outside angle of attack (±60°)
+    const lookTarget = e.action.type === "attack"
+      ? lookup[e.action.target]?.position
+      : e.action.type === "build"
+      ? e.action
+      : e.action.type === "walk"
+      ? e.action.path[0]
+      : undefined;
+    if (lookTarget && e.turnSpeed && e.position) {
+      const facing = e.facing ?? DEFAULT_FACING;
+      const targetAngle = Math.atan2(
+        lookTarget.y - e.position.y,
+        lookTarget.x - e.position.x,
+      );
+      const diff = Math.abs(angleDifference(facing, targetAngle));
+      if (diff > 1e-07) {
+        const maxTurn = e.turnSpeed * delta;
+        e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
+      }
+      if (diff > MAX_ATTACK_ANGLE) {
+        delta = Math.max(
+          0,
+          delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed,
+        );
+      }
+    }
+
+    updateDebugCircles(e);
+
     switch (e.action.type) {
       case "walk":
         advanceWalk(e, delta);
         break;
       case "attack":
-        advanceAttack(e, delta);
-        break;
       case "build":
       case "hold":
       case "cast":
@@ -114,4 +98,5 @@ app.addSystem({
         absurd(e.action);
     }
   },
+  onRemove: clearDebugCircles,
 });

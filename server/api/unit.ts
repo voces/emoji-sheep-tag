@@ -17,6 +17,7 @@ import {
   withPathingMap,
 } from "../systems/pathing.ts";
 import { unitData } from "../../shared/data.ts";
+import { FOLLOW_DISTANCE } from "../../shared/constants.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -73,13 +74,16 @@ export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
   const targetPos = "x" in target ? target : target.position;
   if (!targetPos) return false;
 
-  const path = calcPath(mover, "x" in target ? target : target.id).slice(1);
+  const path = calcPath(mover, "x" in target ? target : target.id, {
+    distanceFromTarget: "x" in target ? undefined : FOLLOW_DISTANCE,
+  }).slice(1);
   if (!path.length) return false;
 
   mover.action = {
     type: "walk",
-    target: "x" in target ? target : path.at(-1)!,
+    target: "x" in target ? target : target.id,
     path,
+    distanceFromTarget: "x" in target ? undefined : FOLLOW_DISTANCE,
   };
 
   return true;
