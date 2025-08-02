@@ -1,7 +1,9 @@
-import { distanceBetweenPoints } from "../../shared/pathing/math.ts";
-import { Entity } from "../../shared/types.ts";
-import { build, computeBuildDistance, orderBuild } from "../api/unit.ts";
-import { onInit } from "../ecs.ts";
+import { distanceBetweenPoints } from "../../../shared/pathing/math.ts";
+import { Entity } from "../../../shared/types.ts";
+import { build, computeBuildDistance } from "../../api/unit.ts";
+import { onInit } from "../../ecs.ts";
+import { calcPath } from "../pathing.ts";
+import { tweenPath } from "./tweenPath.ts";
 
 export const advanceBuild = (e: Entity, delta: number): number => {
   if (e.action?.type !== "build") return delta;
@@ -14,16 +16,22 @@ export const advanceBuild = (e: Entity, delta: number): number => {
 
   // No longer in range; get in range
   if (distanceBetweenPoints(e.position, e.action) > d) {
-    const { unitType, x, y } = e.action;
-    delete e.action;
-    orderBuild(e, unitType, x, y);
-    return delta;
+    if (!e.action.path) {
+      e.action = {
+        ...e.action,
+        path: calcPath(e, e.action, { distanceFromTarget: d }).slice(1),
+      };
+      if (!e.action.path?.length) {
+        delete e.action;
+        return delta;
+      }
+    }
+
+    return tweenPath(e, delta);
   }
 
-  if (delta === 0) return delta;
-
   build(e, e.action.unitType, e.action.x, e.action.y);
-  e.action = null;
+  delete e.action;
   return delta;
 };
 

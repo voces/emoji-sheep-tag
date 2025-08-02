@@ -1,7 +1,7 @@
-import { Entity } from "../../shared/types.ts";
-import { absurd } from "../../shared/util/absurd.ts";
-import { newUnit } from "../api/unit.ts";
-import { updatePathing } from "./pathing.ts";
+import { Entity } from "../../../shared/types.ts";
+import { absurd } from "../../../shared/util/absurd.ts";
+import { newUnit } from "../../api/unit.ts";
+import { updatePathing } from "../pathing.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {
   if (e.action?.type !== "cast") return delta;

@@ -4,99 +4,130 @@ import {
   distanceBetweenPoints,
   tweenAbsAngles,
 } from "../../shared/pathing/math.ts";
-import { absurd } from "../../shared/util/absurd.ts";
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 import { clearDebugCircles, updateDebugCircles } from "../util/pathingDebug.ts";
+import { pathable } from "./pathing.ts";
 
-const advanceWalk = (e: Entity, delta: number) => {
+const tweenPath = (e: Entity, delta: number): number => {
   if (
-    e.action?.type !== "walk" || !e.position || !e.movementSpeed ||
-    e.action.path.length === 0
-  ) return;
+    !e.action || !("path" in e.action) || !e.action.path?.length ||
+    !e.position || !e.movementSpeed
+  ) return 0;
 
-  let target = typeof e.action.target === "string"
-    ? lookup[e.action.target]?.position
-    : e.action.target;
-
-  if (!target) return;
-
-  target = e.action.path[0];
-
+  let target = e.action.path[0];
   let movement = e.movementSpeed * delta;
 
   // Tween along movement
   let remaining = distanceBetweenPoints(target, e.position);
   let p = movement / remaining;
   let last = e.position;
+
+  // End of segment
   while (p > 1) {
-    if (e.action.path.length === 1) {
+    delta -= remaining / e.movementSpeed;
+
+    // End of path
+    if (e.action.path?.length === 1) {
+      // If end position isn't pathable, do nothing
+      if (!pathable(e, target)) return delta;
+
+      // Update end position
       e.position = { ...target };
-      break;
+      const { path: _path, ...rest } = e.action;
+      e.action = rest;
+      return delta;
     }
 
+    // Not end of path, advance along it
     movement -= remaining;
-    [last, target] = e.action.path;
-    e.action = { ...e.action, path: e.action.path.slice(1) };
+    [last, target] = e.action.path ?? [];
+    e.action = { ...e.action, path: e.action.path?.slice(1) };
     remaining = distanceBetweenPoints(target, last);
     p = movement / remaining;
   }
 
-  e.position = p < 1
+  delta -= movement / e.movementSpeed;
+
+  const newPosition = p < 1
     ? {
-      x: e.position.x * (1 - p) + target.x * p,
-      y: e.position.y * (1 - p) + target.y * p,
+      x: last.x * (1 - p) + target.x * p,
+      y: last.y * (1 - p) + target.y * p,
     }
     : {
       x: target.x,
       y: target.y,
     };
+
+  // If end position isn't pathable, do nothing
+  if (!pathable(e, newPosition)) return delta;
+
+  e.position = newPosition;
+  return delta;
 };
 
 app.addSystem({
   props: ["action"],
+  onChange: (e) => {
+    if (e.action?.type !== "attack" && e.swing) delete e.swing;
+  },
   updateEntity: (e, delta) => {
-    // Turn; consume delta if target point is outside angle of attack (±60°)
-    const lookTarget = e.action.type === "attack"
-      ? lookup[e.action.target]?.position
-      : e.action.type === "build"
-      ? e.action
-      : e.action.type === "walk"
-      ? e.action.path[0]
-      : undefined;
-    if (lookTarget && e.turnSpeed && e.position) {
-      const facing = e.facing ?? DEFAULT_FACING;
-      const targetAngle = Math.atan2(
-        lookTarget.y - e.position.y,
-        lookTarget.x - e.position.x,
-      );
-      const diff = Math.abs(angleDifference(facing, targetAngle));
-      if (diff > 1e-07) {
-        const maxTurn = e.turnSpeed * delta;
-        e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
+    let loops = 1000;
+    while ((e.action || e.queue?.length) && delta > 0) {
+      if (!loops--) {
+        console.warn("Over 1000 action loops!", e.id, e.action, delta);
+        break;
       }
-      if (diff > MAX_ATTACK_ANGLE) {
-        delta = Math.max(
-          0,
-          delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed,
+
+      // Advance queue
+      if (!e.action) {
+        if (e.queue && e.queue.length > 0) {
+          if (e.queue.length > 1) [e.action, ...e.queue] = e.queue;
+          else {
+            e.action = e.queue[0];
+            delete e.queue;
+          }
+        } else break;
+      }
+
+      // Turn; consume delta if target point is outside angle of attack (±60°)
+      const lookTarget = "path" in e.action && e.action.path?.[0] ||
+        "targetId" in e.action && e.action.targetId &&
+          lookup[e.action.targetId]?.position ||
+        "target" in e.action && e.action.target || undefined;
+
+      if (
+        lookTarget &&
+        (lookTarget.x !== e.position?.x || lookTarget.y !== e.position.y) &&
+        e.turnSpeed && e.position
+      ) {
+        const facing = e.facing ?? DEFAULT_FACING;
+        const targetAngle = Math.atan2(
+          lookTarget.y - e.position.y,
+          lookTarget.x - e.position.x,
         );
+        const diff = Math.abs(angleDifference(facing, targetAngle));
+        if (diff > 1e-07) {
+          const maxTurn = e.turnSpeed * delta;
+          e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
+        }
+        if (diff > MAX_ATTACK_ANGLE) {
+          delta = Math.max(
+            0,
+            delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed,
+          );
+        }
       }
+
+      // Abort if delta consumed turning
+      if (delta === 0) break;
+
+      delta = "path" in e.action && e.action.path?.length
+        ? tweenPath(e, delta)
+        : 0;
     }
 
     updateDebugCircles(e);
-
-    switch (e.action.type) {
-      case "walk":
-        advanceWalk(e, delta);
-        break;
-      case "attack":
-      case "build":
-      case "hold":
-      case "cast":
-        break;
-      default:
-        absurd(e.action);
-    }
   },
   onRemove: clearDebugCircles,
 });

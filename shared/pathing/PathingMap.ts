@@ -703,7 +703,9 @@ export class PathingMap {
     const removedMovingEntities = new Set<PathingEntity>();
     if (removeMovingEntities) {
       for (const e of this.entities.keys()) {
-        if (e.action?.type !== "walk") continue;
+        if (!e.action || !("path" in e.action) || !e.action.path?.length) {
+          continue;
+        }
         const dist = distanceBetweenEntities(e, entity);
         const aDist = Math.abs(angleDifference(
           Math.atan2(
@@ -753,11 +755,13 @@ export class PathingMap {
     const targetPathable = targetTile &&
       targetTile.pathable(pathing) &&
       this.pathable(entity, targetPosition.x, targetPosition.y);
-    const endNearestPathingGen = targetPathable
+    let endNearestPathingGen = targetPathable
       ? undefined
       : this.nearestPathingGen(targetPosition.x, targetPosition.y, entity);
     const endTile = targetPathable ? targetTile : (() => {
-      const { x, y } = endNearestPathingGen!.next().value;
+      const first = endNearestPathingGen!.next();
+      if (first.done) endNearestPathingGen = undefined;
+      const { x, y } = first.value;
       return this.grid[
         Math.round((y - offset) * this.resolution)
       ][Math.round((x - offset) * this.resolution)];

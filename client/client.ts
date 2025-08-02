@@ -25,18 +25,25 @@ const zStart = z.object({
 const zAction = z.union([
   z.object({
     type: z.literal("walk"),
-    target: z.union([z.string(), zPoint]),
-    path: zPoint.array(),
+    target: zPoint,
+    path: zPoint.array().optional(),
+  }),
+  z.object({
+    type: z.literal("walk"),
+    targetId: z.string(),
+    path: zPoint.array().optional(),
   }),
   z.object({
     type: z.literal("build"),
     unitType: z.string(),
     x: z.number(),
     y: z.number(),
+    path: zPoint.array().optional(),
   }),
   z.object({
     type: z.literal("attack"),
-    target: z.string(),
+    targetId: z.string(),
+    path: zPoint.array().optional(),
   }),
   z.object({ type: z.literal("hold") }),
   z.object({
@@ -50,6 +57,8 @@ const zAction = z.union([
   z.object({
     type: z.literal("attackMove"),
     target: zPoint,
+    targetId: z.string().optional(),
+    path: zPoint.array().optional(),
   }),
 ]).readonly();
 

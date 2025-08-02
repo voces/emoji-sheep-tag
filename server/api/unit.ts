@@ -82,9 +82,8 @@ export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
 
   mover.action = {
     type: "walk",
-    target: "x" in target ? target : target.id,
+    ...("x" in target ? { target } : { targetId: target.id }),
     path,
-    distanceFromTarget: "x" in target ? undefined : FOLLOW_DISTANCE,
   };
 
   return true;
@@ -129,65 +128,31 @@ export const orderAttack = (
   updatePathing(attacker, 1);
   if (!attacker.attack || !attacker.position) return false;
 
-  const attackTarget = "id" in target ? target : undefined;
-
-  if (attackTarget) {
-    if (!attackTarget.position) return false;
+  if ("id" in target) {
+    if (!target.position) return false;
 
     // If within attack range..
-    if (canSwing(attacker, attackTarget)) {
+    if (canSwing(attacker, target)) {
       // Otherwise attack immediately
       delete attacker.queue;
-      attacker.action = { type: "attack", target: attackTarget.id };
+      attacker.action = { type: "attack", targetId: target.id };
       return true;
     }
 
     // If not in range and no movement, abort
     if (!attacker.movementSpeed) return false;
 
-    const path = calcPath(attacker, attackTarget.id, { mode: "attack" }).slice(
-      1,
-    );
-    // No path possible
-    if (
-      !path.length || (path.at(-1)?.x === attacker.position.x &&
-        path.at(-1)?.y === attacker.position.y)
-    ) return false;
-
-    attacker.action = {
-      type: "walk",
-      target: attackTarget.id,
-      path,
-      attacking: true,
-      // distanceFromTarget: attacker.attack.range,
-    };
-    attacker.queue = [{ type: "attack", target: attackTarget.id }];
-    return true;
-  }
-
-  if ("x" in target) {
-    const acquiredTarget = acquireTarget(attacker);
-
-    if (acquiredTarget) {
-      const attacking = orderAttack(attacker, acquiredTarget);
-      if (attacking) {
-        if (!attacker.queue) attacker.queue = [];
-        attacker.queue = [...attacker.queue, { type: "attackMove", target }];
-        return true;
-      }
-    }
-
-    const moving = orderMove(attacker, target);
-    if (!moving) return false;
     delete attacker.queue;
-    if (attacker.action?.type === "walk") {
-      attacker.action = { ...attacker.action, attackMove: true };
-    }
+    attacker.action = { type: "attack", targetId: target.id };
     return true;
   }
 
-  console.warn("Should not be reachable");
-  return false;
+  // TODO: check if nearby target in range
+  if (!attacker.movementSpeed) return false;
+
+  delete attacker.queue;
+  attacker.action = { type: "attackMove", target };
+  return true;
 };
 
 // Minimized relative and maximized absolute such that diagonal tinies cannot
@@ -233,27 +198,8 @@ export const orderBuild = (
     )
   ) return false;
 
-  // Check if walking required
-  const buildDistance = computeBuildDistance(type);
-  if (distanceBetweenPoints(builder.position, { x, y }) <= buildDistance) {
-    builder.action = { type: "build", unitType: type, x, y };
-    return true;
-  }
-
-  // Validate can walk there
-  const path = calcPath(builder, { x, y }, {
-    distanceFromTarget: buildDistance,
-  }).slice(1);
-
-  if (!path.length) return false;
-
-  builder.action = {
-    type: "walk",
-    target: { x, y },
-    path,
-    distanceFromTarget: buildDistance,
-  };
-  builder.queue = [{ type: "build", x, y, unitType: type }];
+  delete builder.queue;
+  builder.action = { type: "build", x, y, unitType: type };
   return true;
 };
 

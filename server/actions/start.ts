@@ -46,7 +46,10 @@ export const start = (client: Client) => {
     ecs,
     lookup,
     start: Date.now(),
-    clearInterval: interval(() => ecs.update(), 0.05),
+    clearInterval: interval(() => {
+      ecs.tick++;
+      ecs.update();
+    }, 0.05),
   };
 
   lobbyContext.with(lobby, () => {

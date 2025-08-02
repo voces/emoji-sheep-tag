@@ -1,13 +1,16 @@
-import { advanceAttack } from "./attack.ts";
-import { advanceBuild } from "./build.ts";
-import { absurd } from "../../shared/util/absurd.ts";
-import { onInit } from "../ecs.ts";
-import { advanceMovement } from "./movement.ts";
-import { lookup } from "./lookup.ts";
-import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../../shared/constants.ts";
-import { angleDifference, tweenAbsAngles } from "../../shared/pathing/math.ts";
-import { advanceCast } from "./cast.ts";
-import { orderAttack } from "../api/unit.ts";
+import { advanceBuild } from "./advanceBuild.ts";
+import { absurd } from "../../../shared/util/absurd.ts";
+import { onInit } from "../../ecs.ts";
+import { lookup } from "../lookup.ts";
+import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../../../shared/constants.ts";
+import {
+  angleDifference,
+  tweenAbsAngles,
+} from "../../../shared/pathing/math.ts";
+import { advanceCast } from "./advanceCast.ts";
+import { advanceWalk } from "./advanceWalk.ts";
+import { advanceAttack } from "./advanceAttack.ts";
+import { advanceAttackMove } from "./advanceAttackMove.ts";
 
 onInit((app) => {
   app.addSystem({
@@ -49,13 +52,10 @@ onInit((app) => {
         }
 
         // Turn; consume delta if target point is outside angle of attack (±60°)
-        const lookTarget = e.action.type === "attack"
-          ? lookup(e.action.target)?.position
-          : e.action.type === "build"
-          ? e.action
-          : e.action.type === "walk"
-          ? e.action.path[0]
-          : undefined;
+        const lookTarget = "path" in e.action && e.action.path?.[0] ||
+          "targetId" in e.action && e.action.targetId &&
+            lookup(e.action.targetId)?.position ||
+          "target" in e.action && e.action.target || undefined;
         if (lookTarget && e.turnSpeed && e.position) {
           const facing = e.facing ?? DEFAULT_FACING;
           const targetAngle = Math.atan2(
@@ -87,7 +87,7 @@ onInit((app) => {
             delta = advanceBuild(e, delta);
             break;
           case "walk":
-            delta = advanceMovement(e, delta);
+            delta = advanceWalk(e, delta);
             break;
           case "hold":
             delta = 0;
@@ -96,7 +96,8 @@ onInit((app) => {
             delta = advanceCast(e, delta);
             break;
           case "attackMove":
-            orderAttack(e, e.action.target);
+            delta = advanceAttackMove(e, delta);
+            // orderAttack(e, e.action.target);
             break;
           default:
             absurd(e.action);

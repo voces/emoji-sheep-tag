@@ -2,18 +2,15 @@ import { Classification } from "./data.ts";
 import { Point } from "./pathing/math.ts";
 import { Footprint, Pathing } from "./pathing/types.ts";
 
-export type WalkAction = {
-  readonly type: "walk";
-  readonly target: string | { x: number; y: number };
-  readonly path: { x: number; y: number }[];
-  readonly distanceFromTarget?: number;
-  /**
-   * If `target` is a string, will stop walking once in range. If `target` is
-   * a position, will attack nearby enemies.
-   */
-  readonly attacking?: boolean;
-  readonly attackMove?: boolean;
-};
+export type WalkAction =
+  & {
+    readonly type: "walk";
+    readonly path?: { x: number; y: number }[];
+  }
+  & (
+    | { readonly targetId: string }
+    | { readonly target: { x: number; y: number } }
+  );
 
 type Action = Readonly<
   WalkAction | {
@@ -21,9 +18,11 @@ type Action = Readonly<
     readonly unitType: string;
     readonly x: number;
     readonly y: number;
+    readonly path?: { x: number; y: number }[];
   } | {
     readonly type: "attack";
-    readonly target: string;
+    readonly targetId: string;
+    readonly path?: { x: number; y: number }[];
   } | {
     readonly type: "hold";
   } | {
@@ -36,6 +35,9 @@ type Action = Readonly<
   } | {
     readonly type: "attackMove";
     readonly target: Point;
+    /** Current acquired target */
+    readonly targetId?: string;
+    readonly path?: { x: number; y: number }[];
   }
 >;
 

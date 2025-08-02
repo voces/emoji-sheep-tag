@@ -148,10 +148,8 @@ export const ActionBar = () => {
           key={i}
           action={a}
           current={a.type === "build"
-            ? [
-              selection.action,
-              ...(selection.queue?.length ? [selection.queue[0]] : []),
-            ].some((a2) => a2?.type === "build" && a2.unitType === a.unitType)
+            ? selection.action?.type === "build" &&
+              selection.action.unitType === a.unitType
             : a.type === "auto"
             ? a.order === (selection.action?.type === "cast"
               ? selection.action.info.type
@@ -163,9 +161,9 @@ export const ActionBar = () => {
             : a.type === "target"
             ? a.order === "attack"
               ? selection.action?.type === "attack" ||
-                (selection.action?.type === "walk" &&
-                  selection.queue?.[0].type === "attack")
-              : a.order === "move" && selection.action?.type === "walk"
+                (selection.action?.type === "attackMove")
+              : a.order === "move" && !!selection.action &&
+                "path" in selection.action
             : false}
         />
       ))}

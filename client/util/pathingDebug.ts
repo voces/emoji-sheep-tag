@@ -16,7 +16,10 @@ export const clearDebugCircles = (e: Entity) => {
 };
 
 export const updateDebugCircles = (e: Entity) => {
-  if (!flags.debugPathing || !e.position || e.action?.type !== "walk") {
+  if (
+    !flags.debugPathing || !e.position || !e.action || !("path" in e.action) ||
+    !e.action.path?.length
+  ) {
     return clearDebugCircles(e);
   }
 
@@ -86,11 +89,12 @@ export const updateDebugCircles = (e: Entity) => {
         unitType: "circle",
         position,
         modelScale,
-        playerColor: e.action.attacking || e.queue?.[0].type === "attack"
-          ? "#FF0000"
-          : e.queue?.[0].type === "build"
-          ? "#0000FF"
-          : "#FFFFFF",
+        playerColor:
+          e.action.type === "attack" || e.action.type === "attackMove"
+            ? "#FF0000"
+            : e.action.type === "build"
+            ? "#0000FF"
+            : "#FFFFFF",
       });
       keyToId.set(key, e2);
     }

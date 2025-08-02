@@ -1,4 +1,4 @@
-import { App, newApp, System } from "jsr:@verit/ecs";
+import { App, newApp } from "jsr:@verit/ecs";
 import { addQueueSystem } from "./systems/queues.ts";
 import { addLookupSystem } from "./systems/lookup.ts";
 import { Entity } from "../shared/types.ts";
@@ -57,6 +57,8 @@ class GameTarget extends TypedEventTarget<GameEvents> {
     super();
   }
 
+  tick = 0;
+
   delete(child: Entity) {
     const app = this as unknown as Game;
     for (const system of app.systems) {
@@ -72,11 +74,6 @@ class GameTarget extends TypedEventTarget<GameEvents> {
 
     remove(child.id);
   }
-
-  #entityChanges = new Map<
-    Entity,
-    Map<System<Entity, never>, Set<keyof Entity>>
-  >();
 }
 
 export type Game = GameTarget & App<Entity>;
