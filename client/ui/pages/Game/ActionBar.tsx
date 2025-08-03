@@ -24,13 +24,14 @@ selection.addEventListener(
 );
 
 const Command = (
-  { name, icon, iconType, binding, iconScale, current }: {
+  { name, icon, iconType, binding, iconScale, current, disabled }: {
     name: string;
     icon?: string;
     iconType?: "svg";
     binding?: string[];
     iconScale?: number;
     current?: boolean;
+    disabled?: boolean;
   },
 ) => {
   const { tooltipContainerProps, tooltip } = useTooltip(name);
@@ -61,9 +62,16 @@ const Command = (
 
   return (
     <div
-      className={["command", current ? "current" : undefined].filter(Boolean)
-        .join(" ")}
+      className={[
+        "command",
+        current ? "current" : undefined,
+        disabled ? "disabled" : undefined,
+      ].filter(Boolean).join(" ")}
       onClick={handleClick}
+      style={{
+        filter: disabled ? "saturate(0.3) brightness(0.7)" : undefined,
+        opacity: disabled ? 0.6 : undefined,
+      }}
       {...tooltipContainerProps}
     >
       {iconType === "svg" && icon && (
@@ -92,8 +100,16 @@ const iconMap: Record<string, string> = {
 };
 
 const Action = (
-  { action, current }: { action: UnitDataAction; current: boolean },
+  { action, current, entity }: {
+    action: UnitDataAction;
+    current: boolean;
+    entity: Entity;
+  },
 ) => {
+  // Check if action is disabled due to insufficient mana
+  const manaCost = action.manaCost ?? 0;
+  const disabled = manaCost > 0 && (entity.mana ?? 0) < manaCost;
+
   switch (action.type) {
     case "auto":
     case "target":
@@ -104,6 +120,7 @@ const Action = (
           icon={iconMap[action.order]}
           binding={action.binding}
           current={current}
+          disabled={disabled}
         />
       );
     case "build":
@@ -115,6 +132,7 @@ const Action = (
           iconScale={unitData[action.unitType]?.modelScale}
           binding={action.binding}
           current={current}
+          disabled={disabled}
         />
       );
     default:
@@ -128,6 +146,7 @@ export const ActionBar = () => {
   const selection = useReactiveVar(selectionVar);
   useReactiveVar(shortcutsVar);
   useListenToEntityProp(selection, "action");
+  useListenToEntityProp(selection, "mana");
 
   if (!selection || selection.owner !== getLocalPlayer()?.id) return null;
 
@@ -147,6 +166,7 @@ export const ActionBar = () => {
         <Action
           key={i}
           action={a}
+          entity={selection}
           current={a.type === "build"
             ? selection.action?.type === "build" &&
               selection.action.unitType === a.unitType

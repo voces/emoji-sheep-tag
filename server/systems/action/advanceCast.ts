@@ -27,6 +27,11 @@ export const advanceCast = (e: Entity, delta: number) => {
           );
           updatePathing(mirror);
           mirror.isMirror = true;
+
+          // Copy health and mana from original unit
+          if (e.health !== undefined) mirror.health = e.health;
+          if (e.mana !== undefined) mirror.mana = e.mana;
+
           mirrors.push(mirror.id);
         }
         e.mirrors = mirrors;

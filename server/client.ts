@@ -16,6 +16,7 @@ import "./systems/autoAttack.ts";
 import "./systems/kd.ts";
 import "./systems/death.ts";
 import "./systems/action/action.ts";
+import "./systems/manaRegen.ts";
 import { generic, zGenericEvent } from "./actions/generic.ts";
 import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";

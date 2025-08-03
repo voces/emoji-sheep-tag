@@ -413,7 +413,7 @@ globalThis.addEventListener("keydown", (e) => {
     return false;
   }
 
-  const units: Entity[] = [];
+  let units: Entity[] = [];
   let action: UnitDataAction | undefined;
   for (const entity of selection) {
     if (!entity.actions) continue;
@@ -431,6 +431,17 @@ globalThis.addEventListener("keydown", (e) => {
   if (!action) return;
 
   cancelOrder();
+
+  // Check if any unit has enough mana for the action
+  const manaCost = action.manaCost ?? 0;
+  const unitsTotal = units.length;
+  units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
+
+  if (units.length === 0 && unitsTotal) {
+    // Play insufficient mana sound
+    playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.3 });
+    return;
+  }
 
   switch (action.type) {
     case "auto":

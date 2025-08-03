@@ -51,6 +51,8 @@ export type UnitDataActionTarget = {
   readonly aoe?: number;
   readonly binding?: string[];
   readonly smart?: { [key in Classification | "ground"]?: number };
+  readonly manaCost?: number;
+  readonly castDuration?: number;
 };
 
 export type UnitDataAction = {
@@ -58,11 +60,15 @@ export type UnitDataAction = {
   readonly type: "build";
   readonly unitType: string;
   readonly binding?: string[];
+  readonly manaCost?: number;
+  readonly castDuration?: number;
 } | {
   readonly name: string;
   readonly type: "auto";
   readonly order: string;
   readonly binding?: string[];
+  readonly manaCost?: number;
+  readonly castDuration?: number;
 } | UnitDataActionTarget;
 
 export type Entity = {
@@ -85,6 +91,8 @@ export type Entity = {
   health?: number;
   maxHealth?: number;
   mana?: number;
+  maxMana?: number;
+  manaRegen?: number;
   movementSpeed?: number;
   /** Radians per second */
   turnSpeed?: number;

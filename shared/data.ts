@@ -57,6 +57,9 @@ export const unitData: Record<
     | "requiresTilemap"
     | "attack"
     | "maxHealth"
+    | "mana"
+    | "maxMana"
+    | "manaRegen"
     | "actions"
     | "isDoodad"
     | "model"
@@ -115,6 +118,9 @@ export const unitData: Record<
     turnSpeed: 11,
     radius: 0.5,
     pathing: 1,
+    mana: 60,
+    maxMana: 100,
+    manaRegen: 1,
     attack: {
       damage: 70,
       // TODO: check range for wolf attacking sheep via corner
@@ -142,6 +148,8 @@ export const unitData: Record<
         type: "auto",
         order: "mirrorImage",
         binding: ["KeyR"],
+        manaCost: 20,
+        castDuration: 0.5,
       },
     ],
   },
