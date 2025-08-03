@@ -1,6 +1,7 @@
 import { App } from "jsr:@verit/ecs";
 import { Entity } from "../../shared/types.ts";
 import { lobbyContext } from "../contexts.ts";
+import { addSystem } from "../ecs.ts";
 
 const data = new WeakMap<App<Entity>, Record<string, Entity | undefined>>();
 
@@ -12,11 +13,10 @@ export const lookup = (entityId: string) => {
   return entity;
 };
 
-/** A system to track a reverse map for entity ids to entities */
-export const addLookupSystem = (app: App<Entity>) => {
+addSystem((game) => {
   const lookup: Record<string, Entity | undefined> = {};
-  data.set(app, lookup);
-  app.addSystem({
+  data.set(game, lookup);
+  return {
     props: ["id"],
     onAdd: (e) => {
       lookup[e.id] = e;
@@ -24,6 +24,5 @@ export const addLookupSystem = (app: App<Entity>) => {
     onRemove: (e) => {
       delete lookup[e.id];
     },
-  });
-  return lookup;
-};
+  };
+});

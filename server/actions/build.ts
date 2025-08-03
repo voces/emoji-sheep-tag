@@ -4,6 +4,7 @@ import { Entity } from "../../shared/types.ts";
 import { orderBuild } from "../api/unit.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
+import { lookup } from "../systems/lookup.ts";
 
 export const zBuild = z.object({
   type: z.literal("build"),
@@ -19,7 +20,7 @@ export const build = (
 ): Entity | void => {
   const round = lobbyContext.context.round;
   if (!round) return;
-  const u = round.lookup[unit];
+  const u = lookup(unit);
   if (u?.owner !== client.id) return;
 
   // Interrupt

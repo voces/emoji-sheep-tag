@@ -1,6 +1,5 @@
 import { Team } from "../shared/zod.ts";
 import { type Client } from "./client.ts";
-import { Entity } from "../shared/types.ts";
 import { Game } from "./ecs.ts";
 
 /**
@@ -8,12 +7,6 @@ import { Game } from "./ecs.ts";
  *  - lobby: stores references to users, settings, and the current round if one is active
  *  - event: stores references to event-data (who, what, etc)
  */
-
-// type Player = {
-//   id: string;
-//   name: string;
-//   color: string;
-// };
 
 type LobbySettings = {
   teams: Map<Client, Team>;
@@ -46,7 +39,6 @@ type LobbyStatus = "lobby" | "playing";
 
 type Round = {
   ecs: Game;
-  lookup: Record<string, Entity | undefined>;
   sheep: Set<Client>;
   wolves: Set<Client>;
   start: number;
@@ -63,11 +55,8 @@ export type Lobby = {
   rounds: { sheep: string[]; wolves: string[]; duration: number }[];
 };
 
-// type GEvent = {};
-
 export const lobbies = new Set<Lobby>();
 Object.assign(globalThis, { lobbies });
-// const eventContext = new ContextManager<GEvent>();
 
 export const deleteLobby = (lobby: Lobby) => {
   lobbies.delete(lobby);

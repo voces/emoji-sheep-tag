@@ -7,6 +7,7 @@ export const Menu = () => (
     <h1>Emoji Sheep Tag</h1>
     <div className="v-stack">
       <button
+        type="button"
         onClick={() => {
           loadLocal();
           connect();
@@ -14,10 +15,10 @@ export const Menu = () => (
       >
         Offline
       </button>
-      <button onClick={connect}>
+      <button type="button" onClick={connect}>
         Multiplayer
       </button>
-      <button onClick={() => showSettingsVar(true)}>
+      <button type="button" onClick={() => showSettingsVar(true)}>
         Settings
       </button>
     </div>

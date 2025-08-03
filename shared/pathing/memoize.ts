@@ -1,10 +1,12 @@
+// deno-lint-ignore no-explicit-any
 export const memoize = <A extends Array<any>, B>(
   fn: (...args: A) => B,
 ): ((...args: A) => B) & {
   hits: number;
   misses: number;
 } => {
-  let rootStore: Map<any, any> | Record<any, any>;
+  // deno-lint-ignore no-explicit-any
+  let rootStore: Map<unknown, any> | Record<any, any>;
 
   const memoized = Object.assign(
     (...args: A): B => {

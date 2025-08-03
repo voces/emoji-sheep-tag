@@ -1,4 +1,4 @@
-import { SystemEntity } from "https://jsr.io/@verit/ecs/0.6.1/src/System.ts";
+import { SystemEntity } from "jsr:@verit/ecs";
 import { app, Entity } from "../ecs.ts";
 import { getLocalPlayer } from "../ui/vars/players.ts";
 import { isAlly } from "../api/unit.ts";

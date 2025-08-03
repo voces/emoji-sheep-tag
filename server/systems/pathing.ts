@@ -6,6 +6,7 @@ import { PathingEntity, TargetEntity } from "../../shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
 import { tiles } from "../../shared/map.ts";
 import { isPathingEntity } from "../../shared/pathing/util.ts";
+import { addSystem } from "../ecs.ts";
 
 const pathingMaps = new WeakMap<App<Entity>, PathingMap>();
 
@@ -93,15 +94,15 @@ export const updatePathing = (entity: Entity, max = Infinity) => {
   ) entity.position = nearest;
 };
 
-export const addPathingSystem = (app: App<Entity>) => {
+addSystem((game) => {
   const pathingMap = new PathingMap({
     resolution: 4,
     pathing: tiles.reverse(),
   });
 
-  pathingMaps.set(app, pathingMap);
+  pathingMaps.set(game, pathingMap);
 
-  app.addSystem({
+  return {
     props: ["position", "radius"],
     onAdd: (e) => {
       pathingMap.addEntity(e);
@@ -112,5 +113,5 @@ export const addPathingSystem = (app: App<Entity>) => {
       if (e.pathing) updatePathing(e);
     },
     onRemove: (e) => pathingMap.removeEntity(e as PathingEntity),
-  });
-};
+  };
+});

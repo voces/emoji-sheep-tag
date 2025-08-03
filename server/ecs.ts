@@ -1,11 +1,7 @@
-import { App, newApp } from "jsr:@verit/ecs";
-import { addQueueSystem } from "./systems/queues.ts";
-import { addLookupSystem } from "./systems/lookup.ts";
+import { App, newApp, System } from "jsr:@verit/ecs";
 import { Entity } from "../shared/types.ts";
-import { addPathingSystem } from "./systems/pathing.ts";
 import { newEntity, remove, update } from "./updates.ts";
 import { TypedEventTarget } from "typed-event-target";
-import { addPlayerEntitiesSystem } from "./systems/playerEntities.ts";
 
 // Alphanumeric, minus 0, O, l, and I
 const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -76,6 +72,17 @@ export const onInit = (fn: (game: Game) => void) => {
   initHooks.push(fn);
 };
 
+export const addSystem = <K extends keyof Entity>(
+  systemConfig:
+    | Partial<System<Entity, K>>
+    | ((game: Game) => Partial<System<Entity, K>>),
+) =>
+  onInit((game) =>
+    game.addSystem(
+      typeof systemConfig === "function" ? systemConfig(game) : systemConfig,
+    )
+  );
+
 export const newEcs = () => {
   const app = newApp<Entity>(
     new GameTarget(
@@ -108,12 +115,22 @@ export const newEcs = () => {
     ),
   ) as Game;
 
-  const lookup = addLookupSystem(app);
-  addQueueSystem(app);
-  addPathingSystem(app);
-  addPlayerEntitiesSystem(app);
-
   for (const hook of initHooks) hook(app);
 
-  return { ecs: app, lookup };
+  return app;
 };
+
+import("./events/death.ts");
+import("./st/index.ts");
+import("./systems/action/action.ts");
+import("./systems/autoAttack.ts");
+import("./systems/death.ts");
+import("./systems/kd.ts");
+import("./systems/lookup.ts");
+import("./systems/lookup.ts");
+import("./systems/manaRegen.ts");
+import("./systems/pathing.ts");
+import("./systems/pathing.ts");
+import("./systems/playerEntities.ts");
+import("./systems/playerEntities.ts");
+import("./systems/queues.ts");

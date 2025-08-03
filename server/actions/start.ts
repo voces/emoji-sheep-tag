@@ -39,12 +39,11 @@ export const start = (client: Client) => {
   }
   for (const p of pool) wolves.add(p);
 
-  const { ecs, lookup } = newEcs();
+  const ecs = newEcs();
   lobby.round = {
     sheep,
     wolves,
     ecs,
-    lookup,
     start: Date.now(),
     clearInterval: interval(() => {
       ecs.tick++;

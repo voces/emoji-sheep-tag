@@ -81,11 +81,13 @@ export class BVH {
   private allocateNode(): number {
     if (this.freeList === -1) {
       let parent = -1;
+      // deno-lint-ignore no-this-alias
       const bvh = this;
       const node: BVHNode = {
         set parent(value: number) {
           parent = value;
           const set = new Set<BVHNode>([this]);
+          // deno-lint-ignore no-this-alias
           let cur = this;
           if (value === -1) return;
           while (cur.parent !== -1) {

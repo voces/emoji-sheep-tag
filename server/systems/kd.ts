@@ -2,7 +2,7 @@ import { SystemEntity } from "jsr:@verit/ecs";
 import { Point } from "../../shared/pathing/math.ts";
 import { Entity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
-import { Game, onInit } from "../ecs.ts";
+import { Game, addSystem } from "../ecs.ts";
 import { KdTree } from "../util/KDTree.ts";
 
 export const dataMap = new WeakMap<
@@ -26,7 +26,7 @@ export const getEntitiesInRange = (x: number, y: number, radius: number) => {
   }).filter(<T>(v: T | undefined): v is T => !!v);
 };
 
-onInit((game) => {
+addSystem((game) => {
   const entityToPointMap = new Map<
     SystemEntity<Entity, "position">,
     Point
@@ -38,7 +38,7 @@ onInit((game) => {
   const kd = new KdTree();
   dataMap.set(game, { entityToPointMap, pointToEntityMap, kd });
 
-  game.addSystem({
+  return {
     props: ["position"],
     onAdd: (e) => {
       kd.add(e.position);
@@ -59,5 +59,5 @@ onInit((game) => {
       entityToPointMap.delete(e as SystemEntity<Entity, "position">);
       pointToEntityMap.delete(prev);
     },
-  });
+  };
 });

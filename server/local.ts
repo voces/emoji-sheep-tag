@@ -71,6 +71,7 @@ self.onconnect = (e) => {
 
 const createSocket = (id: number, port: MessagePort) => {
   let readyState: number = WebSocket.OPEN;
+  // deno-lint-ignore ban-types
   const eventListeners: { [key: string]: Function[] } = {};
 
   const dispatchEvent = (type: string, event: unknown) => {

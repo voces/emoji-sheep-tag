@@ -1,7 +1,7 @@
 import { SystemEntity } from "jsr:@verit/ecs";
 import { Entity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
-import { Game } from "../ecs.ts";
+import { addSystem, Game } from "../ecs.ts";
 import { DoublyLinkedList } from "../util/list.ts";
 
 type PlayerEntity = SystemEntity<Entity, "owner">;
@@ -51,12 +51,12 @@ export const findLastPlayerUnit = <
   return (map[player] as DoublyLinkedList<PlayerEntity>).findLast(fn);
 };
 
-export const addPlayerEntitiesSystem = (app: Game) => {
+addSystem((game) => {
   const map: PlayerEntityMap = {};
   const prevOwner = new Map<Entity, string>();
-  maps.set(app, map);
+  maps.set(game, map);
 
-  app.addSystem({
+  return {
     props: ["owner"],
     onAdd: (e) => {
       const playerMap = map[e.owner] ?? (map[e.owner] = new DoublyLinkedList());
@@ -75,5 +75,5 @@ export const addPlayerEntitiesSystem = (app: Game) => {
       const prev = prevOwner.get(e);
       if (prev && map[prev]) map[prev].delete(e);
     },
-  });
-};
+  };
+});

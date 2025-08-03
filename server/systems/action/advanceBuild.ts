@@ -1,7 +1,7 @@
 import { distanceBetweenPoints } from "../../../shared/pathing/math.ts";
 import { Entity } from "../../../shared/types.ts";
 import { build, computeBuildDistance } from "../../api/unit.ts";
-import { onInit } from "../../ecs.ts";
+import { addSystem } from "../../ecs.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 
@@ -35,14 +35,12 @@ export const advanceBuild = (e: Entity, delta: number): number => {
   return delta;
 };
 
-onInit((game) =>
-  game.addSystem({
-    props: ["progress", "completionTime"],
-    updateEntity: (e, delta) => {
-      if (e.progress + delta >= 1) {
-        return delete (e as Entity).progress;
-      }
-      e.progress += delta / e.completionTime;
-    },
-  })
-);
+addSystem({
+  props: ["progress", "completionTime"],
+  updateEntity: (e, delta) => {
+    if (e.progress + delta >= 1) {
+      return delete (e as Entity).progress;
+    }
+    e.progress += delta / e.completionTime;
+  },
+});

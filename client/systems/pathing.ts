@@ -20,5 +20,5 @@ app.addSystem({
   props: ["position", "radius"],
   onAdd: (e) => !e.blueprint && pathingMap.addEntity(e),
   onChange: (e) => !e.blueprint && pathingMap.updateEntity(e),
-  onRemove: (e) => pathingMap.removeEntity(e as any),
+  onRemove: (e) => pathingMap.removeEntity(e),
 });

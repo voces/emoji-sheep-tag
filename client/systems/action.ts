@@ -74,6 +74,8 @@ app.addSystem({
   updateEntity: (e, delta) => {
     let loops = 1000;
     while ((e.action || e.queue?.length) && delta > 0) {
+      console.log("action", e.id, e.action.type);
+
       if (!loops--) {
         console.warn("Over 1000 action loops!", e.id, e.action, delta);
         break;

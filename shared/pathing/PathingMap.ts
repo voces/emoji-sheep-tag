@@ -18,6 +18,7 @@ import {
   PATHING_WALK_ANGLE_DIFFERENCE,
   PATHING_WALK_IGNORE_DISTANCE,
 } from "../constants.ts";
+import { Entity } from "../types.ts";
 
 let debugging = false;
 // const elems: HTMLElement[] = [];
@@ -1731,10 +1732,10 @@ export class PathingMap {
   /**
    * Removes the entity from the PathingMap, clearing it from all tiles.
    */
-  removeEntity(entity: PathingEntity): void {
-    const tiles = this.entities.get(entity);
+  removeEntity(entity: Entity): void {
+    const tiles = this.entities.get(entity as PathingEntity);
     if (tiles) tiles.forEach((tile) => tile.removeEntity(entity));
-    this.entities.delete(entity);
+    this.entities.delete(entity as PathingEntity);
   }
 
   // paint(): void {

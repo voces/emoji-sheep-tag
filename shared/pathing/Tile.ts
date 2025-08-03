@@ -1,3 +1,4 @@
+import { Entity } from "../types.ts";
 import { Pathing, PathingEntity } from "./types.ts";
 
 export class Tile {
@@ -51,8 +52,8 @@ export class Tile {
     this.recalculatePathing();
   }
 
-  removeEntity(entity: PathingEntity): void {
-    this.entities.delete(entity);
+  removeEntity(entity: Entity): void {
+    this.entities.delete(entity as PathingEntity);
     this.recalculatePathing();
   }
 

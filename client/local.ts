@@ -1,6 +1,5 @@
 import { z } from "npm:zod";
 import { setServer } from "./client.ts";
-import { app } from "./ecs.ts";
 
 let worker: SharedWorker | undefined;
 
@@ -43,6 +42,7 @@ const zWorkerMessage = z.object({
 
 export class LocalWebSocket {
   readyState: number = 0; // CONNECTING
+  // deno-lint-ignore ban-types
   private eventListeners: { [key: string]: Function[] } = {};
   private port: MessagePort;
   private id: number;

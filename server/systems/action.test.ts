@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 const setup = () => {
-  const { ecs, lookup } = newEcs();
+  const ecs = newEcs();
   const client = new Client({
     readyState: WebSocket.OPEN,
     send: () => {},
@@ -33,7 +33,6 @@ const setup = () => {
     sheep: new Set(),
     wolves: new Set(),
     ecs,
-    lookup,
     start: Date.now(),
     clearInterval: interval(() => ecs.update(), 0.05),
   };
