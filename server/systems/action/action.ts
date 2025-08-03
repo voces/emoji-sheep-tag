@@ -13,28 +13,28 @@ import { advanceAttack } from "./advanceAttack.ts";
 import { advanceAttackMove } from "./advanceAttackMove.ts";
 
 addSystem({
-  props: ["action"],
+  props: ["order"],
   onChange: (e) => {
     if (
-      e.action.type !== "attack" && e.action.type !== "attackMove" && e.swing
+      e.order.type !== "attack" && e.order.type !== "attackMove" && e.swing
     ) delete e.swing;
   },
   updateEntity: (e, delta) => {
     let attackCooldownAvailable = delta;
 
     let loops = 1000;
-    while ((e.action || e.queue?.length) && delta > 0) {
+    while ((e.order || e.queue?.length) && delta > 0) {
       if (!loops--) {
-        console.warn("Over 1000 action loops!", e.id, e.action);
+        console.warn("Over 1000 order loops!", e.id, e.order);
         break;
       }
 
       // Advance queue
-      if (!e.action) {
+      if (!e.order) {
         if (e.queue && e.queue.length > 0) {
-          if (e.queue.length > 1) [e.action, ...e.queue] = e.queue;
+          if (e.queue.length > 1) [e.order, ...e.queue] = e.queue;
           else {
-            e.action = e.queue[0];
+            e.order = e.queue[0];
             delete e.queue;
           }
         } else break;
@@ -53,10 +53,10 @@ addSystem({
       }
 
       // Turn; consume delta if target point is outside angle of attack (±60°)
-      const lookTarget = "path" in e.action && e.action.path?.[0] ||
-        "targetId" in e.action && e.action.targetId &&
-          lookup(e.action.targetId)?.position ||
-        "target" in e.action && e.action.target || undefined;
+      const lookTarget = "path" in e.order && e.order.path?.[0] ||
+        "targetId" in e.order && e.order.targetId &&
+          lookup(e.order.targetId)?.position ||
+        "target" in e.order && e.order.target || undefined;
       if (lookTarget && e.turnSpeed && e.position) {
         const facing = e.facing ?? DEFAULT_FACING;
         const targetAngle = Math.atan2(
@@ -79,7 +79,7 @@ addSystem({
       // Abort swing delta consumed turning
       if (delta === 0) break;
 
-      switch (e.action.type) {
+      switch (e.order.type) {
         // TODO: consolidate turning
         case "attack":
           delta = advanceAttack(e, delta);
@@ -101,7 +101,7 @@ addSystem({
           // orderAttack(e, e.action.target);
           break;
         default:
-          absurd(e.action);
+          absurd(e.order);
       }
     }
   },

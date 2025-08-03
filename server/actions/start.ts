@@ -8,7 +8,7 @@ import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
 import { init } from "../st/data.ts";
 import { center, initEntities } from "../../shared/map.ts";
-import { unitData } from "../../shared/data.ts";
+import { prefabs } from "../../shared/data.ts";
 
 export const zStart = z.object({ type: z.literal("start") });
 
@@ -63,16 +63,20 @@ export const start = (client: Client) => {
       wolves: Array.from(wolves, (c) => c.id),
     });
 
-    for (const unitType in initEntities) {
+    for (const prefab in initEntities) {
       for (
-        const [x, y] of initEntities[unitType as keyof typeof initEntities]
-      ) {
-        ecs.addEntity({
-          unitType,
-          position: { x, y },
-          ...unitData[unitType],
-        });
-      }
+        const [x, y] of initEntities[prefab as keyof typeof initEntities]
+      ) ecs.addEntity({ prefab, position: { x, y }, ...prefabs[prefab] });
+    }
+
+    for (const player of [...sheep, ...wolves]) {
+      player.playerEntity = ecs.addEntity({
+        id: `player-${player.id}`,
+        name: player.name,
+        owner: player.id,
+        isPlayer: true,
+        gold: 0,
+      });
     }
 
     timeout(() => {

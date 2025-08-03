@@ -7,7 +7,7 @@ import {
 } from "../../shared/pathing/math.ts";
 import { isPathingEntity } from "../../shared/pathing/util.ts";
 import { Entity } from "../../shared/types.ts";
-import { currentApp } from "../contexts.ts";
+import { currentApp, lobbyContext } from "../contexts.ts";
 import { data } from "../st/data.ts";
 import {
   calcPath,
@@ -16,7 +16,7 @@ import {
   updatePathing,
   withPathingMap,
 } from "../systems/pathing.ts";
-import { unitData } from "../../shared/data.ts";
+import { prefabs } from "../../shared/data.ts";
 import { FOLLOW_DISTANCE } from "../../shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 
@@ -33,17 +33,19 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
     type,
     x,
     y,
-    unitData[type].completionTime
+    prefabs[type].completionTime
       ? { progress: INITIAL_BUILDING_PROGRESS }
       : undefined,
   );
   if (!isPathingEntity(temp)) {
+    deductBuildGold(builder, type);
     return p.withoutEntity(builder, () => app.addEntity(temp));
   }
 
   // Make building if pathable
   const pathable = p.withoutEntity(builder, () => {
     if (!p.pathable(temp)) return false;
+    deductBuildGold(builder, type);
     app.addEntity(temp);
     return true;
   });
@@ -80,7 +82,7 @@ export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
   }).slice(1);
   if (!path.length) return false;
 
-  mover.action = {
+  mover.order = {
     type: "walk",
     ...("x" in target ? { target } : { targetId: target.id }),
     path,
@@ -114,9 +116,9 @@ export const acquireTarget = (e: Entity) => {
     .filter((e2) => isEnemy(e, e2))
     .map((e2) => [e2, distanceBetweenPoints(pos, e2.position)] as const)
     .sort((a, b) => {
-      if (a[0].unitType === "sheep") {
-        if (b[0].unitType !== "sheep") return -1;
-      } else if (b[0].unitType === "sheep") return 1;
+      if (a[0].prefab === "sheep") {
+        if (b[0].prefab !== "sheep") return -1;
+      } else if (b[0].prefab === "sheep") return 1;
       return a[1] - b[1];
     }).find(([e2]) => isReachableTarget(e, e2))?.[0];
 };
@@ -135,7 +137,7 @@ export const orderAttack = (
     if (canSwing(attacker, target)) {
       // Otherwise attack immediately
       delete attacker.queue;
-      attacker.action = { type: "attack", targetId: target.id };
+      attacker.order = { type: "attack", targetId: target.id };
       return true;
     }
 
@@ -143,7 +145,7 @@ export const orderAttack = (
     if (!attacker.movementSpeed) return false;
 
     delete attacker.queue;
-    attacker.action = { type: "attack", targetId: target.id };
+    attacker.order = { type: "attack", targetId: target.id };
     return true;
   }
 
@@ -151,7 +153,7 @@ export const orderAttack = (
   if (!attacker.movementSpeed) return false;
 
   delete attacker.queue;
-  attacker.action = { type: "attackMove", target };
+  attacker.order = { type: "attackMove", target };
   return true;
 };
 
@@ -169,8 +171,8 @@ export const orderAttack = (
 // We can then compute ABSOLUTE from √½-0.25*RELATIVE
 const RELATIVE = 0.3340;
 const ABSOLUTE = 0.6236;
-export const computeBuildDistance = (unitType: string) =>
-  ABSOLUTE + ((unitData[unitType].radius ?? 0) * RELATIVE);
+export const computeBuildDistance = (prefab: string) =>
+  ABSOLUTE + ((prefabs[prefab].radius ?? 0) * RELATIVE);
 
 export const orderBuild = (
   builder: Entity,
@@ -199,11 +201,36 @@ export const orderBuild = (
   ) return false;
 
   delete builder.queue;
-  builder.action = { type: "build", x, y, unitType: type };
+  builder.order = { type: "build", x, y, unitType: type };
   return true;
 };
 
 export const isAlive = (unit: Entity) => {
   if (!currentApp().entities.has(unit)) return false;
   return typeof unit.health !== "number" || unit.health > 0;
+};
+
+const deductBuildGold = (builder: Entity, type: string) => {
+  if (!builder.owner) return;
+
+  const buildAction = builder.actions?.find((a) =>
+    a.type === "build" && a.unitType === type
+  );
+  const goldCost =
+    (buildAction?.type === "build" ? buildAction.goldCost : undefined) ?? 0;
+
+  if (goldCost > 0) {
+    const lobby = lobbyContext.context;
+    const ownerClient = lobby?.round
+      ? Array.from([...lobby.round.sheep, ...lobby.round.wolves]).find(
+        (client) => client.id === builder.owner,
+      )
+      : undefined;
+
+    if (
+      ownerClient?.playerEntity && ownerClient.playerEntity.gold !== undefined
+    ) {
+      ownerClient.playerEntity.gold -= goldCost;
+    }
+  }
 };

@@ -2,14 +2,14 @@ import { mouse, MouseButtonEvent } from "./mouse.ts";
 import { send } from "./client.ts";
 import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
-import { getLocalPlayer } from "./ui/vars/players.ts";
+import { getLocalPlayer, playersVar } from "./ui/vars/players.ts";
 import { selection } from "./systems/autoSelect.ts";
 import { camera } from "./graphics/three.ts";
 import { UnitDataAction, UnitDataActionTarget } from "../shared/types.ts";
 import { absurd } from "../shared/util/absurd.ts";
 import { setFind } from "../server/util/set.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
-import { Classification, unitData } from "../shared/data.ts";
+import { Classification, prefabs } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
 import { canBuild, isEnemy, testClassification } from "./api/unit.ts";
 import { CursorVariant, updateCursor } from "./graphics/cursor.ts";
@@ -128,7 +128,7 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
 
 const getBuilderFromBlueprint = () => {
   if (!blueprint) return;
-  const unitType = blueprint.unitType;
+  const unitType = blueprint.prefab;
   return setFind(
     selection,
     (u) =>
@@ -178,18 +178,18 @@ mouse.addEventListener("mouseButtonDown", (e) => {
     }
   } else if (e.button === "left") {
     if (blueprint) {
-      const unitType = blueprint.unitType;
+      const prefab = blueprint.prefab;
       const unit = getBuilderFromBlueprint();
       if (!unit) return;
       const x = normalize(
         e.world.x,
-        (unitData[unitType]?.tilemap?.width ?? 0) % 4 === 0,
+        (prefabs[prefab]?.tilemap?.width ?? 0) % 4 === 0,
       );
       const y = normalize(
         e.world.y,
-        (unitData[unitType]?.tilemap?.height ?? 0) % 4 === 0,
+        (prefabs[prefab]?.tilemap?.height ?? 0) % 4 === 0,
       );
-      if (!canBuild(unit, unitType, x, y)) return;
+      if (!canBuild(unit, prefab, x, y)) return;
 
       app.removeEntity(blueprint);
       blueprint = undefined;
@@ -205,7 +205,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
           );
         }
       }
-      send({ type: "build", unit: unit.id, buildType: unitType, x, y });
+      send({ type: "build", unit: unit.id, buildType: prefab, x, y });
     } else if (activeOrder) {
       const target = e.intersects.first();
       const unitsWithTarget = selection.filter((e) =>
@@ -271,14 +271,14 @@ mouse.addEventListener("mouseMove", (e) => {
     if (!builder) return;
     const x = normalize(
       e.world.x,
-      (unitData[blueprint.unitType]?.tilemap?.width ?? 0) % 4 === 0,
+      (prefabs[blueprint.prefab]?.tilemap?.width ?? 0) % 4 === 0,
     );
     const y = normalize(
       e.world.y,
-      (unitData[blueprint.unitType]?.tilemap?.height ?? 0) % 4 === 0,
+      (prefabs[blueprint.prefab]?.tilemap?.height ?? 0) % 4 === 0,
     );
     blueprint.position = { x, y };
-    blueprint.blueprint = canBuild(builder, blueprint.unitType, x, y)
+    blueprint.blueprint = canBuild(builder, blueprint.prefab, x, y)
       ? 0x0000ff
       : 0xff0000;
   }
@@ -338,7 +338,7 @@ const cancelBlueprint = () => {
 export const cancelOrder = (
   check?: (order: string | undefined, blueprint: string | undefined) => boolean,
 ) => {
-  if (check && !check(activeOrder?.order, blueprint?.unitType)) return;
+  if (check && !check(activeOrder?.order, blueprint?.prefab)) return;
   if (activeOrder) {
     activeOrder = undefined;
     updateCursor();
@@ -351,9 +351,9 @@ document.addEventListener("pointerlockchange", () => {
 });
 
 let blueprintIndex = 0;
-let blueprint: SystemEntity<Entity, "unitType"> | undefined;
+let blueprint: SystemEntity<Entity, "prefab"> | undefined;
 export const clearBlueprint = (
-  fn?: (blueprint: SystemEntity<Entity, "unitType">) => void,
+  fn?: (blueprint: SystemEntity<Entity, "prefab">) => void,
 ) => {
   if (blueprint && (!fn || fn(blueprint))) cancelBlueprint();
 };
@@ -443,6 +443,22 @@ globalThis.addEventListener("keydown", (e) => {
     return;
   }
 
+  // Check if player has enough gold for build actions
+  if (action.type === "build") {
+    const goldCost = action.goldCost ?? 0;
+    if (goldCost > 0 && units.length > 0) {
+      // Find the owning player of the unit performing the build
+      const owningPlayer = playersVar().find(p => p.id === units[0].owner);
+      const playerGold = owningPlayer?.entity?.gold ?? 0;
+
+      if (playerGold < goldCost) {
+        // Play insufficient gold sound
+        playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.3 });
+        return;
+      }
+    }
+  }
+
   switch (action.type) {
     case "auto":
       if (units.length === 0 && units[0].position) {
@@ -467,19 +483,19 @@ globalThis.addEventListener("keydown", (e) => {
     case "build": {
       const x = normalize(
         mouse.world.x,
-        (unitData[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
+        (prefabs[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
       );
       const y = normalize(
         mouse.world.y,
-        (unitData[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
+        (prefabs[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
       );
       blueprint = app.addEntity({
         id: `blueprint-${blueprintIndex++}`,
-        unitType: action.unitType,
+        prefab: action.unitType,
         position: { x, y },
         owner: getLocalPlayer()?.id,
-        model: unitData[action.unitType]?.model,
-        modelScale: unitData[action.unitType]?.modelScale,
+        model: prefabs[action.unitType]?.model,
+        modelScale: prefabs[action.unitType]?.modelScale,
         blueprint: canBuild(units[0], action.unitType, x, y)
           ? 0x0000ff
           : 0xff0000,
@@ -575,9 +591,9 @@ for (const event of ["pointerdown", "keydown", "contextmenu"]) {
 }
 
 const shortcutOverrides = (
-  e: SystemEntity<Entity, "unitType" | "actions">,
+  e: SystemEntity<Entity, "prefab" | "actions">,
 ) => {
-  const shortcuts = shortcutsVar()[e.unitType];
+  const shortcuts = shortcutsVar()[e.prefab];
   if (!shortcuts) return e;
   let overridden = false;
   const newActions = e.actions.map((a) => {
@@ -594,7 +610,7 @@ const shortcutOverrides = (
   e.actions = newActions;
 };
 const unitsWithActions = app.addSystem({
-  props: ["unitType", "actions"],
+  props: ["prefab", "actions"],
   onAdd: shortcutOverrides,
   onChange: shortcutOverrides,
 });

@@ -279,8 +279,8 @@ export const withinRange = (
     // Kind of a hack, but trying to use distanceToPoint for building makes the
     // unit run around... Need a fix, but then pathing needs to be aware of
     // distanceToPoint
-    : (mover.action?.type === "build" ||
-        (mover.action?.type === "walk" && mover.queue?.[0]?.type === "build"))
+    : (mover.order?.type === "build" ||
+        (mover.order?.type === "walk" && mover.queue?.[0]?.type === "build"))
     ? distanceBetweenPoints(mover.position, targetPoint)
     : distanceToPoint(mover, targetPoint);
 

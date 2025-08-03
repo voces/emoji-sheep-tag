@@ -89,7 +89,7 @@ export const newEcs = () => {
       (input) => {
         const entity: Entity = {
           ...input,
-          id: input.id || id(input.unitType),
+          id: input.id || id(input.prefab),
         };
         const proxy = new Proxy(entity, {
           set: (target, prop, value) => {
@@ -134,3 +134,4 @@ import("./systems/pathing.ts");
 import("./systems/playerEntities.ts");
 import("./systems/playerEntities.ts");
 import("./systems/queues.ts");
+import("./systems/goldGeneration.ts");

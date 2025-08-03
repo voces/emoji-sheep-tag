@@ -17,8 +17,8 @@ export const clearDebugCircles = (e: Entity) => {
 
 export const updateDebugCircles = (e: Entity) => {
   if (
-    !flags.debugPathing || !e.position || !e.action || !("path" in e.action) ||
-    !e.action.path?.length
+    !flags.debugPathing || !e.position || !e.order || !("path" in e.order) ||
+    !e.order.path?.length
   ) {
     return clearDebugCircles(e);
   }
@@ -37,13 +37,13 @@ export const updateDebugCircles = (e: Entity) => {
   register(`${e.position.x}-${e.position.y}`, e.position, WAYPOINT_SIZE);
 
   // each path point + interpolated steps
-  for (let i = e.action.path.length - 1; i >= 0; i--) {
-    const p = e.action.path[i];
+  for (let i = e.order.path.length - 1; i >= 0; i--) {
+    const p = e.order.path[i];
     // register the node itself
     register(`${p.x}-${p.y}`, p, WAYPOINT_SIZE);
 
     // figure out the start of this segment
-    const prev = i === 0 ? e.position : e.action.path[i - 1];
+    const prev = i === 0 ? e.position : e.order.path[i - 1];
 
     // compute dx, dy, distance, and a single, stable angle
     const dx = p.x - prev.x;
@@ -86,15 +86,14 @@ export const updateDebugCircles = (e: Entity) => {
       const { position, modelScale } = specs.get(key)!;
       const e2 = app.addEntity({
         id: crypto.randomUUID(),
-        unitType: "circle",
+        prefab: "circle",
         position,
         modelScale,
-        playerColor:
-          e.action.type === "attack" || e.action.type === "attackMove"
-            ? "#FF0000"
-            : e.action.type === "build"
-            ? "#0000FF"
-            : "#FFFFFF",
+        playerColor: e.order.type === "attack" || e.order.type === "attackMove"
+          ? "#FF0000"
+          : e.order.type === "build"
+          ? "#0000FF"
+          : "#FFFFFF",
       });
       keyToId.set(key, e2);
     }

@@ -16,7 +16,7 @@
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "npm:react",
-    "types": ["npm:@types/react", "./client/assets/asset.d.ts"]
+    "types": ["npm:@types/react", "./client/assets/asset.d.ts", "./client/types.d.ts"]
   },
   "fmt": {
     "indentWidth": 2

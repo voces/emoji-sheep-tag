@@ -4,24 +4,24 @@ import { newUnit } from "../../api/unit.ts";
 import { updatePathing } from "../pathing.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {
-  if (e.action?.type !== "cast") return delta;
+  if (e.order?.type !== "cast") return delta;
 
-  if (delta < e.action.remaining) {
-    e.action = { ...e.action, remaining: e.action.remaining - delta };
+  if (delta < e.order.remaining) {
+    e.order = { ...e.order, remaining: e.order.remaining - delta };
     return 0;
   }
 
-  delta -= e.action.remaining;
+  delta -= e.order.remaining;
 
-  switch (e.action.info.type) {
+  switch (e.order.info.type) {
     case "mirrorImage":
-      e.position = e.action.info.positions[0];
+      e.position = e.order.info.positions[0];
       updatePathing(e);
 
-      if (e.unitType && e.owner) {
+      if (e.prefab && e.owner) {
         const mirrors: string[] = [];
-        for (const pos of e.action.info.positions.slice(1)) {
-          const mirror = newUnit(e.owner, e.unitType, pos.x, pos.y);
+        for (const pos of e.order.info.positions.slice(1)) {
+          const mirror = newUnit(e.owner, e.prefab, pos.x, pos.y);
           mirror.actions = mirror.actions.filter((a) =>
             a.type !== "auto" || a.order !== "mirrorImage"
           );
@@ -38,10 +38,10 @@ export const advanceCast = (e: Entity, delta: number) => {
       }
       break;
     default:
-      absurd(e.action.info.type);
+      absurd(e.order.info.type);
   }
 
-  delete e.action;
+  delete e.order;
 
   return delta;
 };

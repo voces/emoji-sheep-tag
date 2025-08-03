@@ -11,7 +11,7 @@ app.addSystem({
     }
   },
   onRemove: (e) => {
-    if (stateVar() !== "playing" && e.unitType !== "sheep") return;
+    if (stateVar() !== "playing" && e.prefab !== "sheep") return;
     if (typeof e.health === "number" && typeof e.maxHealth === "number") {
       playEntitySound(e, ["death"], { volume: e.tilemap ? 0.3 : 0.6 });
     }

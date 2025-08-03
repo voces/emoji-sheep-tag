@@ -23,7 +23,7 @@ const zStart = z.object({
   wolves: z.string().array(),
 });
 
-const zAction = z.union([
+const zOrder = z.union([
   z.object({
     type: z.literal("walk"),
     target: zPoint,
@@ -86,7 +86,7 @@ const zUpdate = z.object({
   id: z.string(),
 
   // Data
-  unitType: z.string().optional(),
+  prefab: z.string().optional(),
   name: z.string().optional(),
   owner: z.string().optional(),
   health: z.number().optional(),
@@ -94,6 +94,11 @@ const zUpdate = z.object({
   mana: z.number().optional(),
   maxMana: z.number().optional(),
   manaRegen: z.number().optional(),
+
+  // Player data
+  isPlayer: z.boolean().optional(),
+  gold: z.number().optional(),
+
   position: zPoint.readonly().optional(),
   movementSpeed: z.number().optional(),
   facing: z.number().optional(),
@@ -106,6 +111,7 @@ const zUpdate = z.object({
         unitType: z.string(),
         binding: z.array(z.string()).optional(),
         manaCost: z.number().optional(),
+        goldCost: z.number().optional(),
         castDuration: z.number().optional(),
       }),
       z.object({
@@ -163,9 +169,9 @@ const zUpdate = z.object({
   requiresTilemap: zTilemap.optional(),
   structure: z.boolean().optional(),
 
-  // Actions
-  action: zAction.nullable().optional(),
-  queue: zAction.array().readonly().nullable().optional(),
+  // Orders
+  order: zOrder.nullable().optional(),
+  queue: zOrder.array().readonly().nullable().optional(),
 
   // Art
   model: z.string().optional(),
@@ -382,7 +388,7 @@ const handlers = {
       if (checkNearPathing(x, y, 0.25, 255)) continue;
       app.addEntity({
         id: `grass-${crypto.randomUUID()}`,
-        unitType: "grass",
+        prefab: "grass",
         position: { x, y },
         playerColor: `#${r.toString(16)}${g.toString(16)}00`,
         facing: Math.round(Math.random()) * Math.PI,
@@ -398,7 +404,7 @@ const handlers = {
       const scale = Math.min(1 / r, 1 / g, 1 / b) * 255;
       app.addEntity({
         id: `flowers-${crypto.randomUUID()}`,
-        unitType: "flowers",
+        prefab: "flowers",
         position: { x, y },
         playerColor: `#${Math.floor(r * scale).toString(16).padStart(2, "0")}${
           Math.floor(g * scale).toString(16).padStart(2, "0")

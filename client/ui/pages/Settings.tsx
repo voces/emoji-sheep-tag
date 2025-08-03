@@ -2,7 +2,7 @@ import { z } from "npm:zod";
 import { keyboard } from "../../controls.ts";
 import { pluck } from "../../util/pluck.ts";
 import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
-import { unitData } from "../../../shared/data.ts";
+import { prefabs } from "../../../shared/data.ts";
 //@deno-types="npm:@types/react"
 import { useEffect, useState } from "react";
 import { actionToShortcutKey } from "../../util/actionToShortcutKey.ts";
@@ -37,7 +37,7 @@ const defaultBindings: Shortcuts = {
     cancel: ["Backquote"],
   },
   ...Object.fromEntries(
-    Object.entries(unitData).filter(([, d]) => d.actions?.length).map((
+    Object.entries(prefabs).filter(([, d]) => d.actions?.length).map((
       [u, d],
     ) => [
       u,
@@ -55,7 +55,7 @@ export const shortcutsVar = makeVar<Shortcuts>({
     cancel: pluckShortcut("misc.cancel") ?? ["Backquote"],
   },
   ...Object.fromEntries(
-    Object.entries(unitData).filter(([, d]) => d.actions?.length).map((
+    Object.entries(prefabs).filter(([, d]) => d.actions?.length).map((
       [u, d],
     ) => [
       u,
@@ -101,14 +101,14 @@ const Section = (
         <span style={{ display: "inline-block", width: "2ch" }}>
           {isOpen ? "▼" : "▶"}
         </span>
-        {section === "misc" ? "Misc" : unitData[section].name ?? section}
+        {section === "misc" ? "Misc" : prefabs[section].name ?? section}
       </h2>
       <Collapse className="v-stack" isOpen={isOpen}>
         {Object.entries(shortcuts).map(([key, shortcut]) => (
           <div key={key} className="h-stack">
             <p style={{ flex: 1, flexBasis: 1 }}>
               {miscNames[key as keyof typeof miscNames] ??
-                unitData[section].actions?.find((a) =>
+                prefabs[section].actions?.find((a) =>
                   actionToShortcutKey(a) === key
                 )?.name}
             </p>

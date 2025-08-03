@@ -2,22 +2,22 @@ import { SystemEntity } from "jsr:@verit/ecs";
 import { app, Entity } from "../ecs.ts";
 
 const indicators = new Map<
-  SystemEntity<Entity, "unitType" | "modelScale">,
+  SystemEntity<Entity, "prefab" | "modelScale">,
   { birth: number; initialScale: number }
 >();
 
 app.addSystem({
-  props: ["unitType", "modelScale"],
+  props: ["prefab", "modelScale"],
   onAdd: (e) => {
-    if (e.unitType === "indicator") {
+    if (e.prefab === "indicator") {
       indicators.set(e, { birth: app.lastUpdate, initialScale: e.modelScale });
     }
   },
   onChange: (e) => {
-    if (e.unitType !== "indicator") indicators.delete(e);
+    if (e.prefab !== "indicator") indicators.delete(e);
   },
   onRemove: (e) =>
-    indicators.delete(e as SystemEntity<Entity, "unitType" | "modelScale">),
+    indicators.delete(e as SystemEntity<Entity, "prefab" | "modelScale">),
   update: (_, time) => {
     for (const [indicator, { birth, initialScale }] of indicators) {
       const next = initialScale - (time * 3 - birth * 3) ** 2;
@@ -40,7 +40,7 @@ export const newIndicator = (
 ) => {
   app.addEntity({
     id: `indicator-${crypto.randomUUID()}`,
-    unitType: "indicator",
+    prefab: "indicator",
     model,
     playerColor: color,
     position,

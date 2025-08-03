@@ -12,6 +12,8 @@ export type Entity = CommonEntity & {
   playerColor?: string;
   isKaboom?: boolean;
   selectable?: boolean;
+  /** Server position for restoring after failed interpolation */
+  serverPosition?: { readonly x: number; readonly y: number };
 };
 
 class EntityCreatedEvent extends Event {

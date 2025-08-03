@@ -10,7 +10,7 @@ export const handleAttack = (
   if (!unit.attack || !unit.position) return;
 
   // Interrupt
-  delete unit.action;
+  delete unit.order;
   delete unit.queue;
 
   const target = typeof orderTarget === "string"

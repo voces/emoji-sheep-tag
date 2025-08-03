@@ -4,11 +4,11 @@ import { pathable } from "../pathing.ts";
 
 export const tweenPath = (e: Entity, delta: number): number => {
   if (
-    !e.action || !("path" in e.action) || !e.action.path?.length ||
+    !e.order || !("path" in e.order) || !e.order.path?.length ||
     !e.position || !e.movementSpeed
   ) return delta;
 
-  let target = e.action.path[0];
+  let target = e.order.path[0];
   let movement = e.movementSpeed * delta;
 
   // Tween along movement
@@ -21,7 +21,7 @@ export const tweenPath = (e: Entity, delta: number): number => {
     delta -= remaining / e.movementSpeed;
 
     // End of path
-    if (e.action.path?.length === 1) {
+    if (e.order.path?.length === 1) {
       // If end position isn't pathable, do nothing
       if (!pathable(e, target)) return delta;
 
@@ -32,8 +32,8 @@ export const tweenPath = (e: Entity, delta: number): number => {
 
     // Not end of path, advance along it
     movement -= remaining;
-    [last, target] = e.action.path ?? [];
-    e.action = { ...e.action, path: e.action.path?.slice(1) };
+    [last, target] = e.order.path ?? [];
+    e.order = { ...e.order, path: e.order.path?.slice(1) };
     remaining = distanceBetweenPoints(target, last);
     p = movement / remaining;
   }

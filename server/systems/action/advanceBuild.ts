@@ -6,23 +6,23 @@ import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 
 export const advanceBuild = (e: Entity, delta: number): number => {
-  if (e.action?.type !== "build") return delta;
+  if (e.order?.type !== "build") return delta;
   if (!e.position) {
-    delete e.action;
+    delete e.order;
     return delta;
   }
 
-  const d = computeBuildDistance(e.action.unitType);
+  const d = computeBuildDistance(e.order.unitType);
 
   // No longer in range; get in range
-  if (distanceBetweenPoints(e.position, e.action) > d) {
-    if (!e.action.path) {
-      e.action = {
-        ...e.action,
-        path: calcPath(e, e.action, { distanceFromTarget: d }).slice(1),
+  if (distanceBetweenPoints(e.position, e.order) > d) {
+    if (!e.order.path) {
+      e.order = {
+        ...e.order,
+        path: calcPath(e, e.order, { distanceFromTarget: d }).slice(1),
       };
-      if (!e.action.path?.length) {
-        delete e.action;
+      if (!e.order.path?.length) {
+        delete e.order;
         return delta;
       }
     }
@@ -30,8 +30,8 @@ export const advanceBuild = (e: Entity, delta: number): number => {
     return tweenPath(e, delta);
   }
 
-  build(e, e.action.unitType, e.action.x, e.action.y);
-  delete e.action;
+  build(e, e.order.unitType, e.order.x, e.order.y);
+  delete e.order;
   return delta;
 };
 

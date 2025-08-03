@@ -1,4 +1,5 @@
 import { makeVar } from "../hooks/useVar.tsx";
+import type { Entity } from "../../../shared/types.ts";
 
 export type Player = {
   id: string;
@@ -7,6 +8,7 @@ export type Player = {
   local?: boolean;
   host?: boolean;
   sheepCount: number;
+  entity?: Entity;
 };
 
 export const playersVar = makeVar<Player[]>([]);

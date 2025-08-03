@@ -1,7 +1,7 @@
 // styled.d.ts
-import "styled-components";
+import "npm:styled-components";
 
-declare module "styled-components" {
+declare module "npm:styled-components" {
   export interface DefaultTheme {
     colors: {
       pink: string;
@@ -9,6 +9,7 @@ declare module "styled-components" {
       green: string;
       orange: string;
       purple: string;
+      gold: string;
     };
   }
 }

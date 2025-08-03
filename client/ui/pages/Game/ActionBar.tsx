@@ -2,8 +2,8 @@ import { makeVar, useReactiveVar } from "../../hooks/useVar.tsx";
 import { app, Entity } from "../../../ecs.ts";
 import { selection } from "../../../systems/autoSelect.ts";
 import { UnitDataAction } from "../../../../shared/types.ts";
-import { unitData } from "../../../../shared/data.ts";
-import { getLocalPlayer } from "../../vars/players.ts";
+import { prefabs } from "../../../../shared/data.ts";
+import { getLocalPlayer, playersVar } from "../../vars/players.ts";
 import { shortcutsVar } from "../Settings.tsx";
 import { SvgIcon } from "../../components/SVGIcon.tsx";
 import { useTooltip } from "../../hooks/useTooltip.tsx";
@@ -108,7 +108,16 @@ const Action = (
 ) => {
   // Check if action is disabled due to insufficient mana
   const manaCost = action.manaCost ?? 0;
-  const disabled = manaCost > 0 && (entity.mana ?? 0) < manaCost;
+  let disabled = manaCost > 0 && (entity.mana ?? 0) < manaCost;
+
+  // Check if action is disabled due to insufficient gold (for build actions)
+  if (action.type === "build") {
+    const goldCost = action.goldCost ?? 0;
+    // Find the owning player of the entity
+    const owningPlayer = playersVar().find((p) => p.id === entity.owner);
+    const playerGold = owningPlayer?.entity?.gold ?? 0;
+    disabled = disabled || (goldCost > 0 && playerGold < goldCost);
+  }
 
   switch (action.type) {
     case "auto":
@@ -128,8 +137,8 @@ const Action = (
         <Command
           name={action.name}
           iconType="svg"
-          icon={unitData[action.unitType]?.model ?? action.unitType}
-          iconScale={unitData[action.unitType]?.modelScale}
+          icon={prefabs[action.unitType]?.model ?? action.unitType}
+          iconScale={prefabs[action.unitType]?.modelScale}
           binding={action.binding}
           current={current}
           disabled={disabled}
@@ -145,8 +154,14 @@ const Action = (
 export const ActionBar = () => {
   const selection = useReactiveVar(selectionVar);
   useReactiveVar(shortcutsVar);
-  useListenToEntityProp(selection, "action");
+  useListenToEntityProp(selection, "order");
   useListenToEntityProp(selection, "mana");
+
+  // Listen to gold changes on the owning player's entity
+  const owningPlayer = selection
+    ? playersVar().find((p) => p.id === selection.owner)
+    : undefined;
+  useListenToEntityProp(owningPlayer?.entity, "gold");
 
   if (!selection || selection.owner !== getLocalPlayer()?.id) return null;
 
@@ -168,22 +183,22 @@ export const ActionBar = () => {
           action={a}
           entity={selection}
           current={a.type === "build"
-            ? selection.action?.type === "build" &&
-              selection.action.unitType === a.unitType
+            ? selection.order?.type === "build" &&
+              selection.order.unitType === a.unitType
             : a.type === "auto"
-            ? a.order === (selection.action?.type === "cast"
-              ? selection.action.info.type
-              : selection.action?.type === "hold"
+            ? a.order === (selection.order?.type === "cast"
+              ? selection.order.info.type
+              : selection.order?.type === "hold"
               ? "hold"
-              : !selection.action
+              : !selection.order
               ? "stop"
               : undefined)
             : a.type === "target"
             ? a.order === "attack"
-              ? selection.action?.type === "attack" ||
-                (selection.action?.type === "attackMove")
-              : a.order === "move" && !!selection.action &&
-                "path" in selection.action
+              ? selection.order?.type === "attack" ||
+                (selection.order?.type === "attackMove")
+              : a.order === "move" && !!selection.order &&
+                "path" in selection.order
             : false}
         />
       ))}

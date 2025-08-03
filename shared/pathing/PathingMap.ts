@@ -212,7 +212,7 @@ export class PathingMap {
       ) {
         if (
           this.grid[y]?.[x] === undefined ||
-          this.grid[y][x].pathing & map.map[i] ||
+          !this.grid[y][x].pathable(map.map[i]) ||
           (test && !test(this.grid[y][x]))
         ) {
           return false;
@@ -704,14 +704,14 @@ export class PathingMap {
     const removedMovingEntities = new Set<PathingEntity>();
     if (removeMovingEntities) {
       for (const e of this.entities.keys()) {
-        if (!e.action || !("path" in e.action) || !e.action.path?.length) {
+        if (!e.order || !("path" in e.order) || !e.order.path?.length) {
           continue;
         }
         const dist = distanceBetweenEntities(e, entity);
         const aDist = Math.abs(angleDifference(
           Math.atan2(
-            e.action.path[0].y - e.position.y,
-            e.action.path[0].x - e.position.x,
+            e.order.path[0].y - e.position.y,
+            e.order.path[0].x - e.position.x,
           ),
           Math.atan2(
             ("x" in target ? target.y : target.position.y) -

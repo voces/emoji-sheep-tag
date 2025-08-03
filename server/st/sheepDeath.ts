@@ -7,7 +7,7 @@ import { data } from "./data.ts";
 
 onInit((game) => {
   game.addEventListener("unitDeath", ({ unit, killer }) => {
-    if (unit.unitType !== "sheep") return;
+    if (unit.prefab !== "sheep") return;
     if (killer?.owner && unit.owner) {
       message({
         type: "kill",

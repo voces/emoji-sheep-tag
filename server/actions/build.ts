@@ -24,7 +24,7 @@ export const build = (
   if (u?.owner !== client.id) return;
 
   // Interrupt
-  delete u.action;
+  delete u.order;
   delete u.queue;
 
   orderBuild(u, buildType, x, y);

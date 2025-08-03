@@ -12,4 +12,5 @@ import "./systems/swing.ts";
 import "./systems/kaboom.ts";
 import "./systems/indicators.ts";
 import "./systems/mirrors.ts";
+import "./systems/playerEntityReferences.ts";
 import "./graphics/cursor.ts";

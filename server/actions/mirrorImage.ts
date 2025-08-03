@@ -49,7 +49,7 @@ export const handleMirrorImage = (unit: Entity) => {
 
   if (Math.random() < 0.5) [pos1, pos2] = [pos2, pos1];
 
-  unit.action = {
+  unit.order = {
     type: "cast",
     remaining: castDuration,
     info: { type: "mirrorImage", positions: [pos1, pos2] },

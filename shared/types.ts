@@ -2,7 +2,7 @@ import { Classification } from "./data.ts";
 import { Point } from "./pathing/math.ts";
 import { Footprint, Pathing } from "./pathing/types.ts";
 
-export type WalkAction =
+export type WalkOrder =
   & {
     readonly type: "walk";
     readonly path?: { x: number; y: number }[];
@@ -12,8 +12,8 @@ export type WalkAction =
     | { readonly target: { x: number; y: number } }
   );
 
-type Action = Readonly<
-  WalkAction | {
+type Order = Readonly<
+  WalkOrder | {
     readonly type: "build";
     readonly unitType: string;
     readonly x: number;
@@ -61,6 +61,7 @@ export type UnitDataAction = {
   readonly unitType: string;
   readonly binding?: string[];
   readonly manaCost?: number;
+  readonly goldCost?: number;
   readonly castDuration?: number;
 } | {
   readonly name: string;
@@ -74,7 +75,7 @@ export type UnitDataAction = {
 export type Entity = {
   id: string;
   name?: string;
-  unitType?: string;
+  prefab?: string;
   owner?: string;
 
   model?: string;
@@ -93,6 +94,11 @@ export type Entity = {
   mana?: number;
   maxMana?: number;
   manaRegen?: number;
+
+  // Player data
+  isPlayer?: boolean;
+  gold?: number;
+
   movementSpeed?: number;
   /** Radians per second */
   turnSpeed?: number;
@@ -136,7 +142,9 @@ export type Entity = {
   /** Override `tilemap` for require checks. */
   requiresTilemap?: Footprint;
 
-  // Actions
-  action?: Action | null;
-  queue?: ReadonlyArray<Action> | null;
+  // Orders
+  order?: Order | null;
+  queue?: ReadonlyArray<Order> | null;
 };
+
+export const nonNull = <T>(v: T): v is NonNullable<T> => !!v;

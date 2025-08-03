@@ -11,11 +11,11 @@ import { pathable } from "./pathing.ts";
 
 const tweenPath = (e: Entity, delta: number): number => {
   if (
-    !e.action || !("path" in e.action) || !e.action.path?.length ||
+    !e.order || !("path" in e.order) || !e.order.path?.length ||
     !e.position || !e.movementSpeed
   ) return 0;
 
-  let target = e.action.path[0];
+  let target = e.order.path[0];
   let movement = e.movementSpeed * delta;
 
   // Tween along movement
@@ -28,21 +28,21 @@ const tweenPath = (e: Entity, delta: number): number => {
     delta -= remaining / e.movementSpeed;
 
     // End of path
-    if (e.action.path?.length === 1) {
+    if (e.order.path?.length === 1) {
       // If end position isn't pathable, do nothing
       if (!pathable(e, target)) return delta;
 
       // Update end position
       e.position = { ...target };
-      const { path: _path, ...rest } = e.action;
-      e.action = rest;
+      const { path: _path, ...rest } = e.order;
+      e.order = rest;
       return delta;
     }
 
     // Not end of path, advance along it
     movement -= remaining;
-    [last, target] = e.action.path ?? [];
-    e.action = { ...e.action, path: e.action.path?.slice(1) };
+    [last, target] = e.order.path ?? [];
+    e.order = { ...e.order, path: e.order.path?.slice(1) };
     remaining = distanceBetweenPoints(target, last);
     p = movement / remaining;
   }
@@ -67,36 +67,34 @@ const tweenPath = (e: Entity, delta: number): number => {
 };
 
 app.addSystem({
-  props: ["action"],
+  props: ["order"],
   onChange: (e) => {
-    if (e.action?.type !== "attack" && e.swing) delete e.swing;
+    if (e.order?.type !== "attack" && e.swing) delete e.swing;
   },
   updateEntity: (e, delta) => {
     let loops = 1000;
-    while ((e.action || e.queue?.length) && delta > 0) {
-      console.log("action", e.id, e.action.type);
-
+    while ((e.order || e.queue?.length) && delta > 0) {
       if (!loops--) {
-        console.warn("Over 1000 action loops!", e.id, e.action, delta);
+        console.warn("Over 1000 order loops!", e.id, e.order, delta);
         break;
       }
 
       // Advance queue
-      if (!e.action) {
+      if (!e.order) {
         if (e.queue && e.queue.length > 0) {
-          if (e.queue.length > 1) [e.action, ...e.queue] = e.queue;
+          if (e.queue.length > 1) [e.order, ...e.queue] = e.queue;
           else {
-            e.action = e.queue[0];
+            e.order = e.queue[0];
             delete e.queue;
           }
         } else break;
       }
 
       // Turn; consume delta if target point is outside angle of attack (±60°)
-      const lookTarget = "path" in e.action && e.action.path?.[0] ||
-        "targetId" in e.action && e.action.targetId &&
-          lookup[e.action.targetId]?.position ||
-        "target" in e.action && e.action.target || undefined;
+      const lookTarget = "path" in e.order && e.order.path?.[0] ||
+        "targetId" in e.order && e.order.targetId &&
+          lookup[e.order.targetId]?.position ||
+        "target" in e.order && e.order.target || undefined;
 
       if (
         lookTarget &&
@@ -124,7 +122,7 @@ app.addSystem({
       // Abort if delta consumed turning
       if (delta === 0) break;
 
-      delta = "path" in e.action && e.action.path?.length
+      delta = "path" in e.order && e.order.path?.length
         ? tweenPath(e, delta)
         : 0;
     }

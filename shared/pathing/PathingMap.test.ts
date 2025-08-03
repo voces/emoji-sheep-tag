@@ -1,6 +1,7 @@
-// import { Grid } from "./grid.ts";
+import { describe, it } from "jsr:@std/testing/bdd";
 import { PathingMap } from "./PathingMap.ts";
 import { assertEquals } from "jsr:@std/assert";
+import { expect } from "jsr:@std/expect";
 
 Deno.test("ok", () => {
   const solver = new PathingMap({
@@ -77,4 +78,90 @@ Deno.test("distance to target corner", () => {
       { x: 1.25, y: 1 },
     ],
   );
+});
+
+describe("pointToTilemap", () => {
+  it("1x1 aligned", () => {
+    expect(
+      new PathingMap({
+        pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
+        resolution: 4,
+      }).pointToTilemap(0.625, 0.625, 0.125),
+    ).toEqual({ left: 0, top: 0, height: 1, width: 1, map: [1] });
+  });
+
+  it("2x2 aligned", () => {
+    expect(
+      new PathingMap({
+        pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
+        resolution: 4,
+      }).pointToTilemap(0.5, 0.5, 0.25),
+    ).toEqual({
+      left: -1,
+      top: -1,
+      height: 2,
+      width: 2,
+      map: [1, 1, 1, 1],
+    });
+  });
+
+  it("2x2 perfectly unaligned", () => {
+    expect(
+      new PathingMap({
+        pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
+        resolution: 4,
+      }).pointToTilemap(0.625, 0.625, 0.25),
+    ).toEqual({
+      left: -1,
+      top: -1,
+      height: 3,
+      width: 3,
+      map: [1, 1, 1, 1, 1, 1, 1, 1, 1],
+    });
+  });
+
+  it("2x2 perfectly unaligned2", () => {
+    expect(
+      new PathingMap({
+        pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
+        resolution: 4,
+      }).pointToTilemap(0.375, 0.375, 0.25),
+    ).toEqual({
+      left: -1,
+      top: -1,
+      height: 3,
+      width: 3,
+      map: [1, 1, 1, 1, 1, 1, 1, 1, 1],
+    });
+  });
+
+  it("2x2 vertically aligned", () => {
+    expect(
+      new PathingMap({
+        pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
+        resolution: 4,
+      }).pointToTilemap(0.625, 0.5, 0.17),
+    ).toEqual({
+      left: -1,
+      top: -1,
+      height: 2,
+      width: 3,
+      map: [1, 1, 1, 1, 1, 1],
+    });
+  });
+
+  it("2x2 horizontally aligned", () => {
+    expect(
+      new PathingMap({
+        pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
+        resolution: 4,
+      }).pointToTilemap(0.5, 0.625, 0.17),
+    ).toEqual({
+      left: -1,
+      top: -1,
+      height: 3,
+      width: 2,
+      map: [1, 1, 1, 1, 1, 1],
+    });
+  });
 });

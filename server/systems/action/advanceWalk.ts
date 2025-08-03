@@ -6,35 +6,35 @@ import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 
 export const advanceWalk = (e: Entity, delta: number): number => {
-  if (e.action?.type !== "walk") return delta;
+  if (e.order?.type !== "walk") return delta;
 
-  if ("targetId" in e.action) {
-    const target = lookup(e.action.targetId);
+  if ("targetId" in e.order) {
+    const target = lookup(e.order.targetId);
     if (!target || !isAlive(target)) {
-      delete e.action;
+      delete e.order;
       return delta;
     }
-    e.action = {
-      ...e.action,
-      path: calcPath(e, e.action.targetId, {
+    e.order = {
+      ...e.order,
+      path: calcPath(e, e.order.targetId, {
         distanceFromTarget: FOLLOW_DISTANCE + (target.radius ?? 0),
       }).slice(1),
     };
   } else {
-    e.action = { ...e.action, path: calcPath(e, e.action.target).slice(1) };
+    e.order = { ...e.order, path: calcPath(e, e.order.target).slice(1) };
   }
 
-  if (!e.action.path) {
-    delete e.action;
+  if (!e.order.path) {
+    delete e.order;
     return delta;
   }
 
   delta = tweenPath(e, delta);
 
   if (
-    (e.action.path.at(-1)?.x === e.position?.x &&
-      e.action.path.at(-1)?.y === e.position?.y) && "target" in e.action
-  ) delete e.action;
+    (e.order.path.at(-1)?.x === e.position?.x &&
+      e.order.path.at(-1)?.y === e.position?.y) && "target" in e.order
+  ) delete e.order;
 
   return delta;
 };

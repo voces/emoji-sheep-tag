@@ -42,7 +42,7 @@ export const calcPath = (
           ? Math.max(
             0,
             (distanceFromTarget ?? entity.attack?.range ?? 0) -
-              (targetEntity.action?.type === "walk"
+              (targetEntity.order?.type === "walk"
                 ? (targetEntity.movementSpeed ?? 0) * 0.2
                 : 0),
           )

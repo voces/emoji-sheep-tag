@@ -14,7 +14,7 @@ const updateSwing = (e: SystemEntity<Entity, "swing">) => {
 
   const swing = app.addEntity({
     id: `swing-${crypto.randomUUID()}`,
-    unitType: "claw",
+    prefab: "claw",
     position: {
       x: e.swing.source.x + 0.75 * Math.cos(direction),
       y: e.swing.source.y + 0.75 * Math.sin(direction),

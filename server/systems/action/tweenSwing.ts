@@ -7,8 +7,8 @@ import { lookup } from "../lookup.ts";
 export const tweenSwing = (e: Entity, delta: number): number => {
   if (!e.swing || !e.attack) return delta;
 
-  const targetId = e.action && "targetId" in e.action
-    ? e.action.targetId
+  const targetId = e.order && "targetId" in e.order
+    ? e.order.targetId
     : undefined;
   if (!targetId) return delta;
 

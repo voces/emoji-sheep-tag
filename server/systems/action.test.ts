@@ -8,7 +8,7 @@ import { Client } from "../client.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { newLobby } from "../lobby.ts";
-import { unitData } from "../../shared/data.ts";
+import { prefabs } from "../../shared/data.ts";
 
 afterEach(() => {
   try {
@@ -44,7 +44,7 @@ it.only("integration: sheep walking around a corner", async () => {
   const ecs = setup();
 
   const sheep = ecs.addEntity<Entity>({
-    ...unitData.sheep,
+    ...prefabs.sheep,
     id: "sheep-0",
     radius: 0.25,
     position: { x: 0.25, y: 0.25 },
@@ -63,7 +63,7 @@ it.only("integration: sheep walking around a corner", async () => {
   orderMove(sheep, { x: 2.25, y: 2 });
 
   expect(sheep.position).toEqual({ x: 0.25, y: 0.25 });
-  expect(sheep.action).toEqual({
+  expect(sheep.order).toEqual({
     type: "walk",
     target: { x: 2.25, y: 2 },
     path: [{ x: 2, y: 0.5 }, { x: 2.25, y: 2 }],

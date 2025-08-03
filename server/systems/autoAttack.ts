@@ -5,7 +5,7 @@ import { acquireTarget, orderAttack } from "../api/unit.ts";
 
 onInit((game) => {
   const idleCheck = (e: SystemEntity<Entity, "attack" | "position">) => {
-    if (e.action || e.queue?.length) return;
+    if (e.order || e.queue?.length) return;
 
     const target = acquireTarget(e);
     // TODO: return to pos?

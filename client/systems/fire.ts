@@ -29,7 +29,7 @@ const updateFires = (e: Entity, remove = false) => {
     for (let i = existing.length; i < fireCount; i++) {
       const fire = app.addEntity({
         id: `fire-${crypto.randomUUID()}`,
-        unitType: "fire",
+        prefab: "fire",
         position: {
           x: e.position.x + fireOffsets[i].x,
           y: e.position.y + fireOffsets[i].y,

@@ -7,5 +7,6 @@ export const theme: DefaultTheme = {
     green: "#32cd32",
     orange: "#ffa500",
     purple: "#9370db",
+    gold: "#FFCC00",
   },
 };

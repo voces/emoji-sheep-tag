@@ -10,7 +10,7 @@ export const handleMove = (
   if (!unit.position || !orderTarget) return;
 
   // Interrupt
-  delete unit.action;
+  delete unit.order;
   delete unit.queue;
 
   const target = typeof orderTarget === "string"

@@ -9,6 +9,10 @@ export const endRound = (canceled = false) => {
   if (!lobby.round) return;
   console.log(new Date(), "Round ended in lobby", lobby.name);
   lobby.round.clearInterval();
+
+  // Clean up player entity references
+  for (const player of lobby.players) player.playerEntity = undefined;
+
   // Don't want to clear the round in middle of a cycle
   queueMicrotask(() => lobby.round = undefined);
   lobby.status = "lobby";
@@ -47,6 +51,13 @@ export const leave = (client?: Client) => {
   client ??= clientContext.context;
   console.log(new Date(), "Client", client.id, "left");
   const lobby = lobbyContext.context;
+
+  // Clean up player entity reference
+  if (client.playerEntity && lobby.round?.ecs) {
+    lobby.round.ecs.removeEntity(client.playerEntity);
+    client.playerEntity = undefined;
+  }
+
   lobby.players.delete(client);
   // Kill the lobby
   if (lobby.players.size === 0) return deleteLobby(lobby);

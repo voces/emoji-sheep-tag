@@ -2,6 +2,7 @@ import { z } from "npm:zod";
 
 import type { ServerToClientMessage } from "../client/client.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
+import type { Entity } from "../shared/types.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { leave, send } from "./lobbyApi.ts";
 import { build, zBuild } from "./actions/build.ts";
@@ -55,6 +56,7 @@ export class Client {
   color: string;
 
   lobby?: Lobby;
+  playerEntity?: Entity;
 
   sheepCount = 0;
 

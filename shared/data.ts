@@ -44,7 +44,7 @@ const selfDestruct: UnitDataAction = {
   binding: ["KeyX"],
 };
 
-export const unitData: Record<
+export const prefabs: Record<
   string,
   Pick<
     Entity,
@@ -83,12 +83,14 @@ export const unitData: Record<
         type: "build",
         unitType: "wideHut",
         binding: ["KeyW"],
+        goldCost: 4,
       },
       {
         name: "Build Rotund Hut",
         type: "build",
         unitType: "rotundHut",
         binding: ["KeyR"],
+        goldCost: 8,
       },
       {
         name: "Build Tiny Hut",
@@ -101,6 +103,7 @@ export const unitData: Record<
         type: "build",
         unitType: "stackHut",
         binding: ["KeyS"],
+        goldCost: 12,
       },
       {
         name: "Destroy last farm",

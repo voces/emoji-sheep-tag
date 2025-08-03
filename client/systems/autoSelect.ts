@@ -32,11 +32,10 @@ app.addSystem({
 
 // Auto select unit
 app.addSystem({
-  props: ["id", "unitType", "owner"],
+  props: ["id", "prefab", "owner"],
   onAdd: (e) => {
     if (
-      isLocalPlayer(e.owner) &&
-      (e.unitType === "sheep" || e.unitType === "wolf")
+      isLocalPlayer(e.owner) && (e.prefab === "sheep" || e.prefab === "wolf")
     ) {
       if (selection.size === 0) selectEntity(e);
       primary = e;

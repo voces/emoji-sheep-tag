@@ -35,7 +35,7 @@ export const unitOrder = (
         return handleDestroyLastFarm(unit);
       case "stop":
         delete unit.queue;
-        delete unit.action;
+        delete unit.order;
         return;
       case "mirrorImage":
         return handleMirrorImage(unit);

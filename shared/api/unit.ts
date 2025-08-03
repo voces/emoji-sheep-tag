@@ -1,4 +1,4 @@
-import { unitData } from "../data.ts";
+import { prefabs } from "../data.ts";
 import { Entity } from "../types.ts";
 
 export const tempUnit = (
@@ -9,13 +9,13 @@ export const tempUnit = (
   extra?: Partial<Entity>,
 ): Entity => ({
   id: "",
-  unitType: type,
+  prefab: type,
   owner,
   position: { x, y },
   facing: Math.PI,
-  ...(typeof unitData[type]?.maxHealth === "number"
-    ? { health: unitData[type]?.maxHealth }
+  ...(typeof prefabs[type]?.maxHealth === "number"
+    ? { health: prefabs[type]?.maxHealth }
     : undefined),
-  ...unitData[type],
+  ...prefabs[type],
   ...extra,
 });

@@ -7,11 +7,11 @@ import { tweenSwing } from "./tweenSwing.ts";
 
 export const tweenAttack = (e: Entity, delta: number) => {
   if (
-    !e.position || !e.attack || !e.action || !("targetId" in e.action) ||
-    !e.action.targetId
+    !e.position || !e.attack || !e.order || !("targetId" in e.order) ||
+    !e.order.targetId
   ) return delta;
 
-  const target = lookup(e.action.targetId);
+  const target = lookup(e.order.targetId);
   if (!target?.position) return delta;
 
   if (e.swing) return tweenSwing(e, delta);
@@ -26,17 +26,17 @@ export const tweenAttack = (e: Entity, delta: number) => {
       (path.at(-1)?.x === e.position.x &&
         path.at(-1)?.y === e.position.y)
     ) {
-      delete e.action;
+      delete e.order;
       return delta;
     }
 
-    e.action = { ...e.action, path };
+    e.order = { ...e.order, path };
 
     // Otherwise start walking!
     return tweenPath(e, delta);
-  } else if (e.action.path) {
-    const { path: _path, ...rest } = e.action;
-    e.action = { ...rest };
+  } else if (e.order.path) {
+    const { path: _path, ...rest } = e.order;
+    e.order = { ...rest };
   }
 
   if (!e.attackCooldownRemaining) {

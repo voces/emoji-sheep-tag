@@ -37,6 +37,8 @@ import hinduTemple from "../assets/hindu-temple.svg";
 import route from "../assets/route.svg";
 //@deno-types="../assets/asset.d.ts"
 import stop from "../assets/stop.svg";
+//@deno-types="../assets/asset.d.ts"
+import gold from "../assets/gold.svg";
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -54,6 +56,7 @@ export const svgs: Record<string, string> = {
   hinduTemple,
   route,
   stop,
+  gold,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -78,8 +81,8 @@ const white = new Color("white");
 const temp = new Color(0x0000ff);
 
 const updateColor = (e: Entity) => {
-  if (!e.unitType) return;
-  const collection = collections[e.model ?? e.unitType];
+  if (!e.prefab) return;
+  const collection = collections[e.model ?? e.prefab];
   if (!collection) return;
   const hex = e.playerColor ??
     playersVar().find((p) => p.id === e.owner)?.color;
@@ -103,7 +106,7 @@ const updateColor = (e: Entity) => {
 };
 
 app.addSystem({
-  props: ["id", "unitType", "owner"],
+  props: ["id", "prefab", "owner"],
   onAdd: updateColor,
   onChange: updateColor,
 });
@@ -117,13 +120,13 @@ app.addSystem({
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
 
 const onPositionOrRotationChange = (
-  e: SystemEntity<Entity, "unitType"> & {
+  e: SystemEntity<Entity, "prefab"> & {
     readonly position: { x: number; y: number };
     readonly facing?: number;
   },
 ) => {
-  const model = e.model ?? e.unitType;
-  if (e.action?.type === "walk") {
+  const model = e.model ?? e.prefab;
+  if (e.order && "path" in e.order) {
     const prev = prevPositions.get(e);
     if (prev) {
       const delta =
@@ -157,10 +160,10 @@ const onPositionOrRotationChange = (
 
 // Reflect logical position to render position
 app.addSystem({
-  props: ["unitType", "position"],
-  onAdd: (e: SystemEntity<Entity, "unitType" | "position">) => {
+  props: ["prefab", "position"],
+  onAdd: (e: SystemEntity<Entity, "prefab" | "position">) => {
     prevPositions.set(e, e.position);
-    collections[e.model ?? e.unitType]?.setPositionAt(
+    collections[e.model ?? e.prefab]?.setPositionAt(
       e.id,
       e.position.x,
       e.position.y,
@@ -169,15 +172,15 @@ app.addSystem({
     );
   },
   onChange: onPositionOrRotationChange,
-  onRemove: (e) => collections[e.model ?? e.unitType!]?.delete(e.id),
+  onRemove: (e) => collections[e.model ?? e.prefab!]?.delete(e.id),
 });
 
 app.addSystem({
-  props: ["unitType", "facing"],
+  props: ["prefab", "facing"],
   onChange: (e) => {
     if (e.position) {
       onPositionOrRotationChange(
-        e as SystemEntity<Entity, "unitType" | "position" | "facing">,
+        e as SystemEntity<Entity, "prefab" | "position" | "facing">,
       );
     }
   },
@@ -185,18 +188,18 @@ app.addSystem({
 
 // Apply playerColor override
 app.addSystem({
-  props: ["unitType", "playerColor"],
+  props: ["prefab", "playerColor"],
   onAdd: updateColor,
   onChange: updateColor,
 });
 
-const updateScale = (e: SystemEntity<Entity, "unitType" | "modelScale">) => {
-  const collection = collections[e.model ?? e.unitType];
+const updateScale = (e: SystemEntity<Entity, "prefab" | "modelScale">) => {
+  const collection = collections[e.model ?? e.prefab];
   if (!collection) return;
   collection.setScaleAt(e.id, e.modelScale);
 };
 app.addSystem({
-  props: ["unitType", "modelScale"],
+  props: ["prefab", "modelScale"],
   onAdd: updateScale,
   onChange: updateScale,
 });
@@ -213,7 +216,7 @@ app.addSystem({
 
 const updateAlpha = (e: Entity) => {
   if (!app.entities.has(e)) return;
-  const collection = collections[e.model ?? e.unitType ?? ""];
+  const collection = collections[e.model ?? e.prefab ?? ""];
   if (!collection) return;
   collection.setAlphaAt(
     e.id,
