@@ -1,6 +1,7 @@
 import { useReactiveVar } from "../hooks/useVar.tsx";
 import { getLocalPlayer, Player, playersVar } from "../vars/players.ts";
 import { ColorPicker } from "../components/ColorPicker.tsx";
+import { NameInput } from "../components/NameInput.tsx";
 import { send } from "../../client.ts";
 //@deno-types="npm:@types/react"
 import { Fragment, useCallback, useLayoutEffect, useRef } from "react";
@@ -19,7 +20,13 @@ const PlayerRow = ({ name, color, id }: Player) => (
       }}
       readonly={id !== getLocalPlayer()?.id}
     />
-    <span>{name}</span>
+    <NameInput
+      value={name}
+      onChange={(e) => {
+        send({ type: "generic", event: { type: "nameChange", name: e } });
+      }}
+      readonly={id !== getLocalPlayer()?.id}
+    />
   </div>
 );
 
@@ -81,6 +88,7 @@ const Settings = () => {
       style={{ width: "40%", flexDirection: "column-reverse" }}
     >
       <button
+        type="button"
         onClick={() => send({ type: "start" })}
         disabled={!getLocalPlayer()?.host}
       >

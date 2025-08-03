@@ -13,6 +13,7 @@ import { addChatMessage } from "./ui/vars/chat.ts";
 import { roundsVar } from "./ui/vars/rounds.ts";
 import { formatVar } from "./ui/vars/format.ts";
 import { format } from "./api/player.ts";
+import { getStoredPlayerName } from "./util/playerPrefs.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -199,6 +200,12 @@ const zColorChange = z.object({
   color: z.string(),
 });
 
+const zNameChange = z.object({
+  type: z.literal("nameChange"),
+  id: z.string(),
+  name: z.string(),
+});
+
 const zRound = z.object({
   sheep: z.string().array(),
   wolves: z.string().array(),
@@ -256,6 +263,7 @@ const zMessage = z.union([
   zStart,
   zUpdates,
   zColorChange,
+  zNameChange,
   zJoin,
   zLeave,
   zStop,
@@ -339,6 +347,11 @@ const handlers = {
   colorChange: (data: z.TypeOf<typeof zColorChange>) => {
     playersVar((players) =>
       players.map((p) => p.id === data.id ? { ...p, color: data.color } : p)
+    );
+  },
+  nameChange: (data: z.TypeOf<typeof zNameChange>) => {
+    playersVar((players) =>
+      players.map((p) => p.id === data.id ? { ...p, name: data.name } : p)
     );
   },
   start: (e: z.TypeOf<typeof zStart>) => {
@@ -474,7 +487,17 @@ export const connect = () => {
     ws = undefined;
     connect();
   });
-  ws.addEventListener("open", () => connectionStatusVar("connected"));
+  ws.addEventListener("open", () => {
+    connectionStatusVar("connected");
+    // Send stored name if available
+    const storedName = getStoredPlayerName();
+    if (storedName) {
+      send({
+        type: "generic",
+        event: { type: "nameChange", name: storedName },
+      });
+    }
+  });
   ws.addEventListener("message", (e) => {
     const json = JSON.parse(e.data);
     let data: ServerToClientMessage;
@@ -502,7 +525,8 @@ export const send = (message: ClientToServerMessage) => {
   delay(() => {
     try {
       ws?.send(JSON.stringify(message));
-    } catch {
+    } catch (err) {
+      console.error(err);
       // do nothing
     }
   });

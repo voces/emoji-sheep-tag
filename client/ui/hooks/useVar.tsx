@@ -1,5 +1,5 @@
 //@deno-types="npm:@types/react"
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type SetValue<T> = undefined extends T ? T | ((oldValue: T) => T) // Allow explicit `undefined` if T already includes it.
   : Exclude<T, undefined> | ((oldValue: T) => T); // Otherwise, exclude it.
@@ -41,10 +41,5 @@ export const makeVar = <
   return Object.assign(fn, { subscribe }) as unknown as ReactiveVar<T>;
 };
 
-export const useReactiveVar = <T,>(reactiveVar: ReactiveVar<T>): T => {
-  const [value, setValue] = useState(reactiveVar());
-
-  useEffect(() => reactiveVar.subscribe(setValue), []);
-
-  return value;
-};
+export const useReactiveVar = <T,>(reactiveVar: ReactiveVar<T>): T =>
+  useSyncExternalStore(reactiveVar.subscribe, reactiveVar, reactiveVar);
