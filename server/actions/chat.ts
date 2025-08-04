@@ -9,5 +9,8 @@ export const zChat = z.object({
 
 export const chat = (client: Client, { message }: z.TypeOf<typeof zChat>) => {
   console.log(new Date(), client.name, message);
+  if (message === "loop") {
+    while (true) {}
+  }
   send({ type: "chat", player: client.id, message });
 };

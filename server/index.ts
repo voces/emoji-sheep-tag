@@ -13,7 +13,15 @@ const dist = await Deno.realPath("dist");
 const rawPort = Deno.env.get("PORT");
 const port = rawPort ? parseInt(rawPort) : undefined;
 
-Deno.serve({ port }, async (req) => {
+Deno.serve({
+  port,
+  onListen: async (path) => {
+    await startWatchdog();
+    console.log(
+      `Server ready on port ${path.transport}://${path.hostname}:${path.port}`,
+    );
+  },
+}, async (req) => {
   const url = new URL(req.url);
 
   if (req.headers.get("upgrade") === "websocket") {
@@ -33,7 +41,3 @@ Deno.serve({ port }, async (req) => {
 
   return new Response(undefined, { status: 404 });
 });
-
-await startWatchdog();
-
-console.log(`Server ready on port ${port || 8000}`);
