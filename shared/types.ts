@@ -83,9 +83,9 @@ export type UnitDataAction = {
   readonly name: string;
   readonly type: "purchase";
   readonly itemId: string;
-  readonly shopId?: string;
-  readonly binding?: string[];
-  readonly goldCost?: number;
+  readonly shopId: string;
+  readonly binding: string[];
+  readonly goldCost: number;
   readonly manaCost?: number;
   readonly castDuration?: number;
 } | UnitDataActionTarget;

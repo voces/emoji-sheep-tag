@@ -19,7 +19,7 @@ export const advanceBuild = (e: Entity, delta: number): number => {
     if (!e.order.path) {
       e.order = {
         ...e.order,
-        path: calcPath(e, e.order, { distanceFromTarget: d }).slice(1),
+        path: calcPath(e, e.order, { distanceFromTarget: d }),
       };
       if (!e.order.path?.length) {
         delete e.order;

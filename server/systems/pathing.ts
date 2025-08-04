@@ -34,7 +34,7 @@ export const calcPath = (
   if (typeof target === "string") {
     const targetEntity = lookup(target);
     if (!targetEntity?.position) return [];
-    return pathingMap().path(
+    const path = pathingMap().path(
       entity,
       targetEntity as TargetEntity,
       {
@@ -49,13 +49,28 @@ export const calcPath = (
           : distanceFromTarget),
         removeMovingEntities,
       },
-    );
+    ).slice(1);
+
+    if (
+      path.at(-1)?.x === entity.position.x &&
+      path.at(-1)?.y === entity.position.y
+    ) path.pop();
+
+    return path;
   }
-  return pathingMap().path(
+
+  const path = pathingMap().path(
     entity,
     target,
     { distanceFromTarget, removeMovingEntities },
-  );
+  ).slice(1);
+
+  if (
+    path.at(-1)?.x === entity.position.x &&
+    path.at(-1)?.y === entity.position.y
+  ) path.pop();
+
+  return path;
 };
 
 export const pathable = (

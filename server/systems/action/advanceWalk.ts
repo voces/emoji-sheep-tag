@@ -15,14 +15,13 @@ export const advanceWalk = (e: Entity, delta: number): number => {
       return delta;
     }
     // TODO: this can crash loop!
-    e.order = {
-      ...e.order,
-      path: calcPath(e, e.order.targetId, {
-        distanceFromTarget: FOLLOW_DISTANCE + (target.radius ?? 0),
-      }).slice(1),
-    };
+    const path = calcPath(e, e.order.targetId, {
+      distanceFromTarget: FOLLOW_DISTANCE,
+    });
+    if (!path.length) return 0;
+    e.order = { ...e.order, path };
   } else {
-    e.order = { ...e.order, path: calcPath(e, e.order.target).slice(1) };
+    e.order = { ...e.order, path: calcPath(e, e.order.target) };
   }
 
   if (!e.order.path) {
@@ -32,9 +31,11 @@ export const advanceWalk = (e: Entity, delta: number): number => {
 
   delta = tweenPath(e, delta);
 
+  // Reached end
   if (
-    (e.order.path.at(-1)?.x === e.position?.x &&
-      e.order.path.at(-1)?.y === e.position?.y) && "target" in e.order
+    (!e.order.path.length ||
+      (e.order.path.at(-1)?.x === e.position?.x &&
+        e.order.path.at(-1)?.y === e.position?.y)) && "target" in e.order
   ) delete e.order;
 
   return delta;

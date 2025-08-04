@@ -2,12 +2,13 @@ import { z } from "npm:zod";
 import { keyboard } from "../../controls.ts";
 import { pluck } from "../../util/pluck.ts";
 import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
-import { prefabs } from "../../../shared/data.ts";
+import { items, prefabs } from "../../../shared/data.ts";
 //@deno-types="npm:@types/react"
 import { useEffect, useState } from "react";
 import { actionToShortcutKey } from "../../util/actionToShortcutKey.ts";
 import { showSettingsVar } from "../vars/showSettings.ts";
 import Collapse from "../components/Collapse.tsx";
+import { formatShortcut } from "../util/formatShortcut.ts";
 
 const localStorageShortcuts = (() => {
   try {
@@ -28,6 +29,8 @@ const miscNames = {
   openCommandPalette: "Open command palette",
   openChat: "Open chat",
   cancel: "Cancel",
+  selectOwnUnit: "Select primary unit",
+  selectMirrors: "Select mirror images",
 };
 
 const defaultBindings: Shortcuts = {
@@ -35,56 +38,65 @@ const defaultBindings: Shortcuts = {
     openCommandPalette: ["Slash"],
     openChat: ["Enter"],
     cancel: ["Backquote"],
+    selectOwnUnit: ["Digit1"],
+    selectMirrors: ["Digit2"],
   },
   ...Object.fromEntries(
-    Object.entries(prefabs).filter(([, d]) => d.actions?.length).map((
-      [u, d],
-    ) => [
-      u,
-      Object.fromEntries(
-        d.actions!.map((a) => [actionToShortcutKey(a), a.binding ?? []]),
-      ),
-    ]),
+    Object.entries(prefabs).filter(([, d]) => d.actions?.length || d.inventory)
+      .map((
+        [u, d],
+      ) => [
+        u,
+        Object.fromEntries(
+          [
+            ...d.actions!.map((a) => [actionToShortcutKey(a), a.binding ?? []]),
+            ...d.inventory
+              ? Object.values(items).map((i) => [`purchase-${i.id}`, i.binding])
+              : [],
+          ],
+        ),
+      ]),
   ),
 };
+
+console.log({ defaultBindings });
 
 export const shortcutsVar = makeVar<Shortcuts>({
   misc: { // Potential conflict with a `misc` unitType?
     openCommandPalette: pluckShortcut("misc.openCommandPalette") ?? ["Slash"],
     openChat: pluckShortcut("misc.openChat") ?? ["Enter"],
     cancel: pluckShortcut("misc.cancel") ?? ["Backquote"],
+    selectOwnUnit: pluckShortcut("misc.selectOwnUnit") ?? ["Digit1"],
+    selectMirrors: pluckShortcut("misc.selectMirrors") ?? ["Digit2"],
   },
   ...Object.fromEntries(
-    Object.entries(prefabs).filter(([, d]) => d.actions?.length).map((
-      [u, d],
-    ) => [
-      u,
-      Object.fromEntries(
-        d.actions!.map((
-          a,
-        ) => [
-          actionToShortcutKey(a),
-          pluckShortcut(`${u}.${actionToShortcutKey(a)}`) ?? a.binding ?? [],
-        ]),
-      ),
-    ]),
+    Object.entries(prefabs).filter(([, d]) => d.actions?.length || d.inventory)
+      .map((
+        [u, d],
+      ) => [
+        u,
+        Object.fromEntries(
+          [
+            ...d.actions!.map((
+              a,
+            ) => [
+              actionToShortcutKey(a),
+              pluckShortcut(`${u}.${actionToShortcutKey(a)}`) ?? a.binding ??
+                [],
+            ]),
+            ...d.inventory
+              ? Object.values(items).map((
+                i,
+              ) => [
+                `purchase-${i.id}`,
+                pluckShortcut(`${u}.purchase-${i.id}`) ?? i.binding,
+              ])
+              : [],
+          ],
+        ),
+      ]),
   ),
 });
-
-const formatShortcut = (shortcut: string[]) =>
-  shortcut.map((v) =>
-    v
-      .replace("Slash", "/")
-      .replace(/^Key/, "")
-      .replace(/^Arrow/, "")
-      .replace(/^Digit/, "")
-      .replace(/^Numpad/, "#")
-      .replace("Comma", ",")
-      .replace("Period", ".")
-      .replace("Period", ".")
-      .replace("Enter", "↵")
-      .replace("Backquote", "`")
-  ).join(" + ");
 
 const Section = (
   { section, shortcuts, setBinding }: {
@@ -110,7 +122,14 @@ const Section = (
               {miscNames[key as keyof typeof miscNames] ??
                 prefabs[section].actions?.find((a) =>
                   actionToShortcutKey(a) === key
-                )?.name}
+                )?.name ??
+                (() => {
+                  const name = items[key.split(`purchase-`)?.[1]]
+                    ?.name;
+                  if (name) {
+                    return `Purchase ${name}`;
+                  }
+                })()}
             </p>
             <div
               className="h-stack"

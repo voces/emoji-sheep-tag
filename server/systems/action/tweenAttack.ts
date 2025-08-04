@@ -18,14 +18,10 @@ export const tweenAttack = (e: Entity, delta: number) => {
 
   // Target too far, cancel attack and start walking
   if (distanceBetweenEntities(e, target) > e.attack.range) {
-    const path = calcPath(e, target.id, { mode: "attack" }).slice(1);
+    const path = calcPath(e, target.id, { mode: "attack" });
 
     // If no longer pathable, give up
-    if (
-      !path.length ||
-      (path.at(-1)?.x === e.position.x &&
-        path.at(-1)?.y === e.position.y)
-    ) {
+    if (!path.length) {
       delete e.order;
       return delta;
     }

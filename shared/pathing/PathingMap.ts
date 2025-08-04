@@ -707,6 +707,12 @@ export class PathingMap {
         if (!e.order || !("path" in e.order) || !e.order.path?.length) {
           continue;
         }
+        
+        // Don't remove entities that are targeting the pathing entity
+        if ("targetId" in e.order && e.order.targetId === entity.id) {
+          continue;
+        }
+        
         const dist = distanceBetweenEntities(e, entity);
         const aDist = Math.abs(angleDifference(
           Math.atan2(

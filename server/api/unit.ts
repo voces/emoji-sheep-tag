@@ -98,8 +98,8 @@ export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
 
   const path = calcPath(mover, "x" in target ? target : target.id, {
     distanceFromTarget: "x" in target ? undefined : FOLLOW_DISTANCE,
-  }).slice(1);
-  if (!path.length) return false;
+  });
+  if (!path.length && "x" in target) return false;
 
   mover.order = {
     type: "walk",
@@ -121,7 +121,7 @@ const isReachableTarget = (attacker: Entity, target: Entity) => {
 
   const path = calcPath(attacker, "id" in target ? target.id : target, {
     mode: "attack",
-  }).slice(1);
+  });
 
   return path.length > 0 &&
     (path.at(-1)?.x !== attacker.position.x ||

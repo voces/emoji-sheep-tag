@@ -23,6 +23,7 @@ import { shortcutsVar } from "./ui/pages/Settings.tsx";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { showSettingsVar } from "./ui/vars/showSettings.ts";
 import { selectEntity } from "./api/selection.ts";
+import { normalizeKey, normalizeKeys } from "./util/normalizeKey.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -313,6 +314,8 @@ mouse.addEventListener("mouseMove", (e) => {
 });
 
 export const keyboard: Record<string, boolean> = {};
+// Normalized keyboard state for shortcut checking
+const normalizedKeyboard: Record<string, boolean> = {};
 
 const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
   switch (a.type) {
@@ -323,7 +326,8 @@ const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
     case "target":
       return b.type === "target" && a.order === b.order;
     case "purchase":
-      return b.type === "purchase" && a.itemId === b.itemId && a.shopId === b.shopId;
+      return b.type === "purchase" && a.itemId === b.itemId &&
+        a.shopId === b.shopId;
     default:
       absurd(a);
   }
@@ -366,12 +370,17 @@ export const getActiveOrder = () => activeOrder;
 
 globalThis.addEventListener("keydown", (e) => {
   keyboard[e.code] = true;
+  normalizedKeyboard[normalizeKey(e.code)] = true;
 
   if (showSettingsVar()) return false;
 
   const shortcuts = shortcutsVar();
-  const checkShortcut = (shortcut: string[]) =>
-    shortcut.includes(e.code) && shortcut.every((s) => keyboard[s]);
+  const checkShortcut = (shortcut: string[]) => {
+    const normalizedShortcut = normalizeKeys(shortcut);
+    const normalizedCurrentKey = normalizeKey(e.code);
+    return normalizedShortcut.includes(normalizedCurrentKey) && 
+           normalizedShortcut.every((s) => normalizedKeyboard[s]);
+  };
 
   if (
     document.activeElement instanceof HTMLInputElement &&
@@ -394,6 +403,62 @@ globalThis.addEventListener("keydown", (e) => {
   ) {
     e.preventDefault();
     showChatBoxVar("open");
+    return false;
+  }
+
+  if (
+    checkShortcut(shortcuts.misc.selectOwnUnit) &&
+    showChatBoxVar() !== "open" && showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    e.preventDefault();
+    const localPlayer = getLocalPlayer();
+    if (localPlayer) {
+      // Find sheep or wolf owned by the local player
+      let ownedUnit: Entity | undefined;
+      for (const entity of app.entities) {
+        if (
+          entity.owner === localPlayer.id &&
+          (entity.prefab === "sheep" || entity.prefab === "wolf")
+        ) {
+          ownedUnit = entity;
+          break;
+        }
+      }
+      if (ownedUnit) {
+        selectEntity(ownedUnit);
+      }
+    }
+    return false;
+  }
+
+  if (
+    checkShortcut(shortcuts.misc.selectMirrors) &&
+    showChatBoxVar() !== "open" && showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    e.preventDefault();
+    const localPlayer = getLocalPlayer();
+    if (localPlayer) {
+      // Find all mirror entities owned by the local player
+      const mirrorEntities: Entity[] = [];
+      for (const entity of app.entities) {
+        if (entity.owner === localPlayer.id && entity.isMirror === true) {
+          mirrorEntities.push(entity);
+        }
+      }
+      
+      if (mirrorEntities.length > 0) {
+        // Clear current selection first
+        for (const entity of selection) {
+          delete (entity as Entity).selected;
+        }
+        // Select all mirror entities
+        for (const entity of mirrorEntities) {
+          entity.selected = true;
+        }
+      }
+    }
     return false;
   }
 
@@ -420,12 +485,17 @@ globalThis.addEventListener("keydown", (e) => {
   for (const entity of selection) {
     if (!entity.actions) continue;
     for (const a of entity.actions) {
-      if (
-        (a.binding?.includes(e.code) && a.binding.every((b) => keyboard[b])) &&
-        (!action || isSameAction(action, a))
-      ) {
-        action = a;
-        units.push(entity);
+      if (a.binding) {
+        const normalizedBinding = normalizeKeys(a.binding);
+        const normalizedCurrentKey = normalizeKey(e.code);
+        if (
+          normalizedBinding.includes(normalizedCurrentKey) && 
+          normalizedBinding.every((b) => normalizedKeyboard[b]) &&
+          (!action || isSameAction(action, a))
+        ) {
+          action = a;
+          units.push(entity);
+        }
       }
     }
   }
@@ -450,12 +520,14 @@ globalThis.addEventListener("keydown", (e) => {
     const goldCost = action.goldCost ?? 0;
     if (goldCost > 0 && units.length > 0) {
       // Find the owning player of the unit performing the build/purchase
-      const owningPlayer = playersVar().find(p => p.id === units[0].owner);
+      const owningPlayer = playersVar().find((p) => p.id === units[0].owner);
       const playerGold = owningPlayer?.entity?.gold ?? 0;
 
       if (playerGold < goldCost) {
         // Play insufficient gold sound
-        playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.3 });
+        playSound(pick("click1", "click2", "click3", "click4"), {
+          volume: 0.3,
+        });
         return;
       }
     }
@@ -530,10 +602,12 @@ globalThis.addEventListener("keydown", (e) => {
 
 globalThis.addEventListener("keyup", (e) => {
   delete keyboard[e.code];
+  delete normalizedKeyboard[normalizeKey(e.code)];
 });
 
 globalThis.addEventListener("blur", () => {
   for (const key in keyboard) delete keyboard[key];
+  for (const key in normalizedKeyboard) delete normalizedKeyboard[key];
 });
 
 globalThis.addEventListener("wheel", (e) => {

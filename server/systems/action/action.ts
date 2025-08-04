@@ -22,10 +22,10 @@ addSystem({
   updateEntity: (e, delta) => {
     let attackCooldownAvailable = delta;
 
-    let loops = 1000;
+    let loops = 10;
     while ((e.order || e.queue?.length) && delta > 0) {
       if (!loops--) {
-        console.warn("Over 1000 order loops!", e.id, e.order);
+        console.warn("Over 10 order loops!", e.id, e.order);
         break;
       }
 

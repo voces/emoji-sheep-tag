@@ -27,7 +27,7 @@ export const advanceAttackMove = (e: Entity, delta: number): number => {
   if (e.order.targetId) return tweenAttack(e, delta);
 
   // Otherwise proceed along path
-  const path = calcPath(e, e.order.target).slice(1);
+  const path = calcPath(e, e.order.target);
   if (!path.length) {
     delete e.order;
     return delta;

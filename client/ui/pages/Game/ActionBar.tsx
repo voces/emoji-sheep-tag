@@ -10,6 +10,7 @@ import { useTooltip } from "../../hooks/useTooltip.tsx";
 import { absurd } from "../../../../shared/util/absurd.ts";
 import { useListenToEntityProp } from "../../hooks/useListenToEntityProp.ts";
 import { styled } from "npm:styled-components";
+import { formatShortcut } from "../../util/formatShortcut.ts";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -102,9 +103,7 @@ const Command = (
           scale={iconScale}
         />
       )}
-      {binding?.length && (
-        <div>{binding.map((b) => b.replace("Key", "")).join("")}</div>
-      )}
+      {binding?.length && <div>{formatShortcut(binding)}</div>}
       {tooltip}
     </div>
   );
