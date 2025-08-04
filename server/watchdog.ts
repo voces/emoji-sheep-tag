@@ -10,18 +10,20 @@ let notifySocket: Deno.DatagramConn | null = null;
 /** Initialize datagram socket for systemd notifications */
 function initNotifySocket() {
   if (!NOTIFY_SOCKET || notifySocket) return;
-  
+
   try {
     // Create a datagram socket - we'll send to the systemd socket path
     notifySocket = Deno.listenDatagram({ transport: "unixpacket", path: "" });
   } catch (error) {
-    console.debug(`[Watchdog] Failed to create notify socket: ${(error as Error).message}`);
+    console.debug(
+      `[Watchdog] Failed to create notify socket: ${(error as Error).message}`,
+    );
   }
 }
 
 async function sdNotify(state: string) {
   if (!NOTIFY_SOCKET) return;
-  
+
   initNotifySocket();
   if (!notifySocket) return;
 
@@ -30,8 +32,11 @@ async function sdNotify(state: string) {
     const targetPath = NOTIFY_SOCKET.startsWith("@")
       ? `\0${NOTIFY_SOCKET.slice(1)}`
       : NOTIFY_SOCKET;
-    
-    await notifySocket.send(enc.encode(state), { transport: "unixpacket", path: targetPath });
+
+    await notifySocket.send(enc.encode(state), {
+      transport: "unixpacket",
+      path: targetPath,
+    });
   } catch (error) {
     console.debug(`[Watchdog] Notify failed: ${(error as Error).message}`);
   }
@@ -46,9 +51,17 @@ export async function notifyReady() {
 
 /** Start the periodic WATCHDOG=1 pings (no-op if watchdog not configured) */
 export function armWatchdog() {
-  if (WATCHDOG_USEC === 0) return;
+  if (WATCHDOG_USEC === 0) {
+    console.debug("[Watchdog] Not armed - WATCHDOG_USEC not set");
+    return;
+  }
 
   const intervalMs = WATCHDOG_USEC / 2 / 1000; // < ½ timeout
+  console.log(
+    `[Watchdog] Armed with interval ${intervalMs}ms (timeout: ${
+      WATCHDOG_USEC / 1000
+    }ms)`,
+  );
   setInterval(() => void sdNotify("WATCHDOG=1"), intervalMs);
 }
 
