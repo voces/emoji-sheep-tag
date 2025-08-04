@@ -1,4 +1,4 @@
-import { Entity, UnitDataAction } from "./types.ts";
+import { Entity, Item, UnitDataAction } from "./types.ts";
 
 export const classificationGroups = {
   alliance: ["ally", "enemy", "neutral"],
@@ -44,6 +44,17 @@ const selfDestruct: UnitDataAction = {
   binding: ["KeyX"],
 };
 
+export const items: Record<string, Item> = {
+  claw: {
+    id: "claw",
+    name: "Claws +20",
+    icon: "claw2",
+    gold: 25,
+    binding: ["KeyC"],
+    damage: 20,
+  },
+};
+
 export const prefabs: Record<
   string,
   Pick<
@@ -66,6 +77,8 @@ export const prefabs: Record<
     | "modelScale"
     | "sounds"
     | "completionTime"
+    | "items"
+    | "inventory"
   >
 > = {
   sheep: {
@@ -124,6 +137,7 @@ export const prefabs: Record<
   },
   wolf: {
     name: "Wolf",
+    inventory: [],
     movementSpeed: 3.1,
     turnSpeed: 11,
     radius: 0.5,
@@ -235,6 +249,12 @@ export const prefabs: Record<
     radius: 0.25,
     tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     isDoodad: true,
+  },
+  shop: {
+    name: "Shop",
+    radius: 0.25,
+    tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
+    items: [items.claw],
   },
 };
 

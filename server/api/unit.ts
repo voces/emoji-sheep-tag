@@ -7,7 +7,7 @@ import {
 } from "../../shared/pathing/math.ts";
 import { isPathingEntity } from "../../shared/pathing/util.ts";
 import { Entity } from "../../shared/types.ts";
-import { currentApp, lobbyContext } from "../contexts.ts";
+import { currentApp } from "../contexts.ts";
 import { data } from "../st/data.ts";
 import {
   calcPath,
@@ -19,6 +19,7 @@ import {
 import { prefabs } from "../../shared/data.ts";
 import { FOLLOW_DISTANCE } from "../../shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
+import { deductPlayerGold } from "./player.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -237,18 +238,5 @@ const deductBuildGold = (builder: Entity, type: string) => {
   const goldCost =
     (buildAction?.type === "build" ? buildAction.goldCost : undefined) ?? 0;
 
-  if (goldCost > 0) {
-    const lobby = lobbyContext.context;
-    const ownerClient = lobby?.round
-      ? Array.from([...lobby.round.sheep, ...lobby.round.wolves]).find(
-        (client) => client.id === builder.owner,
-      )
-      : undefined;
-
-    if (
-      ownerClient?.playerEntity && ownerClient.playerEntity.gold !== undefined
-    ) {
-      ownerClient.playerEntity.gold -= goldCost;
-    }
-  }
+  deductPlayerGold(builder.owner, goldCost);
 };

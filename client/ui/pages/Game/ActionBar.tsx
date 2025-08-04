@@ -2,13 +2,14 @@ import { makeVar, useReactiveVar } from "../../hooks/useVar.tsx";
 import { app, Entity } from "../../../ecs.ts";
 import { selection } from "../../../systems/autoSelect.ts";
 import { UnitDataAction } from "../../../../shared/types.ts";
-import { prefabs } from "../../../../shared/data.ts";
+import { items, prefabs } from "../../../../shared/data.ts";
 import { getLocalPlayer, playersVar } from "../../vars/players.ts";
 import { shortcutsVar } from "../Settings.tsx";
 import { SvgIcon } from "../../components/SVGIcon.tsx";
 import { useTooltip } from "../../hooks/useTooltip.tsx";
 import { absurd } from "../../../../shared/util/absurd.ts";
 import { useListenToEntityProp } from "../../hooks/useListenToEntityProp.ts";
+import { styled } from "npm:styled-components";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -23,8 +24,15 @@ selection.addEventListener(
     ),
 );
 
+const GoldContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: 4,
+  alignItems: "center",
+  color: theme.colors.gold,
+}));
+
 const Command = (
-  { name, icon, iconType, binding, iconScale, current, disabled }: {
+  { name, icon, iconType, binding, iconScale, current, disabled, goldCost }: {
     name: string;
     icon?: string;
     iconType?: "svg";
@@ -32,9 +40,22 @@ const Command = (
     iconScale?: number;
     current?: boolean;
     disabled?: boolean;
+    goldCost?: number;
   },
 ) => {
-  const { tooltipContainerProps, tooltip } = useTooltip(name);
+  const { tooltipContainerProps, tooltip } = useTooltip(
+    <div>
+      <div>{name}</div>
+      {(goldCost ?? 0) > 0 && (
+        <GoldContainer>
+          <span style={{ width: 24, height: 24, display: "inline-block" }}>
+            <SvgIcon icon="gold" />
+          </span>
+          <span>{goldCost}</span>
+        </GoldContainer>
+      )}
+    </div>,
+  );
 
   const handleClick = () => {
     if (!binding?.length) return;
@@ -110,8 +131,8 @@ const Action = (
   const manaCost = action.manaCost ?? 0;
   let disabled = manaCost > 0 && (entity.mana ?? 0) < manaCost;
 
-  // Check if action is disabled due to insufficient gold (for build actions)
-  if (action.type === "build") {
+  // Check if action is disabled due to insufficient gold (for build and purchase actions)
+  if (action.type === "build" || action.type === "purchase") {
     const goldCost = action.goldCost ?? 0;
     // Find the owning player of the entity
     const owningPlayer = playersVar().find((p) => p.id === entity.owner);
@@ -142,6 +163,19 @@ const Action = (
           binding={action.binding}
           current={current}
           disabled={disabled}
+          goldCost={action.goldCost}
+        />
+      );
+    case "purchase":
+      return (
+        <Command
+          name={action.name}
+          iconType="svg"
+          icon={items[action.itemId].icon ?? action.itemId}
+          binding={action.binding}
+          current={current}
+          disabled={disabled}
+          goldCost={action.goldCost}
         />
       );
     default:
@@ -199,6 +233,8 @@ export const ActionBar = () => {
                 (selection.order?.type === "attackMove")
               : a.order === "move" && !!selection.order &&
                 "path" in selection.order
+            : a.type === "purchase"
+            ? false // Purchase actions are instant, never current
             : false}
         />
       ))}

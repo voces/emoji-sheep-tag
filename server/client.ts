@@ -15,6 +15,7 @@ import { generic, zGenericEvent } from "./actions/generic.ts";
 import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
+import { purchase, zPurchase } from "./actions/purchase.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 
 export type SocketEventMap = {
@@ -97,6 +98,7 @@ const zClientToServerMessage = z.union([
   zGenericEvent,
   zChat,
   zCancel,
+  zPurchase,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -109,6 +111,7 @@ const actions = {
   generic,
   chat,
   cancel,
+  purchase,
 };
 
 export const handleSocket = (socket: Socket) => {

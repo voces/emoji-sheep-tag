@@ -55,6 +55,15 @@ export type UnitDataActionTarget = {
   readonly castDuration?: number;
 };
 
+export type Item = {
+  readonly id: string;
+  readonly name: string;
+  readonly icon?: string;
+  readonly gold: number;
+  readonly binding: string[];
+  readonly damage?: number;
+};
+
 export type UnitDataAction = {
   readonly name: string;
   readonly type: "build";
@@ -68,6 +77,15 @@ export type UnitDataAction = {
   readonly type: "auto";
   readonly order: string;
   readonly binding?: string[];
+  readonly manaCost?: number;
+  readonly castDuration?: number;
+} | {
+  readonly name: string;
+  readonly type: "purchase";
+  readonly itemId: string;
+  readonly shopId?: string;
+  readonly binding?: string[];
+  readonly goldCost?: number;
   readonly manaCost?: number;
   readonly castDuration?: number;
 } | UnitDataActionTarget;
@@ -141,6 +159,10 @@ export type Entity = {
   tilemap?: Footprint;
   /** Override `tilemap` for require checks. */
   requiresTilemap?: Footprint;
+
+  // Items
+  items?: ReadonlyArray<Item>;
+  inventory?: ReadonlyArray<Item>;
 
   // Orders
   order?: Order | null;

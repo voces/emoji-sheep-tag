@@ -81,6 +81,14 @@ const zClassification = z.union([
   z.literal("other"),
 ]);
 
+const zItem = z.object({
+  id: z.string(),
+  name: z.string(),
+  gold: z.number(),
+  binding: z.string().array(),
+  damage: z.number().optional(),
+});
+
 const zUpdate = z.object({
   type: z.literal("unit"),
   id: z.string(),
@@ -124,6 +132,16 @@ const zUpdate = z.object({
       }),
       z.object({
         name: z.string(),
+        type: z.literal("purchase"),
+        itemId: z.string(),
+        shopId: z.string().optional(),
+        binding: z.array(z.string()).optional(),
+        goldCost: z.number().optional(),
+        manaCost: z.number().optional(),
+        castDuration: z.number().optional(),
+      }),
+      z.object({
+        name: z.string(),
         type: z.literal("target"),
         order: z.string(),
         targeting: z.array(zClassification).optional(),
@@ -159,6 +177,10 @@ const zUpdate = z.object({
 
   isMirror: z.boolean().optional(),
   mirrors: z.array(z.string()).readonly().nullable().optional(),
+
+  // Items
+  items: zItem.array().readonly().optional(),
+  inventory: zItem.array().readonly().optional(),
 
   // Pathing
   radius: z.number().optional(),
@@ -350,6 +372,7 @@ const handlers = {
     stateVar(data.status);
     if (data.status === "lobby") {
       for (const entity of app.entities) app.removeEntity(entity);
+      for (const key in map) delete map[key];
     }
     for (const update of data.updates) {
       const { type: _type, ...props } = update;
@@ -416,6 +439,7 @@ const handlers = {
   stop: (d: z.TypeOf<typeof zStop>) => {
     stateVar("lobby");
     for (const entity of app.entities) app.removeEntity(entity);
+    for (const key in map) delete map[key];
     if (d.players) {
       playersVar((players) =>
         players.map((p) => {

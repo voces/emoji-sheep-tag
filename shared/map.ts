@@ -1,3 +1,5 @@
+import { Entity } from "./types.ts";
+
 export const tiles = `
                            
                            
@@ -35,27 +37,30 @@ export const center = {
   y: tiles.length / 2,
 };
 
-export const initEntities = {
+export const initEntities: Record<string, Partial<Entity>[]> = {
   fence: [
-    [11.75, 11.25],
-    [12.25, 11.25],
-    [12.75, 11.25],
-    [13.25, 11.25],
+    { position: { x: 11.75, y: 11.25 } },
+    { position: { x: 12.25, y: 11.25 } },
+    { position: { x: 12.75, y: 11.25 } },
+    { position: { x: 13.25, y: 11.25 } },
 
-    [15.75, 11.25],
-    [15.75, 11.75],
-    [15.75, 12.25],
-    [15.75, 12.75],
-    [15.75, 13.25],
+    { position: { x: 15.75, y: 11.25 } },
+    { position: { x: 15.75, y: 11.75 } },
+    // { position: { x: 15.75, y: 12.25 } },
+    { position: { x: 15.75, y: 12.75 } },
+    { position: { x: 15.75, y: 13.25 } },
 
-    [15.25, 15.75],
-    [14.75, 15.75],
-    [14.25, 15.75],
-    [13.75, 15.75],
+    { position: { x: 15.25, y: 15.75 } },
+    { position: { x: 14.75, y: 15.75 } },
+    { position: { x: 14.25, y: 15.75 } },
+    { position: { x: 13.75, y: 15.75 } },
 
-    [11.25, 15.25],
-    [11.25, 14.75],
-    [11.25, 14.25],
-    [11.25, 13.75],
+    { position: { x: 11.25, y: 15.25 } },
+    { position: { x: 11.25, y: 14.75 } },
+    { position: { x: 11.25, y: 14.25 } },
+    { position: { x: 11.25, y: 13.75 } },
+  ],
+  shop: [
+    { position: { x: 15.75, y: 12.25 } },
   ],
 };

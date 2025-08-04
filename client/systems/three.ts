@@ -20,6 +20,8 @@ import fire from "../assets/fire.svg";
 //@deno-types="../assets/asset.d.ts"
 import claw from "../assets/claw.svg";
 //@deno-types="../assets/asset.d.ts"
+import claw2 from "../assets/claw2.svg";
+//@deno-types="../assets/asset.d.ts"
 import collision from "../assets/collision.svg";
 //@deno-types="../assets/asset.d.ts"
 import flowers from "../assets/flowers.svg";
@@ -41,6 +43,8 @@ import stop from "../assets/stop.svg";
 import gold from "../assets/gold.svg";
 //@deno-types="../assets/asset.d.ts"
 import divinity from "../assets/divinity.svg";
+//@deno-types="../assets/asset.d.ts"
+import shop from "../assets/shop.svg";
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -60,6 +64,8 @@ export const svgs: Record<string, string> = {
   stop,
   gold,
   divinity,
+  shop,
+  claw2,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -76,6 +82,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   gravity: loadSvg(gravity, 2, { layer: 2 }),
   hinduTemple: loadSvg(hinduTemple, 1.75),
   divinity: loadSvg(divinity, 1),
+  shop: loadSvg(shop, 1),
 };
 Object.assign(globalThis, { collections });
 

@@ -65,8 +65,8 @@ export const start = (client: Client) => {
 
     for (const prefab in initEntities) {
       for (
-        const [x, y] of initEntities[prefab as keyof typeof initEntities]
-      ) ecs.addEntity({ prefab, position: { x, y }, ...prefabs[prefab] });
+        const partial of initEntities[prefab as keyof typeof initEntities]
+      ) ecs.addEntity({ prefab, ...prefabs[prefab], ...partial });
     }
 
     for (const player of [...sheep, ...wolves]) {

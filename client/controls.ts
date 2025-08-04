@@ -322,6 +322,8 @@ const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
       return b.type === "build" && a.unitType === b.unitType;
     case "target":
       return b.type === "target" && a.order === b.order;
+    case "purchase":
+      return b.type === "purchase" && a.itemId === b.itemId && a.shopId === b.shopId;
     default:
       absurd(a);
   }
@@ -443,11 +445,11 @@ globalThis.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Check if player has enough gold for build actions
-  if (action.type === "build") {
+  // Check if player has enough gold for build and purchase actions
+  if (action.type === "build" || action.type === "purchase") {
     const goldCost = action.goldCost ?? 0;
     if (goldCost > 0 && units.length > 0) {
-      // Find the owning player of the unit performing the build
+      // Find the owning player of the unit performing the build/purchase
       const owningPlayer = playersVar().find(p => p.id === units[0].owner);
       const playerGold = owningPlayer?.entity?.gold ?? 0;
 
@@ -509,6 +511,16 @@ globalThis.addEventListener("keydown", (e) => {
         variant: action.order === "attack" ? "enemy" : "ally",
       };
       updateCursor();
+      break;
+    case "purchase":
+      // Purchase is instant - send the purchase command immediately
+      playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.3 });
+      send({
+        type: "purchase",
+        unit: units[0].id,
+        itemId: action.itemId,
+        shopId: action.shopId,
+      });
       break;
 
     default:

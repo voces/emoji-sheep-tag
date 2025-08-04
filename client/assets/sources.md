@@ -17,6 +17,8 @@
 - https://www.svgrepo.com/svg/500037/stop
 - https://www.svgrepo.com/svg/367026/gold
 - https://www.svgrepo.com/svg/424411/building-landmark-senegal
+- https://www.svgrepo.com/svg/411739/shop
+- https://www.svgrepo.com/svg/83759/claw
 
 # Audio
 

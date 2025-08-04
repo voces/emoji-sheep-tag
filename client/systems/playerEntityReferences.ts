@@ -5,12 +5,10 @@ import { playersVar } from "../ui/vars/players.ts";
 app.addSystem({
   props: ["isPlayer", "owner"],
   onAdd: (entity) => {
-    if (entity.owner) {
-      // Link player entity to player object
-      playersVar((players) =>
-        players.map((p) => p.id === entity.owner ? { ...p, entity } : p)
-      );
-    }
+    // Link player entity to player object
+    playersVar((players) =>
+      players.map((p) => p.id === entity.owner ? { ...p, entity } : p)
+    );
   },
   onRemove: (entity) => {
     if (entity.owner) {
