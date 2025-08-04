@@ -7,17 +7,29 @@ async function sdNotify(state: string) {
   if (!NOTIFY_SOCKET) return; // not running under systemd
 
   try {
-    // Send the raw state string to systemd-notify
-    // systemd-notify expects the notification string as a simple argument
-    const process = new Deno.Command("systemd-notify", {
-      args: [state],
-      stdout: "null",
-      stderr: "null",
+    // Parse the socket path (handle abstract namespace sockets)
+    let socketPath = NOTIFY_SOCKET;
+    if (NOTIFY_SOCKET.startsWith("@")) {
+      // Abstract namespace socket - replace @ with \0
+      socketPath = `\0${NOTIFY_SOCKET.slice(1)}`;
+    }
+
+    // Send notification directly via Unix socket from main process
+    // This avoids the PID issue completely
+    const conn = await Deno.connect({
+      transport: "unix",
+      path: socketPath,
     });
-    
-    await process.output();
+
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(state);
+      await conn.write(data);
+    } finally {
+      conn.close();
+    }
   } catch (error) {
-    // Silently ignore - systemd-notify might not be available or we're not in systemd
+    // Silently ignore - we might not be running under systemd
     console.debug(`Systemd notification failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -33,13 +45,8 @@ export async function notifyReady() {
 export function armWatchdog() {
   if (WATCHDOG_USEC === 0) return;
 
-  // Temporarily disable watchdog pings to avoid PID issues
-  // The ready notification should be sufficient for now
-  console.debug("Watchdog armed but disabled due to systemd PID restrictions");
-  
-  // Uncomment this line once we resolve the PID issue:
-  // const intervalMs = WATCHDOG_USEC / 2 / 1000; // < ½ timeout
-  // setInterval(() => void sdNotify("WATCHDOG=1"), intervalMs);
+  const intervalMs = WATCHDOG_USEC / 2 / 1000; // < ½ timeout
+  setInterval(() => void sdNotify("WATCHDOG=1"), intervalMs);
 }
 
 /**
