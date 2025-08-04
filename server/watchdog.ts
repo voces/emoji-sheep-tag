@@ -26,9 +26,9 @@ async function sdNotify(state: string) {
   if (!socketPath) return; // not running under systemd
 
   try {
-    // Try using UDP socket approach which is more common for systemd notifications
+    // Try using systemd-notify command with main PID
     const process = new Deno.Command("systemd-notify", {
-      args: [state],
+      args: ["--pid", Deno.pid.toString(), state],
       stdout: "null",
       stderr: "null",
     });
