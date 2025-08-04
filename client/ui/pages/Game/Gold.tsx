@@ -25,7 +25,7 @@ const InnerGold = ({ entity }: { entity: Entity }) => {
       <span style={{ width: 24, height: 24 }}>
         <SvgIcon icon="gold" />
       </span>
-      <span>{(entity.gold ?? 0).toFixed(0)}</span>
+      <span>{Math.floor(entity.gold ?? 0)}</span>
     </Container>
   );
 };

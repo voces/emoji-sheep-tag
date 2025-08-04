@@ -51,6 +51,24 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
   });
   if (!pathable) return;
 
+  // Handle translocation for Translocation Hut
+  if (type === "translocationHut" && builder.position && temp.position) {
+    // Calculate the vector from structure center to builder
+    const dx = builder.position.x - temp.position.x;
+    const dy = builder.position.y - temp.position.y;
+
+    // Convert to polar coordinates and add 180 degrees
+    const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+    const angle = Math.atan2(dy, dx) + Math.PI; // Add 180 degrees (π radians)
+
+    // Calculate new position on opposite side
+    const newX = temp.position.x + distance * Math.cos(angle);
+    const newY = temp.position.y + distance * Math.sin(angle);
+
+    // Move the builder to the new position
+    builder.position = { x: newX, y: newY };
+  }
+
   // Relocate entity if position not valid
   app.enqueue(() => updatePathing(builder));
 

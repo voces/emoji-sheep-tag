@@ -39,6 +39,8 @@ import route from "../assets/route.svg";
 import stop from "../assets/stop.svg";
 //@deno-types="../assets/asset.d.ts"
 import gold from "../assets/gold.svg";
+//@deno-types="../assets/asset.d.ts"
+import divinity from "../assets/divinity.svg";
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -57,6 +59,7 @@ export const svgs: Record<string, string> = {
   route,
   stop,
   gold,
+  divinity,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -72,6 +75,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   circle: loadSvg(circle, 0.08, { layer: 2 }),
   gravity: loadSvg(gravity, 2, { layer: 2 }),
   hinduTemple: loadSvg(hinduTemple, 1.75),
+  divinity: loadSvg(divinity, 1),
 };
 Object.assign(globalThis, { collections });
 

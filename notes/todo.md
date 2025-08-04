@@ -1,9 +1,7 @@
 - Login system
 - Invis Farm?
-- Trans Farm
 - Fog of war?
 - Sound settings
-- Money
 - Items
   - Claws
   - Gloves

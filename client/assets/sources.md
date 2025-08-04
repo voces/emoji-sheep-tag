@@ -15,6 +15,8 @@
 - https://iconduck.com/emojis/98624/hindu-temple
 - https://www.svgrepo.com/svg/259472/route
 - https://www.svgrepo.com/svg/500037/stop
+- https://www.svgrepo.com/svg/367026/gold
+- https://www.svgrepo.com/svg/424411/building-landmark-senegal
 
 # Audio
 
