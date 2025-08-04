@@ -1,6 +1,7 @@
 import { serveFile } from "jsr:@std/http/file-server";
 import { resolve } from "jsr:@std/path";
 import { handleSocket } from "./client.ts";
+import { startWatchdog } from "./watchdog.ts";
 
 const isDev = Deno.args.includes("--dev");
 
@@ -32,3 +33,7 @@ Deno.serve({ port }, async (req) => {
 
   return new Response(undefined, { status: 404 });
 });
+
+await startWatchdog();
+
+console.log(`Server ready on port ${port || 8000}`);

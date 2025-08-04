@@ -14,6 +14,7 @@ export const advanceWalk = (e: Entity, delta: number): number => {
       delete e.order;
       return delta;
     }
+    // TODO: this can crash loop!
     e.order = {
       ...e.order,
       path: calcPath(e, e.order.targetId, {
