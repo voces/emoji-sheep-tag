@@ -24,12 +24,34 @@ const socketPath = initNotifySocket();
 
 async function sdNotify(state: string) {
   if (!socketPath) return; // not running under systemd
-  
-  const conn = Deno.listenDatagram({ transport: "unixpacket", path: "" });
+
   try {
-    await conn.send(enc.encode(state), { transport: "unixpacket", path: socketPath });
-  } finally {
-    conn.close();
+    // Try using UDP socket approach which is more common for systemd notifications
+    const process = new Deno.Command("systemd-notify", {
+      args: [state],
+      stdout: "null",
+      stderr: "null",
+    });
+    await process.output();
+  } catch (error) {
+    // If systemd-notify command is not available, try manual socket approach
+    try {
+      const conn = await Deno.connect({ transport: "unix", path: socketPath });
+      try {
+        await conn.write(enc.encode(state));
+      } finally {
+        conn.close();
+      }
+    } catch (socketError) {
+      // Silently ignore - service might not be running under systemd
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const socketErrorMsg = socketError instanceof Error
+        ? socketError.message
+        : String(socketError);
+      console.debug(
+        `Watchdog notification failed: ${errorMsg}, ${socketErrorMsg}`,
+      );
+    }
   }
 }
 
@@ -48,7 +70,7 @@ export function armWatchdog() {
   setInterval(() => void sdNotify("WATCHDOG=1"), intervalMs);
 }
 
-/** 
+/**
  * Notify systemd that the server is ready and start watchdog pings
  * Combines notifyReady() and armWatchdog() into a single call
  */
