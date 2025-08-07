@@ -27,11 +27,10 @@ type Order = Readonly<
     readonly type: "hold";
   } | {
     readonly type: "cast";
+    readonly orderId: string;
     readonly remaining: number;
-    readonly info: {
-      readonly type: "mirrorImage";
-      readonly positions: ReadonlyArray<Point>;
-    };
+    readonly positions?: ReadonlyArray<Point>;
+    readonly started?: boolean;
   } | {
     readonly type: "attackMove";
     readonly target: Point;
@@ -62,6 +61,8 @@ export type Item = {
   readonly gold: number;
   readonly binding: string[];
   readonly damage?: number;
+  readonly charges?: number;
+  readonly action?: UnitDataAction;
 };
 
 export type UnitDataAction = {
@@ -83,11 +84,15 @@ export type UnitDataAction = {
   readonly name: string;
   readonly type: "purchase";
   readonly itemId: string;
-  readonly shopId: string;
   readonly binding: string[];
   readonly goldCost: number;
   readonly manaCost?: number;
   readonly castDuration?: number;
+} | {
+  readonly name: string;
+  readonly type: "menu";
+  readonly binding?: string[];
+  readonly actions: ReadonlyArray<UnitDataAction>;
 } | UnitDataActionTarget;
 
 export type Entity = {
@@ -161,7 +166,6 @@ export type Entity = {
   requiresTilemap?: Footprint;
 
   // Items
-  items?: ReadonlyArray<Item>;
   inventory?: ReadonlyArray<Item>;
 
   // Orders

@@ -1,9 +1,14 @@
 import { Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
+import { closeMenusForUnit } from "../ui/vars/menuState.ts";
 
 export const selectEntity = (entity: Entity, clearCurrentSelection = true) => {
   if (clearCurrentSelection) {
-    for (const entity of selection) delete (entity as Entity).selected;
+    // Close menus for units being deselected
+    for (const deselectedEntity of selection) {
+      closeMenusForUnit(deselectedEntity.id);
+      delete (deselectedEntity as Entity).selected;
+    }
   }
   entity.selected = true;
 };

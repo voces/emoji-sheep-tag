@@ -11,6 +11,7 @@ import { absurd } from "../../../../shared/util/absurd.ts";
 import { useListenToEntityProp } from "../../hooks/useListenToEntityProp.ts";
 import { styled } from "npm:styled-components";
 import { formatShortcut } from "../../util/formatShortcut.ts";
+import { getCurrentMenu, menuStateVar } from "../../vars/menuState.ts";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -117,6 +118,8 @@ const iconMap: Record<string, string> = {
   stop: "stop",
   attack: "claw",
   selfDestruct: "collision",
+  back: "stop",
+  fox: "fox",
 };
 
 const Action = (
@@ -127,7 +130,7 @@ const Action = (
   },
 ) => {
   // Check if action is disabled due to insufficient mana
-  const manaCost = action.manaCost ?? 0;
+  const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
   let disabled = manaCost > 0 && (entity.mana ?? 0) < manaCost;
 
   // Check if action is disabled due to insufficient gold (for build and purchase actions)
@@ -146,7 +149,7 @@ const Action = (
         <Command
           name={action.name}
           iconType="svg"
-          icon={iconMap[action.order]}
+          icon={iconMap[action.order] ?? action.order}
           binding={action.binding}
           current={current}
           disabled={disabled}
@@ -177,6 +180,17 @@ const Action = (
           goldCost={action.goldCost}
         />
       );
+    case "menu":
+      return (
+        <Command
+          name={action.name}
+          iconType="svg"
+          icon="shop"
+          binding={action.binding}
+          current={current}
+          disabled={disabled}
+        />
+      );
     default:
       absurd(action);
   }
@@ -187,8 +201,11 @@ const Action = (
 export const ActionBar = () => {
   const selection = useReactiveVar(selectionVar);
   useReactiveVar(shortcutsVar);
+  useReactiveVar(menuStateVar);
+  const currentMenu = getCurrentMenu();
   useListenToEntityProp(selection, "order");
   useListenToEntityProp(selection, "mana");
+  useListenToEntityProp(selection, "inventory");
 
   // Listen to gold changes on the owning player's entity
   const owningPlayer = selection
@@ -197,6 +214,29 @@ export const ActionBar = () => {
   useListenToEntityProp(owningPlayer?.entity, "gold");
 
   if (!selection || selection.owner !== getLocalPlayer()?.id) return null;
+
+  // Show menu actions if menu is active
+  let displayActions = currentMenu
+    ? currentMenu.action.actions
+    : selection.actions ?? [];
+
+  // Add item actions from inventory
+  if (!currentMenu && selection.inventory) {
+    const itemActions: UnitDataAction[] = [];
+    for (const item of selection.inventory) {
+      if (item.action && (!item.charges || item.charges > 0)) {
+        // Create an action with the charge count in the name if applicable
+        const actionWithCharges = {
+          ...item.action,
+          name: item.charges
+            ? `${item.action.name} (${item.charges})`
+            : item.action.name,
+        };
+        itemActions.push(actionWithCharges);
+      }
+    }
+    displayActions = [...displayActions, ...itemActions];
+  }
 
   return (
     <div
@@ -210,7 +250,7 @@ export const ActionBar = () => {
         padding: 12,
       }}
     >
-      {selection.actions?.map((a, i) => (
+      {displayActions.map((a, i) => (
         <Action
           key={i}
           action={a}
@@ -220,7 +260,7 @@ export const ActionBar = () => {
               selection.order.unitType === a.unitType
             : a.type === "auto"
             ? a.order === (selection.order?.type === "cast"
-              ? selection.order.info.type
+              ? selection.order.orderId
               : selection.order?.type === "hold"
               ? "hold"
               : !selection.order
@@ -234,6 +274,8 @@ export const ActionBar = () => {
                 "path" in selection.order
             : a.type === "purchase"
             ? false // Purchase actions are instant, never current
+            : a.type === "menu"
+            ? !!(currentMenu && currentMenu.action === a)
             : false}
         />
       ))}

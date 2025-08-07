@@ -16,7 +16,8 @@ import {
   updatePathing,
   withPathingMap,
 } from "../systems/pathing.ts";
-import { prefabs } from "../../shared/data.ts";
+import { prefabs, items } from "../../shared/data.ts";
+import { findAction } from "../util/actionLookup.ts";
 import { FOLLOW_DISTANCE } from "../../shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 import { deductPlayerGold } from "./player.ts";
@@ -229,10 +230,35 @@ export const isAlive = (unit: Entity) => {
   return typeof unit.health !== "number" || unit.health > 0;
 };
 
+export const addItem = (unit: Entity, itemId: string): boolean => {
+  const item = items[itemId];
+  if (!item) return false;
+
+  if (!unit.inventory) {
+    unit.inventory = [];
+  }
+
+  // Check if item already exists and has charges
+  const existingItem = unit.inventory.find(i => i.id === itemId);
+  if (existingItem && item.charges) {
+    // If item has charges and already exists, increase charges
+    unit.inventory = unit.inventory.map((i) =>
+      i.id === itemId
+        ? { ...i, charges: (i.charges || 0) + (item.charges || 1) }
+        : i
+    );
+  } else {
+    // Add new item to inventory
+    unit.inventory = [...unit.inventory, item];
+  }
+
+  return true;
+};
+
 const deductBuildGold = (builder: Entity, type: string) => {
   if (!builder.owner) return;
 
-  const buildAction = builder.actions?.find((a) =>
+  const buildAction = findAction(builder, (a) =>
     a.type === "build" && a.unitType === type
   );
   const goldCost =

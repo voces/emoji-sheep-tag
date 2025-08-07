@@ -19,6 +19,7 @@
 - https://www.svgrepo.com/svg/424411/building-landmark-senegal
 - https://www.svgrepo.com/svg/411739/shop
 - https://www.svgrepo.com/svg/83759/claw
+- https://www.svgrepo.com/svg/405703/fox
 
 # Audio
 

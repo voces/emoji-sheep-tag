@@ -14,10 +14,10 @@ export const advanceWalk = (e: Entity, delta: number): number => {
       delete e.order;
       return delta;
     }
-    // TODO: this can crash loop!
     const path = calcPath(e, e.order.targetId, {
       distanceFromTarget: FOLLOW_DISTANCE,
     });
+    // TODO: Ignore very short paths!
     if (!path.length) return 0;
     e.order = { ...e.order, path };
   } else {

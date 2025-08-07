@@ -46,7 +46,7 @@ export const initEntities: Record<string, Partial<Entity>[]> = {
 
     { position: { x: 15.75, y: 11.25 } },
     { position: { x: 15.75, y: 11.75 } },
-    // { position: { x: 15.75, y: 12.25 } },
+    { position: { x: 15.75, y: 12.25 } },
     { position: { x: 15.75, y: 12.75 } },
     { position: { x: 15.75, y: 13.25 } },
 
@@ -59,8 +59,5 @@ export const initEntities: Record<string, Partial<Entity>[]> = {
     { position: { x: 11.25, y: 14.75 } },
     { position: { x: 11.25, y: 14.25 } },
     { position: { x: 11.25, y: 13.75 } },
-  ],
-  shop: [
-    { position: { x: 15.75, y: 12.25 } },
   ],
 };

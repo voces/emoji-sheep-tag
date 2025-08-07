@@ -45,6 +45,8 @@ import gold from "../assets/gold.svg";
 import divinity from "../assets/divinity.svg";
 //@deno-types="../assets/asset.d.ts"
 import shop from "../assets/shop.svg";
+//@deno-types="../assets/asset.d.ts"
+import fox from "../assets/fox.svg";
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -66,6 +68,7 @@ export const svgs: Record<string, string> = {
   divinity,
   shop,
   claw2,
+  fox,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -83,6 +86,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   hinduTemple: loadSvg(hinduTemple, 1.75),
   divinity: loadSvg(divinity, 1),
   shop: loadSvg(shop, 1),
+  fox: loadSvg(fox, 1.8),
 };
 Object.assign(globalThis, { collections });
 

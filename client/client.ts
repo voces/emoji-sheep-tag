@@ -49,11 +49,10 @@ const zOrder = z.union([
   z.object({ type: z.literal("hold") }),
   z.object({
     type: z.literal("cast"),
+    orderId: z.string(),
     remaining: z.number(),
-    info: z.object({
-      type: z.literal("mirrorImage"),
-      positions: z.array(zPoint).readonly(),
-    }),
+    positions: z.array(zPoint).readonly().optional(),
+    started: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("attackMove"),
@@ -81,12 +80,65 @@ const zClassification = z.union([
   z.literal("other"),
 ]);
 
+// Define the action schema as a constant for recursive reference
+const zAction: z.ZodTypeAny = z.union([
+  z.object({
+    name: z.string(),
+    type: z.literal("build"),
+    unitType: z.string(),
+    binding: z.array(z.string()).optional(),
+    manaCost: z.number().optional(),
+    goldCost: z.number().optional(),
+    castDuration: z.number().optional(),
+  }),
+  z.object({
+    name: z.string(),
+    type: z.literal("auto"),
+    order: z.string(),
+    binding: z.array(z.string()).optional(),
+    manaCost: z.number().optional(),
+    castDuration: z.number().optional(),
+  }),
+  z.object({
+    name: z.string(),
+    type: z.literal("purchase"),
+    itemId: z.string(),
+    binding: z.array(z.string()),
+    goldCost: z.number(),
+    manaCost: z.number().optional(),
+    castDuration: z.number().optional(),
+  }),
+  z.object({
+    name: z.string(),
+    type: z.literal("target"),
+    order: z.string(),
+    targeting: z.array(zClassification).optional(),
+    aoe: z.number().optional(),
+    binding: z.array(z.string()).optional(),
+    smart: z.record(
+      z.union([zClassification, z.literal("ground")]),
+      z.number(),
+    ).optional(),
+    manaCost: z.number().optional(),
+    castDuration: z.number().optional(),
+  }),
+  z.object({
+    name: z.string(),
+    type: z.literal("menu"),
+    binding: z.array(z.string()).optional(),
+    actions: z.lazy(() => z.array(zAction)),
+  }),
+]);
+
 const zItem = z.object({
   id: z.string(),
   name: z.string(),
+  icon: z.string().optional(),
   gold: z.number(),
   binding: z.string().array(),
   damage: z.number().optional(),
+  charges: z.number().optional(),
+  action: zAction.optional(),
 });
 
 const zUpdate = z.object({
@@ -111,51 +163,7 @@ const zUpdate = z.object({
   movementSpeed: z.number().optional(),
   facing: z.number().optional(),
   turnSpeed: z.number().optional(),
-  actions: z.array(
-    z.union([
-      z.object({
-        name: z.string(),
-        type: z.literal("build"),
-        unitType: z.string(),
-        binding: z.array(z.string()).optional(),
-        manaCost: z.number().optional(),
-        goldCost: z.number().optional(),
-        castDuration: z.number().optional(),
-      }),
-      z.object({
-        name: z.string(),
-        type: z.literal("auto"),
-        order: z.string(),
-        binding: z.array(z.string()).optional(),
-        manaCost: z.number().optional(),
-        castDuration: z.number().optional(),
-      }),
-      z.object({
-        name: z.string(),
-        type: z.literal("purchase"),
-        itemId: z.string(),
-        shopId: z.string(),
-        binding: z.array(z.string()),
-        goldCost: z.number(),
-        manaCost: z.number().optional(),
-        castDuration: z.number().optional(),
-      }),
-      z.object({
-        name: z.string(),
-        type: z.literal("target"),
-        order: z.string(),
-        targeting: z.array(zClassification).optional(),
-        aoe: z.number().optional(),
-        binding: z.array(z.string()).optional(),
-        smart: z.record(
-          z.union([zClassification, z.literal("ground")]),
-          z.number(),
-        ).optional(),
-        manaCost: z.number().optional(),
-        castDuration: z.number().optional(),
-      }),
-    ]),
-  ).readonly().optional(),
+  actions: z.array(zAction).readonly().optional(),
   attack: z.object({
     damage: z.number(),
     range: z.number(),

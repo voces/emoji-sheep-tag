@@ -37,6 +37,13 @@ const stop: UnitDataAction = {
   binding: ["KeyZ"],
 };
 
+const back: UnitDataAction = {
+  name: "Back",
+  type: "auto",
+  order: "back",
+  binding: ["Backquote"],
+};
+
 const selfDestruct: UnitDataAction = {
   name: "Self destruct",
   type: "auto",
@@ -49,9 +56,24 @@ export const items: Record<string, Item> = {
     id: "claw",
     name: "Claws +20",
     icon: "claw2",
-    gold: 25,
+    gold: 2,
     binding: ["KeyC"],
     damage: 20,
+  },
+  foxItem: {
+    id: "foxItem",
+    name: "Summon Fox",
+    icon: "fox",
+    gold: 5,
+    binding: ["KeyF"],
+    charges: 1,
+    action: {
+      name: "Summon Fox",
+      type: "auto",
+      order: "fox",
+      binding: ["KeyF"],
+      castDuration: 0.1,
+    },
   },
 };
 
@@ -77,7 +99,6 @@ export const prefabs: Record<
     | "modelScale"
     | "sounds"
     | "completionTime"
-    | "items"
     | "inventory"
   >
 > = {
@@ -139,7 +160,7 @@ export const prefabs: Record<
     name: "Wolf",
     inventory: [],
     movementSpeed: 3.1,
-    turnSpeed: 11,
+    turnSpeed: 10,
     radius: 0.5,
     pathing: 1,
     mana: 60,
@@ -175,6 +196,50 @@ export const prefabs: Record<
         manaCost: 20,
         castDuration: 0.5,
       },
+      {
+        name: "Shop",
+        type: "menu",
+        binding: ["KeyB"],
+        actions: [
+          back,
+          ...Object.values(items).map((item): UnitDataAction => ({
+            name: `Purchase ${item.name}`,
+            type: "purchase",
+            itemId: item.id,
+            binding: item.binding,
+            goldCost: item.gold,
+          })),
+        ],
+      },
+    ],
+  },
+  fox: {
+    name: "Fox",
+    movementSpeed: 2.5,
+    turnSpeed: 8,
+    radius: 0.5,
+    pathing: 1,
+    attack: {
+      damage: 20,
+      range: 0.09, // Sheep between two huts is 0.25; this gives a bit of wiggle
+      rangeMotionBuffer: 0.93,
+      cooldown: 0.8,
+      backswing: 0.10,
+      damagePoint: 0.2,
+    },
+    actions: [
+      {
+        name: "Attack",
+        type: "target",
+        order: "attack",
+        targeting: ["other"],
+        aoe: 0,
+        binding: ["KeyA"],
+        smart: { enemy: 0 },
+      },
+      move,
+      stop,
+      { name: "Hold position", type: "auto", order: "hold", binding: ["KeyH"] },
     ],
   },
   hut: {
@@ -249,12 +314,6 @@ export const prefabs: Record<
     radius: 0.25,
     tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     isDoodad: true,
-  },
-  shop: {
-    name: "Shop",
-    radius: 0.25,
-    tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
-    items: [items.claw],
   },
 };
 

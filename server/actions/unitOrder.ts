@@ -8,6 +8,8 @@ import { handleAttack } from "./attack.ts";
 import { handleHold } from "./hold.ts";
 import { handleDestroyLastFarm } from "../st/destroyLastFarm.ts";
 import { handleMirrorImage } from "./mirrorImage.ts";
+import { handleFox } from "./fox.ts";
+import { findActionAndItem } from "../util/actionLookup.ts";
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
@@ -24,25 +26,63 @@ export const unitOrder = (
     const unit = lookup(uId);
     if (!unit) throw new UnknownEntity(uId);
     if (client.id !== unit.owner) continue;
+
+    // Find action from all possible sources
+    const result = findActionAndItem(unit, order);
+    if (!result) {
+      console.warn("Action not found", { order, units, target });
+      return;
+    }
+
+    const { action, item: itemWithAction } = result;
+
+    // Handle the action based on order type
+    let actionResult;
     switch (order) {
       case "move":
-        return handleMove(unit, target);
+        actionResult = handleMove(unit, target);
+        break;
       case "attack":
-        return handleAttack(unit, target);
-      case "hold":
-        return handleHold(unit);
-      case "destroyLastFarm":
-        return handleDestroyLastFarm(unit);
+        actionResult = handleAttack(unit, target);
+        break;
       case "stop":
         delete unit.queue;
         delete unit.order;
-        return;
-      case "mirrorImage":
-        return handleMirrorImage(unit);
+        actionResult = undefined;
+        break;
+      case "hold":
+        actionResult = handleHold(unit);
+        break;
+      case "destroyLastFarm":
+        actionResult = handleDestroyLastFarm(unit);
+        break;
       case "selfDestruct":
-        return unit.health = 0;
+        unit.health = 0;
+        actionResult = undefined;
+        break;
+      case "mirrorImage":
+        actionResult = handleMirrorImage(unit);
+        break;
+      case "fox":
+        // TODO: subtract charge count when order actually consumed
+        actionResult = handleFox(unit, action);
+        break;
       default:
-        console.warn("unhandled order", { order, units, target });
+        console.warn("Unhandled order type", { order, units, target });
+        return;
     }
+
+    // Consume a charge if this action came from an item
+    if (itemWithAction && itemWithAction.charges) {
+      unit.inventory = unit.inventory?.map((i) =>
+        i.id === itemWithAction.id
+          ? { ...i, charges: (i.charges || 1) - 1 }
+          : i
+      ).filter((i) =>
+        i.charges === undefined || i.charges > 0
+      ) || [];
+    }
+
+    return actionResult;
   }
 };

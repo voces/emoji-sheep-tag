@@ -24,6 +24,14 @@ import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { showSettingsVar } from "./ui/vars/showSettings.ts";
 import { selectEntity } from "./api/selection.ts";
 import { normalizeKey, normalizeKeys } from "./util/normalizeKey.ts";
+import {
+  closeAllMenus,
+  closeMenu,
+  closeMenusForUnit,
+  getCurrentMenu,
+  openMenu,
+} from "./ui/vars/menuState.ts";
+import { lookup } from "./systems/lookup.ts";
 
 const normalize = (value: number, evenStep: boolean) =>
   evenStep
@@ -326,8 +334,9 @@ const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
     case "target":
       return b.type === "target" && a.order === b.order;
     case "purchase":
-      return b.type === "purchase" && a.itemId === b.itemId &&
-        a.shopId === b.shopId;
+      return b.type === "purchase" && a.itemId === b.itemId;
+    case "menu":
+      return b.type === "menu";
     default:
       absurd(a);
   }
@@ -378,8 +387,8 @@ globalThis.addEventListener("keydown", (e) => {
   const checkShortcut = (shortcut: string[]) => {
     const normalizedShortcut = normalizeKeys(shortcut);
     const normalizedCurrentKey = normalizeKey(e.code);
-    return normalizedShortcut.includes(normalizedCurrentKey) && 
-           normalizedShortcut.every((s) => normalizedKeyboard[s]);
+    return normalizedShortcut.includes(normalizedCurrentKey) &&
+      normalizedShortcut.every((s) => normalizedKeyboard[s]);
   };
 
   if (
@@ -447,10 +456,11 @@ globalThis.addEventListener("keydown", (e) => {
           mirrorEntities.push(entity);
         }
       }
-      
+
       if (mirrorEntities.length > 0) {
         // Clear current selection first
         for (const entity of selection) {
+          closeMenusForUnit(entity.id);
           delete (entity as Entity).selected;
         }
         // Select all mirror entities
@@ -474,38 +484,81 @@ globalThis.addEventListener("keydown", (e) => {
     return false;
   }
 
-  // Cancel
-  if (checkShortcut(shortcuts.misc.cancel)) {
-    cancelOrder();
-    return false;
-  }
-
   let units: Entity[] = [];
   let action: UnitDataAction | undefined;
-  for (const entity of selection) {
-    if (!entity.actions) continue;
-    for (const a of entity.actions) {
-      if (a.binding) {
-        const normalizedBinding = normalizeKeys(a.binding);
-        const normalizedCurrentKey = normalizeKey(e.code);
-        if (
-          normalizedBinding.includes(normalizedCurrentKey) && 
-          normalizedBinding.every((b) => normalizedKeyboard[b]) &&
-          (!action || isSameAction(action, a))
-        ) {
-          action = a;
-          units.push(entity);
+
+  const currentMenu = getCurrentMenu();
+  const menuUnit = currentMenu ? lookup[currentMenu.unitId] : undefined;
+  if (currentMenu && menuUnit) {
+    for (const a of currentMenu.action.actions) {
+      if (!a.binding) continue;
+      const normalizedBinding = normalizeKeys(a.binding);
+      const normalizedCurrentKey = normalizeKey(e.code);
+      if (
+        normalizedBinding.includes(normalizedCurrentKey) &&
+        normalizedBinding.every((b) => normalizedKeyboard[b]) &&
+        (!action || isSameAction(action, a))
+      ) {
+        action = a;
+        units.push(menuUnit);
+      }
+    }
+  } else {
+    for (const entity of selection) {
+      // Check unit's base actions
+      if (entity.actions) {
+        for (const a of entity.actions) {
+          if (a.binding) {
+            const normalizedBinding = normalizeKeys(a.binding);
+            const normalizedCurrentKey = normalizeKey(e.code);
+            if (
+              normalizedBinding.includes(normalizedCurrentKey) &&
+              normalizedBinding.every((b) => normalizedKeyboard[b]) &&
+              (!action || isSameAction(action, a))
+            ) {
+              action = a;
+              units.push(entity);
+            }
+          }
+        }
+      }
+
+      // Check item actions from inventory
+      if (entity.inventory) {
+        for (const item of entity.inventory) {
+          if (
+            item.action && item.action.binding &&
+            (!item.charges || item.charges > 0)
+          ) {
+            const normalizedBinding = normalizeKeys(item.action.binding);
+            const normalizedCurrentKey = normalizeKey(e.code);
+            if (
+              normalizedBinding.includes(normalizedCurrentKey) &&
+              normalizedBinding.every((b) => normalizedKeyboard[b]) &&
+              (!action || isSameAction(action, item.action))
+            ) {
+              action = item.action;
+              units.push(entity);
+            }
+          }
         }
       }
     }
   }
 
-  if (!action) return;
+  if (!action) {
+    // Cancel
+    if (checkShortcut(shortcuts.misc.cancel)) {
+      cancelOrder();
+      return false;
+    }
+    return;
+  }
 
   cancelOrder();
 
   // Check if any unit has enough mana for the action
-  const manaCost = action.manaCost ?? 0;
+  const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
   const unitsTotal = units.length;
   units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
 
@@ -535,6 +588,15 @@ globalThis.addEventListener("keydown", (e) => {
 
   switch (action.type) {
     case "auto":
+      // Handle special "back" order for closing menus
+      if (action.order === "back" && getCurrentMenu()) {
+        playSound(pick("click1", "click2", "click3", "click4"), {
+          volume: 0.1,
+        });
+        closeMenu();
+        break;
+      }
+
       if (units.length === 0 && units[0].position) {
         playSoundAt(
           pick("click1", "click2", "click3", "click4"),
@@ -591,8 +653,14 @@ globalThis.addEventListener("keydown", (e) => {
         type: "purchase",
         unit: units[0].id,
         itemId: action.itemId,
-        shopId: action.shopId,
       });
+      // Close the menu after purchase
+      closeAllMenus();
+      break;
+    case "menu":
+      // Open the menu interface
+      playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.1 });
+      openMenu(action, units[0].id);
       break;
 
     default:
@@ -682,16 +750,49 @@ const shortcutOverrides = (
   const shortcuts = shortcutsVar()[e.prefab];
   if (!shortcuts) return e;
   let overridden = false;
-  const newActions = e.actions.map((a) => {
-    const binding = shortcuts[actionToShortcutKey(a)];
-    if (!binding) return a;
+
+  const overrideAction = (
+    action: UnitDataAction,
+    menuContext?: string,
+  ): UnitDataAction => {
+    const shortcutKey = actionToShortcutKey(action, menuContext);
+    const binding = shortcuts[shortcutKey];
+
+    let updatedAction = action;
+
+    // Override binding if different
     if (
-      a.binding?.length === binding.length &&
-      a.binding.some((v, i) => v === binding[i])
-    ) return a;
-    overridden = true;
-    return { ...a, binding };
-  });
+      binding && (
+        !action.binding ||
+        action.binding.length !== binding.length ||
+        !action.binding.every((v, i) => v === binding[i])
+      )
+    ) {
+      overridden = true;
+      updatedAction = { ...action, binding };
+    }
+
+    // Recursively handle menu actions
+    if (updatedAction.type === "menu") {
+      const menuName = actionToShortcutKey(updatedAction);
+      const menuAction = updatedAction as UnitDataAction & { type: "menu" };
+      const updatedSubActions = menuAction.actions.map((subAction) =>
+        overrideAction(subAction, menuName)
+      );
+
+      // Check if any sub-actions were modified
+      if (
+        updatedSubActions.some((newSub, i) => newSub !== menuAction.actions[i])
+      ) {
+        overridden = true;
+        updatedAction = { ...menuAction, actions: updatedSubActions };
+      }
+    }
+
+    return updatedAction;
+  };
+
+  const newActions = e.actions.map((action) => overrideAction(action));
   if (!overridden) return;
   e.actions = newActions;
 };
