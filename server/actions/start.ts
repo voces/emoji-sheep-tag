@@ -71,7 +71,6 @@ export const start = (client: Client) => {
 
     for (const player of [...sheep, ...wolves]) {
       player.playerEntity = ecs.addEntity({
-        id: `player-${player.id}`,
         name: player.name,
         owner: player.id,
         isPlayer: true,

@@ -3,6 +3,7 @@ import { Client } from "./client.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { deleteLobby } from "./lobby.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
+import { clearUpdatesCache } from "./updates.ts";
 
 export const endRound = (canceled = false) => {
   const lobby = lobbyContext.context;
@@ -14,7 +15,10 @@ export const endRound = (canceled = false) => {
   for (const player of lobby.players) player.playerEntity = undefined;
 
   // Don't want to clear the round in middle of a cycle
-  queueMicrotask(() => lobby.round = undefined);
+  queueMicrotask(() => {
+    clearUpdatesCache();
+    lobby.round = undefined;
+  });
   lobby.status = "lobby";
   const round = {
     sheep: Array.from(lobby.round.sheep, (p) => p.id),

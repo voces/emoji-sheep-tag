@@ -52,10 +52,7 @@ export const unitOrder = (
       }
 
       // Order-specific validation
-      if (orderDef.canExecute && !orderDef.canExecute(unit)) {
-        console.warn(`Cannot execute order ${order} for unit ${unit.id}`);
-        return;
-      }
+      if (orderDef.canExecute && !orderDef.canExecute(unit)) return;
 
       orderDef.initiate(unit);
       actionResult = undefined;

@@ -1,9 +1,9 @@
 import { SystemEntity } from "jsr:@verit/ecs";
-import { onInit } from "../ecs.ts";
+import { addSystem } from "../ecs.ts";
 import { Entity } from "../../shared/types.ts";
 import { acquireTarget, orderAttack } from "../api/unit.ts";
 
-onInit((game) => {
+addSystem(() => {
   const idleCheck = (e: SystemEntity<Entity, "attack" | "position">) => {
     if (e.order || e.queue?.length) return;
 
@@ -12,18 +12,21 @@ onInit((game) => {
     if (target) orderAttack(e, target);
   };
 
+  const entities = new Set<SystemEntity<Entity, "attack" | "position">>();
   let counter = 0;
-  const sys = game.addSystem({
+
+  return {
     props: ["attack", "position"],
+    entities,
     onAdd: (e) => idleCheck(e),
     update: () => {
       let offset = -1;
-      for (const e of sys.entities) {
+      for (const e of entities) {
         offset++;
         if ((counter + offset) % 17) continue;
         idleCheck(e);
       }
       counter++;
     },
-  });
+  };
 });

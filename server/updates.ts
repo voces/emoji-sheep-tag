@@ -41,3 +41,8 @@ export const flushUpdates = () => {
     messages.splice(0);
   }
 };
+
+export const clearUpdatesCache = () => {
+  updates = {};
+  messages.splice(0);
+};

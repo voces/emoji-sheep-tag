@@ -79,7 +79,9 @@ export const addSystem = <K extends keyof Entity>(
 ) =>
   onInit((game) =>
     game.addSystem(
-      typeof systemConfig === "function" ? systemConfig(game) : systemConfig,
+      typeof systemConfig === "function"
+        ? systemConfig(game)
+        : { ...systemConfig },
     )
   );
 
