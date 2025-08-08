@@ -1,12 +1,12 @@
-import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
+import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
 //@deno-types="npm:@types/react"
 import { useEffect } from "react";
-import { showSettingsVar } from "../vars/showSettings.ts";
-import { SettingsSection } from "../components/SettingsSection.tsx";
+import { showSettingsVar } from "@/vars/showSettings.ts";
+import { SettingsSection } from "@/components/SettingsSection.tsx";
 import {
   createInitialShortcuts,
   type Shortcuts,
-} from "../util/shortcutUtils.ts";
+} from "@/util/shortcutUtils.ts";
 
 export const shortcutsVar = makeVar<Shortcuts>(createInitialShortcuts());
 

@@ -5,7 +5,7 @@ import { expect } from "jsr:@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
 import { getAllTexts } from "@/testing/utils.ts";
 import { Action } from "./Action.tsx";
-import { playersVar } from "../../vars/players.ts";
+import { playersVar } from "@/vars/players.ts";
 import { userEvent } from "npm:@testing-library/user-event";
 
 describe("Action", () => {

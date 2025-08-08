@@ -1,5 +1,5 @@
-import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
-import type { Entity } from "../../../shared/types.ts";
+import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
+import type { Entity } from "@/shared/types.ts";
 
 export type Player = {
   id: string;

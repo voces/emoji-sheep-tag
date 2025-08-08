@@ -1,5 +1,5 @@
-import { DEFAULT_FACING, MIRROR_SEPARATION } from "../../shared/constants.ts";
-import { Entity } from "../../shared/types.ts";
+import { DEFAULT_FACING, MIRROR_SEPARATION } from "@/shared/constants.ts";
+import { Entity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { updatePathing } from "../systems/pathing.ts";

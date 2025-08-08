@@ -1,4 +1,4 @@
-import { Entity } from "../../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { getOrder } from "../../orders/index.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {

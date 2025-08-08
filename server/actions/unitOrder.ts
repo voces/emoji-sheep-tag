@@ -2,7 +2,7 @@ import { z } from "npm:zod";
 import { lookup } from "../systems/lookup.ts";
 import { Client } from "../client.ts";
 import { UnknownEntity } from "../errors/UnknownEntity.ts";
-import { zPoint } from "../../shared/zod.ts";
+import { zPoint } from "@/shared/zod.ts";
 import { handleMove } from "./move.ts";
 import { handleAttack } from "./attack.ts";
 import { handleHold } from "./hold.ts";

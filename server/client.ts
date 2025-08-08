@@ -2,12 +2,12 @@ import { z } from "npm:zod";
 
 import type { ServerToClientMessage } from "../client/client.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
-import type { Entity } from "../shared/types.ts";
+import type { Entity } from "@/shared/types.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { leave, send } from "./lobbyApi.ts";
 import { build, zBuild } from "./actions/build.ts";
 import { start, zStart } from "./actions/start.ts";
-import { colors } from "../shared/data.ts";
+import { colors } from "@/shared/data.ts";
 import { unitOrder, zOrderEvent } from "./actions/unitOrder.ts";
 import { flushUpdates } from "./updates.ts";
 import { ping, zPing } from "./actions/ping.ts";

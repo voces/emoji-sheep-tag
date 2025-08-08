@@ -3,8 +3,8 @@ import { describe, it } from "jsr:@std/testing/bdd";
 import { render, screen } from "npm:@testing-library/react";
 import { expect } from "jsr:@std/expect";
 import { ActionBar, selectionVar } from "./ActionBar.tsx";
-import { playersVar } from "../../vars/players.ts";
-import { menuStateVar } from "../../vars/menuState.ts";
+import { playersVar } from "@/vars/players.ts";
+import { menuStateVar } from "@/vars/menuState.ts";
 
 describe("ActionBar", () => {
   it("should not render when no selection", () => {

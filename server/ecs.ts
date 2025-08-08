@@ -1,5 +1,5 @@
 import { App, newApp, System } from "jsr:@verit/ecs";
-import { Entity } from "../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { newEntity, remove, update } from "./updates.ts";
 import { TypedEventTarget } from "typed-event-target";
 

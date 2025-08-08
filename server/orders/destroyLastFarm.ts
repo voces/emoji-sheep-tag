@@ -1,4 +1,4 @@
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { findLastPlayerUnit } from "../systems/playerEntities.ts";
 

@@ -1,4 +1,4 @@
-import { Point } from "../../shared/pathing/math.ts";
+import { Point } from "@/shared/pathing/math.ts";
 import { app, Entity } from "../ecs.ts";
 import { flags } from "../flags.ts";
 

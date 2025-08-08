@@ -1,4 +1,4 @@
-import { makeVar } from "../hooks/useVar.tsx";
+import { makeVar } from "@/hooks/useVar.tsx";
 
 export const chatLogVar = makeVar<
   { id: string; timestamp: number; message: string }[]

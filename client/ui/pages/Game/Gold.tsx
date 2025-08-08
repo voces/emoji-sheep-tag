@@ -1,9 +1,9 @@
 import { styled } from "npm:styled-components";
-import { SvgIcon } from "../../components/SVGIcon.tsx";
-import { useReactiveVar } from "../../hooks/useVar.tsx";
-import { playersVar } from "../../vars/players.ts";
+import { SvgIcon } from "@/components/SVGIcon.tsx";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
+import { playersVar } from "@/vars/players.ts";
 import { Entity } from "../../../ecs.ts";
-import { useListenToEntityProp } from "../../hooks/useListenToEntityProp.ts";
+import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
 
 const Container = styled.div(({ theme }) => ({
   position: "fixed",

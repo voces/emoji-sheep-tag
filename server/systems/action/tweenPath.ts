@@ -1,5 +1,5 @@
-import { distanceBetweenPoints } from "../../../shared/pathing/math.ts";
-import { Entity } from "../../../shared/types.ts";
+import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
+import { Entity } from "@/shared/types.ts";
 import { pathable } from "../pathing.ts";
 
 export const tweenPath = (e: Entity, delta: number): number => {

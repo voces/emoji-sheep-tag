@@ -1,15 +1,15 @@
-import { tempUnit } from "../../shared/api/unit.ts";
+import { tempUnit } from "@/shared/api/unit.ts";
 import {
   Classification,
   ClassificationGroup,
   classificationGroups,
-} from "../../shared/data.ts";
-import { isPathingEntity } from "../../shared/pathing/util.ts";
+} from "@/shared/data.ts";
+import { isPathingEntity } from "@/shared/pathing/util.ts";
 import { data } from "../data.ts";
 import { Entity } from "../ecs.ts";
 import { pathable, pathingMap } from "../systems/pathing.ts";
 import { getLocalPlayer, Player } from "../ui/vars/players.ts";
-import { absurd } from "../../shared/util/absurd.ts";
+import { absurd } from "@/shared/util/absurd.ts";
 
 export const isEnemy = (source: Entity, target: Entity | Player) => {
   const sourceTeam = data.sheep.some((s) => s.id === source.owner)

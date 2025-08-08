@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { styled } from "npm:styled-components";
-import { SvgIcon } from "../../components/SVGIcon.tsx";
-import { useTooltip } from "../../hooks/useTooltip.tsx";
-import { useLocalPlayer } from "../../vars/players.ts";
-import { formatShortcut } from "../../util/formatShortcut.ts";
+import { SvgIcon } from "@/components/SVGIcon.tsx";
+import { useTooltip } from "@/hooks/useTooltip.tsx";
+import { useLocalPlayer } from "@/vars/players.ts";
+import { formatShortcut } from "@/util/formatShortcut.ts";
 
 const GoldContainer = styled.div(({ theme }) => ({
   display: "flex",

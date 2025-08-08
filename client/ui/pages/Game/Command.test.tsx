@@ -6,7 +6,7 @@ import { expect } from "jsr:@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
 import { getAllTexts } from "@/testing/utils.ts";
 import { Command } from "./Command.tsx";
-import { playersVar } from "../../vars/players.ts";
+import { playersVar } from "@/vars/players.ts";
 
 describe("Command", () => {
   it("should render button with aria-label", () => {

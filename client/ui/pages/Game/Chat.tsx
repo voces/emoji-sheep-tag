@@ -1,9 +1,9 @@
 //@deno-types="npm:@types/react"
 import { useEffect, useRef } from "react";
-import { makeVar, useReactiveVar } from "../../hooks/useVar.tsx";
+import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
 import { send } from "../../../client.ts";
-import { ColorMarkdown } from "../../components/Markdown.tsx";
-import { chatLogVar, chatValueVar } from "../../vars/chat.ts";
+import { ColorMarkdown } from "@/components/Markdown.tsx";
+import { chatLogVar, chatValueVar } from "@/vars/chat.ts";
 
 export const showChatBoxVar = makeVar<"closed" | "open" | "sent" | "dismissed">(
   "closed",

@@ -1,10 +1,10 @@
 import { z } from "npm:zod";
 
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { Client } from "../client.ts";
 import { lookup } from "../systems/lookup.ts";
 import { deductPlayerGold, getPlayerGold } from "../api/player.ts";
-import { items } from "../../shared/data.ts";
+import { items } from "@/shared/data.ts";
 import { addItem } from "../api/unit.ts";
 
 export const zPurchase = z.object({

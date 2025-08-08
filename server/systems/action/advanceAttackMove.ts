@@ -1,4 +1,4 @@
-import { Entity } from "../../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { acquireTarget, isAlive } from "../../api/unit.ts";
 import { lookup } from "../lookup.ts";
 import { calcPath } from "../pathing.ts";

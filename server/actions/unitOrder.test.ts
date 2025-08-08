@@ -1,6 +1,6 @@
 import { afterEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { waitFor } from "../../shared/util/test/waitFor.ts";
+import { waitFor } from "@/shared/util/test/waitFor.ts";
 import { interval } from "../api/timing.ts";
 import { addItem, newUnit } from "../api/unit.ts";
 import { Client } from "../client.ts";

@@ -1,4 +1,4 @@
-import { Entity, Item, UnitDataAction } from "../../shared/types.ts";
+import { Entity, Item, UnitDataAction } from "@/shared/types.ts";
 
 export type ActionMatcher = (action: UnitDataAction) => boolean;
 

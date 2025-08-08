@@ -1,5 +1,5 @@
 import { addSystem } from "../ecs.ts";
-import { SystemEntity } from "../../shared/types.ts";
+import { SystemEntity } from "@/shared/types.ts";
 import { acquireTarget, orderAttack } from "../api/unit.ts";
 
 addSystem(() => {

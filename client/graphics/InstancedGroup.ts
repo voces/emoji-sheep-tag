@@ -14,7 +14,7 @@ import {
   Raycaster,
   ShapeGeometry,
 } from "three";
-import { normalizeAngle } from "../../shared/pathing/math.ts";
+import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
 
 const dummy = new Object3D();

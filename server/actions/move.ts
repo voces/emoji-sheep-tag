@@ -1,5 +1,5 @@
-import { Point } from "../../shared/pathing/math.ts";
-import { Entity } from "../../shared/types.ts";
+import { Point } from "@/shared/pathing/math.ts";
+import { Entity } from "@/shared/types.ts";
 import { orderMove } from "../api/unit.ts";
 import { lookup } from "../systems/lookup.ts";
 

@@ -1,11 +1,11 @@
-import { makeVar, useReactiveVar } from "../../hooks/useVar.tsx";
+import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
 import { app, Entity } from "../../../ecs.ts";
 import { selection } from "../../../systems/autoSelect.ts";
-import { UnitDataAction } from "../../../../shared/types.ts";
-import { playersVar, useLocalPlayer } from "../../vars/players.ts";
+import { UnitDataAction } from "@/shared/types.ts";
+import { playersVar, useLocalPlayer } from "@/vars/players.ts";
 import { shortcutsVar } from "../Settings.tsx";
-import { useListenToEntityProp } from "../../hooks/useListenToEntityProp.ts";
-import { getCurrentMenu, menuStateVar } from "../../vars/menuState.ts";
+import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
+import { getCurrentMenu, menuStateVar } from "@/vars/menuState.ts";
 import { useMemo } from "react";
 import { Action } from "./Action.tsx";
 

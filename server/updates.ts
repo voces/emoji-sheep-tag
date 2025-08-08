@@ -1,5 +1,5 @@
 import { GameMessage, Update } from "../client/client.ts";
-import { Entity } from "../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { send } from "./lobbyApi.ts";
 
 let updates: Record<string, Partial<Entity>> = {};

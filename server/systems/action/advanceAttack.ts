@@ -1,4 +1,4 @@
-import { Entity } from "../../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { lookup } from "../lookup.ts";
 import { tweenAttack } from "./tweenAttack.ts";
 

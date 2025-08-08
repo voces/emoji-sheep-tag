@@ -1,4 +1,4 @@
-import { Entity, UnitDataAction } from "../../shared/types.ts";
+import { Entity, UnitDataAction } from "@/shared/types.ts";
 
 export interface OrderDefinition {
   // The order ID that identifies this order

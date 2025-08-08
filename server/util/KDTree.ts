@@ -1,4 +1,4 @@
-import { Point } from "../../shared/pathing/math.ts";
+import { Point } from "@/shared/pathing/math.ts";
 
 class KdTreeNode {
   point: Point;

@@ -1,4 +1,4 @@
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { Client } from "../client.ts";
 import { currentApp } from "../contexts.ts";
 import { Game } from "../ecs.ts";

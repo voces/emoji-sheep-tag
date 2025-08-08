@@ -1,5 +1,5 @@
-import { distanceBetweenEntities } from "../../../shared/pathing/math.ts";
-import { Entity } from "../../../shared/types.ts";
+import { distanceBetweenEntities } from "@/shared/pathing/math.ts";
+import { Entity } from "@/shared/types.ts";
 import { lookup } from "../lookup.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";

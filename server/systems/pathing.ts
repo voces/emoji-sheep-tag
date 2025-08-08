@@ -1,11 +1,11 @@
 import { App } from "jsr:@verit/ecs";
-import { Entity } from "../../shared/types.ts";
-import { PathingMap } from "../../shared/pathing/PathingMap.ts";
+import { Entity } from "@/shared/types.ts";
+import { PathingMap } from "@/shared/pathing/PathingMap.ts";
 import { currentApp } from "../contexts.ts";
-import { PathingEntity, TargetEntity } from "../../shared/pathing/types.ts";
+import { PathingEntity, TargetEntity } from "@/shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
-import { tiles } from "../../shared/map.ts";
-import { isPathingEntity } from "../../shared/pathing/util.ts";
+import { tiles } from "@/shared/map.ts";
+import { isPathingEntity } from "@/shared/pathing/util.ts";
 import { addSystem } from "../ecs.ts";
 
 const pathingMaps = new WeakMap<App<Entity>, PathingMap>();

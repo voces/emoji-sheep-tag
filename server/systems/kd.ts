@@ -1,5 +1,5 @@
-import { Point } from "../../shared/pathing/math.ts";
-import { SystemEntity } from "../../shared/types.ts";
+import { Point } from "@/shared/pathing/math.ts";
+import { SystemEntity } from "@/shared/types.ts";
 import { currentApp } from "../contexts.ts";
 import { addSystem, Game } from "../ecs.ts";
 import { KdTree } from "../util/KDTree.ts";

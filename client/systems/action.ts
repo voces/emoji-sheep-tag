@@ -1,9 +1,9 @@
-import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../../shared/constants.ts";
+import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "@/shared/constants.ts";
 import {
   angleDifference,
   distanceBetweenPoints,
   tweenAbsAngles,
-} from "../../shared/pathing/math.ts";
+} from "@/shared/pathing/math.ts";
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 import { clearDebugCircles, updateDebugCircles } from "../util/pathingDebug.ts";

@@ -1,14 +1,14 @@
 import { afterEach, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { Entity } from "../../shared/types.ts";
-import { waitFor } from "../../shared/util/test/waitFor.ts";
+import { Entity } from "@/shared/types.ts";
+import { waitFor } from "@/shared/util/test/waitFor.ts";
 import { interval } from "../api/timing.ts";
 import { orderMove } from "../api/unit.ts";
 import { Client } from "../client.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { newLobby } from "../lobby.ts";
-import { prefabs } from "../../shared/data.ts";
+import { prefabs } from "@/shared/data.ts";
 
 afterEach(() => {
   try {

@@ -1,6 +1,6 @@
 import { z } from "npm:zod";
 import { pluck } from "../../util/pluck.ts";
-import { items, prefabs } from "../../../shared/data.ts";
+import { items, prefabs } from "@/shared/data.ts";
 import {
   actionToShortcutKey,
   getMenuShortcutKeys,

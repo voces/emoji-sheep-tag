@@ -1,15 +1,15 @@
-import { useReactiveVar } from "../hooks/useVar.tsx";
-import { Player, playersVar, useLocalPlayer } from "../vars/players.ts";
-import { ColorPicker } from "../components/ColorPicker.tsx";
-import { NameInput } from "../components/NameInput.tsx";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
+import { Player, playersVar, useLocalPlayer } from "@/vars/players.ts";
+import { ColorPicker } from "@/components/ColorPicker.tsx";
+import { NameInput } from "@/components/NameInput.tsx";
 import { send } from "../../client.ts";
 //@deno-types="npm:@types/react"
 import { Fragment, useCallback, useLayoutEffect, useRef } from "react";
-import { roundsVar } from "../vars/rounds.ts";
-import { formatDuration } from "../util/formatDuration.ts";
-import { chatLogVar, chatValueVar } from "../vars/chat.ts";
-import { ColorMarkdown } from "../components/Markdown.tsx";
-import { formatVar } from "../vars/format.ts";
+import { roundsVar } from "@/vars/rounds.ts";
+import { formatDuration } from "@/util/formatDuration.ts";
+import { chatLogVar, chatValueVar } from "@/vars/chat.ts";
+import { ColorMarkdown } from "@/components/Markdown.tsx";
+import { formatVar } from "@/vars/format.ts";
 
 const PlayerRow = ({ name, color, id }: Player) => {
   const localPlayer = useLocalPlayer();

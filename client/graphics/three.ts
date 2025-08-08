@@ -5,7 +5,7 @@ import {
   Scene,
   WebGLRenderer,
 } from "three";
-import { center, tiles } from "../../shared/map.ts";
+import { center, tiles } from "@/shared/map.ts";
 import { Grid } from "./Grid.ts";
 import { stats } from "../util/Stats.ts";
 

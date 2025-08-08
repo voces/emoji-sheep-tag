@@ -1,7 +1,7 @@
 import { lookup } from "../lookup.ts";
-import { FOLLOW_DISTANCE } from "../../../shared/constants.ts";
+import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { isAlive } from "../../api/unit.ts";
-import { Entity } from "../../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 

@@ -1,5 +1,5 @@
 import { App } from "jsr:@verit/ecs";
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { lobbyContext } from "../contexts.ts";
 import { addSystem } from "../ecs.ts";
 

@@ -1,8 +1,8 @@
 import { Entity } from "../../../ecs.ts";
-import { UnitDataAction } from "../../../../shared/types.ts";
-import { items, prefabs } from "../../../../shared/data.ts";
-import { playersVar } from "../../vars/players.ts";
-import { absurd } from "../../../../shared/util/absurd.ts";
+import { UnitDataAction } from "@/shared/types.ts";
+import { items, prefabs } from "@/shared/data.ts";
+import { playersVar } from "@/vars/players.ts";
+import { absurd } from "@/shared/util/absurd.ts";
 import { Command } from "./Command.tsx";
 
 const iconMap: Record<string, string> = {

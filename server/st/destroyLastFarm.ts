@@ -1,4 +1,4 @@
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 
 export const handleDestroyLastFarm = (unit: Entity) => {

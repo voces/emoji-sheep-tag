@@ -5,7 +5,7 @@ import {
   findActionAndItem,
   findActionByOrder,
 } from "./actionLookup.ts";
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 
 describe("actionLookup", () => {
   // Test entity with various action sources

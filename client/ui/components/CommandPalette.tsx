@@ -1,11 +1,11 @@
 //@deno-types="npm:@types/react"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { send } from "../../client.ts";
-import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
-import { addChatMessage } from "../vars/chat.ts";
-import { useMemoWithPrevious } from "../hooks/useMemoWithPrevious.ts";
-import { showSettingsVar } from "../vars/showSettings.ts";
-import { stateVar } from "../vars/state.ts";
+import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
+import { addChatMessage } from "@/vars/chat.ts";
+import { useMemoWithPrevious } from "@/hooks/useMemoWithPrevious.ts";
+import { showSettingsVar } from "@/vars/showSettings.ts";
+import { stateVar } from "@/vars/state.ts";
 import { flags } from "../../flags.ts";
 
 export const showCommandPaletteVar = makeVar<

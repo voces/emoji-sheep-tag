@@ -1,6 +1,6 @@
 import { z } from "npm:zod";
 
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { orderBuild } from "../api/unit.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";

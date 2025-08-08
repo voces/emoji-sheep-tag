@@ -1,4 +1,4 @@
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 import { addSystem } from "../ecs.ts";
 
 addSystem({

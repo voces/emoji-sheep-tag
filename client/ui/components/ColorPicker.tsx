@@ -1,7 +1,7 @@
 import { styled } from "npm:styled-components";
 //@deno-types="npm:@types/react"
 import { useState } from "react";
-import { colors } from "../../../shared/data.ts";
+import { colors } from "@/shared/data.ts";
 
 const Wrapper = styled.div({
   width: "1cap",

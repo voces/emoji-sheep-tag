@@ -1,5 +1,5 @@
-import { distanceBetweenPoints } from "../../../shared/pathing/math.ts";
-import { Entity } from "../../../shared/types.ts";
+import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
+import { Entity } from "@/shared/types.ts";
 import { currentApp } from "../../contexts.ts";
 import { UnitDeathEvent } from "../../ecs.ts";
 import { lookup } from "../lookup.ts";

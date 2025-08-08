@@ -1,11 +1,11 @@
-import { tempUnit } from "../../shared/api/unit.ts";
+import { tempUnit } from "@/shared/api/unit.ts";
 import {
   canSwing,
   distanceBetweenPoints,
   Point,
-} from "../../shared/pathing/math.ts";
-import { isPathingEntity } from "../../shared/pathing/util.ts";
-import { Entity, SystemEntity } from "../../shared/types.ts";
+} from "@/shared/pathing/math.ts";
+import { isPathingEntity } from "@/shared/pathing/util.ts";
+import { Entity, SystemEntity } from "@/shared/types.ts";
 import { currentApp } from "../contexts.ts";
 import { data } from "../st/data.ts";
 import {
@@ -15,9 +15,9 @@ import {
   updatePathing,
   withPathingMap,
 } from "../systems/pathing.ts";
-import { items, prefabs } from "../../shared/data.ts";
+import { items, prefabs } from "@/shared/data.ts";
 import { findAction } from "../util/actionLookup.ts";
-import { FOLLOW_DISTANCE } from "../../shared/constants.ts";
+import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 import { deductPlayerGold } from "./player.ts";
 

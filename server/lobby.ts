@@ -1,4 +1,4 @@
-import { Team } from "../shared/zod.ts";
+import { Team } from "@/shared/zod.ts";
 import { type Client } from "./client.ts";
 import { Game } from "./ecs.ts";
 

@@ -1,5 +1,5 @@
-import { DEFAULT_FACING } from "../../shared/constants.ts";
-import { Entity } from "../../shared/types.ts";
+import { DEFAULT_FACING } from "@/shared/constants.ts";
+import { Entity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 

@@ -1,5 +1,5 @@
-import { makeVar } from "../hooks/useVar.tsx";
-import { UnitDataAction } from "../../../shared/types.ts";
+import { makeVar } from "@/hooks/useVar.tsx";
+import { UnitDataAction } from "@/shared/types.ts";
 
 interface MenuStackItem {
   action: UnitDataAction & { type: "menu" };

@@ -7,8 +7,8 @@ import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
 import { init } from "../st/data.ts";
-import { center, initEntities } from "../../shared/map.ts";
-import { prefabs } from "../../shared/data.ts";
+import { center, initEntities } from "@/shared/map.ts";
+import { prefabs } from "@/shared/data.ts";
 
 export const zStart = z.object({ type: z.literal("start") });
 

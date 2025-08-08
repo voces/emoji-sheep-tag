@@ -1,5 +1,5 @@
 import { Entity } from "../ecs.ts";
-import { UnitDataAction } from "../../shared/types.ts";
+import { UnitDataAction } from "@/shared/types.ts";
 
 export const actionToShortcutKey = (
   action: NonNullable<Entity["actions"]>[number],

@@ -1,14 +1,14 @@
 //@deno-types="npm:@types/react"
 import { useState } from "react";
 import { keyboard } from "../../controls.ts";
-import { prefabs } from "../../../shared/data.ts";
-import { formatShortcut } from "../util/formatShortcut.ts";
+import { prefabs } from "@/shared/data.ts";
+import { formatShortcut } from "@/util/formatShortcut.ts";
 import Collapse from "./Collapse.tsx";
 import {
   defaultBindings,
   getActionDisplayName,
   type Shortcuts,
-} from "../util/shortcutUtils.ts";
+} from "@/util/shortcutUtils.ts";
 
 interface ShortcutRowProps {
   actionKey: string;

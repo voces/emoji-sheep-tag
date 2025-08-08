@@ -1,7 +1,7 @@
 import { describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { addItem } from "./unit.ts";
-import { Entity } from "../../shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 
 describe("addItem", () => {
   it("should add new item to empty inventory", () => {
