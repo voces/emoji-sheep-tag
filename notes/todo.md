@@ -3,7 +3,6 @@
 - Fog of war?
 - Sound settings
 - Items
-  - Gloves
   - Splash
   - Cloak
   - Speed pot

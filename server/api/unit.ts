@@ -279,13 +279,29 @@ export const computeUnitDamage = (unit: Entity): number => {
   // Add damage bonuses from items in inventory
   if (unit.inventory) {
     for (const item of unit.inventory) {
-      if (item.damage) {
-        totalDamage += item.damage;
-      }
+      if (item.damage) totalDamage += item.damage;
     }
   }
 
   return totalDamage;
+};
+
+/**
+ * Computes the effective attack speed multiplier for a unit, including bonuses from items
+ */
+export const computeUnitAttackSpeed = (unit: Entity): number => {
+  let speedMultiplier = 1.0;
+  
+  // Apply attack speed bonuses from items in inventory
+  if (unit.inventory) {
+    for (const item of unit.inventory) {
+      if (item.attackSpeedMultiplier) {
+        speedMultiplier *= item.attackSpeedMultiplier;
+      }
+    }
+  }
+  
+  return speedMultiplier;
 };
 
 /**

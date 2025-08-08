@@ -107,9 +107,9 @@ export const ActionBar = () => {
         padding: 12,
       }}
     >
-      {displayActions.map((action, i) => (
+      {displayActions.map((action) => (
         <Action
-          key={i}
+          key={`${selection.id}-${action.type}-${action.name}`}
           action={action}
           entity={selection}
           current={currentActionCheck(action)}

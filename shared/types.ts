@@ -62,6 +62,7 @@ export type Item = {
   readonly gold: number;
   readonly binding: ReadonlyArray<string>;
   readonly damage?: number;
+  readonly attackSpeedMultiplier?: number;
   readonly charges?: number;
   readonly actions?: ReadonlyArray<UnitDataAction>;
 };

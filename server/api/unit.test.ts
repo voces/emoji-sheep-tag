@@ -1,6 +1,6 @@
 import { afterEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { addItem, computeUnitDamage, damageEntity } from "./unit.ts";
+import { addItem, computeUnitDamage, computeUnitAttackSpeed, damageEntity } from "./unit.ts";
 import { Entity } from "@/shared/types.ts";
 import { newEcs } from "../ecs.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
@@ -166,6 +166,71 @@ describe("computeUnitDamage", () => {
       inventory: [items.foxItem] // foxItem has no damage property
     };
     expect(computeUnitDamage(unit)).toBe(70); // Only wolf base damage
+  });
+});
+
+describe("computeUnitAttackSpeed", () => {
+  it("should return 1.0 for unit with no items", () => {
+    const unit: Entity = { id: "test-wolf", ...prefabs.wolf };
+    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
+  });
+
+  it("should return 1.0 for unit with items that have no attack speed multiplier", () => {
+    const unit: Entity = { 
+      id: "test-wolf", 
+      ...prefabs.wolf,
+      inventory: [items.claw, items.foxItem] // Neither has attackSpeedMultiplier
+    };
+    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
+  });
+
+  it("should apply single attack speed multiplier", () => {
+    const unit: Entity = { 
+      id: "test-wolf", 
+      ...prefabs.wolf,
+      inventory: [items.swiftness] // 1.15x multiplier
+    };
+    expect(computeUnitAttackSpeed(unit)).toBe(1.15);
+  });
+
+  it("should stack multiple attack speed multipliers multiplicatively", () => {
+    const unit: Entity = { 
+      id: "test-wolf", 
+      ...prefabs.wolf,
+      inventory: [
+        items.swiftness, // 1.15x
+        { ...items.swiftness, id: "swiftness2", attackSpeedMultiplier: 1.2 } // 1.2x
+      ]
+    };
+    expect(computeUnitAttackSpeed(unit)).toBeCloseTo(1.38, 2); // 1.15 * 1.2 = 1.38
+  });
+
+  it("should ignore items without attack speed multiplier", () => {
+    const unit: Entity = { 
+      id: "test-wolf", 
+      ...prefabs.wolf,
+      inventory: [
+        items.swiftness, // 1.15x
+        items.claw, // No attack speed multiplier
+        items.foxItem // No attack speed multiplier
+      ]
+    };
+    expect(computeUnitAttackSpeed(unit)).toBe(1.15);
+  });
+
+  it("should return 1.0 for unit with empty inventory", () => {
+    const unit: Entity = { 
+      id: "test-wolf", 
+      ...prefabs.wolf,
+      inventory: []
+    };
+    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
+  });
+
+  it("should return 1.0 for unit with no inventory property", () => {
+    const unit: Entity = { id: "test-wolf", ...prefabs.wolf };
+    delete unit.inventory;
+    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
   });
 });
 

@@ -56,7 +56,7 @@ export const items: Record<string, Item> = {
     id: "claw",
     name: "Claws +20",
     icon: "claw2",
-    gold: 40,
+    gold: 60,
     binding: ["KeyC"],
     damage: 20,
   },
@@ -74,6 +74,14 @@ export const items: Record<string, Item> = {
       binding: ["KeyF"],
       castDuration: 0.1,
     }],
+  },
+  swiftness: {
+    id: "swiftness",
+    name: "Swift Claws +15%",
+    icon: "claw",
+    gold: 40,
+    binding: ["KeyV"],
+    attackSpeedMultiplier: 1.15,
   },
 };
 

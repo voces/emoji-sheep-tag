@@ -1,5 +1,5 @@
 //@deno-types="npm:@types/react"
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // @deno-types="npm:@types/react-dom"
 import { createPortal } from "npm:react-dom";
 
@@ -18,6 +18,10 @@ export const useTooltip = (tooltip: React.ReactNode) => {
 
   const onMouseLeave = useCallback(() => setCoords(null), []);
 
+  const clearTooltip = useCallback(() => setCoords(null), []);
+
+  useEffect(() => () => setCoords(null), [clearTooltip]);
+
   return useMemo(
     () => ({
       tooltipContainerProps: { onMouseEnter, onMouseLeave, ref: containerRef },
@@ -34,6 +38,6 @@ export const useTooltip = (tooltip: React.ReactNode) => {
         )
         : null,
     }),
-    [onMouseEnter, coords, tooltip],
+    [onMouseEnter, onMouseLeave, coords, tooltip],
   );
 };

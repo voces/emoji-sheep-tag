@@ -1,7 +1,7 @@
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { lookup } from "../lookup.ts";
-import { damageEntity } from "../../api/unit.ts";
+import { damageEntity, computeUnitAttackSpeed } from "../../api/unit.ts";
 
 export const tweenSwing = (e: Entity, delta: number): number => {
   if (!e.swing || !e.attack) return delta;
@@ -32,7 +32,8 @@ export const tweenSwing = (e: Entity, delta: number): number => {
   // Complete swing if damage point reached
   if (!e.swing.remaining) {
     // House keeping for attacks
-    e.attackCooldownRemaining = e.attack.cooldown;
+    const attackSpeedMultiplier = computeUnitAttackSpeed(e);
+    e.attackCooldownRemaining = e.attack.cooldown / attackSpeedMultiplier;
     const swingTarget = e.swing.target;
     delete e.swing;
 
