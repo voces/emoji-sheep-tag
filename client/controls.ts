@@ -527,18 +527,22 @@ globalThis.addEventListener("keydown", (e) => {
       if (entity.inventory) {
         for (const item of entity.inventory) {
           if (
-            item.action && item.action.binding &&
+            item.actions && item.actions.length > 0 &&
             (!item.charges || item.charges > 0)
           ) {
-            const normalizedBinding = normalizeKeys(item.action.binding);
-            const normalizedCurrentKey = normalizeKey(e.code);
-            if (
-              normalizedBinding.includes(normalizedCurrentKey) &&
-              normalizedBinding.every((b) => normalizedKeyboard[b]) &&
-              (!action || isSameAction(action, item.action))
-            ) {
-              action = item.action;
-              units.push(entity);
+            for (const itemAction of item.actions) {
+              if (itemAction.binding) {
+                const normalizedBinding = normalizeKeys(itemAction.binding);
+                const normalizedCurrentKey = normalizeKey(e.code);
+                if (
+                  normalizedBinding.includes(normalizedCurrentKey) &&
+                  normalizedBinding.every((b) => normalizedKeyboard[b]) &&
+                  (!action || isSameAction(action, itemAction))
+                ) {
+                  action = itemAction;
+                  units.push(entity);
+                }
+              }
             }
           }
         }

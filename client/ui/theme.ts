@@ -8,5 +8,6 @@ export const theme: DefaultTheme = {
     orange: "#ffa500",
     purple: "#9370db",
     gold: "#FFCC00",
+    mana: "#5fa7ff",
   },
 };

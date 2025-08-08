@@ -3,7 +3,10 @@ import { makeVar, useReactiveVar } from "../hooks/useVar.tsx";
 import { useEffect } from "react";
 import { showSettingsVar } from "../vars/showSettings.ts";
 import { SettingsSection } from "../components/SettingsSection.tsx";
-import { type Shortcuts, createInitialShortcuts } from "../util/shortcutUtils.ts";
+import {
+  createInitialShortcuts,
+  type Shortcuts,
+} from "../util/shortcutUtils.ts";
 
 export const shortcutsVar = makeVar<Shortcuts>(createInitialShortcuts());
 

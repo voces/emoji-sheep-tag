@@ -15,7 +15,7 @@ describe("addItem", () => {
     expect(result).toBe(true);
     expect(unit.inventory).toHaveLength(1);
     expect(unit.inventory![0].id).toBe("foxItem");
-    expect(unit.inventory![0].name).toBe("Summon Fox");
+    expect(unit.inventory![0].name).toBe("Summon Fox Token");
   });
 
   it("should initialize inventory if undefined", () => {
@@ -35,18 +35,18 @@ describe("addItem", () => {
       id: "test-unit",
       inventory: [{
         id: "foxItem",
-        name: "Summon Fox",
+        name: "Summon Fox Token",
         icon: "fox",
         gold: 5,
         binding: ["KeyF"],
         charges: 2,
-        action: {
+        actions: [{
           name: "Summon Fox",
           type: "auto",
           order: "fox",
           binding: ["KeyF"],
           castDuration: 0.1,
-        },
+        }],
       }],
     };
 

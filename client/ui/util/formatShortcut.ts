@@ -3,7 +3,7 @@
  * @param shortcut Array of key codes (e.g., ["ControlLeft", "KeyQ"])
  * @returns Formatted string (e.g., "⌃ + Q")
  */
-export const formatShortcut = (shortcut: string[]) =>
+export const formatShortcut = (shortcut: ReadonlyArray<string>) =>
   shortcut.map((v) =>
     v
       // Modifier keys with symbols

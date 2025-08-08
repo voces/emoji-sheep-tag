@@ -85,7 +85,7 @@ for (const group in classificationGroups) {
 export const testClassification = (
   source: Entity,
   target: Entity,
-  classifications: Classification[] | undefined,
+  classifications: ReadonlyArray<Classification> | undefined,
 ) => {
   if (!classifications) return true;
   const groups = classifications.reduce(

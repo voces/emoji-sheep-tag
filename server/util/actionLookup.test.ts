@@ -1,6 +1,10 @@
 import { describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { findAction, findActionByOrder, findActionAndItem } from "./actionLookup.ts";
+import {
+  findAction,
+  findActionAndItem,
+  findActionByOrder,
+} from "./actionLookup.ts";
 import { Entity } from "../../shared/types.ts";
 
 describe("actionLookup", () => {
@@ -47,27 +51,27 @@ describe("actionLookup", () => {
         gold: 50,
         binding: ["KeyF"],
         charges: 2,
-        action: {
+        actions: [{
           name: "Summon Fox",
           type: "auto",
           order: "fox",
           binding: ["KeyF"],
           castDuration: 0.1,
-        },
+        }],
       },
       {
-        id: "potionItem", 
+        id: "potionItem",
         name: "Healing Potion",
         gold: 20,
         binding: ["KeyP"],
         charges: 0, // No charges left
-        action: {
+        actions: [{
           name: "Heal",
-          type: "auto", 
+          type: "auto",
           order: "heal",
           binding: ["KeyP"],
           castDuration: 0.5,
-        },
+        }],
       },
       {
         id: "scrollItem",
@@ -75,13 +79,13 @@ describe("actionLookup", () => {
         gold: 30,
         binding: ["KeyL"],
         // No charges property - should be treated as unlimited
-        action: {
+        actions: [{
           name: "Lightning",
           type: "target",
           order: "lightning",
           binding: ["KeyL"],
           castDuration: 1.0,
-        },
+        }],
       },
     ],
   });
@@ -89,9 +93,12 @@ describe("actionLookup", () => {
   describe("findAction", () => {
     it("should find action from unit base actions", () => {
       const entity = createTestEntity();
-      
-      const action = findAction(entity, (a) => "order" in a && a.order === "move");
-      
+
+      const action = findAction(
+        entity,
+        (a) => "order" in a && a.order === "move",
+      );
+
       expect(action).toBeDefined();
       expect(action!.name).toBe("Move");
       expect(action!.type).toBe("target");
@@ -99,9 +106,12 @@ describe("actionLookup", () => {
 
     it("should find action from submenu actions", () => {
       const entity = createTestEntity();
-      
-      const action = findAction(entity, (a) => a.type === "build" && a.unitType === "hut");
-      
+
+      const action = findAction(
+        entity,
+        (a) => a.type === "build" && a.unitType === "hut",
+      );
+
       expect(action).toBeDefined();
       expect(action!.name).toBe("Build Hut");
       expect(action!.type).toBe("build");
@@ -109,9 +119,12 @@ describe("actionLookup", () => {
 
     it("should find action from item with charges", () => {
       const entity = createTestEntity();
-      
-      const action = findAction(entity, (a) => "order" in a && a.order === "fox");
-      
+
+      const action = findAction(
+        entity,
+        (a) => "order" in a && a.order === "fox",
+      );
+
       expect(action).toBeDefined();
       expect(action!.name).toBe("Summon Fox");
       expect(action!.type).toBe("auto");
@@ -119,9 +132,12 @@ describe("actionLookup", () => {
 
     it("should find action from item with undefined charges", () => {
       const entity = createTestEntity();
-      
-      const action = findAction(entity, (a) => "order" in a && a.order === "lightning");
-      
+
+      const action = findAction(
+        entity,
+        (a) => "order" in a && a.order === "lightning",
+      );
+
       expect(action).toBeDefined();
       expect(action!.name).toBe("Lightning");
       expect(action!.type).toBe("target");
@@ -129,9 +145,12 @@ describe("actionLookup", () => {
 
     it("should not find action from item with zero charges", () => {
       const entity = createTestEntity();
-      
-      const action = findAction(entity, (a) => "order" in a && a.order === "heal");
-      
+
+      const action = findAction(
+        entity,
+        (a) => "order" in a && a.order === "heal",
+      );
+
       expect(action).toBeUndefined();
     });
 
@@ -152,7 +171,7 @@ describe("actionLookup", () => {
             actions: [
               {
                 name: "Submenu Test Action",
-                type: "auto", 
+                type: "auto",
                 order: "test",
                 binding: ["KeyT"],
               },
@@ -166,18 +185,21 @@ describe("actionLookup", () => {
             gold: 10,
             binding: ["KeyT"],
             charges: 1,
-            action: {
+            actions: [{
               name: "Item Test Action",
               type: "auto",
               order: "test",
               binding: ["KeyT"],
-            },
+            }],
           },
         ],
       };
-      
-      const action = findAction(entity, (a) => "order" in a && a.order === "test");
-      
+
+      const action = findAction(
+        entity,
+        (a) => "order" in a && a.order === "test",
+      );
+
       // Should find the unit action first (highest priority)
       expect(action).toBeDefined();
       expect(action!.name).toBe("Unit Test Action");
@@ -185,17 +207,23 @@ describe("actionLookup", () => {
 
     it("should return undefined for non-existent action", () => {
       const entity = createTestEntity();
-      
-      const action = findAction(entity, (a) => "order" in a && a.order === "nonexistent");
-      
+
+      const action = findAction(
+        entity,
+        (a) => "order" in a && a.order === "nonexistent",
+      );
+
       expect(action).toBeUndefined();
     });
 
     it("should handle entity with no actions", () => {
       const entity: Entity = { id: "empty-entity" };
-      
-      const action = findAction(entity, (a) => "order" in a && a.order === "move");
-      
+
+      const action = findAction(
+        entity,
+        (a) => "order" in a && a.order === "move",
+      );
+
       expect(action).toBeUndefined();
     });
 
@@ -205,9 +233,12 @@ describe("actionLookup", () => {
         actions: [],
         inventory: [],
       };
-      
-      const action = findAction(entity, (a) => "order" in a && a.order === "move");
-      
+
+      const action = findAction(
+        entity,
+        (a) => "order" in a && a.order === "move",
+      );
+
       expect(action).toBeUndefined();
     });
   });
@@ -215,9 +246,9 @@ describe("actionLookup", () => {
   describe("findActionByOrder", () => {
     it("should find auto action by order", () => {
       const entity = createTestEntity();
-      
+
       const action = findActionByOrder(entity, "stop");
-      
+
       expect(action).toBeDefined();
       expect(action!.name).toBe("Stop");
       expect(action!.type).toBe("auto");
@@ -225,9 +256,9 @@ describe("actionLookup", () => {
 
     it("should find target action by order", () => {
       const entity = createTestEntity();
-      
+
       const action = findActionByOrder(entity, "move");
-      
+
       expect(action).toBeDefined();
       expect(action!.name).toBe("Move");
       expect(action!.type).toBe("target");
@@ -235,9 +266,9 @@ describe("actionLookup", () => {
 
     it("should find item auto action by order", () => {
       const entity = createTestEntity();
-      
+
       const action = findActionByOrder(entity, "fox");
-      
+
       expect(action).toBeDefined();
       expect(action!.name).toBe("Summon Fox");
       expect(action!.type).toBe("auto");
@@ -245,9 +276,9 @@ describe("actionLookup", () => {
 
     it("should find item target action by order", () => {
       const entity = createTestEntity();
-      
+
       const action = findActionByOrder(entity, "lightning");
-      
+
       expect(action).toBeDefined();
       expect(action!.name).toBe("Lightning");
       expect(action!.type).toBe("target");
@@ -255,18 +286,18 @@ describe("actionLookup", () => {
 
     it("should not find build action by order", () => {
       const entity = createTestEntity();
-      
+
       // Build actions are not auto or target type, so findActionByOrder should not find them
       const action = findActionByOrder(entity, "nonexistentOrder");
-      
+
       expect(action).toBeUndefined();
     });
 
     it("should return undefined for non-existent order", () => {
       const entity = createTestEntity();
-      
+
       const action = findActionByOrder(entity, "nonexistent");
-      
+
       expect(action).toBeUndefined();
     });
   });
@@ -274,9 +305,9 @@ describe("actionLookup", () => {
   describe("findActionAndItem", () => {
     it("should find unit action and return no item", () => {
       const entity = createTestEntity();
-      
+
       const result = findActionAndItem(entity, "move");
-      
+
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Move");
       expect(result!.item).toBeUndefined();
@@ -302,9 +333,9 @@ describe("actionLookup", () => {
           },
         ],
       };
-      
+
       const result = findActionAndItem(entity, "specialAttack");
-      
+
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Special Attack");
       expect(result!.item).toBeUndefined();
@@ -312,9 +343,9 @@ describe("actionLookup", () => {
 
     it("should find item action and return the item", () => {
       const entity = createTestEntity();
-      
+
       const result = findActionAndItem(entity, "fox");
-      
+
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Summon Fox");
       expect(result!.item).toBeDefined();
@@ -324,9 +355,9 @@ describe("actionLookup", () => {
 
     it("should find item with undefined charges and return the item", () => {
       const entity = createTestEntity();
-      
+
       const result = findActionAndItem(entity, "lightning");
-      
+
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Lightning");
       expect(result!.item).toBeDefined();
@@ -336,9 +367,9 @@ describe("actionLookup", () => {
 
     it("should not find item action with zero charges", () => {
       const entity = createTestEntity();
-      
+
       const result = findActionAndItem(entity, "heal");
-      
+
       expect(result).toBeUndefined();
     });
 
@@ -358,7 +389,7 @@ describe("actionLookup", () => {
             binding: ["KeyM"],
             actions: [
               {
-                name: "Submenu Priority", 
+                name: "Submenu Priority",
                 type: "target",
                 order: "priority",
                 binding: ["KeyP"],
@@ -373,18 +404,18 @@ describe("actionLookup", () => {
             gold: 10,
             binding: ["KeyP"],
             charges: 1,
-            action: {
+            actions: [{
               name: "Item Priority Action",
               type: "auto",
               order: "priority",
               binding: ["KeyP"],
-            },
+            }],
           },
         ],
       };
-      
+
       const result = findActionAndItem(entity, "priority");
-      
+
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Unit Priority");
       expect(result!.item).toBeUndefined();
@@ -396,7 +427,7 @@ describe("actionLookup", () => {
         actions: [
           {
             name: "Menu",
-            type: "menu", 
+            type: "menu",
             binding: ["KeyM"],
             actions: [
               {
@@ -415,18 +446,18 @@ describe("actionLookup", () => {
             gold: 10,
             binding: ["KeyF"],
             charges: 1,
-            action: {
+            actions: [{
               name: "Item Fallback Action",
               type: "target",
-              order: "fallback", 
+              order: "fallback",
               binding: ["KeyF"],
-            },
+            }],
           },
         ],
       };
-      
+
       const result = findActionAndItem(entity, "fallback");
-      
+
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Submenu Fallback");
       expect(result!.item).toBeUndefined();
@@ -439,21 +470,21 @@ describe("actionLookup", () => {
           {
             id: "onlyItem",
             name: "Only Item",
-            gold: 10, 
+            gold: 10,
             binding: ["KeyO"],
             charges: 1,
-            action: {
+            actions: [{
               name: "Only Item Action",
               type: "auto",
               order: "only",
               binding: ["KeyO"],
-            },
+            }],
           },
         ],
       };
-      
+
       const result = findActionAndItem(entity, "only");
-      
+
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Only Item Action");
       expect(result!.item).toBeDefined();
@@ -462,9 +493,9 @@ describe("actionLookup", () => {
 
     it("should return undefined when action not found anywhere", () => {
       const entity = createTestEntity();
-      
+
       const result = findActionAndItem(entity, "nonexistent");
-      
+
       expect(result).toBeUndefined();
     });
   });

@@ -1,5 +1,5 @@
 import { useReactiveVar } from "../hooks/useVar.tsx";
-import { getLocalPlayer, Player, playersVar } from "../vars/players.ts";
+import { Player, playersVar, useLocalPlayer } from "../vars/players.ts";
 import { ColorPicker } from "../components/ColorPicker.tsx";
 import { NameInput } from "../components/NameInput.tsx";
 import { send } from "../../client.ts";
@@ -11,24 +11,27 @@ import { chatLogVar, chatValueVar } from "../vars/chat.ts";
 import { ColorMarkdown } from "../components/Markdown.tsx";
 import { formatVar } from "../vars/format.ts";
 
-const PlayerRow = ({ name, color, id }: Player) => (
-  <div className="h-stack" style={{ alignItems: "center" }}>
-    <ColorPicker
-      value={color}
-      onChange={(e) => {
-        send({ type: "generic", event: { type: "colorChange", color: e } });
-      }}
-      readonly={id !== getLocalPlayer()?.id}
-    />
-    <NameInput
-      value={name}
-      onChange={(e) => {
-        send({ type: "generic", event: { type: "nameChange", name: e } });
-      }}
-      readonly={id !== getLocalPlayer()?.id}
-    />
-  </div>
-);
+const PlayerRow = ({ name, color, id }: Player) => {
+  const localPlayer = useLocalPlayer();
+  return (
+    <div className="h-stack" style={{ alignItems: "center" }}>
+      <ColorPicker
+        value={color}
+        onChange={(e) => {
+          send({ type: "generic", event: { type: "colorChange", color: e } });
+        }}
+        readonly={id !== localPlayer?.id}
+      />
+      <NameInput
+        value={name}
+        onChange={(e) => {
+          send({ type: "generic", event: { type: "nameChange", name: e } });
+        }}
+        readonly={id !== localPlayer?.id}
+      />
+    </div>
+  );
+};
 
 const Players = () => {
   const players = useReactiveVar(playersVar);
@@ -81,7 +84,7 @@ const Players = () => {
 };
 
 const Settings = () => {
-  useReactiveVar(playersVar); // update when host changes
+  const localPlayer = useLocalPlayer();
   return (
     <div
       className="card v-stack"
@@ -90,7 +93,7 @@ const Settings = () => {
       <button
         type="button"
         onClick={() => send({ type: "start" })}
-        disabled={!getLocalPlayer()?.host}
+        disabled={!localPlayer?.host}
       >
         Start
       </button>

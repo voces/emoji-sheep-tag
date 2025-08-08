@@ -34,7 +34,7 @@ const Collapse: React.FC<CollapseProps> = ({
     }
 
     // On updates: run animation
-    el.getAnimations().forEach((a) => a.cancel());
+    el.getAnimations?.().forEach((a) => a.cancel());
     el.style.overflow = "hidden";
 
     const fullHeight = `${el.scrollHeight}px`;
@@ -42,13 +42,15 @@ const Collapse: React.FC<CollapseProps> = ({
       ? [{ height: "0px" }, { height: fullHeight }]
       : [{ height: fullHeight }, { height: "0px" }];
 
-    const animation = el.animate(keyframes, { duration, easing });
-    animation.onfinish = () => {
-      el.style.height = isOpen ? "auto" : "0px";
-      el.style.overflow = isOpen ? "" : "hidden";
-    };
+    const animation = el.animate?.(keyframes, { duration, easing });
+    if (animation) {
+      animation.onfinish = () => {
+        el.style.height = isOpen ? "auto" : "0px";
+        el.style.overflow = isOpen ? "" : "hidden";
+      };
 
-    return () => animation.cancel();
+      return () => animation.cancel();
+    }
   }, [isOpen, duration, easing]);
 
   // Ensure initial render matches the collapsed/open state

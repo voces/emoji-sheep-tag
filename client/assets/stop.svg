@@ -10,63 +10,63 @@
   xml:space="preserve"
 >
   <style type="text/css">
-    .avocado_zeventien {
-      fill: #cc4121;
-    }
-    .avocado_een {
-      fill: #231f20;
-    }
-    .avocado_zes {
-      fill: #fffaee;
-    }
-    .st0 {
-      fill: #a3aeb5;
-    }
-    .st1 {
-      fill: #af9480;
-    }
-    .st2 {
-      fill: #dbd2c1;
-    }
-    .st3 {
-      fill: #788287;
-    }
-    .st4 {
-      fill: #ead13f;
-    }
-    .st5 {
-      fill: #c3cc6a;
-    }
-    .st6 {
-      fill: #d1712a;
-    }
-    .st7 {
-      fill: #e0a838;
-    }
-    .st8 {
-      fill: #716558;
-    }
-    .st9 {
-      fill: #6f9b45;
-    }
-    .st10 {
-      fill: #0e608e;
-    }
-    .st11 {
-      fill: #e598a3;
-    }
-    .st12 {
-      fill: #fffaee;
-    }
-    .st13 {
-      fill: #3d3935;
-    }
-    .st14 {
-      fill: #248ebc;
-    }
-    .st15 {
-      fill: #bf63c1;
-    }
+  .avocado_zeventien {
+    fill: #cc4121;
+  }
+  .avocado_een {
+    fill: #231f20;
+  }
+  .avocado_zes {
+    fill: #fffaee;
+  }
+  .st0 {
+    fill: #a3aeb5;
+  }
+  .st1 {
+    fill: #af9480;
+  }
+  .st2 {
+    fill: #dbd2c1;
+  }
+  .st3 {
+    fill: #788287;
+  }
+  .st4 {
+    fill: #ead13f;
+  }
+  .st5 {
+    fill: #c3cc6a;
+  }
+  .st6 {
+    fill: #d1712a;
+  }
+  .st7 {
+    fill: #e0a838;
+  }
+  .st8 {
+    fill: #716558;
+  }
+  .st9 {
+    fill: #6f9b45;
+  }
+  .st10 {
+    fill: #0e608e;
+  }
+  .st11 {
+    fill: #e598a3;
+  }
+  .st12 {
+    fill: #fffaee;
+  }
+  .st13 {
+    fill: #3d3935;
+  }
+  .st14 {
+    fill: #248ebc;
+  }
+  .st15 {
+    fill: #bf63c1;
+  }
   </style>
   <g>
     <polygon

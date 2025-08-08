@@ -21,20 +21,28 @@ export const camera = new PerspectiveCamera(
 );
 Object.assign(globalThis, { camera });
 
-const renderer = new WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(globalThis.devicePixelRatio);
-renderer.setClearColor(new Color(0x333333));
-renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
-document.body.appendChild(renderer.domElement);
+// undefined in tests
+let renderer: WebGLRenderer | undefined;
+if (!("Deno" in globalThis)) {
+  renderer = new WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(globalThis.devicePixelRatio);
+  renderer.setClearColor(new Color(0x333333));
+  renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
+  document.body.appendChild(renderer.domElement);
+}
 
 camera.position.z = 9;
 camera.position.x = center.x;
 camera.position.y = center.y;
 camera.layers.enableAll();
 
-export const listener = new AudioListener();
-Object.assign(globalThis, { listener });
-camera.add(listener);
+export const listener = "AudioListener" in globalThis
+  ? new AudioListener()
+  : undefined;
+if (listener) {
+  Object.assign(globalThis, { listener });
+  camera.add(listener);
+}
 
 const terrain = new Grid(tiles[0].length, tiles.length);
 terrain.layers.set(2);
@@ -86,7 +94,7 @@ const resize = () => {
   camera.updateProjectionMatrix();
 
   // Update renderer size
-  renderer.setSize(newWidth, newHeight);
+  renderer?.setSize(newWidth, newHeight);
 };
 
 globalThis.addEventListener("resize", resize);
@@ -116,10 +124,10 @@ const animate = () => {
     renderListeners[i](delta, time);
   }
 
-  renderer.render(scene, camera);
+  renderer?.render(scene, camera);
 
   stats.end();
 };
-renderer.setAnimationLoop(animate);
+renderer?.setAnimationLoop(animate);
 
 export const getFps = () => fps;

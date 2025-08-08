@@ -24,6 +24,7 @@ export const useTooltip = (tooltip: React.ReactNode) => {
       tooltip: coords
         ? createPortal(
           <div
+            role="tooltip"
             className="tooltip"
             style={{ top: coords.top, left: coords.left }}
           >
@@ -33,6 +34,6 @@ export const useTooltip = (tooltip: React.ReactNode) => {
         )
         : null,
     }),
-    [onMouseEnter, coords],
+    [onMouseEnter, coords, tooltip],
   );
 };

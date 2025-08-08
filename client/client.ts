@@ -19,32 +19,33 @@ const zPoint = z.object({ x: z.number(), y: z.number() });
 
 const zStart = z.object({
   type: z.literal("start"),
-  sheep: z.object({ id: z.string(), sheepCount: z.number() }).array(),
-  wolves: z.string().array(),
+  sheep: z.object({ id: z.string(), sheepCount: z.number() }).array()
+    .readonly(),
+  wolves: z.string().array().readonly(),
 });
 
 const zOrder = z.union([
   z.object({
     type: z.literal("walk"),
     target: zPoint,
-    path: zPoint.array().optional(),
+    path: zPoint.array().readonly().optional(),
   }),
   z.object({
     type: z.literal("walk"),
     targetId: z.string(),
-    path: zPoint.array().optional(),
+    path: zPoint.array().readonly().optional(),
   }),
   z.object({
     type: z.literal("build"),
     unitType: z.string(),
     x: z.number(),
     y: z.number(),
-    path: zPoint.array().optional(),
+    path: zPoint.array().readonly().optional(),
   }),
   z.object({
     type: z.literal("attack"),
     targetId: z.string(),
-    path: zPoint.array().optional(),
+    path: zPoint.array().readonly().optional(),
   }),
   z.object({ type: z.literal("hold") }),
   z.object({
@@ -58,7 +59,7 @@ const zOrder = z.union([
     type: z.literal("attackMove"),
     target: zPoint,
     targetId: z.string().optional(),
-    path: zPoint.array().optional(),
+    path: zPoint.array().readonly().optional(),
   }),
 ]).readonly();
 
@@ -67,7 +68,7 @@ const zTilemap = z.object({
   left: z.number(),
   height: z.number(),
   width: z.number(),
-  map: z.number().array(),
+  map: z.number().array().readonly(),
 });
 
 const zClassification = z.union([
@@ -80,13 +81,13 @@ const zClassification = z.union([
   z.literal("other"),
 ]);
 
-// Define the action schema as a constant for recursive reference
-const zAction: z.ZodTypeAny = z.union([
+// Define the base action types first (non-recursive)
+const zBaseAction = z.union([
   z.object({
     name: z.string(),
     type: z.literal("build"),
     unitType: z.string(),
-    binding: z.array(z.string()).optional(),
+    binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
     goldCost: z.number().optional(),
     castDuration: z.number().optional(),
@@ -95,7 +96,7 @@ const zAction: z.ZodTypeAny = z.union([
     name: z.string(),
     type: z.literal("auto"),
     order: z.string(),
-    binding: z.array(z.string()).optional(),
+    binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
     castDuration: z.number().optional(),
   }),
@@ -103,7 +104,7 @@ const zAction: z.ZodTypeAny = z.union([
     name: z.string(),
     type: z.literal("purchase"),
     itemId: z.string(),
-    binding: z.array(z.string()),
+    binding: z.array(z.string()).readonly().optional(),
     goldCost: z.number(),
     manaCost: z.number().optional(),
     castDuration: z.number().optional(),
@@ -112,33 +113,47 @@ const zAction: z.ZodTypeAny = z.union([
     name: z.string(),
     type: z.literal("target"),
     order: z.string(),
-    targeting: z.array(zClassification).optional(),
+    targeting: z.array(zClassification).readonly().optional(),
     aoe: z.number().optional(),
-    binding: z.array(z.string()).optional(),
-    smart: z.record(
+    binding: z.array(z.string()).readonly().optional(),
+    smart: z.partialRecord(
       z.union([zClassification, z.literal("ground")]),
       z.number(),
     ).optional(),
     manaCost: z.number().optional(),
     castDuration: z.number().optional(),
   }),
-  z.object({
-    name: z.string(),
-    type: z.literal("menu"),
-    binding: z.array(z.string()).optional(),
-    actions: z.lazy(() => z.array(zAction)),
-  }),
 ]);
+
+// Define the recursive action type using z.lazy with proper typing
+type ActionType = z.infer<typeof zBaseAction> | {
+  name: string;
+  type: "menu";
+  binding?: ReadonlyArray<string>;
+  actions: ReadonlyArray<ActionType>;
+};
+
+const zAction: z.ZodType<ActionType> = z.lazy(() =>
+  z.union([
+    zBaseAction,
+    z.object({
+      name: z.string(),
+      type: z.literal("menu"),
+      binding: z.array(z.string()).readonly().optional(),
+      actions: z.array(zAction).readonly(),
+    }),
+  ])
+);
 
 const zItem = z.object({
   id: z.string(),
   name: z.string(),
   icon: z.string().optional(),
   gold: z.number(),
-  binding: z.string().array(),
+  binding: z.string().array().readonly(),
   damage: z.number().optional(),
   charges: z.number().optional(),
-  action: zAction.optional(),
+  actions: z.array(zAction).readonly().optional(),
 });
 
 const zUpdate = z.object({
@@ -207,11 +222,11 @@ const zUpdate = z.object({
   model: z.string().optional(),
   modelScale: z.number().optional(),
   sounds: z.object({
-    attack: z.array(z.string()).optional(),
-    death: z.array(z.string()).optional(),
-    ready: z.array(z.string()).optional(),
-    what: z.array(z.string()).optional(),
-    yes: z.array(z.string()).optional(),
+    attack: z.array(z.string()).readonly().optional(),
+    death: z.array(z.string()).readonly().optional(),
+    ready: z.array(z.string()).readonly().optional(),
+    what: z.array(z.string()).readonly().optional(),
+    yes: z.array(z.string()).readonly().optional(),
   }).optional(),
 }).strict();
 
@@ -233,7 +248,7 @@ export type GameMessage = z.TypeOf<typeof zGameMessage>;
 // Events that come down from a loo
 const zUpdates = z.object({
   type: z.literal("updates"),
-  updates: z.union([zUpdate, zDelete, zKill]).array(),
+  updates: z.union([zUpdate, zDelete, zKill]).array().readonly(),
 });
 
 export type Update = z.TypeOf<typeof zUpdates>["updates"][number];
@@ -251,8 +266,8 @@ const zNameChange = z.object({
 });
 
 const zRound = z.object({
-  sheep: z.string().array(),
-  wolves: z.string().array(),
+  sheep: z.string().array().readonly(),
+  wolves: z.string().array().readonly(),
   duration: z.number(),
 });
 
@@ -269,10 +284,10 @@ const zJoin = z.object({
     local: z.boolean().optional().default(false),
     host: z.boolean().optional().default(false),
     sheepCount: z.number(),
-  }).array(),
+  }).array().readonly(),
   format: zFormat,
-  updates: zUpdate.array(),
-  rounds: zRound.array().optional(),
+  updates: zUpdate.array().readonly(),
+  rounds: zRound.array().readonly().optional(),
 });
 
 const zLeave = z.object({
@@ -286,6 +301,7 @@ const zStop = z.object({
   type: z.literal("stop"),
   // Sent if round canceled to revert sheepCount
   players: z.object({ id: z.string(), sheepCount: z.number() }).array()
+    .readonly()
     .optional(),
   // Sent if round not canceled
   round: zRound.optional(),
@@ -520,7 +536,7 @@ const delay = (fn: () => void) => {
   setTimeout(fn, delay);
 };
 
-let server = location.host;
+let server = location?.host;
 export const setServer = (value: string) => server = value;
 
 export const connect = () => {

@@ -1,7 +1,10 @@
 import { z } from "npm:zod";
 import { pluck } from "../../util/pluck.ts";
 import { items, prefabs } from "../../../shared/data.ts";
-import { actionToShortcutKey, getMenuShortcutKeys } from "../../util/actionToShortcutKey.ts";
+import {
+  actionToShortcutKey,
+  getMenuShortcutKeys,
+} from "../../util/actionToShortcutKey.ts";
 
 const localStorageShortcuts = (() => {
   try {
@@ -91,7 +94,11 @@ export const createInitialShortcuts = (): Shortcuts => ({
                 return Object.entries(menuShortcuts).map(([key, binding]) => {
                   // For nested keys like "shop.back", we need to access the stored shortcuts differently
                   // The key contains dots, so we need to access it directly from the section
-                  const storedSectionShortcuts = pluck(localStorageShortcuts, u, z.record(zShortcut));
+                  const storedSectionShortcuts = pluck(
+                    localStorageShortcuts,
+                    u,
+                    z.record(z.string(), zShortcut),
+                  );
                   const storedBinding = storedSectionShortcuts?.[key];
                   return [
                     key,
@@ -120,7 +127,7 @@ export const getActionDisplayName = (
       actionToShortcutKey(a) === key
     );
     if (action) return action.name;
-    
+
     // For menu actions, find them in the menu's actions
     const menuAction = prefabs[section]?.actions?.find((a) =>
       a.type === "menu"
@@ -131,7 +138,7 @@ export const getActionDisplayName = (
       );
       if (subAction) return subAction.name;
     }
-    
+
     return key;
   }
 };

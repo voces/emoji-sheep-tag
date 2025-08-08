@@ -1,16 +1,16 @@
-import { Entity, UnitDataAction, Item } from "../../shared/types.ts";
+import { Entity, Item, UnitDataAction } from "../../shared/types.ts";
 
 export type ActionMatcher = (action: UnitDataAction) => boolean;
 
 /**
  * Finds the first action matching the given predicate by searching through:
  * 1. Entity.actions (base unit actions)
- * 2. Entity.inventory[].action (item actions)
+ * 2. Entity.inventory[].actions (item actions)
  * 3. Entity.actions[].actions (submenu actions)
  */
 export function findAction(
   entity: Entity,
-  matcher: ActionMatcher
+  matcher: ActionMatcher,
 ): UnitDataAction | undefined {
   // Check unit's base actions
   if (entity.actions) {
@@ -35,10 +35,11 @@ export function findAction(
   // Check item actions
   if (entity.inventory) {
     for (const item of entity.inventory) {
-      if (item.action && matcher(item.action)) {
-        // Only return if item has charges available
-        if (item.charges === undefined || item.charges > 0) {
-          return item.action;
+      if (item.actions && (item.charges === undefined || item.charges > 0)) {
+        for (const itemAction of item.actions) {
+          if (matcher(itemAction)) {
+            return itemAction;
+          }
         }
       }
     }
@@ -52,11 +53,13 @@ export function findAction(
  */
 export function findActionByOrder(
   entity: Entity,
-  order: string
+  order: string,
 ): UnitDataAction | undefined {
-  return findAction(entity, (action) =>
-    (action.type === "auto" && action.order === order) ||
-    (action.type === "target" && action.order === order)
+  return findAction(
+    entity,
+    (action) =>
+      (action.type === "auto" && action.order === order) ||
+      (action.type === "target" && action.order === order),
   );
 }
 
@@ -66,7 +69,7 @@ export function findActionByOrder(
  */
 export function findActionAndItem(
   entity: Entity,
-  order: string
+  order: string,
 ): { action: UnitDataAction; item?: Item } | undefined {
   // Check unit's base actions first
   if (entity.actions) {
@@ -97,13 +100,14 @@ export function findActionAndItem(
   // Check item actions
   if (entity.inventory) {
     for (const item of entity.inventory) {
-      if (
-        item.action &&
-        ((item.action.type === "auto" && item.action.order === order) ||
-         (item.action.type === "target" && item.action.order === order))
-      ) {
-        if (item.charges === undefined || item.charges > 0) {
-          return { action: item.action, item };
+      if (item.actions && (item.charges === undefined || item.charges > 0)) {
+        for (const itemAction of item.actions) {
+          if (
+            (itemAction.type === "auto" && itemAction.order === order) ||
+            (itemAction.type === "target" && itemAction.order === order)
+          ) {
+            return { action: itemAction, item };
+          }
         }
       }
     }

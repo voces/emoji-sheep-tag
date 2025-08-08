@@ -2,11 +2,14 @@ import { serveFile } from "jsr:@std/http/file-server";
 import { resolve } from "jsr:@std/path";
 import { handleSocket } from "./client.ts";
 import { startWatchdog } from "./watchdog.ts";
+import { ensureDir } from "jsr:@std/fs";
 
 const isDev = Deno.args.includes("--dev");
 
-if (isDev) import("../scripts/dev.ts");
-else await (await import("../scripts/build.ts")).build("prod");
+if (isDev) {
+  import("../scripts/dev.ts");
+  await ensureDir("dist");
+} else await (await import("../scripts/build.ts")).build("prod");
 
 const dist = await Deno.realPath("dist");
 

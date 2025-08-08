@@ -160,7 +160,7 @@
         filter: brightness(80%);
         transition: filter 100ms ease-in 100ms;
       }
-      .command.current {
+      .command[aria-pressed="true"] {
         border: 4px outset var(--color-body);
         filter: brightness(100%);
         transition: filter 100ms ease-out 0ms;
@@ -171,7 +171,7 @@
         border-style: inset;
       }
 
-      .command > div:nth-child(2) {
+      .command > kbd {
         position: absolute;
         top: 0;
         right: 2px;
@@ -334,8 +334,12 @@
         fill="#C6C5CA"
       />
       <g fill="#9B9AA5">
-        <path d="m268.23 243.77 54.295 54.295-188.23 188.23c-12.293 12.293-32.224 12.293-44.516 0l-32.037-32.037 210.49-210.49z" />
-        <path d="m205 415.59-36.66-71.94L96.409 307 213.94 189.47l108.59 108.59z" />
+        <path
+          d="m268.23 243.77 54.295 54.295-188.23 188.23c-12.293 12.293-32.224 12.293-44.516 0l-32.037-32.037 210.49-210.49z"
+        />
+        <path
+          d="m205 415.59-36.66-71.94L96.409 307 213.94 189.47l108.59 108.59z"
+        />
       </g>
       <path
         fill="#797882"

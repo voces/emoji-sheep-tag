@@ -28,7 +28,7 @@ export type CursorVariant = keyof typeof variants;
 // 330 aquamarine
 
 const cursor = document.getElementById("cursor");
-if (!cursor) throw new Error("Expected cursor element");
+// if (!cursor) throw new Error("Expected cursor element");
 
 const getCursorVariant = (intersect: Entity | undefined) => {
   if (hasBlueprint()) return "hidden";
@@ -44,7 +44,7 @@ const getCursorVariant = (intersect: Entity | undefined) => {
 };
 
 export const updateCursor = (updatePosition = false) => {
-  if (updatePosition) {
+  if (updatePosition && cursor) {
     cursor.style.top = `${mouse.pixels.y}px`;
     cursor.style.left = `${mouse.pixels.x}px`;
   }
@@ -53,13 +53,17 @@ export const updateCursor = (updatePosition = false) => {
 
   if (variant === "hidden") {
     document.body.style.cursor = "none";
-    cursor.style.visibility = "hidden";
+    if (cursor) cursor.style.visibility = "hidden";
     return;
   }
 
   document.body.style.cursor = variants[variant].css;
-  cursor.style.visibility = document.pointerLockElement ? "visible" : "hidden";
-  cursor.style.filter = `hue-rotate(${variants[variant].hue}deg)`;
+  if (cursor) {
+    cursor.style.visibility = document.pointerLockElement
+      ? "visible"
+      : "hidden";
+    cursor.style.filter = `hue-rotate(${variants[variant].hue}deg)`;
+  }
 };
 
 document.addEventListener("pointerlockchange", () => updateCursor(false));

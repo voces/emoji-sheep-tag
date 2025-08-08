@@ -12,15 +12,18 @@ interface MenuState {
 
 export const menuStateVar = makeVar<MenuState>({ stack: [] });
 
-export const openMenu = (menuAction: UnitDataAction & { type: "menu" }, unitId: string) => {
-  menuStateVar(state => ({
-    stack: [...state.stack, { action: menuAction, unitId }]
+export const openMenu = (
+  menuAction: UnitDataAction & { type: "menu" },
+  unitId: string,
+) => {
+  menuStateVar((state) => ({
+    stack: [...state.stack, { action: menuAction, unitId }],
   }));
 };
 
 export const closeMenu = () => {
-  menuStateVar(state => ({
-    stack: state.stack.slice(0, -1)
+  menuStateVar((state) => ({
+    stack: state.stack.slice(0, -1),
   }));
 };
 
@@ -29,8 +32,8 @@ export const closeAllMenus = () => {
 };
 
 export const closeMenusForUnit = (unitId: string) => {
-  menuStateVar(state => ({
-    stack: state.stack.filter(item => item.unitId !== unitId)
+  menuStateVar((state) => ({
+    stack: state.stack.filter((item) => item.unitId !== unitId),
   }));
 };
 

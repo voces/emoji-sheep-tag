@@ -8,6 +8,7 @@ import { clientContext, lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { newLobby } from "../lobby.ts";
 import { unitOrder } from "./unitOrder.ts";
+import { advanceCast } from "../systems/action/advanceCast.ts";
 import { init } from "../st/data.ts";
 
 afterEach(() => {
@@ -59,7 +60,7 @@ describe("unitOrder fox item integration", () => {
 
     expect(wolf.inventory).toHaveLength(1);
     expect(wolf.inventory![0].charges).toBe(1);
-    expect(wolf.inventory![0].action).toBeDefined();
+    expect(wolf.inventory![0].actions![0]).toBeDefined();
 
     // Use fox ability from item
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
@@ -453,6 +454,9 @@ describe("unitOrder special abilities", () => {
       order: "mirrorImage",
     });
 
+    // Advance cast slightly to trigger cast start (which consumes mana)
+    advanceCast(wolf, 0.1);
+
     // Should have consumed mana (mirror image costs 20 mana)
     expect(wolf.mana).toBe(80);
   });
@@ -532,13 +536,13 @@ describe("unitOrder generalized charge system", () => {
       gold: 50,
       binding: ["KeyL"],
       charges: 3,
-      action: {
+      actions: [{
         name: "Lightning Bolt",
         type: "auto",
         order: "lightning",
         binding: ["KeyL"],
         castDuration: 1.0,
-      },
+      }],
     }];
 
     // Mock a lightning action handler by temporarily adding to unitOrder switch
@@ -574,13 +578,13 @@ describe("unitOrder generalized charge system", () => {
       gold: 100,
       binding: ["KeyU"],
       // No charges property - should be unlimited
-      action: {
+      actions: [{
         name: "Unlimited Spell",
         type: "auto",
         order: "fox", // Reuse fox order for testing
         binding: ["KeyU"],
         castDuration: 0.5,
-      },
+      }],
     }];
 
     // Use the unlimited action

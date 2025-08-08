@@ -2,7 +2,7 @@ import { SystemEntity } from "jsr:@verit/ecs";
 import { Point } from "../../shared/pathing/math.ts";
 import { Entity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
-import { Game, addSystem } from "../ecs.ts";
+import { addSystem, Game } from "../ecs.ts";
 import { KdTree } from "../util/KDTree.ts";
 
 export const dataMap = new WeakMap<

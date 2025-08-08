@@ -5,7 +5,7 @@ import { Footprint, Pathing } from "./pathing/types.ts";
 export type WalkOrder =
   & {
     readonly type: "walk";
-    readonly path?: { x: number; y: number }[];
+    readonly path?: ReadonlyArray<{ x: number; y: number }>;
   }
   & (
     | { readonly targetId: string }
@@ -18,11 +18,11 @@ type Order = Readonly<
     readonly unitType: string;
     readonly x: number;
     readonly y: number;
-    readonly path?: { x: number; y: number }[];
+    readonly path?: ReadonlyArray<{ x: number; y: number }>;
   } | {
     readonly type: "attack";
     readonly targetId: string;
-    readonly path?: { x: number; y: number }[];
+    readonly path?: ReadonlyArray<{ x: number; y: number }>;
   } | {
     readonly type: "hold";
   } | {
@@ -36,7 +36,7 @@ type Order = Readonly<
     readonly target: Point;
     /** Current acquired target */
     readonly targetId?: string;
-    readonly path?: { x: number; y: number }[];
+    readonly path?: ReadonlyArray<{ x: number; y: number }>;
   }
 >;
 
@@ -45,10 +45,10 @@ export type UnitDataActionTarget = {
   readonly type: "target";
   readonly order: string;
   /** By default, actions can target everything */
-  readonly targeting?: Classification[];
+  readonly targeting?: ReadonlyArray<Classification>;
   /** `aoe` of `0` allows targeting the ground */
   readonly aoe?: number;
-  readonly binding?: string[];
+  readonly binding?: ReadonlyArray<string>;
   readonly smart?: { [key in Classification | "ground"]?: number };
   readonly manaCost?: number;
   readonly castDuration?: number;
@@ -59,17 +59,17 @@ export type Item = {
   readonly name: string;
   readonly icon?: string;
   readonly gold: number;
-  readonly binding: string[];
+  readonly binding: ReadonlyArray<string>;
   readonly damage?: number;
   readonly charges?: number;
-  readonly action?: UnitDataAction;
+  readonly actions?: ReadonlyArray<UnitDataAction>;
 };
 
 export type UnitDataAction = {
   readonly name: string;
   readonly type: "build";
   readonly unitType: string;
-  readonly binding?: string[];
+  readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly goldCost?: number;
   readonly castDuration?: number;
@@ -77,21 +77,21 @@ export type UnitDataAction = {
   readonly name: string;
   readonly type: "auto";
   readonly order: string;
-  readonly binding?: string[];
+  readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly castDuration?: number;
 } | {
   readonly name: string;
   readonly type: "purchase";
   readonly itemId: string;
-  readonly binding: string[];
+  readonly binding?: ReadonlyArray<string>;
   readonly goldCost: number;
   readonly manaCost?: number;
   readonly castDuration?: number;
 } | {
   readonly name: string;
   readonly type: "menu";
-  readonly binding?: string[];
+  readonly binding?: ReadonlyArray<string>;
   readonly actions: ReadonlyArray<UnitDataAction>;
 } | UnitDataActionTarget;
 
@@ -104,8 +104,8 @@ export type Entity = {
   model?: string;
   modelScale?: number;
   sounds?: {
-    death?: string[];
-    what?: string[];
+    death?: ReadonlyArray<string>;
+    what?: ReadonlyArray<string>;
   };
 
   position?: { readonly x: number; readonly y: number };

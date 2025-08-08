@@ -56,24 +56,24 @@ export const items: Record<string, Item> = {
     id: "claw",
     name: "Claws +20",
     icon: "claw2",
-    gold: 2,
+    gold: 40,
     binding: ["KeyC"],
     damage: 20,
   },
   foxItem: {
     id: "foxItem",
-    name: "Summon Fox",
+    name: "Summon Fox Token",
     icon: "fox",
-    gold: 5,
+    gold: 100,
     binding: ["KeyF"],
     charges: 1,
-    action: {
+    actions: [{
       name: "Summon Fox",
       type: "auto",
       order: "fox",
       binding: ["KeyF"],
       castDuration: 0.1,
-    },
+    }],
   },
 };
 

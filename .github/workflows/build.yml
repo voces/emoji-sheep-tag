@@ -23,7 +23,7 @@ jobs:
       - name: Setup repo
         uses: actions/checkout@v4
         with:
-          lfs: 'true'
+          lfs: "true"
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
@@ -35,12 +35,12 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dist'
-          
+          path: "dist"
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

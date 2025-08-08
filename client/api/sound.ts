@@ -16,6 +16,7 @@ export const playSoundAt = (
   y: number,
   volume = 1,
 ) => {
+  if (!listener) return;
   const soundPath = sounds[soundKey];
   const sound = new PositionalAudio(listener);
   scene.add(sound);
@@ -48,6 +49,7 @@ export const playSound = (
   soundKey: string,
   { volume = 1, loop = false }: { volume?: number; loop?: boolean } = {},
 ) => {
+  if (!listener) return;
   const soundPath = sounds[soundKey];
   const sound = new Audio(listener);
   scene.add(sound);
@@ -75,7 +77,7 @@ export const playSound = (
 };
 
 const getSoundFromSet = (entity: Entity, ...sets: SoundSet[]) => {
-  let choices: string[] = [];
+  let choices: ReadonlyArray<string> = [];
   for (let i = 0; i < sets.length && !choices.length; i++) {
     choices = entity.sounds?.[sets[i]] ?? [];
   }
@@ -105,7 +107,7 @@ export const playEntitySound = (
 
 const startAmbient = () => {
   const sound = playSound("ambientBirds", { volume: 0.05, loop: true });
-  sound.onEnded = () => void 0;
+  if (sound) sound.onEnded = () => void 0;
 
   for (const event of ["pointerdown", "keydown"]) {
     document.removeEventListener(event, startAmbient);

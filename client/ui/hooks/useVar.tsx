@@ -10,6 +10,8 @@ type ReactiveVar<T> = {
   subscribe: (callback: (newValue: T, prevValue: T) => void) => () => void;
 };
 
+const resets: (() => void)[] = [];
+
 export const makeVar = <
   T extends object | string | number | boolean | undefined,
 >(
@@ -38,8 +40,14 @@ export const makeVar = <
     return value;
   };
 
+  resets.push(() => fn(initialValue));
+
   return Object.assign(fn, { subscribe }) as unknown as ReactiveVar<T>;
 };
 
 export const useReactiveVar = <T,>(reactiveVar: ReactiveVar<T>): T =>
   useSyncExternalStore(reactiveVar.subscribe, reactiveVar, reactiveVar);
+
+export const __testing_reset_all_vars = () => {
+  for (const fn of resets) fn();
+};

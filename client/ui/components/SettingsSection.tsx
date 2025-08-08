@@ -4,7 +4,11 @@ import { keyboard } from "../../controls.ts";
 import { prefabs } from "../../../shared/data.ts";
 import { formatShortcut } from "../util/formatShortcut.ts";
 import Collapse from "./Collapse.tsx";
-import { type Shortcuts, defaultBindings, getActionDisplayName } from "../util/shortcutUtils.ts";
+import {
+  defaultBindings,
+  getActionDisplayName,
+  type Shortcuts,
+} from "../util/shortcutUtils.ts";
 
 interface ShortcutRowProps {
   actionKey: string;
@@ -15,13 +19,13 @@ interface ShortcutRowProps {
   onSetBinding: (key: string, binding: string[]) => void;
 }
 
-const ShortcutRow = ({ 
-  actionKey, 
-  shortcut, 
-  fullKey, 
-  isNested = false, 
-  section, 
-  onSetBinding 
+const ShortcutRow = ({
+  actionKey,
+  shortcut,
+  fullKey,
+  isNested = false,
+  section,
+  onSetBinding,
 }: ShortcutRowProps) => (
   <div
     className="h-stack"
@@ -48,8 +52,7 @@ const ShortcutRow = ({
       />
       <button
         type="button"
-        onClick={() =>
-          onSetBinding(fullKey, defaultBindings[section][fullKey])}
+        onClick={() => onSetBinding(fullKey, defaultBindings[section][fullKey])}
       >
         ↺
       </button>
@@ -63,13 +66,15 @@ interface SettingsSectionProps {
   setBinding: (shortcut: string, binding: string[]) => Shortcuts;
 }
 
-export const SettingsSection = ({ section, shortcuts, setBinding }: SettingsSectionProps) => {
+export const SettingsSection = (
+  { section, shortcuts, setBinding }: SettingsSectionProps,
+) => {
   const [isOpen, setIsOpen] = useState(false);
 
   // Group shortcuts by menu context (nested vs top-level)
   const topLevelShortcuts: Record<string, string[]> = {};
   const menuShortcuts: Record<string, Record<string, string[]>> = {};
-  
+
   for (const [key, binding] of Object.entries(shortcuts)) {
     if (key.includes(".")) {
       // This is a menu shortcut (e.g., "shop.back" or "shop.purchase-claw")
@@ -91,7 +96,7 @@ export const SettingsSection = ({ section, shortcuts, setBinding }: SettingsSect
   // Render actions in order: top-level first, then menu actions with their subactions
   const renderShortcuts = () => {
     const result = [];
-    
+
     // Add top-level shortcuts first
     for (const [key, shortcut] of Object.entries(topLevelShortcuts)) {
       result.push(
@@ -103,12 +108,14 @@ export const SettingsSection = ({ section, shortcuts, setBinding }: SettingsSect
           isNested={false}
           section={section}
           onSetBinding={handleSetBinding}
-        />
+        />,
       );
-      
+
       // If this is a menu action, add its subactions right after it
       if (menuShortcuts[key]) {
-        for (const [actionKey, menuShortcut] of Object.entries(menuShortcuts[key])) {
+        for (
+          const [actionKey, menuShortcut] of Object.entries(menuShortcuts[key])
+        ) {
           result.push(
             <ShortcutRow
               key={`${key}.${actionKey}`}
@@ -118,12 +125,12 @@ export const SettingsSection = ({ section, shortcuts, setBinding }: SettingsSect
               isNested
               section={section}
               onSetBinding={handleSetBinding}
-            />
+            />,
           );
         }
       }
     }
-    
+
     return result;
   };
 

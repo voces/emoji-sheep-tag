@@ -10,6 +10,7 @@ declare module "npm:styled-components" {
       orange: string;
       purple: string;
       gold: string;
+      mana: string;
     };
   }
 }

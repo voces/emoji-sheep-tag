@@ -3,6 +3,7 @@ import { copy, ensureDir } from "jsr:@std/fs";
 import esbuild, { type Plugin } from "npm:esbuild";
 import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
 import { basename, join, relative } from "jsr:@std/path";
+import { expandGlob } from "jsr:@std/fs";
 
 const assetInlinePlugin = {
   name: "asset-inline",
@@ -24,42 +25,33 @@ const assetInlinePlugin = {
   },
 } satisfies Plugin;
 
-export const assetCopyPlugin = {
-  name: "asset-copy",
-  setup(build) {
-    build.onResolve({ filter: /\.(mp3|wav|ogg)$/ }, (args) => ({
-      path: relative(Deno.cwd(), join(args.resolveDir, args.path)),
-      namespace: "asset-copy",
-    }));
+// Copy sound assets from client/assets to dist/assets
+const copySoundAssets = async () => {
+  const assetsDir = "dist/assets";
+  await ensureDir(assetsDir);
 
-    build.onLoad(
-      { filter: /.*/, namespace: "asset-copy" },
-      async (args) => {
-        const outdir = build.initialOptions.outdir || "dist";
-        const destDir = join(outdir, "assets");
-        const fileName = basename(args.path);
+  // Collect all mp3 files first
+  const soundFiles = [];
+  for await (const entry of expandGlob("client/assets/*.mp3")) {
+    if (entry.isFile) soundFiles.push(entry.path);
+  }
 
-        await Deno.mkdir(destDir, { recursive: true });
-        await copy(args.path, join(destDir, fileName), { overwrite: true });
-
-        return {
-          contents: `./assets/${fileName}`,
-          loader: "text",
-        };
-      },
-    );
-  },
-} satisfies Plugin;
+  // Copy all files in parallel
+  await Promise.all(
+    soundFiles.map((filePath) => {
+      const fileName = basename(filePath);
+      return copy(filePath, join(assetsDir, fileName), { overwrite: true });
+    }),
+  );
+};
 
 const decoder = new TextDecoder();
 
-export const build = async (env: "dev" | "prod") => {
-  const start = performance.now();
-
+const buildHtml = async (env: "dev" | "prod") => {
+  // Load HTML first (needed for subsequent steps)
   const dom = new jsdom.JSDOM(
     await Deno.readTextFile("./client/index.html"),
   );
-
   const document: Document = dom.window.document;
 
   const main = document.querySelector("script#main");
@@ -68,37 +60,53 @@ export const build = async (env: "dev" | "prod") => {
   const worker = document.querySelector("script#worker");
   if (!worker) throw new Error("Could not find worker script");
 
-  const files = (await esbuild.build({
-    bundle: true,
-    target: "chrome123",
-    format: "esm",
-    entryPoints: ["client/index.ts", "server/local.ts"],
-    write: false,
-    sourcemap: env === "dev" ? "inline" : false,
-    plugins: [
-      assetInlinePlugin,
-      assetCopyPlugin,
-      ...denoPlugins({ configPath: await Deno.realPath("deno.json") }),
-    ],
-    jsx: "automatic",
-    jsxFactory: "React.createElement",
-    jsxFragment: "React.Fragment",
-    jsxImportSource: "npm:react",
-    outdir: "dist",
-    define: {
-      "process.env.NODE_ENV": JSON.stringify(
-        env === "dev" ? "development" : "production",
-      ),
-    },
-    minify: env === "dev" ? false : true,
-  })).outputFiles;
+  // Run esbuild and ensure dist directory in parallel
+  const [files] = await Promise.all([
+    // esbuild bundling
+    esbuild.build({
+      bundle: true,
+      target: "chrome123",
+      format: "esm",
+      entryPoints: ["client/index.ts", "server/local.ts"],
+      write: false,
+      publicPath: "/",
+      sourcemap: env === "dev" ? "inline" : false,
+      plugins: [
+        assetInlinePlugin,
+        // Type-incompatible after upgrade, but still functions
+        // deno-lint-ignore no-explicit-any
+        ...denoPlugins({ configPath: await Deno.realPath("deno.json") }) as any,
+      ],
+      jsx: "automatic",
+      jsxFactory: "React.createElement",
+      jsxFragment: "React.Fragment",
+      jsxImportSource: "npm:react",
+      outdir: "dist",
+      define: {
+        "process.env.NODE_ENV": JSON.stringify(
+          env === "dev" ? "development" : "production",
+        ),
+      },
+      minify: env === "dev" ? false : true,
+    }),
+    ensureDir("dist"),
+  ]);
 
-  main.textContent = decoder.decode(files[0].contents);
-  worker.textContent = decoder.decode(files[1].contents);
+  main.textContent = decoder.decode(files.outputFiles[0].contents);
+  worker.textContent = decoder.decode(files.outputFiles[1].contents);
 
-  await ensureDir("dist");
-
+  // Write HTML file as final step (can't be parallelized with DOM manipulation above)
   await Deno.writeTextFile("dist/index.html", dom.serialize());
+};
+
+export const build = async (env: "dev" | "prod") => {
+  const start = performance.now();
+
+  // Run HTML/JS building and sound asset copying in true parallel
+  await Promise.all([
+    buildHtml(env),
+    copySoundAssets(),
+  ]);
 
   console.log("Built in", Math.round(performance.now() - start), "ms!");
 };

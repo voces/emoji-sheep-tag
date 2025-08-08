@@ -16,7 +16,7 @@ import {
   updatePathing,
   withPathingMap,
 } from "../systems/pathing.ts";
-import { prefabs, items } from "../../shared/data.ts";
+import { items, prefabs } from "../../shared/data.ts";
 import { findAction } from "../util/actionLookup.ts";
 import { FOLLOW_DISTANCE } from "../../shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
@@ -239,7 +239,7 @@ export const addItem = (unit: Entity, itemId: string): boolean => {
   }
 
   // Check if item already exists and has charges
-  const existingItem = unit.inventory.find(i => i.id === itemId);
+  const existingItem = unit.inventory.find((i) => i.id === itemId);
   if (existingItem && item.charges) {
     // If item has charges and already exists, increase charges
     unit.inventory = unit.inventory.map((i) =>
@@ -258,8 +258,9 @@ export const addItem = (unit: Entity, itemId: string): boolean => {
 const deductBuildGold = (builder: Entity, type: string) => {
   if (!builder.owner) return;
 
-  const buildAction = findAction(builder, (a) =>
-    a.type === "build" && a.unitType === type
+  const buildAction = findAction(
+    builder,
+    (a) => a.type === "build" && a.unitType === type,
   );
   const goldCost =
     (buildAction?.type === "build" ? buildAction.goldCost : undefined) ?? 0;

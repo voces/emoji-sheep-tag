@@ -20,6 +20,7 @@
 - https://www.svgrepo.com/svg/411739/shop
 - https://www.svgrepo.com/svg/83759/claw
 - https://www.svgrepo.com/svg/405703/fox
+- https://www.svgrepo.com/svg/317730/saphire
 
 # Audio
 

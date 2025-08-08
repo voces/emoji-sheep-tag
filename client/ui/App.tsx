@@ -1,22 +1,17 @@
 import { useReactiveVar } from "./hooks/useVar.tsx";
 import { connectionStatusVar, stateVar } from "./vars/state.ts";
-import { ThemeProvider } from "npm:styled-components";
-import { theme } from "./theme.ts";
 import { Lobby } from "./pages/Lobby.tsx";
 import { Menu } from "./pages/Menu.tsx";
 import { Game } from "./pages/Game/index.tsx";
 import { CommandPalette } from "./components/CommandPalette.tsx";
 import { Settings } from "./pages/Settings.tsx";
+import { Wrapper } from "./Wrapper.tsx";
 
 const pages = {
   menu: Menu,
   lobby: Lobby,
   playing: Game,
 };
-
-const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <ThemeProvider theme={theme}>{children}</ThemeProvider>
-);
 
 const Disconnected = () => {
   const connectionStatus = useReactiveVar(connectionStatusVar);

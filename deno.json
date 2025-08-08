@@ -1,6 +1,7 @@
 {
   "tasks": {
-    "dev": "deno run -A --watch --inspect server/index.ts --dev"
+    "dev": "deno run -A --watch --inspect server/index.ts --dev",
+    "test": "deno test --no-check --allow-env --allow-net --allow-read --unstable-broadcast-channel"
   },
   "imports": {
     "typed-event-target": "https://deno.land/x/typescript_event_target@v1.0.5/mod.ts",
@@ -8,17 +9,25 @@
     "three/SVGLoader.d.ts": "https://esm.sh/v135/@types/three@0.166.0/examples/jsm/loaders/SVGLoader.d.ts",
     "three/SVGLoader": "https://esm.sh/three@0.166.1/addons/loaders/SVGLoader.js?pin=v135",
     "jsdom": "https://esm.sh/jsdom@24.1.0&pin=v135",
-    "react": "npm:react"
+    "react": "npm:react",
+    "@/testing/": "./client/ui/testing/"
   },
   "compilerOptions": {
     "lib": [
-      "deno.window", "dom", "webworker"
+      "deno.window",
+      "dom",
+      "webworker"
     ],
     "jsx": "react-jsx",
     "jsxImportSource": "npm:react",
-    "types": ["npm:@types/react", "./client/assets/asset.d.ts", "./client/types.d.ts"]
+    "types": [
+      "npm:@types/react",
+      "./client/assets/asset.d.ts",
+      "./client/types.d.ts"
+    ]
   },
   "fmt": {
     "indentWidth": 2
-  }
+  },
+  "unstable": ["raw-imports"]
 }

@@ -7,46 +7,27 @@ import { playersVar } from "../ui/vars/players.ts";
 import { getFps } from "../graphics/three.ts";
 import { SystemEntity } from "jsr:@verit/ecs";
 
-//@deno-types="../assets/asset.d.ts"
-import sheep from "../assets/sheep.svg";
-//@deno-types="../assets/asset.d.ts"
-import wolf from "../assets/wolf.svg";
-//@deno-types="../assets/asset.d.ts"
-import hut from "../assets/hut.svg";
-//@deno-types="../assets/asset.d.ts"
-import fence from "../assets/fence.svg";
-//@deno-types="../assets/asset.d.ts"
-import fire from "../assets/fire.svg";
-//@deno-types="../assets/asset.d.ts"
-import claw from "../assets/claw.svg";
-//@deno-types="../assets/asset.d.ts"
-import claw2 from "../assets/claw2.svg";
-//@deno-types="../assets/asset.d.ts"
-import collision from "../assets/collision.svg";
-//@deno-types="../assets/asset.d.ts"
-import flowers from "../assets/flowers.svg";
-//@deno-types="../assets/asset.d.ts"
-import grass from "../assets/grass.svg";
-//@deno-types="../assets/asset.d.ts"
-import suspend from "../assets/suspend.svg";
-//@deno-types="../assets/asset.d.ts"
-import circle from "../assets/circle.svg";
-//@deno-types="../assets/asset.d.ts"
-import gravity from "../assets/gravity.svg";
-//@deno-types="../assets/asset.d.ts"
-import hinduTemple from "../assets/hindu-temple.svg";
-//@deno-types="../assets/asset.d.ts"
-import route from "../assets/route.svg";
-//@deno-types="../assets/asset.d.ts"
-import stop from "../assets/stop.svg";
-//@deno-types="../assets/asset.d.ts"
-import gold from "../assets/gold.svg";
-//@deno-types="../assets/asset.d.ts"
-import divinity from "../assets/divinity.svg";
-//@deno-types="../assets/asset.d.ts"
-import shop from "../assets/shop.svg";
-//@deno-types="../assets/asset.d.ts"
-import fox from "../assets/fox.svg";
+import sheep from "../assets/sheep.svg" with { type: "text" };
+import wolf from "../assets/wolf.svg" with { type: "text" };
+import hut from "../assets/hut.svg" with { type: "text" };
+import fence from "../assets/fence.svg" with { type: "text" };
+import fire from "../assets/fire.svg" with { type: "text" };
+import claw from "../assets/claw.svg" with { type: "text" };
+import claw2 from "../assets/claw2.svg" with { type: "text" };
+import collision from "../assets/collision.svg" with { type: "text" };
+import flowers from "../assets/flowers.svg" with { type: "text" };
+import grass from "../assets/grass.svg" with { type: "text" };
+import suspend from "../assets/suspend.svg" with { type: "text" };
+import circle from "../assets/circle.svg" with { type: "text" };
+import gravity from "../assets/gravity.svg" with { type: "text" };
+import hinduTemple from "../assets/hindu-temple.svg" with { type: "text" };
+import route from "../assets/route.svg" with { type: "text" };
+import stop from "../assets/stop.svg" with { type: "text" };
+import gold from "../assets/gold.svg" with { type: "text" };
+import divinity from "../assets/divinity.svg" with { type: "text" };
+import shop from "../assets/shop.svg" with { type: "text" };
+import fox from "../assets/fox.svg" with { type: "text" };
+import sapphire from "../assets/sapphire.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -69,6 +50,7 @@ export const svgs: Record<string, string> = {
   shop,
   claw2,
   fox,
+  sapphire,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

@@ -1,0 +1,12 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 64 64"
+>
+  <g fill="none" fill-rule="evenodd"><path
+      fill="#B4DFFB"
+      d="M13 7h38l10 12H3z"
+    /><path fill="#5EA7FF" d="M32 60 3 19h58z" /><path
+      fill="#B4DFFB"
+      d="M32 60 20 19h24z"
+    /><path fill="#5EA7FF" d="m32 7 12 12H20z" /></g>
+</svg>

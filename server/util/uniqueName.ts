@@ -14,7 +14,7 @@ export const generateUniqueName = (
 ): string => {
   // Remove any existing numbering from the base name to avoid double numbering
   const cleanBaseName = baseName.replace(/\s*\(\d+\)$/, "");
-  
+
   // Check if the base name is available
   const isNameTaken = (name: string) => {
     for (const client of existingClients) {

@@ -1,45 +1,16 @@
-//@deno-types="./asset.d.ts"
-import sheep1 from "./sheep1.mp3";
-//@deno-types="./asset.d.ts"
-import sheep2 from "./sheep2.mp3";
-//@deno-types="./asset.d.ts"
-import sheep3 from "./sheep3.mp3";
-//@deno-types="./asset.d.ts"
-import explosion1 from "./explosion1.mp3";
-//@deno-types="./asset.d.ts"
-import splat1 from "./splat1.mp3";
-//@deno-types="./asset.d.ts"
-import thud1 from "./thud1.mp3";
-//@deno-types="./asset.d.ts"
-import thud2 from "./thud2.mp3";
-//@deno-types="./asset.d.ts"
-import swipe1 from "./swipe1.mp3";
-//@deno-types="./asset.d.ts"
-import construction1 from "./construction1.mp3";
-//@deno-types="./asset.d.ts"
-import click1 from "./click1.mp3";
-//@deno-types="./asset.d.ts"
-import click2 from "./click2.mp3";
-//@deno-types="./asset.d.ts"
-import click3 from "./click3.mp3";
-//@deno-types="./asset.d.ts"
-import click4 from "./click4.mp3";
-//@deno-types="./asset.d.ts"
-import ambientBirds from "./ambientBirds.mp3";
-
 export const sounds: Record<string, string> = {
-  sheep1,
-  sheep2,
-  sheep3,
-  explosion1,
-  splat1,
-  thud1,
-  thud2,
-  swipe1,
-  construction1,
-  click1,
-  click2,
-  click3,
-  click4,
-  ambientBirds,
+  sheep1: new URL("/assets/sheep1.mp3", import.meta.url).pathname,
+  sheep2: new URL("/assets/sheep2.mp3", import.meta.url).pathname,
+  sheep3: new URL("/assets/sheep3.mp3", import.meta.url).pathname,
+  explosion1: new URL("/assets/explosion1.mp3", import.meta.url).pathname,
+  splat1: new URL("/assets/splat1.mp3", import.meta.url).pathname,
+  thud1: new URL("/assets/thud1.mp3", import.meta.url).pathname,
+  thud2: new URL("/assets/thud2.mp3", import.meta.url).pathname,
+  swipe1: new URL("/assets/swipe1.mp3", import.meta.url).pathname,
+  construction1: new URL("/assets/construction1.mp3", import.meta.url).pathname,
+  click1: new URL("/assets/click1.mp3", import.meta.url).pathname,
+  click2: new URL("/assets/click2.mp3", import.meta.url).pathname,
+  click3: new URL("/assets/click3.mp3", import.meta.url).pathname,
+  click4: new URL("/assets/click4.mp3", import.meta.url).pathname,
+  ambientBirds: new URL("/assets/ambientBirds.mp3", import.meta.url).pathname,
 };

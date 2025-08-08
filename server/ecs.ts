@@ -135,3 +135,4 @@ import("./systems/playerEntities.ts");
 import("./systems/playerEntities.ts");
 import("./systems/queues.ts");
 import("./systems/goldGeneration.ts");
+import("./orders/index.ts");

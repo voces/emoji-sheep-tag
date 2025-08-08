@@ -66,7 +66,11 @@ export function armWatchdog() {
 }
 
 export const startWatchdog = async () => {
-  console.debug(`[Watchdog] NOTIFY_SOCKET=${NOTIFY_SOCKET || 'not set'}, WATCHDOG_USEC=${WATCHDOG_USEC || 'not set'}`);
+  console.debug(
+    `[Watchdog] NOTIFY_SOCKET=${NOTIFY_SOCKET || "not set"}, WATCHDOG_USEC=${
+      WATCHDOG_USEC || "not set"
+    }`,
+  );
   await notifyReady();
   armWatchdog();
 };

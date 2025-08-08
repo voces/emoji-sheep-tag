@@ -8,7 +8,7 @@ export type Footprint = {
   left: number;
   height: number;
   width: number;
-  map: number[];
+  map: ReadonlyArray<number>;
 };
 
 export type PathingEntity = SystemEntity<Entity, "position" | "radius">;
