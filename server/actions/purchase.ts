@@ -34,13 +34,5 @@ export const purchase = (
   // Add item to inventory using the addItem API
   addItem(u, itemId);
 
-  // Apply item effects (for now just damage bonus)
-  if (item.damage && u.attack) {
-    u.attack = {
-      ...u.attack,
-      damage: u.attack.damage + item.damage,
-    };
-  }
-
   return u;
 };

@@ -20,6 +20,7 @@ import { findAction } from "../util/actionLookup.ts";
 import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 import { deductPlayerGold } from "./player.ts";
+import { UnitDeathEvent } from "../ecs.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -265,4 +266,66 @@ const deductBuildGold = (builder: Entity, type: string) => {
     (buildAction?.type === "build" ? buildAction.goldCost : undefined) ?? 0;
 
   deductPlayerGold(builder.owner, goldCost);
+};
+
+/**
+ * Computes the total damage a unit can deal, including base damage plus bonuses from items
+ */
+export const computeUnitDamage = (unit: Entity): number => {
+  if (!unit.attack) return 0;
+
+  let totalDamage = unit.attack.damage;
+
+  // Add damage bonuses from items in inventory
+  if (unit.inventory) {
+    for (const item of unit.inventory) {
+      if (item.damage) {
+        totalDamage += item.damage;
+      }
+    }
+  }
+
+  return totalDamage;
+};
+
+/**
+ * Applies damage mitigation and amplification modifiers
+ */
+const applyDamageModifiers = (
+  damage: number,
+  attacker: Entity,
+  target: Entity,
+): number =>
+  damage * (target.progress ? 2 : 1) *
+  (attacker.isMirror ? target.tilemap ? 0.25 : 0.001 : 1);
+
+/**
+ * Damages one entity from another, handling mitigation and amplification
+ * @param attacker The entity dealing damage
+ * @param target The entity receiving damage
+ * @param amount Optional damage amount. If not specified, uses computeUnitDamage
+ * @param pure If true, applies mitigation/amplification. If false, deals pure damage
+ */
+export const damageEntity = (
+  attacker: Entity,
+  target: Entity,
+  amount?: number,
+  pure: boolean = true,
+): void => {
+  if (!target.health) return;
+
+  const app = currentApp();
+
+  const baseDamage = amount !== undefined
+    ? amount
+    : computeUnitDamage(attacker);
+  const finalDamage = pure
+    ? baseDamage
+    : applyDamageModifiers(baseDamage, attacker, target);
+
+  target.health = Math.max(0, target.health - finalDamage);
+
+  if (target.health === 0) {
+    app.dispatchTypedEvent("unitDeath", new UnitDeathEvent(target, attacker));
+  }
 };

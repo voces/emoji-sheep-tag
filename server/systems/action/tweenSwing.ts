@@ -1,8 +1,7 @@
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
-import { currentApp } from "../../contexts.ts";
-import { UnitDeathEvent } from "../../ecs.ts";
 import { lookup } from "../lookup.ts";
+import { damageEntity } from "../../api/unit.ts";
 
 export const tweenSwing = (e: Entity, delta: number): number => {
   if (!e.swing || !e.attack) return delta;
@@ -44,21 +43,7 @@ export const tweenSwing = (e: Entity, delta: number): number => {
     ) return delta;
 
     // Otherwise damage target
-    if (target.health) {
-      target.health = Math.max(
-        0,
-        target.health! -
-          e.attack!.damage * (target.progress ? 2 : 1) *
-            // Do extremely minor damage to units to trigger sound
-            (e.isMirror ? target.tilemap ? 0.25 : 0.001 : 1),
-      );
-      if (target.health === 0) {
-        currentApp().dispatchTypedEvent(
-          "unitDeath",
-          new UnitDeathEvent(target, e),
-        );
-      }
-    }
+    if (target.health) damageEntity(e, target);
   }
 
   return delta;

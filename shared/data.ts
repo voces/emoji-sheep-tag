@@ -306,7 +306,7 @@ export const prefabs: Record<
     model: "divinity",
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
-    maxHealth: 100,
+    maxHealth: 10,
     sounds: { death: ["explosion1"] },
     actions: [selfDestruct],
   },
