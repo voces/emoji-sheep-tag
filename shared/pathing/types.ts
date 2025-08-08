@@ -1,5 +1,4 @@
-import { SystemEntity } from "jsr:@verit/ecs";
-import { Entity } from "../types.ts";
+import { SystemEntity } from "../types.ts";
 
 export type Pathing = number;
 
@@ -11,8 +10,8 @@ export type Footprint = {
   map: ReadonlyArray<number>;
 };
 
-export type PathingEntity = SystemEntity<Entity, "position" | "radius">;
-export type TargetEntity = SystemEntity<Entity, "position">;
+export type PathingEntity = SystemEntity<"position" | "radius">;
+export type TargetEntity = SystemEntity<"position">;
 
 export type PeekingIterator<T> = Iterator<T> & {
   /** Look at the next value without consuming it. */

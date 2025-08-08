@@ -1,10 +1,9 @@
-import { SystemEntity } from "jsr:@verit/ecs";
 import { addSystem } from "../ecs.ts";
-import { Entity } from "../../shared/types.ts";
+import { SystemEntity } from "../../shared/types.ts";
 import { acquireTarget, orderAttack } from "../api/unit.ts";
 
 addSystem(() => {
-  const idleCheck = (e: SystemEntity<Entity, "attack" | "position">) => {
+  const idleCheck = (e: SystemEntity<"attack" | "position">) => {
     if (e.order || e.queue?.length) return;
 
     const target = acquireTarget(e);
@@ -12,7 +11,7 @@ addSystem(() => {
     if (target) orderAttack(e, target);
   };
 
-  const entities = new Set<SystemEntity<Entity, "attack" | "position">>();
+  const entities = new Set<SystemEntity<"attack" | "position">>();
   let counter = 0;
 
   return {

@@ -1,4 +1,3 @@
-import { SystemEntity } from "jsr:@verit/ecs";
 import { tempUnit } from "../../shared/api/unit.ts";
 import {
   canSwing,
@@ -6,7 +5,7 @@ import {
   Point,
 } from "../../shared/pathing/math.ts";
 import { isPathingEntity } from "../../shared/pathing/util.ts";
-import { Entity } from "../../shared/types.ts";
+import { Entity, SystemEntity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
 import { data } from "../st/data.ts";
 import {
@@ -214,7 +213,7 @@ export const orderBuild = (
   if (
     !withPathingMap((pm) =>
       pm.withoutEntity(
-        builder as SystemEntity<Entity, "position" | "radius">,
+        builder as SystemEntity<"position" | "radius">,
         () => pathable(temp),
       )
     )

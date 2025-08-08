@@ -1,11 +1,10 @@
 import { Color } from "three";
 
-import { app, Entity } from "../ecs.ts";
+import { app, Entity, SystemEntity } from "../ecs.ts";
 import { InstancedGroup } from "../graphics/InstancedGroup.ts";
 import { loadSvg } from "../graphics/loadSvg.ts";
 import { playersVar } from "../ui/vars/players.ts";
 import { getFps } from "../graphics/three.ts";
-import { SystemEntity } from "jsr:@verit/ecs";
 
 import sheep from "../assets/sheep.svg" with { type: "text" };
 import wolf from "../assets/wolf.svg" with { type: "text" };
@@ -117,7 +116,7 @@ app.addSystem({
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
 
 const onPositionOrRotationChange = (
-  e: SystemEntity<Entity, "prefab"> & {
+  e: SystemEntity<"prefab"> & {
     readonly position: { x: number; y: number };
     readonly facing?: number;
   },
@@ -158,7 +157,7 @@ const onPositionOrRotationChange = (
 // Reflect logical position to render position
 app.addSystem({
   props: ["prefab", "position"],
-  onAdd: (e: SystemEntity<Entity, "prefab" | "position">) => {
+  onAdd: (e: SystemEntity<"prefab" | "position">) => {
     prevPositions.set(e, e.position);
     collections[e.model ?? e.prefab]?.setPositionAt(
       e.id,
@@ -177,7 +176,7 @@ app.addSystem({
   onChange: (e) => {
     if (e.position) {
       onPositionOrRotationChange(
-        e as SystemEntity<Entity, "prefab" | "position" | "facing">,
+        e as SystemEntity<"prefab" | "position" | "facing">,
       );
     }
   },
@@ -190,7 +189,7 @@ app.addSystem({
   onChange: updateColor,
 });
 
-const updateScale = (e: SystemEntity<Entity, "prefab" | "modelScale">) => {
+const updateScale = (e: SystemEntity<"prefab" | "modelScale">) => {
   const collection = collections[e.model ?? e.prefab];
   if (!collection) return;
   collection.setScaleAt(e.id, e.modelScale);

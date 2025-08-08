@@ -1,3 +1,4 @@
+import { SystemEntity as ECSSystemEntity } from "jsr:@verit/ecs";
 import { Classification } from "./data.ts";
 import { Point } from "./pathing/math.ts";
 import { Footprint, Pathing } from "./pathing/types.ts";
@@ -172,5 +173,7 @@ export type Entity = {
   order?: Order | null;
   queue?: ReadonlyArray<Order> | null;
 };
+
+export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;
 
 export const nonNull = <T>(v: T): v is NonNullable<T> => !!v;

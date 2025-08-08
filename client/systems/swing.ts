@@ -1,9 +1,8 @@
-import { SystemEntity } from "jsr:@verit/ecs";
-import { app, Entity } from "../ecs.ts";
+import { app, Entity, SystemEntity } from "../ecs.ts";
 
 const swings = new WeakMap<Entity, Entity>();
 
-const updateSwing = (e: SystemEntity<Entity, "swing">) => {
+const updateSwing = (e: SystemEntity<"swing">) => {
   const existing = swings.get(e);
   if (existing) app.removeEntity(existing);
 

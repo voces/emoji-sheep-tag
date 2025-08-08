@@ -1,10 +1,9 @@
-import { SystemEntity } from "jsr:@verit/ecs";
-import { Entity } from "../../shared/types.ts";
+import { Entity, SystemEntity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
 import { addSystem, Game } from "../ecs.ts";
 import { DoublyLinkedList } from "../util/list.ts";
 
-type PlayerEntity = SystemEntity<Entity, "owner">;
+type PlayerEntity = SystemEntity<"owner">;
 
 type PlayerEntityMap = Record<
   string,

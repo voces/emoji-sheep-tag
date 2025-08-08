@@ -8,7 +8,7 @@ import { camera } from "./graphics/three.ts";
 import { UnitDataAction, UnitDataActionTarget } from "../shared/types.ts";
 import { absurd } from "../shared/util/absurd.ts";
 import { setFind } from "../server/util/set.ts";
-import { SystemEntity } from "jsr:@verit/ecs";
+import { SystemEntity } from "./ecs.ts";
 import { Classification, prefabs } from "../shared/data.ts";
 import { tiles } from "../shared/map.ts";
 import { canBuild, isEnemy, testClassification } from "./api/unit.ts";
@@ -92,11 +92,9 @@ const handleSmartTarget = (e: MouseButtonEvent) => {
       ] as const,
   ).filter((
     pair,
-  ): pair is readonly [
-    SystemEntity<Entity, "selected">,
-    UnitDataActionTarget,
-  ] => !!pair[1]);
-
+  ): pair is readonly [SystemEntity<"selected">, UnitDataActionTarget] =>
+    !!pair[1]
+  );
   if (!orders.length) return false;
 
   const groupedOrders = orders.reduce((groups, [unit, action]) => {
@@ -366,9 +364,9 @@ document.addEventListener("pointerlockchange", () => {
 });
 
 let blueprintIndex = 0;
-let blueprint: SystemEntity<Entity, "prefab"> | undefined;
+let blueprint: SystemEntity<"prefab"> | undefined;
 export const clearBlueprint = (
-  fn?: (blueprint: SystemEntity<Entity, "prefab">) => void,
+  fn?: (blueprint: SystemEntity<"prefab">) => void,
 ) => {
   if (blueprint && (!fn || fn(blueprint))) cancelBlueprint();
 };
@@ -748,9 +746,7 @@ for (const event of ["pointerdown", "keydown", "contextmenu"]) {
   });
 }
 
-const shortcutOverrides = (
-  e: SystemEntity<Entity, "prefab" | "actions">,
-) => {
+const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
   const shortcuts = shortcutsVar()[e.prefab];
   if (!shortcuts) return e;
   let overridden = false;

@@ -1,14 +1,10 @@
-import { SystemEntity } from "jsr:@verit/ecs";
-
-import { app, Entity } from "../ecs.ts";
+import { app, Entity, SystemEntity } from "../ecs.ts";
 import { isLocalPlayer } from "../ui/vars/players.ts";
 import { ExtendedSet } from "../util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
 
-export const selection = new ExtendedSet<
-  SystemEntity<Entity, "selected">
->();
+export const selection = new ExtendedSet<SystemEntity<"selected">>();
 
 let primary: Entity | undefined;
 

@@ -1,8 +1,7 @@
-import { SystemEntity } from "jsr:@verit/ecs";
-import { app, Entity } from "../ecs.ts";
+import { app, SystemEntity } from "../ecs.ts";
 
 const indicators = new Map<
-  SystemEntity<Entity, "prefab" | "modelScale">,
+  SystemEntity<"prefab" | "modelScale">,
   { birth: number; initialScale: number }
 >();
 
@@ -17,7 +16,7 @@ app.addSystem({
     if (e.prefab !== "indicator") indicators.delete(e);
   },
   onRemove: (e) =>
-    indicators.delete(e as SystemEntity<Entity, "prefab" | "modelScale">),
+    indicators.delete(e as SystemEntity<"prefab" | "modelScale">),
   update: (_, time) => {
     for (const [indicator, { birth, initialScale }] of indicators) {
       const next = initialScale - (time * 3 - birth * 3) ** 2;

@@ -1,5 +1,4 @@
-import { SystemEntity } from "jsr:@verit/ecs";
-import { app, Entity } from "../ecs.ts";
+import { app, Entity, SystemEntity } from "../ecs.ts";
 import { getLocalPlayer } from "../ui/vars/players.ts";
 import { isAlly } from "../api/unit.ts";
 import { prefabs as blueprintData } from "../../shared/data.ts";
@@ -7,9 +6,7 @@ import { nonNull } from "../../shared/types.ts";
 
 const blueprints = new Map<Entity, Entity[]>();
 
-const entitiesFromQueue = (
-  e: SystemEntity<Entity, "owner">,
-) => {
+const entitiesFromQueue = (e: SystemEntity<"owner">) => {
   if (!isAlly(e, getLocalPlayer()!)) return;
   const buildOrders = [
     e.order?.type === "build" ? e.order : undefined,

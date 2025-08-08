@@ -80,7 +80,12 @@ describe("ActionBar", () => {
 
     const buttons = screen.getAllByRole("button");
     expect(buttons.length).toBe(4);
-    expect(buttons.map(b => b.ariaLabel)).toEqual(["Stop", "Move", "Attack", "Hold"]);
+    expect(buttons.map((b) => b.ariaLabel)).toEqual([
+      "Stop",
+      "Move",
+      "Attack",
+      "Hold",
+    ]);
   });
 
   it("should display menu actions when menu is open", () => {
@@ -122,7 +127,7 @@ describe("ActionBar", () => {
     render(<ActionBar />);
 
     const buttons = screen.getAllByRole("button");
-    expect(buttons.map(b => b.ariaLabel)).toEqual(["Buy Sword", "Back"]);
+    expect(buttons.map((b) => b.ariaLabel)).toEqual(["Buy Sword", "Back"]);
   });
 
   it("should display inventory item actions", () => {
@@ -154,7 +159,7 @@ describe("ActionBar", () => {
     render(<ActionBar />);
 
     const buttons = screen.getAllByRole("button");
-    expect(buttons.map(b => b.ariaLabel)).toEqual(["Stop", "Use Potion (3)"]);
+    expect(buttons.map((b) => b.ariaLabel)).toEqual(["Stop", "Use Potion (3)"]);
   });
 
   it("should not display inventory actions when charges are 0", () => {
@@ -221,10 +226,10 @@ describe("ActionBar", () => {
     render(<ActionBar />);
 
     const buttons = screen.getAllByRole("button");
-    expect(buttons.map(b => b.ariaLabel)).toEqual([
-      "Stop", 
-      "Attack", 
-      "Cast Spell (2)"
+    expect(buttons.map((b) => b.ariaLabel)).toEqual([
+      "Stop",
+      "Attack",
+      "Cast Spell (2)",
     ]);
   });
 
@@ -328,7 +333,13 @@ describe("ActionBar", () => {
       id: "unit-0",
       owner: "player-0",
       actions: [
-        { type: "purchase", name: "Buy Item", itemId: "item", goldCost: 50, binding: [] },
+        {
+          type: "purchase",
+          name: "Buy Item",
+          itemId: "item",
+          goldCost: 50,
+          binding: [],
+        },
       ],
     });
 

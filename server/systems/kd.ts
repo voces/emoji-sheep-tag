@@ -1,6 +1,5 @@
-import { SystemEntity } from "jsr:@verit/ecs";
 import { Point } from "../../shared/pathing/math.ts";
-import { Entity } from "../../shared/types.ts";
+import { SystemEntity } from "../../shared/types.ts";
 import { currentApp } from "../contexts.ts";
 import { addSystem, Game } from "../ecs.ts";
 import { KdTree } from "../util/KDTree.ts";
@@ -8,8 +7,8 @@ import { KdTree } from "../util/KDTree.ts";
 export const dataMap = new WeakMap<
   Game,
   {
-    entityToPointMap: Map<SystemEntity<Entity, "position">, Point>;
-    pointToEntityMap: Map<Point, SystemEntity<Entity, "position">>;
+    entityToPointMap: Map<SystemEntity<"position">, Point>;
+    pointToEntityMap: Map<Point, SystemEntity<"position">>;
     kd: KdTree;
   }
 >();
@@ -27,14 +26,8 @@ export const getEntitiesInRange = (x: number, y: number, radius: number) => {
 };
 
 addSystem((game) => {
-  const entityToPointMap = new Map<
-    SystemEntity<Entity, "position">,
-    Point
-  >();
-  const pointToEntityMap = new Map<
-    Point,
-    SystemEntity<Entity, "position">
-  >();
+  const entityToPointMap = new Map<SystemEntity<"position">, Point>();
+  const pointToEntityMap = new Map<Point, SystemEntity<"position">>();
   const kd = new KdTree();
   dataMap.set(game, { entityToPointMap, pointToEntityMap, kd });
 
@@ -53,10 +46,10 @@ addSystem((game) => {
       pointToEntityMap.set(e.position, e);
     },
     onRemove: (e) => {
-      const prev = entityToPointMap.get(e as SystemEntity<Entity, "position">);
+      const prev = entityToPointMap.get(e as SystemEntity<"position">);
       if (!prev) return;
       kd.delete(prev);
-      entityToPointMap.delete(e as SystemEntity<Entity, "position">);
+      entityToPointMap.delete(e as SystemEntity<"position">);
       pointToEntityMap.delete(prev);
     },
   };

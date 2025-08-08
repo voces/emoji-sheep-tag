@@ -1,4 +1,4 @@
-import { App, newApp } from "jsr:@verit/ecs";
+import { App, newApp, SystemEntity as ECSSystemEntity } from "jsr:@verit/ecs";
 import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "../shared/types.ts";
 import { TypedEventTarget } from "typed-event-target";
@@ -15,6 +15,8 @@ export type Entity = CommonEntity & {
   /** Server position for restoring after failed interpolation */
   serverPosition?: { readonly x: number; readonly y: number };
 };
+
+export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;
 
 class EntityCreatedEvent extends Event {
   constructor(readonly entity: Entity) {

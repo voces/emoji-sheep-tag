@@ -1,5 +1,4 @@
-import { SystemEntity } from "jsr:@verit/ecs";
-import { Entity } from "../types.ts";
+import { Entity, SystemEntity } from "../types.ts";
 import { facingWithin } from "../../server/util/math.ts";
 import { MAX_ATTACK_ANGLE } from "../constants.ts";
 import { PathingMap } from "./PathingMap.ts";
@@ -97,7 +96,7 @@ export const squaredDistanceBetweenPoints = (a: Point, b: Point) =>
 export const distanceBetweenPoints = (a: Point, b: Point) =>
   ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
 
-type Unit = SystemEntity<Entity, "radius" | "position">;
+type Unit = SystemEntity<"radius" | "position">;
 
 export const distanceBetweenEntities = (entityA: Entity, entityB: Entity) => {
   if (!entityA.position || !entityB.position) return Infinity;
