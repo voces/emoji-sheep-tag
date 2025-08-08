@@ -152,6 +152,8 @@ const zItem = z.object({
   gold: z.number(),
   binding: z.string().array().readonly(),
   damage: z.number().optional(),
+  attackSpeedMultiplier: z.number().optional(),
+  movementSpeedBonus: z.number().optional(),
   charges: z.number().optional(),
   actions: z.array(zAction).readonly().optional(),
 });
@@ -202,7 +204,6 @@ const zUpdate = z.object({
   mirrors: z.array(z.string()).readonly().nullable().optional(),
 
   // Items
-  items: zItem.array().readonly().optional(),
   inventory: zItem.array().readonly().optional(),
 
   // Pathing

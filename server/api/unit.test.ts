@@ -1,6 +1,11 @@
 import { afterEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { addItem, computeUnitDamage, computeUnitAttackSpeed, damageEntity } from "./unit.ts";
+import {
+  addItem,
+  computeUnitAttackSpeed,
+  computeUnitDamage,
+  damageEntity,
+} from "./unit.ts";
 import { Entity } from "@/shared/types.ts";
 import { newEcs } from "../ecs.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
@@ -8,7 +13,7 @@ import { Client } from "../client.ts";
 import { newLobby } from "../lobby.ts";
 import { interval } from "../api/timing.ts";
 import { init } from "../st/data.ts";
-import { prefabs, items } from "@/shared/data.ts";
+import { items, prefabs } from "@/shared/data.ts";
 
 afterEach(() => {
   try {
@@ -139,31 +144,31 @@ describe("computeUnitDamage", () => {
   });
 
   it("should add item damage bonuses", () => {
-    const unit: Entity = { 
-      id: "test-wolf", 
+    const unit: Entity = {
+      id: "test-wolf",
       ...prefabs.wolf,
-      inventory: [items.claw]
+      inventory: [items.claw],
     };
     expect(computeUnitDamage(unit)).toBe(90); // 70 + 20
   });
 
   it("should add multiple item damage bonuses", () => {
-    const unit: Entity = { 
-      id: "test-wolf", 
+    const unit: Entity = {
+      id: "test-wolf",
       ...prefabs.wolf,
       inventory: [
         items.claw,
-        { ...items.claw, id: "claw2", damage: 15 } // Second claw with different damage
-      ]
+        { ...items.claw, id: "claw2", damage: 15 }, // Second claw with different damage
+      ],
     };
     expect(computeUnitDamage(unit)).toBe(105); // 70 + 20 + 15
   });
 
   it("should ignore items without damage property", () => {
-    const unit: Entity = { 
-      id: "test-wolf", 
+    const unit: Entity = {
+      id: "test-wolf",
       ...prefabs.wolf,
-      inventory: [items.foxItem] // foxItem has no damage property
+      inventory: [items.foxItem], // foxItem has no damage property
     };
     expect(computeUnitDamage(unit)).toBe(70); // Only wolf base damage
   });
@@ -176,53 +181,53 @@ describe("computeUnitAttackSpeed", () => {
   });
 
   it("should return 1.0 for unit with items that have no attack speed multiplier", () => {
-    const unit: Entity = { 
-      id: "test-wolf", 
+    const unit: Entity = {
+      id: "test-wolf",
       ...prefabs.wolf,
-      inventory: [items.claw, items.foxItem] // Neither has attackSpeedMultiplier
+      inventory: [items.claw, items.foxItem], // Neither has attackSpeedMultiplier
     };
     expect(computeUnitAttackSpeed(unit)).toBe(1.0);
   });
 
   it("should apply single attack speed multiplier", () => {
-    const unit: Entity = { 
-      id: "test-wolf", 
+    const unit: Entity = {
+      id: "test-wolf",
       ...prefabs.wolf,
-      inventory: [items.swiftness] // 1.15x multiplier
+      inventory: [items.swiftness], // 1.15x multiplier
     };
     expect(computeUnitAttackSpeed(unit)).toBe(1.15);
   });
 
   it("should stack multiple attack speed multipliers multiplicatively", () => {
-    const unit: Entity = { 
-      id: "test-wolf", 
+    const unit: Entity = {
+      id: "test-wolf",
       ...prefabs.wolf,
       inventory: [
         items.swiftness, // 1.15x
-        { ...items.swiftness, id: "swiftness2", attackSpeedMultiplier: 1.2 } // 1.2x
-      ]
+        { ...items.swiftness, id: "swiftness2", attackSpeedMultiplier: 1.2 }, // 1.2x
+      ],
     };
     expect(computeUnitAttackSpeed(unit)).toBeCloseTo(1.38, 2); // 1.15 * 1.2 = 1.38
   });
 
   it("should ignore items without attack speed multiplier", () => {
-    const unit: Entity = { 
-      id: "test-wolf", 
+    const unit: Entity = {
+      id: "test-wolf",
       ...prefabs.wolf,
       inventory: [
         items.swiftness, // 1.15x
         items.claw, // No attack speed multiplier
-        items.foxItem // No attack speed multiplier
-      ]
+        items.foxItem, // No attack speed multiplier
+      ],
     };
     expect(computeUnitAttackSpeed(unit)).toBe(1.15);
   });
 
   it("should return 1.0 for unit with empty inventory", () => {
-    const unit: Entity = { 
-      id: "test-wolf", 
+    const unit: Entity = {
+      id: "test-wolf",
       ...prefabs.wolf,
-      inventory: []
+      inventory: [],
     };
     expect(computeUnitAttackSpeed(unit)).toBe(1.0);
   });
@@ -239,9 +244,9 @@ describe("damageEntity", () => {
     setupEcs();
     const attacker: Entity = { id: "attacker-wolf", ...prefabs.wolf };
     const target: Entity = { id: "target-fence", ...prefabs.fence }; // Fence has no health
-    
+
     damageEntity(attacker, target);
-    
+
     expect(target.health).toBeUndefined();
   });
 
@@ -249,9 +254,9 @@ describe("damageEntity", () => {
     setupEcs();
     const attacker: Entity = { id: "attacker-wolf", ...prefabs.wolf };
     const target: Entity = { id: "target-sheep", ...prefabs.sheep, health: 20 }; // Sheep max health
-    
+
     damageEntity(attacker, target);
-    
+
     expect(target.health).toBe(0); // 20 - 70 (wolf damage) = 0 (capped)
   });
 
@@ -259,24 +264,24 @@ describe("damageEntity", () => {
     setupEcs();
     const attacker: Entity = { id: "attacker-wolf", ...prefabs.wolf };
     const target: Entity = { id: "target-hut", ...prefabs.hut, health: 120 }; // Hut max health
-    
+
     damageEntity(attacker, target, 25);
-    
+
     expect(target.health).toBe(95); // 120 - 25
   });
 
   it("should apply damage amplification for targets with progress", () => {
     setupEcs();
     const attacker: Entity = { id: "attacker-fox", ...prefabs.fox }; // Fox has 20 damage
-    const target: Entity = { 
-      id: "target-hut", 
-      ...prefabs.hut, 
+    const target: Entity = {
+      id: "target-hut",
+      ...prefabs.hut,
       health: 120,
-      progress: 0.5 // Building in progress
+      progress: 0.5, // Building in progress
     };
-    
+
     damageEntity(attacker, target, undefined, false);
-    
+
     expect(target.health).toBe(80); // 120 - (20 * 2) = 80
   });
 
@@ -285,17 +290,17 @@ describe("damageEntity", () => {
     const attacker: Entity = {
       id: "attacker-mirror",
       ...prefabs.wolf,
-      isMirror: true // Mirror wolf
+      isMirror: true, // Mirror wolf
     };
-    const target: Entity = { 
-      id: "target-hut", 
+    const target: Entity = {
+      id: "target-hut",
       ...prefabs.hut,
-      health: 120
+      health: 120,
     };
-    
+
     damageEntity(attacker, target, undefined, false);
-    
-    expect(target.health).toBe(102.5); // 120 - (70 * 0.25) = 102.5
+
+    expect(target.health).toBe(103.2); // 120 - (70 * 0.24) = 103.2
   });
 
   it("should apply extreme damage mitigation for mirror attackers against non-tilemaps", () => {
@@ -303,16 +308,16 @@ describe("damageEntity", () => {
     const attacker: Entity = {
       id: "attacker-mirror",
       ...prefabs.wolf,
-      isMirror: true // Mirror wolf
+      isMirror: true, // Mirror wolf
     };
-    const target: Entity = { 
-      id: "target-sheep", 
-      ...prefabs.sheep, 
-      health: 20
+    const target: Entity = {
+      id: "target-sheep",
+      ...prefabs.sheep,
+      health: 20,
     };
-    
+
     damageEntity(attacker, target, undefined, false);
-    
+
     expect(target.health).toBe(19.93); // 20 - (70 * 0.001) = 19.93
   });
 
@@ -321,18 +326,18 @@ describe("damageEntity", () => {
     const attacker: Entity = {
       id: "attacker-mirror",
       ...prefabs.fox, // Fox has 20 damage
-      isMirror: true
+      isMirror: true,
     };
-    const target: Entity = { 
-      id: "target-hut", 
+    const target: Entity = {
+      id: "target-hut",
       ...prefabs.hut,
-      health: 120, 
-      progress: 0.3 // Building in progress
+      health: 120,
+      progress: 0.3, // Building in progress
     };
-    
+
     damageEntity(attacker, target, undefined, false);
-    
-    expect(target.health).toBe(110); // 120 - (20 * 2 * 0.25) = 110
+
+    expect(target.health).toBe(110.4); // 120 - (20 * 2 * 0.24) = 110.4
   });
 
   it("should deal pure damage when pure=true", () => {
@@ -340,70 +345,70 @@ describe("damageEntity", () => {
     const attacker: Entity = {
       id: "attacker-mirror",
       ...prefabs.wolf,
-      isMirror: true
+      isMirror: true,
     };
-    const target: Entity = { 
-      id: "target-hut", 
+    const target: Entity = {
+      id: "target-hut",
       ...prefabs.hut,
-      health: 120, 
-      progress: 0.5 
+      health: 120,
+      progress: 0.5,
     };
-    
+
     damageEntity(attacker, target, undefined, true);
-    
+
     expect(target.health).toBe(50); // 120 - 70, no modifiers applied
   });
 
   it("should deal pure specified amount when pure=true", () => {
     setupEcs();
-    const attacker: Entity = { 
-      id: "attacker-mirror", 
+    const attacker: Entity = {
+      id: "attacker-mirror",
       ...prefabs.wolf,
-      isMirror: true 
+      isMirror: true,
     };
-    const target: Entity = { 
-      id: "target-hut", 
+    const target: Entity = {
+      id: "target-hut",
       ...prefabs.hut,
-      health: 120, 
-      progress: 0.5 
+      health: 120,
+      progress: 0.5,
     };
-    
+
     damageEntity(attacker, target, 35, true);
-    
+
     expect(target.health).toBe(85); // 120 - 35, no modifiers
   });
 
   it("should not reduce health below 0", () => {
     setupEcs();
     const attacker: Entity = { id: "attacker-wolf", ...prefabs.wolf }; // 70 damage
-    const target: Entity = { 
-      id: "target-sheep", 
-      ...prefabs.sheep, 
-      health: 20 // Less than wolf damage
+    const target: Entity = {
+      id: "target-sheep",
+      ...prefabs.sheep,
+      health: 20, // Less than wolf damage
     };
-    
+
     damageEntity(attacker, target);
-    
+
     expect(target.health).toBe(0);
   });
 
   it("should dispatch unitDeath event when health reaches 0", () => {
     const { ecs: app } = setupEcs();
     let deathEventFired = false;
-    
+
     app.addEventListener("unitDeath", () => {
       deathEventFired = true;
     });
-    
+
     const attacker: Entity = { id: "attacker-wolf", ...prefabs.wolf };
-    const target: Entity = { 
-      id: "target-sheep", 
-      ...prefabs.sheep, 
-      health: 20 // Will be killed by wolf's 70 damage
+    const target: Entity = {
+      id: "target-sheep",
+      ...prefabs.sheep,
+      health: 20, // Will be killed by wolf's 70 damage
     };
-    
+
     damageEntity(attacker, target);
-    
+
     expect(target.health).toBe(0);
     expect(deathEventFired).toBe(true);
   });
@@ -413,16 +418,16 @@ describe("damageEntity", () => {
     const attacker: Entity = {
       id: "attacker-wolf",
       ...prefabs.wolf,
-      inventory: [items.claw] // +20 damage
+      inventory: [items.claw], // +20 damage
     };
-    const target: Entity = { 
-      id: "target-hut", 
+    const target: Entity = {
+      id: "target-hut",
       ...prefabs.hut,
-      health: 120 
+      health: 120,
     };
-    
+
     damageEntity(attacker, target);
-    
+
     expect(target.health).toBe(30); // 120 - (70 + 20) = 30
   });
 });

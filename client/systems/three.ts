@@ -5,6 +5,7 @@ import { InstancedGroup } from "../graphics/InstancedGroup.ts";
 import { loadSvg } from "../graphics/loadSvg.ts";
 import { playersVar } from "../ui/vars/players.ts";
 import { getFps } from "../graphics/three.ts";
+import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
 
 import sheep from "../assets/sheep.svg" with { type: "text" };
 import wolf from "../assets/wolf.svg" with { type: "text" };
@@ -27,6 +28,7 @@ import divinity from "../assets/divinity.svg" with { type: "text" };
 import shop from "../assets/shop.svg" with { type: "text" };
 import fox from "../assets/fox.svg" with { type: "text" };
 import sapphire from "../assets/sapphire.svg" with { type: "text" };
+import runningShoes from "../assets/running-shoes.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -50,6 +52,7 @@ export const svgs: Record<string, string> = {
   claw2,
   fox,
   sapphire,
+  runningShoes,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -127,7 +130,7 @@ const onPositionOrRotationChange = (
     if (prev) {
       const delta =
         ((prev.x - e.position.x) ** 2 + (prev.y - e.position.y) ** 2) ** 0.5;
-      const movement = (e.movementSpeed ?? 0) / getFps();
+      const movement = computeUnitMovementSpeed(e) / getFps();
       const jerk = delta / movement;
 
       if (jerk > 1.05 && jerk < 15) {

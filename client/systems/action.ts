@@ -4,6 +4,7 @@ import {
   distanceBetweenPoints,
   tweenAbsAngles,
 } from "@/shared/pathing/math.ts";
+import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 import { clearDebugCircles, updateDebugCircles } from "../util/pathingDebug.ts";
@@ -16,7 +17,8 @@ const tweenPath = (e: Entity, delta: number): number => {
   ) return 0;
 
   let target = e.order.path[0];
-  let movement = e.movementSpeed * delta;
+  const effectiveMovementSpeed = computeUnitMovementSpeed(e);
+  let movement = effectiveMovementSpeed * delta;
 
   // Tween along movement
   let remaining = distanceBetweenPoints(target, e.position);
@@ -25,7 +27,7 @@ const tweenPath = (e: Entity, delta: number): number => {
 
   // End of segment
   while (p > 1) {
-    delta -= remaining / e.movementSpeed;
+    delta -= remaining / effectiveMovementSpeed;
 
     // End of path
     if (e.order.path?.length === 1) {
@@ -47,7 +49,7 @@ const tweenPath = (e: Entity, delta: number): number => {
     p = movement / remaining;
   }
 
-  delta -= movement / e.movementSpeed;
+  delta -= movement / effectiveMovementSpeed;
 
   const newPosition = p < 1
     ? {

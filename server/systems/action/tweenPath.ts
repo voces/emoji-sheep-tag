@@ -1,5 +1,6 @@
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
+import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
 import { pathable } from "../pathing.ts";
 
 export const tweenPath = (e: Entity, delta: number): number => {
@@ -9,7 +10,8 @@ export const tweenPath = (e: Entity, delta: number): number => {
   ) return delta;
 
   let target = e.order.path[0];
-  let movement = e.movementSpeed * delta;
+  const effectiveMovementSpeed = computeUnitMovementSpeed(e);
+  let movement = effectiveMovementSpeed * delta;
 
   // Tween along movement
   let remaining = distanceBetweenPoints(target, e.position);
@@ -18,7 +20,7 @@ export const tweenPath = (e: Entity, delta: number): number => {
 
   // End of segment
   while (p > 1) {
-    delta -= remaining / e.movementSpeed;
+    delta -= remaining / effectiveMovementSpeed;
 
     // End of path
     if (e.order.path?.length === 1) {
@@ -38,7 +40,7 @@ export const tweenPath = (e: Entity, delta: number): number => {
     p = movement / remaining;
   }
 
-  delta -= movement / e.movementSpeed;
+  delta -= movement / effectiveMovementSpeed;
 
   const newPosition = p < 1
     ? {

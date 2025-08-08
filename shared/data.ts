@@ -83,6 +83,14 @@ export const items: Record<string, Item> = {
     binding: ["KeyV"],
     attackSpeedMultiplier: 1.15,
   },
+  boots: {
+    id: "boots",
+    name: "Boots +30",
+    icon: "runningShoes",
+    gold: 5,
+    binding: ["KeyB"],
+    movementSpeedBonus: 0.3,
+  },
 };
 
 export const prefabs: Record<

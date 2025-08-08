@@ -1,7 +1,7 @@
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { lookup } from "../lookup.ts";
-import { damageEntity, computeUnitAttackSpeed } from "../../api/unit.ts";
+import { computeUnitAttackSpeed, damageEntity } from "../../api/unit.ts";
 
 export const tweenSwing = (e: Entity, delta: number): number => {
   if (!e.swing || !e.attack) return delta;

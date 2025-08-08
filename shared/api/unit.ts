@@ -19,3 +19,18 @@ export const tempUnit = (
   ...prefabs[type],
   ...extra,
 });
+
+export const computeUnitMovementSpeed = (unit: Entity): number => {
+  const baseSpeed = unit.movementSpeed ?? 0;
+  let speedBonus = 0;
+
+  if (unit.inventory) {
+    for (const item of unit.inventory) {
+      if (item.movementSpeedBonus) {
+        speedBonus += item.movementSpeedBonus;
+      }
+    }
+  }
+
+  return baseSpeed + speedBonus;
+};

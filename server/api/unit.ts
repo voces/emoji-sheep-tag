@@ -291,7 +291,7 @@ export const computeUnitDamage = (unit: Entity): number => {
  */
 export const computeUnitAttackSpeed = (unit: Entity): number => {
   let speedMultiplier = 1.0;
-  
+
   // Apply attack speed bonuses from items in inventory
   if (unit.inventory) {
     for (const item of unit.inventory) {
@@ -300,7 +300,7 @@ export const computeUnitAttackSpeed = (unit: Entity): number => {
       }
     }
   }
-  
+
   return speedMultiplier;
 };
 
@@ -313,7 +313,7 @@ const applyDamageModifiers = (
   target: Entity,
 ): number =>
   damage * (target.progress ? 2 : 1) *
-  (attacker.isMirror ? target.tilemap ? 0.25 : 0.001 : 1);
+  (attacker.isMirror ? target.tilemap ? 0.24 : 0.001 : 1);
 
 /**
  * Damages one entity from another, handling mitigation and amplification
@@ -326,7 +326,7 @@ export const damageEntity = (
   attacker: Entity,
   target: Entity,
   amount?: number,
-  pure: boolean = true,
+  pure: boolean = typeof amount === "number",
 ): void => {
   if (!target.health) return;
 
