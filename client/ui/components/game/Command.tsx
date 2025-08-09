@@ -4,20 +4,27 @@ import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { useLocalPlayer } from "@/vars/players.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";
+import { CommandButton, CommandShortcut } from "@/components/Command.tsx";
 
-const GoldContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: 4,
-  alignItems: "center",
-  color: theme.colors.gold,
-}));
+const GoldContainer = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+  align-items: center;
+  color: ${({ theme }) => theme.colors.gold};
+`;
 
-const ManaContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: 4,
-  alignItems: "center",
-  color: theme.colors.mana,
-}));
+const ManaContainer = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.sm};
+  align-items: center;
+  color: ${({ theme }) => theme.colors.mana};
+`;
+
+const IconContainer = styled.span`
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+`;
 
 export const Command = ({
   name,
@@ -45,17 +52,17 @@ export const Command = ({
       <div>{name}</div>
       {(goldCost ?? 0) > 0 && (
         <GoldContainer>
-          <span style={{ width: 24, height: 24, display: "inline-block" }}>
+          <IconContainer>
             <SvgIcon icon="gold" aria-label="Gold" />
-          </span>
+          </IconContainer>
           <span>{goldCost}</span>
         </GoldContainer>
       )}
       {(manaCost ?? 0) > 0 && (
         <ManaContainer>
-          <span style={{ width: 24, height: 24, display: "inline-block" }}>
+          <IconContainer>
             <SvgIcon icon="sapphire" aria-label="Mana" />
-          </span>
+          </IconContainer>
           <span>{manaCost}</span>
         </ManaContainer>
       )}
@@ -87,12 +94,11 @@ export const Command = ({
   };
 
   return (
-    <div
+    <CommandButton
       role="button"
       aria-label={name}
       aria-disabled={disabled}
       aria-pressed={current}
-      className="command"
       onClick={handleClick}
       style={{
         filter: disabled ? "saturate(0.3) brightness(0.7)" : undefined,
@@ -103,8 +109,8 @@ export const Command = ({
       {icon && (
         <SvgIcon icon={icon} color={localPlayer?.color} scale={iconScale} />
       )}
-      {binding?.length && <kbd>{formatShortcut(binding)}</kbd>}
+      {binding?.length && <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>}
       {tooltip}
-    </div>
+    </CommandButton>
   );
 };

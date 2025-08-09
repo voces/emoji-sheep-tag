@@ -9,13 +9,9 @@
     />
 
     <style>
+      /* Minimal CSS Reset - Only essential base styles */
       :root {
         color-scheme: dark;
-        --color-primary: hsl(202, 86%, 40%);
-        --color-body: white;
-        --color-background: #333;
-        --color-border: black;
-        --color-shadow: #222;
       }
 
       * {
@@ -28,10 +24,10 @@
         -webkit-font-smoothing: antialiased;
         font-size: 1.2rem;
         font-family: "Trebuchet MS", sans-serif;
-        color: var(--color-body);
+        color: white;
         overflow: hidden;
-        text-shadow: 0 0 2px var(--color-border);
-        background-color: var(--color-background);
+        text-shadow: 0 0 2px black;
+        background-color: #333;
       }
 
       img,
@@ -48,34 +44,23 @@
       textarea,
       select {
         font: inherit;
-        padding: 0 4px;
-        border: 0;
-        color: var(--color-border);
       }
 
-      input,
-      textarea {
-        background-color: hsl(from var(--color-body) h s calc(l - 12));
-      }
-
-      button,
-      select {
-        background-color: hsl(from var(--color-body) h s calc(l - 10));
-      }
-
-      button[disabled] {
-        background-color: hsl(from var(--color-body) h s calc(l - 30));
-        color: hsl(from var(--color-border) h s calc(l + 30));
-      }
-
-      input.hover:not([disabled]) {
-        background-color: hsl(from var(--color-body) h s calc(l - 5));
-      }
-
-      button.hover:not([disabled]),
       input:focus:not([disabled]) {
-        background-color: var(--color-body);
-        box-shadow: var(--color-shadow) 1px 1px 4px 1px;
+        background-color: white;
+        box-shadow: #222 1px 1px 4px 1px;
+      }
+
+      /* Hide number input spinners */
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
       }
 
       p,
@@ -106,17 +91,9 @@
       }
 
       #ui {
-        /* isolation: isolate; */
         position: absolute;
         inset: 0;
         z-index: 1;
-      }
-
-      .abs-center {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
       }
 
       #cursor {
@@ -133,181 +110,7 @@
         filter: hue-rotate(90deg);
       }
 
-      .card {
-        background-color: var(--color-background);
-        box-shadow: var(--color-shadow) 1px 1px 4px 1px;
-        padding: 16px;
-      }
-
-      .v-stack {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .h-stack {
-        display: flex;
-        gap: 8px;
-      }
-
-      .command {
-        position: relative;
-        width: 64px;
-        height: 64px;
-        border: 4px outset var(--color-body);
-        overflow: hidden;
-        background-color: var(--color-shadow);
-        filter: brightness(80%);
-        transition: filter 100ms ease-in 100ms;
-      }
-      .command[aria-pressed="true"] {
-        border: 4px outset var(--color-body);
-        filter: brightness(100%);
-        transition: filter 100ms ease-out 0ms;
-      }
-
-      .command.hover,
-      .command:has(.hover) {
-        border-style: inset;
-      }
-
-      .command > kbd {
-        position: absolute;
-        top: 0;
-        right: 2px;
-        line-height: 1;
-        font-size: 80%;
-      }
-
-      .hide-empty:empty {
-        display: none;
-      }
-
-      #chat {
-        position: absolute;
-        bottom: 130px;
-        left: 20px;
-        pointer-events: none;
-      }
-
-      #chat > div {
-        opacity: 1;
-        animation: fadeOut 3s ease forwards;
-        animation-delay: 7s;
-      }
-
-      #chat > input {
-        background: transparent;
-        color: inherit;
-        text-shadow: 0 0 2px var(--color-border);
-        opacity: 0;
-        transition: all 100ms ease-in-out;
-        outline: none;
-        padding-left: 4px;
-        margin-left: -4px;
-      }
-
-      #chat > input.open {
-        opacity: 1;
-        background-color: color-mix(
-          in oklab,
-          var(--color-background) 70%,
-          transparent
-        );
-        box-shadow: color-mix(in oklab, var(--color-shadow) 70%, transparent)
-          1px 1px 4px 1px;
-      }
-
-      #chat > input.dismissed {
-        opacity: 0.5;
-        background-color: color-mix(
-          in oklab,
-          var(--color-background) 20%,
-          transparent
-        );
-        box-shadow: color-mix(in oklab, var(--color-shadow) 20%, transparent)
-          1px 1px 4px 1px;
-      }
-
-      #palette {
-        position: absolute;
-        top: 20px;
-        width: 400px;
-        left: calc(50% - 200px);
-        opacity: 0;
-        transition: all 100ms ease-in-out;
-        pointer-events: none;
-      }
-
-      #palette.open {
-        opacity: 1;
-        pointer-events: initial;
-      }
-
-      #palette > div.hover,
-      #palette > div:has(.hover) {
-        background-color: var(--color-shadow);
-        margin: 0 -16px;
-        padding: 0 16px;
-      }
-
-      #palette > div > div:nth-of-type(2) {
-        font-size: 70%;
-        color: color-mix(in oklab, var(--color-body) 70%, transparent);
-      }
-
-      #palette .focused {
-        background-color: var(--color-shadow);
-        margin: 0 -16px;
-        padding: 0 16px;
-      }
-
-      .highlight {
-        color: color-mix(
-          in oklab,
-          var(--color-body) 30%,
-          var(--color-primary)
-        );
-      }
-
-      .overlay {
-        position: absolute;
-        inset: 0;
-        background-color: color-mix(
-          in oklab,
-          var(--color-border) 40%,
-          transparent
-        );
-        backdrop-filter: blur(3px);
-      }
-
-      .positional {
-        pointer-events: none;
-      }
-
-      .positional > *:not(.positional) {
-        pointer-events: auto;
-      }
-
-      .tooltip {
-        position: fixed;
-        background-color: var(--color-background);
-        box-shadow: var(--color-shadow) 1px 1px 4px 1px;
-        padding: 16px;
-        transform: translate(-50%, -100%);
-        padding: 4px 8px;
-        white-space: nowrap;
-        pointer-events: none;
-        z-index: 9999;
-      }
-
-      .hover-highlight {
-        color: hsl(from var(--color-body) h s calc(l - 10));
-      }
-      .hover-highlight.hover {
-        color: var(--color-body);
-      }
-
+      /* Animation for chat messages */
       @keyframes fadeOut {
         to {
           opacity: 0;

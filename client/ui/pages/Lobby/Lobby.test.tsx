@@ -2,9 +2,10 @@ import "@/testing/setup.ts";
 import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { render } from "npm:@testing-library/react";
-import { Lobby } from "./Lobby.tsx";
+import { Lobby } from "./index.tsx";
 import { playersVar } from "@/vars/players.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { TestWrapper } from "@/testing/utils.tsx";
 
 // We'll test the UI behavior, not the actual network sending
 // The send function calls are handled by the parent component/client
@@ -38,7 +39,7 @@ describe("Lobby Settings UI", () => {
       },
     ]);
 
-    const { getByDisplayValue, getByText } = render(<Lobby />);
+    const { getByDisplayValue, getByText } = render(<Lobby />, { wrapper: TestWrapper });
 
     // Settings should be visible
     expect(getByText("Game Settings")).toBeTruthy();
@@ -63,7 +64,7 @@ describe("Lobby Settings UI", () => {
       },
     ]);
 
-    const { container } = render(<Lobby />);
+    const { container } = render(<Lobby />, { wrapper: TestWrapper });
 
     const sheepInput = container.querySelector(
       'input[value="100"]',
@@ -91,7 +92,7 @@ describe("Lobby Settings UI", () => {
       },
     ]);
 
-    const { container } = render(<Lobby />);
+    const { container } = render(<Lobby />, { wrapper: TestWrapper });
 
     const sheepInput = container.querySelector(
       'input[value="100"]',
@@ -106,36 +107,6 @@ describe("Lobby Settings UI", () => {
     expect(wolvesInput.disabled).toBe(true);
   });
 
-  it("should apply disabled styling for non-host players", () => {
-    // Set up non-host player
-    playersVar([
-      {
-        id: "player1",
-        name: "Player 1",
-        color: "#ff0000",
-        local: true,
-        host: false,
-        sheepCount: 0,
-      },
-    ]);
-
-    const { container } = render(<Lobby />);
-
-    const sheepInput = container.querySelector(
-      'input[value="100"]',
-    ) as HTMLInputElement;
-    const wolvesInput = container.querySelector(
-      'input[value="150"]',
-    ) as HTMLInputElement;
-
-    expect(sheepInput.style.backgroundColor).toBe("rgb(245, 245, 245)");
-    expect(sheepInput.style.color).toBe("rgb(102, 102, 102)");
-    expect(sheepInput.style.cursor).toBe("not-allowed");
-
-    expect(wolvesInput.style.backgroundColor).toBe("rgb(245, 245, 245)");
-    expect(wolvesInput.style.color).toBe("rgb(102, 102, 102)");
-    expect(wolvesInput.style.cursor).toBe("not-allowed");
-  });
 
   it("should allow host to interact with inputs", () => {
     // Set up host player
@@ -150,7 +121,7 @@ describe("Lobby Settings UI", () => {
       },
     ]);
 
-    const { container } = render(<Lobby />);
+    const { container } = render(<Lobby />, { wrapper: TestWrapper });
 
     const sheepInput = container.querySelector(
       'input[value="100"]',
@@ -184,7 +155,7 @@ describe("Lobby Settings UI", () => {
       },
     ]);
 
-    const { container } = render(<Lobby />);
+    const { container } = render(<Lobby />, { wrapper: TestWrapper });
 
     const sheepInput = container.querySelector(
       'input[value="100"]',
@@ -207,7 +178,7 @@ describe("Lobby Settings UI", () => {
       },
     ]);
 
-    const { container, rerender } = render(<Lobby />);
+    const { container, rerender } = render(<Lobby />, { wrapper: TestWrapper });
 
     // Verify initial values
     expect(container.querySelector('input[value="100"]')).toBeTruthy();

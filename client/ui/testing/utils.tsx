@@ -1,3 +1,15 @@
+//@deno-types="npm:@types/react"
+import React from "react";
+import { ThemeProvider } from "npm:styled-components";
+import { theme } from "../theme.ts";
+
+/**
+ * Test wrapper that provides theme context
+ */
+export const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+  <ThemeProvider theme={theme}>{children}</ThemeProvider>
+);
+
 /**
  * Gets all text nodes and aria-labels from the DOM and returns their content.
  *

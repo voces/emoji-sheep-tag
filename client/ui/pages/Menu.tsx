@@ -1,12 +1,23 @@
 import { loadLocal } from "../../local.ts";
 import { connect } from "../../client.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
+import { styled } from "npm:styled-components";
+import { Card } from "@/components/layout/Card.tsx";
+import { VStack } from "@/components/layout/Layout.tsx";
+import { Button } from "@/components/forms/Button.tsx";
+
+const MenuContainer = styled(Card)`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+`;
 
 export const Menu = () => (
-  <div className="card abs-center">
+  <MenuContainer>
     <h1>Emoji Sheep Tag</h1>
-    <div className="v-stack">
-      <button
+    <VStack>
+      <Button
         type="button"
         onClick={() => {
           loadLocal();
@@ -14,13 +25,13 @@ export const Menu = () => (
         }}
       >
         Offline
-      </button>
-      <button type="button" onClick={connect}>
+      </Button>
+      <Button type="button" onClick={connect}>
         Multiplayer
-      </button>
-      <button type="button" onClick={() => showSettingsVar(true)}>
+      </Button>
+      <Button type="button" onClick={() => showSettingsVar(true)}>
         Settings
-      </button>
-    </div>
-  </div>
+      </Button>
+    </VStack>
+  </MenuContainer>
 );

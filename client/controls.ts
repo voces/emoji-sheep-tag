@@ -19,7 +19,7 @@ import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
 import { showCommandPaletteVar } from "./ui/components/CommandPalette.tsx";
 import { stateVar } from "./ui/vars/state.ts";
 import { newIndicator } from "./systems/indicators.ts";
-import { shortcutsVar } from "./ui/pages/Settings.tsx";
+import { shortcutsVar } from "./ui/vars/shortcuts.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { showSettingsVar } from "./ui/vars/showSettings.ts";
 import { selectEntity } from "./api/selection.ts";

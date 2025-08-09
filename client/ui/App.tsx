@@ -1,11 +1,13 @@
+import { styled } from "npm:styled-components";
 import { useReactiveVar } from "./hooks/useVar.tsx";
 import { connectionStatusVar, stateVar } from "./vars/state.ts";
-import { Lobby } from "./pages/Lobby.tsx";
+import { Lobby } from "./pages/Lobby/index.tsx";
 import { Menu } from "./pages/Menu.tsx";
 import { Game } from "./pages/Game/index.tsx";
 import { CommandPalette } from "./components/CommandPalette.tsx";
-import { Settings } from "./pages/Settings.tsx";
+import { Settings } from "./pages/Settings/index.tsx";
 import { Wrapper } from "./Wrapper.tsx";
+import { Card } from "@/components/layout/Card.tsx";
 
 const pages = {
   menu: Menu,
@@ -13,13 +15,20 @@ const pages = {
   playing: Game,
 };
 
+const DisconnectedCard = styled(Card)`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+`;
+
 const Disconnected = () => {
   const connectionStatus = useReactiveVar(connectionStatusVar);
   if (connectionStatus !== "disconnected") return null;
   return (
-    <div className="abs-center card">
+    <DisconnectedCard>
       Disconnected! Reconnecting...
-    </div>
+    </DisconnectedCard>
   );
 };
 

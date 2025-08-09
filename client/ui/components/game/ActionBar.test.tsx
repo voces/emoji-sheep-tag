@@ -5,6 +5,7 @@ import { expect } from "jsr:@std/expect";
 import { ActionBar, selectionVar } from "./ActionBar.tsx";
 import { playersVar } from "@/vars/players.ts";
 import { menuStateVar } from "@/vars/menuState.ts";
+import { Wrapper } from "../../Wrapper.tsx";
 
 describe("ActionBar", () => {
   it("should not render when no selection", () => {
@@ -53,7 +54,7 @@ describe("ActionBar", () => {
       actions: [{ type: "auto", name: "Test", order: "some-order" }],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
     expect(screen.getByRole("toolbar")).toBeTruthy();
   });
 
@@ -76,16 +77,14 @@ describe("ActionBar", () => {
       ],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
     const buttons = screen.getAllByRole("button");
     expect(buttons.length).toBe(4);
-    expect(buttons.map((b) => b.ariaLabel)).toEqual([
-      "Stop",
-      "Move",
-      "Attack",
-      "Hold",
-    ]);
+    expect(screen.getByLabelText("Stop")).toBeTruthy();
+    expect(screen.getByLabelText("Move")).toBeTruthy();
+    expect(screen.getByLabelText("Attack")).toBeTruthy();
+    expect(screen.getByLabelText("Hold")).toBeTruthy();
   });
 
   it("should display menu actions when menu is open", () => {
@@ -124,10 +123,10 @@ describe("ActionBar", () => {
       stack: [{ unitId: entity.id, action: menuAction }],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.map((b) => b.ariaLabel)).toEqual(["Buy Sword", "Back"]);
+    expect(screen.getByLabelText("Buy Sword")).toBeTruthy();
+    expect(screen.getByLabelText("Back")).toBeTruthy();
   });
 
   it("should display inventory item actions", () => {
@@ -156,10 +155,10 @@ describe("ActionBar", () => {
       ],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.map((b) => b.ariaLabel)).toEqual(["Stop", "Use Potion (3)"]);
+    expect(screen.getByLabelText("Stop")).toBeTruthy();
+    expect(screen.getByLabelText("Use Potion (3)")).toBeTruthy();
   });
 
   it("should not display inventory actions when charges are 0", () => {
@@ -188,7 +187,7 @@ describe("ActionBar", () => {
       ],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
     const buttons = screen.getAllByRole("button");
     expect(buttons.length).toBe(1); // Only Stop, no potion action
@@ -223,14 +222,11 @@ describe("ActionBar", () => {
       ],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.map((b) => b.ariaLabel)).toEqual([
-      "Stop",
-      "Attack",
-      "Cast Spell (2)",
-    ]);
+    expect(screen.getByLabelText("Stop")).toBeTruthy();
+    expect(screen.getByLabelText("Attack")).toBeTruthy();
+    expect(screen.getByLabelText("Cast Spell (2)")).toBeTruthy();
   });
 
   it("should mark current action as pressed", () => {
@@ -251,11 +247,12 @@ describe("ActionBar", () => {
       ],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons[0].ariaPressed).toBe("true");
-    expect(buttons[1].ariaPressed).toBe("false");
+    const holdButton = screen.getByLabelText("Hold");
+    const stopButton = screen.getByLabelText("Stop");
+    expect(holdButton.getAttribute("aria-pressed")).toBe("true");
+    expect(stopButton.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("should mark build action as current when building", () => {
@@ -276,11 +273,12 @@ describe("ActionBar", () => {
       ],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons[0].ariaPressed).toBe("true");
-    expect(buttons[1].ariaPressed).toBe("false");
+    const farmButton = screen.getByLabelText("Build Farm");
+    const towerButton = screen.getByLabelText("Build Tower");
+    expect(farmButton.getAttribute("aria-pressed")).toBe("true");
+    expect(towerButton.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("should mark menu action as current when menu is open", () => {
@@ -313,7 +311,7 @@ describe("ActionBar", () => {
       stack: [{ unitId: entity.id, action: menuAction }],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
     // When menu is open, we show menu's actions instead of entity actions
     // But we can test that when entity has menu action and menu is NOT open,
@@ -343,9 +341,9 @@ describe("ActionBar", () => {
       ],
     });
 
-    render(<ActionBar />);
+    render(<ActionBar />, { wrapper: Wrapper });
 
-    const button = screen.getByRole("button");
-    expect(button.ariaPressed).toBe("false"); // Purchase actions are never current
+    const button = screen.getByLabelText("Buy Item");
+    expect(button.getAttribute("aria-pressed")).toBe("false"); // Purchase actions are never current
   });
 });

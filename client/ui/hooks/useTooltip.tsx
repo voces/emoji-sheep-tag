@@ -2,6 +2,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // @deno-types="npm:@types/react-dom"
 import { createPortal } from "npm:react-dom";
+import { styled } from "npm:styled-components";
+
+const Tooltip = styled.div`
+  position: fixed;
+  background-color: ${({ theme }) => theme.colors.background};
+  box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+`;
 
 export const useTooltip = (tooltip: React.ReactNode) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,13 +39,12 @@ export const useTooltip = (tooltip: React.ReactNode) => {
       tooltipContainerProps: { onMouseEnter, onMouseLeave, ref: containerRef },
       tooltip: coords
         ? createPortal(
-          <div
+          <Tooltip
             role="tooltip"
-            className="tooltip"
             style={{ top: coords.top, left: coords.left }}
           >
             {tooltip}
-          </div>,
+          </Tooltip>,
           document.body,
         )
         : null,

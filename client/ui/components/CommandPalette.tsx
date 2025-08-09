@@ -1,5 +1,6 @@
 //@deno-types="npm:@types/react"
 import { useEffect, useMemo, useRef, useState } from "react";
+import { styled } from "npm:styled-components";
 import { send } from "../../client.ts";
 import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
@@ -7,6 +8,48 @@ import { useMemoWithPrevious } from "@/hooks/useMemoWithPrevious.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { stateVar } from "@/vars/state.ts";
 import { flags } from "../../flags.ts";
+import { Card } from "@/components/layout/Card.tsx";
+import { Input } from "@/components/forms/Input.tsx";
+
+const PaletteContainer = styled(Card)<{ $state: string }>`
+  position: absolute;
+  top: 20px;
+  width: 400px;
+  left: calc(50% - 200px);
+  opacity: ${({ $state }) => $state === "open" ? 1 : 0};
+  transition: all 100ms ease-in-out;
+  pointer-events: ${({ $state }) => $state === "open" ? "initial" : "none"};
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.md};
+`;
+
+const CommandOption = styled.div<{ $focused?: boolean }>`
+  background-color: ${({ $focused, theme }) => $focused ? theme.colors.shadow : "transparent"};
+  margin: ${({ $focused, theme }) => $focused ? `0 -${theme.spacing.lg}` : "0"};
+  padding: ${({ $focused, theme }) => $focused ? `0 ${theme.spacing.lg}` : "0"};
+  cursor: pointer;
+  
+  &:hover,
+  &.hover {
+    background-color: ${({ theme }) => theme.colors.shadow};
+    margin: 0 -${({ theme }) => theme.spacing.lg};
+    padding: 0 ${({ theme }) => theme.spacing.lg};
+  }
+`;
+
+const CommandDescription = styled.div`
+  font-size: 70%;
+  color: color-mix(in oklab, ${({ theme }) => theme.colors.body} 70%, transparent);
+`;
+
+const Highlight = styled.span`
+  color: color-mix(
+    in oklab,
+    ${({ theme }) => theme.colors.body} 30%,
+    ${({ theme }) => theme.colors.primary}
+  );
+`;
 
 export const showCommandPaletteVar = makeVar<
   "closed" | "open" | "sent" | "dismissed"
@@ -49,9 +92,9 @@ const highlightText = (text: string, query: string) => {
     }
     // Append the matched character wrapped in a span for highlighting
     result.push(
-      <span key={matchIndex} className="highlight">
+      <Highlight key={matchIndex}>
         {text.charAt(matchIndex)}
-      </span>,
+      </Highlight>,
     );
     lastIndex = matchIndex + 1;
   }
@@ -184,8 +227,8 @@ export const CommandPalette = () => {
   }, [showCommandPalette]);
 
   return (
-    <div id="palette" className={`card v-stack ${showCommandPalette}`}>
-      <input
+    <PaletteContainer $state={showCommandPalette}>
+      <Input
         placeholder={prompt}
         value={input}
         onChange={(e) => setInput(e.target.value)}
@@ -213,9 +256,9 @@ export const CommandPalette = () => {
         onBlur={() => showCommandPaletteVar("dismissed")}
       />
       {!prompt && filteredCommands.map((c) => (
-        <div
+        <CommandOption
           key={c.originalName}
-          className={focused === c.originalName ? "focused" : undefined}
+          $focused={focused === c.originalName}
           onClick={() => {
             setFocused(c.originalName);
             if (c.prompts?.length) {
@@ -228,9 +271,9 @@ export const CommandPalette = () => {
           }}
         >
           <div>{c.name}</div>
-          <div>{c.description}</div>
-        </div>
+          <CommandDescription>{c.description}</CommandDescription>
+        </CommandOption>
       ))}
-    </div>
+    </PaletteContainer>
   );
 };

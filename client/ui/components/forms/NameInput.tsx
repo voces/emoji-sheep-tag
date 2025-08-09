@@ -1,24 +1,39 @@
 import { styled } from "npm:styled-components";
 //@deno-types="npm:@types/react"
 import { useState } from "react";
-import { setStoredPlayerName } from "../../util/playerPrefs.ts";
+import { setStoredPlayerName } from "../../../util/playerPrefs.ts";
 
-const InputWrapper = styled.div({
-  position: "relative",
-});
+const InputWrapper = styled.div`
+  position: relative;
+`;
 
-const NameDisplay = styled.span<{ $readonly?: boolean }>((
-  { $readonly },
-) => ({
-  textDecoration: $readonly ? "none" : "underline",
-  "&.hover": {
-    textShadow: $readonly
-      ? undefined
-      : "0 0 2px var(--color-border), 0 0 4px var(--color-border), 0 0 4px var(--color-border)",
-  },
-}));
+const NameDisplay = styled.span<{ $readonly?: boolean }>`
+  text-decoration: ${({ $readonly }) => $readonly ? "none" : "underline"};
+  display: inline-block;
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  padding: 0;
+  margin: 0;
+  line-height: normal;
 
-const NameInputField = styled.input({ width: "100%" });
+  &.hover {
+    text-shadow: ${({ $readonly, theme }) =>
+      $readonly
+        ? "none"
+        : `0 0 2px ${theme.colors.border}, 0 0 4px ${theme.colors.border}, 0 0 4px ${theme.colors.border}`};
+  }
+`;
+
+const NameInputField = styled.input`
+  width: 100%;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.body};
+  color: ${({ theme }) => theme.colors.background};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  padding: 0;
+  margin: 0;
+  line-height: normal;
+`;
 
 export const NameInput = (
   { value, onChange, readonly }: {

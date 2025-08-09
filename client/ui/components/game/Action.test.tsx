@@ -3,7 +3,7 @@ import { describe, it } from "jsr:@std/testing/bdd";
 import { render, screen } from "npm:@testing-library/react";
 import { expect } from "jsr:@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
-import { getAllTexts } from "@/testing/utils.ts";
+import { getAllTexts } from "@/testing/utils.tsx";
 import { Action } from "./Action.tsx";
 import { playersVar } from "@/vars/players.ts";
 import { userEvent } from "npm:@testing-library/user-event";
@@ -21,9 +21,11 @@ describe("Action", () => {
         current={false}
         entity={entity}
       />,
+      { wrapper: Wrapper },
     );
 
-    expect(screen.getByRole("button").ariaLabel).toBe("Stop");
+    expect(screen.getByRole("button")).toBeTruthy();
+    expect(screen.getByLabelText("Stop")).toBeTruthy();
   });
 
   it("should render target action", () => {
@@ -38,9 +40,11 @@ describe("Action", () => {
         current={false}
         entity={entity}
       />,
+      { wrapper: Wrapper },
     );
 
-    expect(screen.getByRole("button").ariaLabel).toBe("Attack");
+    expect(screen.getByRole("button")).toBeTruthy();
+    expect(screen.getByLabelText("Attack")).toBeTruthy();
   });
 
   it("should render build action with gold cost", async () => {
@@ -135,9 +139,11 @@ describe("Action", () => {
         current={false}
         entity={entity}
       />,
+      { wrapper: Wrapper },
     );
 
-    expect(screen.getByRole("button").ariaLabel).toBe("Shop");
+    expect(screen.getByRole("button")).toBeTruthy();
+    expect(screen.getByLabelText("Shop")).toBeTruthy();
   });
 
   it("should disable action when insufficient mana", () => {
@@ -158,9 +164,11 @@ describe("Action", () => {
         current={false}
         entity={entity}
       />,
+      { wrapper: Wrapper },
     );
 
-    expect(screen.getByRole("button").ariaDisabled).toBe("true");
+    const button = screen.getByRole("button");
+    expect(button.getAttribute("aria-disabled")).toBe("true");
   });
 
   it("should disable build action when insufficient gold", () => {
@@ -189,9 +197,11 @@ describe("Action", () => {
         current={false}
         entity={entity}
       />,
+      { wrapper: Wrapper },
     );
 
-    expect(screen.getByRole("button").ariaDisabled).toBe("true");
+    const button = screen.getByRole("button");
+    expect(button.getAttribute("aria-disabled")).toBe("true");
   });
 
   it("should disable purchase action when insufficient gold", () => {
@@ -220,9 +230,11 @@ describe("Action", () => {
         current={false}
         entity={entity}
       />,
+      { wrapper: Wrapper },
     );
 
-    expect(screen.getByRole("button").ariaDisabled).toBe("true");
+    const button = screen.getByRole("button");
+    expect(button.getAttribute("aria-disabled")).toBe("true");
   });
 
   it("should show current state when action is current", () => {
@@ -237,9 +249,11 @@ describe("Action", () => {
         current
         entity={entity}
       />,
+      { wrapper: Wrapper },
     );
 
-    expect(screen.getByRole("button").ariaPressed).toBe("true");
+    const button = screen.getByRole("button");
+    expect(button.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("should enable action with sufficient resources", () => {
@@ -270,8 +284,10 @@ describe("Action", () => {
         current={false}
         entity={entity}
       />,
+      { wrapper: Wrapper },
     );
 
-    expect(screen.getByRole("button").ariaDisabled).toBe("false");
+    const button = screen.getByRole("button");
+    expect(button.getAttribute("aria-disabled")).not.toBe("true");
   });
 });

@@ -1,9 +1,10 @@
 import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
+import { styled } from "npm:styled-components";
 import { app, Entity } from "../../../ecs.ts";
 import { selection } from "../../../systems/autoSelect.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { playersVar, useLocalPlayer } from "@/vars/players.ts";
-import { shortcutsVar } from "../Settings.tsx";
+import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
 import {
   closeMenusForUnit,
@@ -13,6 +14,21 @@ import {
 import { useMemo } from "react";
 import { Action } from "./Action.tsx";
 import { applyShortcutOverride } from "../../../util/applyShortcutOverrides.ts";
+import { Card } from "@/components/layout/Card.tsx";
+
+const ActionBarContainer = styled(Card)`
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 10px;
+  padding: 12px;
+  display: flex;
+  
+  &:empty {
+    display: none;
+  }
+`;
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -112,17 +128,8 @@ export const ActionBar = () => {
   if (!selection || selection.owner !== localPlayer?.id) return null;
 
   return (
-    <div
+    <ActionBarContainer
       role="toolbar"
-      className="card h-stack hide-empty"
-      style={{
-        position: "fixed",
-        bottom: 0,
-        left: "50%",
-        transform: "translateX(-50%)",
-        gap: 10,
-        padding: 12,
-      }}
     >
       {displayActions.map((action) => (
         <Action
@@ -132,6 +139,6 @@ export const ActionBar = () => {
           current={currentActionCheck(action)}
         />
       ))}
-    </div>
+    </ActionBarContainer>
   );
 };

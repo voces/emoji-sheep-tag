@@ -1,14 +1,60 @@
 //@deno-types="npm:@types/react"
 import { useState } from "react";
-import { keyboard } from "../../controls.ts";
+import { styled } from "npm:styled-components";
+import { keyboard } from "../../../controls.ts";
 import { prefabs } from "@/shared/data.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";
-import Collapse from "./Collapse.tsx";
+import Collapse from "@/components/layout/Collapse.tsx";
 import {
   defaultBindings,
   getActionDisplayName,
   type Shortcuts,
 } from "@/util/shortcutUtils.ts";
+import { VStack, HStack, HoverHighlight } from "@/components/layout/Layout.tsx";
+
+const ShortcutRowContainer = styled(HStack)<{ $isNested?: boolean }>`
+  padding-left: ${({ $isNested }) => $isNested ? "16px" : "0"};
+`;
+
+const ShortcutLabel = styled.p`
+  flex: 1;
+  flex-basis: 1;
+`;
+
+const ShortcutInputContainer = styled(HStack)``;
+
+const ShortcutInput = styled.input`
+  width: 100%;
+  max-width: 150px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.body};
+  color: ${({ theme }) => theme.colors.background};
+  padding: ${({ theme }) => theme.spacing.sm};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+`;
+
+const ResetButton = styled.button`
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.body};
+  color: ${({ theme }) => theme.colors.background};
+  padding: ${({ theme }) => theme.spacing.sm};
+  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  cursor: pointer;
+  
+  &:hover,
+  &.hover {
+    box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) => theme.shadows.sm};
+  }
+`;
+
+const SectionHeader = styled.h2`
+  cursor: pointer;
+`;
+
+const HeaderIcon = styled.span`
+  display: inline-block;
+  width: 2ch;
+`;
 
 interface ShortcutRowProps {
   actionKey: string;
@@ -27,17 +73,13 @@ const ShortcutRow = ({
   section,
   onSetBinding,
 }: ShortcutRowProps) => (
-  <div
-    className="h-stack"
-    style={{ paddingLeft: isNested ? 16 : 0 }}
-  >
-    <p style={{ flex: 1, flexBasis: 1 }}>
+  <ShortcutRowContainer $isNested={isNested}>
+    <ShortcutLabel>
       {getActionDisplayName(actionKey, section)}
-    </p>
-    <div className="h-stack">
-      <input
+    </ShortcutLabel>
+    <ShortcutInputContainer>
+      <ShortcutInput
         value={formatShortcut(shortcut)}
-        style={{ width: "100%", maxWidth: 150 }}
         onChange={() => {}}
         onKeyDown={(e) => {
           onSetBinding(
@@ -47,16 +89,16 @@ const ShortcutRow = ({
           e.preventDefault();
         }}
       />
-      <button
+      <ResetButton
         type="button"
         onClick={() =>
           onSetBinding(fullKey, defaultBindings[section]?.[fullKey] ?? [])}
         aria-label="Reset hotkey"
       >
         ↺
-      </button>
-    </div>
-  </div>
+      </ResetButton>
+    </ShortcutInputContainer>
+  </ShortcutRowContainer>
 );
 
 interface SettingsSectionProps {
@@ -134,16 +176,16 @@ export const SettingsSection = (
   };
 
   return (
-    <div className="v-stack">
-      <h2 onClick={() => setIsOpen(!isOpen)} className="hover-highlight">
-        <span style={{ display: "inline-block", width: "2ch" }}>
+    <VStack>
+      <HoverHighlight as={SectionHeader} onClick={() => setIsOpen(!isOpen)}>
+        <HeaderIcon>
           {isOpen ? "▼" : "▶"}
-        </span>
+        </HeaderIcon>
         {section === "misc" ? "Misc" : prefabs[section].name ?? section}
-      </h2>
-      <Collapse className="v-stack" isOpen={isOpen}>
+      </HoverHighlight>
+      <Collapse isOpen={isOpen}>
         {renderShortcuts()}
       </Collapse>
-    </div>
+    </VStack>
   );
 };
