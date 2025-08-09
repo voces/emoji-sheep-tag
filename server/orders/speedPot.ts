@@ -5,9 +5,11 @@ import { OrderDefinition } from "./types.ts";
 export const speedPotOrder: OrderDefinition = {
   id: "speedPot",
 
-  initiate: (unit: Entity) => {
+  onIssue: (unit: Entity) => {
     const action = findActionByOrder(unit, "speedPot");
-    if (!action || action.type !== "auto" || !action.buffDuration) return;
+    if (!action || action.type !== "auto" || !action.buffDuration) {
+      return "failed";
+    }
 
     const buffs: Buff[] = [];
 
@@ -34,5 +36,7 @@ export const speedPotOrder: OrderDefinition = {
 
     // Add buffs to entity
     if (buffs.length > 0) unit.buffs = [...(unit.buffs || []), ...buffs];
+
+    return "immediate";
   },
 };

@@ -8,6 +8,7 @@ import { handleAttack } from "./attack.ts";
 import { handleHold } from "./hold.ts";
 import { getOrder } from "../orders/index.ts";
 import { findActionAndItem, findActionByOrder } from "../util/actionLookup.ts";
+import { playSound } from "../updates.ts";
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
@@ -55,7 +56,11 @@ export const unitOrder = (
       // Order-specific validation
       if (orderDef.canExecute && !orderDef.canExecute(unit)) return;
 
-      orderDef.initiate(unit);
+      if (orderDef.onIssue(unit) === "immediate") {
+        if (action && "soundOnCastStart" in action && action.soundOnCastStart) {
+          playSound(action.soundOnCastStart);
+        }
+      }
       actionResult = undefined;
     } else {
       // Fall back to legacy handlers

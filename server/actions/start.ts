@@ -74,7 +74,7 @@ export const start = (client: Client) => {
         name: player.name,
         owner: player.id,
         isPlayer: true,
-        gold: 0,
+        gold: 1000,
       });
     }
 

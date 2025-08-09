@@ -14,6 +14,8 @@ import { roundsVar } from "./ui/vars/rounds.ts";
 import { formatVar } from "./ui/vars/format.ts";
 import { format } from "./api/player.ts";
 import { getStoredPlayerName } from "./util/playerPrefs.ts";
+import { playSound } from "./api/sound.ts";
+import { absurd } from "@/shared/util/absurd.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -103,6 +105,7 @@ const zBaseAction = z.union([
     attackSpeedMultiplier: z.number().optional(),
     movementSpeedBonus: z.number().optional(),
     movementSpeedMultiplier: z.number().optional(),
+    soundOnCastStart: z.string().optional(),
   }),
   z.object({
     name: z.string(),
@@ -256,14 +259,20 @@ const zKill = z.object({
   victim: z.object({ player: z.string(), unit: z.string() }),
 });
 
-const zGameMessage = zKill;
+const zSound = z.object({
+  type: z.literal("sound"),
+  soundKey: z.string(),
+  volume: z.number().optional(),
+});
+
+const zGameMessage = z.union([zKill, zSound]);
 
 export type GameMessage = z.TypeOf<typeof zGameMessage>;
 
 // Events that come down from a loo
 const zUpdates = z.object({
   type: z.literal("updates"),
-  updates: z.union([zUpdate, zDelete, zKill]).array().readonly(),
+  updates: z.union([zUpdate, zDelete, zKill, zSound]).array().readonly(),
 });
 
 export type Update = z.TypeOf<typeof zUpdates>["updates"][number];
@@ -515,6 +524,14 @@ const handlers = {
           }
           break;
         }
+        case "sound":
+          // sound: ({ soundKey, volume }: z.TypeOf<typeof zSound>) => {
+          // console.log("on sound?", { soundKey, volume });
+          playSound(update.soundKey, { volume: update.volume });
+          // },
+          break;
+        default:
+          absurd(update);
       }
     }
   },

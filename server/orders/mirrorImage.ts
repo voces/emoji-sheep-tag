@@ -17,8 +17,8 @@ export const mirrorImageOrder = {
   },
 
   // Called when the order is initiated (sets up the order on the unit)
-  initiate: (unit: Entity) => {
-    if (!unit.position) return;
+  onIssue: (unit: Entity) => {
+    if (!unit.position) return "failed";
 
     // Calculate mirror positions
     const angle1 = (unit.facing ?? DEFAULT_FACING) + Math.PI / 2;
@@ -46,6 +46,8 @@ export const mirrorImageOrder = {
       positions: [pos1, pos2],
     };
     delete unit.queue;
+
+    return "ordered";
   },
 
   // Called when the cast starts (order-specific side effects like clearing old state)

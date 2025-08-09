@@ -1,6 +1,7 @@
 import { Entity } from "@/shared/types.ts";
 import { getOrder } from "../../orders/index.ts";
 import { findActionByOrder } from "../../util/actionLookup.ts";
+import { playSound } from "../../updates.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {
   if (e.order?.type !== "cast") return delta;
@@ -11,9 +12,13 @@ export const advanceCast = (e: Entity, delta: number) => {
 
     // Generic mana consumption for all orders
     const action = findActionByOrder(e, e.order.orderId);
-    if (action && action.type === "auto" && action.manaCost) {
+    if (action && "manaCost" in action && action.manaCost) {
       const manaCost = action.manaCost;
       if (manaCost > 0 && e.mana) e.mana -= manaCost;
+    }
+
+    if (action && "soundOnCastStart" in action && action.soundOnCastStart) {
+      playSound(action.soundOnCastStart);
     }
 
     orderDef?.onCastStart?.(e);
@@ -23,12 +28,9 @@ export const advanceCast = (e: Entity, delta: number) => {
   }
 
   if (delta < e.order.remaining) {
-    console.log("not done", delta, e.order.remaining);
     e.order = { ...e.order, remaining: e.order.remaining - delta };
     return 0;
   }
-
-  console.log("done!", e.order.orderId, getOrder(e.order.orderId));
 
   delta -= e.order.remaining;
 

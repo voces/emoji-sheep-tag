@@ -14,7 +14,7 @@ export const foxOrder = {
   },
 
   // Called when the order is initiated (sets up the order on the unit)
-  initiate: (unit: Entity) => {
+  onIssue: (unit: Entity) => {
     const action = findActionByOrder(unit, "fox");
     const castDuration =
       (action?.type === "auto" ? action.castDuration : undefined) ?? 0.3;
@@ -24,6 +24,7 @@ export const foxOrder = {
       remaining: castDuration,
     };
     delete unit.queue;
+    return "ordered";
   },
 
   // Called when the cast completes (spawn fox)

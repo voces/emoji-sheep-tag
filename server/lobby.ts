@@ -30,7 +30,7 @@ type LobbySettings = {
   //  * - `"auto"` factors in sheep and wolves to determine an appropiate time
   //  */
   // time: "auto" | number;
-  // gold: [number, number];
+  startingGold: { sheep: number; wolves: 0 };
   // income: [number, number];
   // view: boolean;
 };
@@ -71,7 +71,7 @@ export const newLobby = (host?: Client) => {
     players: new Set(host ? [host] : []),
     host: host,
     name: `lobby-${lobbyIndex++}`,
-    settings: { teams: new Map() },
+    settings: { teams: new Map(), startingGold: { sheep: 0, wolves: 0 } },
     status: "lobby",
     rounds: [],
   };

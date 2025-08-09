@@ -19,15 +19,13 @@ export const destroyLastFarmOrder = {
   },
 
   // Called when the order is initiated (immediately destroy the farm without interrupting current orders)
-  initiate: (unit: Entity) => {
-    if (unit.owner) {
-      const lastFarm = findLastPlayerUnit(
-        unit.owner,
-        (entity) => !!entity.tilemap,
-      );
-      if (lastFarm) {
-        lastFarm.health = 0;
-      }
-    }
+  onIssue: (unit: Entity) => {
+    if (!unit.owner) return "failed";
+    const lastFarm = findLastPlayerUnit(
+      unit.owner,
+      (entity) => !!entity.tilemap,
+    );
+    if (lastFarm) lastFarm.health = 0;
+    return "immediate";
   },
 } satisfies OrderDefinition;

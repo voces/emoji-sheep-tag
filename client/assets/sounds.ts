@@ -13,4 +13,5 @@ export const sounds: Record<string, string> = {
   click3: new URL("/assets/click3.mp3", import.meta.url).pathname,
   click4: new URL("/assets/click4.mp3", import.meta.url).pathname,
   ambientBirds: new URL("/assets/ambientBirds.mp3", import.meta.url).pathname,
+  jarOpen1: new URL("/assets/jarOpen1.mp3", import.meta.url).pathname,
 };

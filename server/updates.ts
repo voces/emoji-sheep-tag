@@ -28,6 +28,10 @@ export const message = (message: GameMessage) => {
   messages.push(message);
 };
 
+export const playSound = (soundKey: string, volume?: number) => {
+  messages.push({ type: "sound", soundKey, volume });
+};
+
 export const flushUpdates = () => {
   const updatesArray: Update[] = Object.entries(updates).map(([id, update]) =>
     "__delete" in update

@@ -94,6 +94,7 @@ export type UnitDataAction = {
   readonly attackSpeedMultiplier?: number;
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
+  readonly soundOnCastStart?: string;
 } | {
   readonly name: string;
   readonly type: "purchase";
