@@ -99,6 +99,10 @@ const zBaseAction = z.union([
     binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
     castDuration: z.number().optional(),
+    buffDuration: z.number().optional(),
+    attackSpeedMultiplier: z.number().optional(),
+    movementSpeedBonus: z.number().optional(),
+    movementSpeedMultiplier: z.number().optional(),
   }),
   z.object({
     name: z.string(),
@@ -158,6 +162,13 @@ const zItem = z.object({
   actions: z.array(zAction).readonly().optional(),
 });
 
+const zBuff = z.object({
+  remainingDuration: z.number(),
+  attackSpeedMultiplier: z.number().optional(),
+  movementSpeedBonus: z.number().optional(),
+  movementSpeedMultiplier: z.number().optional(),
+});
+
 const zUpdate = z.object({
   type: z.literal("unit"),
   id: z.string(),
@@ -205,6 +216,9 @@ const zUpdate = z.object({
 
   // Items
   inventory: zItem.array().readonly().optional(),
+
+  // Buffs
+  buffs: zBuff.array().readonly().nullable().optional(),
 
   // Pathing
   radius: z.number().optional(),

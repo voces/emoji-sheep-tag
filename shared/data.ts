@@ -62,7 +62,7 @@ export const items: Record<string, Item> = {
   },
   foxItem: {
     id: "foxItem",
-    name: "Summon Fox Token",
+    name: "Fox Token",
     icon: "fox",
     gold: 100,
     binding: ["KeyF"],
@@ -87,9 +87,27 @@ export const items: Record<string, Item> = {
     id: "boots",
     name: "Boots +30",
     icon: "runningShoes",
-    gold: 5,
+    gold: 50,
     binding: ["KeyB"],
     movementSpeedBonus: 0.3,
+  },
+  speedPot: {
+    id: "speedPot",
+    name: "Speed Potion",
+    icon: "purplePotion",
+    gold: 30,
+    binding: ["KeyP"],
+    charges: 1,
+    actions: [{
+      name: "Use Speed Potion",
+      type: "auto",
+      order: "speedPot",
+      binding: ["KeyP"],
+      castDuration: 0.1,
+      buffDuration: 10,
+      attackSpeedMultiplier: 1.1,
+      movementSpeedMultiplier: 1.15,
+    }],
   },
 };
 

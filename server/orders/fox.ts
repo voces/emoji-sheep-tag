@@ -2,19 +2,10 @@ import { DEFAULT_FACING } from "@/shared/constants.ts";
 import { Entity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
+import { findActionByOrder } from "../util/actionLookup.ts";
 
 export const foxOrder = {
   id: "fox",
-
-  // The action data that goes on prefabs
-  action: {
-    type: "auto" as const,
-    order: "fox" as const,
-    name: "Summon Fox",
-    binding: ["KeyF"],
-    castDuration: 0.3,
-    manaCost: 10,
-  },
 
   // Check if the unit can execute this order
   canExecute: (unit: Entity) => {
@@ -24,10 +15,13 @@ export const foxOrder = {
 
   // Called when the order is initiated (sets up the order on the unit)
   initiate: (unit: Entity) => {
+    const action = findActionByOrder(unit, "fox");
+    const castDuration =
+      (action?.type === "auto" ? action.castDuration : undefined) ?? 0.3;
     unit.order = {
       type: "cast",
       orderId: "fox",
-      remaining: foxOrder.action.castDuration ?? 0,
+      remaining: castDuration,
     };
     delete unit.queue;
   },

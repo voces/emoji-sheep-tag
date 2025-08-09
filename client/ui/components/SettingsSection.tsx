@@ -34,10 +34,7 @@ const ShortcutRow = ({
     <p style={{ flex: 1, flexBasis: 1 }}>
       {getActionDisplayName(actionKey, section)}
     </p>
-    <div
-      className="h-stack"
-      style={{ flex: 1, flexBasis: 1, justifyContent: "end" }}
-    >
+    <div className="h-stack">
       <input
         value={formatShortcut(shortcut)}
         style={{ width: "100%", maxWidth: 150 }}
@@ -52,7 +49,9 @@ const ShortcutRow = ({
       />
       <button
         type="button"
-        onClick={() => onSetBinding(fullKey, defaultBindings[section][fullKey])}
+        onClick={() =>
+          onSetBinding(fullKey, defaultBindings[section]?.[fullKey] ?? [])}
+        aria-label="Reset hotkey"
       >
         ↺
       </button>

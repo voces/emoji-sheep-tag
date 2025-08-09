@@ -29,6 +29,7 @@ import shop from "../assets/shop.svg" with { type: "text" };
 import fox from "../assets/fox.svg" with { type: "text" };
 import sapphire from "../assets/sapphire.svg" with { type: "text" };
 import runningShoes from "../assets/running-shoes.svg" with { type: "text" };
+import purplePotion from "../assets/purple-potion.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -53,6 +54,7 @@ export const svgs: Record<string, string> = {
   fox,
   sapphire,
   runningShoes,
+  purplePotion,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

@@ -22,6 +22,7 @@
 - https://www.svgrepo.com/svg/405703/fox
 - https://www.svgrepo.com/svg/317730/saphire
 - https://www.svgrepo.com/svg/245894/running-shoes-shoe
+- https://www.svgrepo.com/svg/191964/potion
 
 # Audio
 

@@ -51,10 +51,27 @@ export const defaultBindings: Shortcuts = {
             .flatMap((menuAction) => {
               const menuName = actionToShortcutKey(menuAction);
               const menuShortcuts = getMenuShortcutKeys(menuAction, menuName);
-              return Object.entries(menuShortcuts).map(([key, binding]) => [
+              const shortcuts = Object.entries(menuShortcuts).map((
+                [key, binding],
+              ) => [
                 key,
                 binding,
               ]);
+
+              // Also add shortcuts for item actions from purchase actions
+              for (const subAction of menuAction.actions) {
+                if (subAction.type === "purchase" && items[subAction.itemId]) {
+                  const item = items[subAction.itemId];
+                  if (item.actions) {
+                    for (const itemAction of item.actions) {
+                      const itemKey = actionToShortcutKey(itemAction);
+                      shortcuts.push([itemKey, itemAction.binding ?? []]);
+                    }
+                  }
+                }
+              }
+
+              return shortcuts;
             }),
         ],
       ),
@@ -91,20 +108,45 @@ export const createInitialShortcuts = (): Shortcuts => ({
               .flatMap((menuAction) => {
                 const menuName = actionToShortcutKey(menuAction);
                 const menuShortcuts = getMenuShortcutKeys(menuAction, menuName);
-                return Object.entries(menuShortcuts).map(([key, binding]) => {
-                  // For nested keys like "shop.back", we need to access the stored shortcuts differently
-                  // The key contains dots, so we need to access it directly from the section
-                  const storedSectionShortcuts = pluck(
-                    localStorageShortcuts,
-                    u,
-                    z.record(z.string(), zShortcut),
-                  );
-                  const storedBinding = storedSectionShortcuts?.[key];
-                  return [
-                    key,
-                    storedBinding ?? binding,
-                  ];
-                });
+                const storedSectionShortcuts = pluck(
+                  localStorageShortcuts,
+                  u,
+                  z.record(z.string(), zShortcut),
+                );
+
+                const shortcuts = Object.entries(menuShortcuts).map(
+                  ([key, binding]) => {
+                    // For nested keys like "shop.back", we need to access the stored shortcuts differently
+                    // The key contains dots, so we need to access it directly from the section
+                    const storedBinding = storedSectionShortcuts?.[key];
+                    return [
+                      key,
+                      storedBinding ?? binding,
+                    ];
+                  },
+                );
+
+                // Also add shortcuts for item actions from purchase actions
+                for (const subAction of menuAction.actions) {
+                  if (
+                    subAction.type === "purchase" && items[subAction.itemId]
+                  ) {
+                    const item = items[subAction.itemId];
+                    if (item.actions) {
+                      for (const itemAction of item.actions) {
+                        const itemKey = actionToShortcutKey(itemAction);
+                        const storedBinding = storedSectionShortcuts?.[itemKey];
+                        shortcuts.push([
+                          itemKey,
+                          storedBinding ?? pluckShortcut(`${u}.${itemKey}`) ??
+                            itemAction.binding ?? [],
+                        ]);
+                      }
+                    }
+                  }
+                }
+
+                return shortcuts;
               }),
           ],
         ),
@@ -137,6 +179,20 @@ export const getActionDisplayName = (
         actionToShortcutKey(subAction) === key
       );
       if (subAction) return subAction.name;
+
+      // Check if this is an item action from a purchase action
+      for (const subAction of menuAction.actions) {
+        if (subAction.type === "purchase" && items[subAction.itemId]) {
+          const item = items[subAction.itemId];
+          if (item.actions) {
+            for (const itemAction of item.actions) {
+              if (actionToShortcutKey(itemAction) === key) {
+                return itemAction.name;
+              }
+            }
+          }
+        }
+      }
     }
 
     return key;

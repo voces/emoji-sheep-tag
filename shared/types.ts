@@ -68,6 +68,13 @@ export type Item = {
   readonly actions?: ReadonlyArray<UnitDataAction>;
 };
 
+export type Buff = {
+  readonly remainingDuration: number;
+  readonly attackSpeedMultiplier?: number;
+  readonly movementSpeedBonus?: number;
+  readonly movementSpeedMultiplier?: number;
+};
+
 export type UnitDataAction = {
   readonly name: string;
   readonly type: "build";
@@ -83,6 +90,10 @@ export type UnitDataAction = {
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly castDuration?: number;
+  readonly buffDuration?: number;
+  readonly attackSpeedMultiplier?: number;
+  readonly movementSpeedBonus?: number;
+  readonly movementSpeedMultiplier?: number;
 } | {
   readonly name: string;
   readonly type: "purchase";
@@ -170,6 +181,9 @@ export type Entity = {
 
   // Items
   inventory?: ReadonlyArray<Item>;
+
+  // Buffs
+  buffs?: ReadonlyArray<Buff> | null;
 
   // Orders
   order?: Order | null;

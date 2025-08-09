@@ -5,14 +5,6 @@ import { findLastPlayerUnit } from "../systems/playerEntities.ts";
 export const destroyLastFarmOrder = {
   id: "destroyLastFarm",
 
-  // The action data that goes on prefabs
-  action: {
-    type: "auto" as const,
-    order: "destroyLastFarm" as const,
-    name: "Destroy Last Farm",
-    binding: ["KeyX"],
-  },
-
   // Check if the unit can execute this order
   canExecute: (unit: Entity) => {
     // Must have owner

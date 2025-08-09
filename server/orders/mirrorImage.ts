@@ -5,19 +5,10 @@ import { newUnit } from "../api/unit.ts";
 import { updatePathing } from "../systems/pathing.ts";
 import { lookup } from "../systems/lookup.ts";
 import { currentApp } from "../contexts.ts";
+import { findActionByOrder } from "../util/actionLookup.ts";
 
 export const mirrorImageOrder = {
   id: "mirrorImage",
-
-  // The action data that goes on prefabs
-  action: {
-    type: "auto" as const,
-    order: "mirrorImage" as const,
-    name: "Mirror Image",
-    binding: ["KeyR"],
-    castDuration: 1,
-    manaCost: 20,
-  },
 
   // Check if the unit can execute this order
   canExecute: (unit: Entity) => {
@@ -45,10 +36,13 @@ export const mirrorImageOrder = {
     if (Math.random() < 0.5) [pos1, pos2] = [pos2, pos1];
 
     // Set the cast order
+    const action = findActionByOrder(unit, "mirrorImage");
+    const castDuration =
+      (action?.type === "auto" ? action.castDuration : undefined) ?? 1;
     unit.order = {
       type: "cast",
       orderId: "mirrorImage",
-      remaining: mirrorImageOrder.action.castDuration ?? 0,
+      remaining: castDuration,
       positions: [pos1, pos2],
     };
     delete unit.queue;

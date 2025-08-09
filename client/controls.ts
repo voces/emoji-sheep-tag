@@ -529,8 +529,16 @@ globalThis.addEventListener("keydown", (e) => {
             (!item.charges || item.charges > 0)
           ) {
             for (const itemAction of item.actions) {
-              if (itemAction.binding) {
-                const normalizedBinding = normalizeKeys(itemAction.binding);
+              // Check for shortcut override
+              const prefabShortcuts = entity.prefab
+                ? shortcuts[entity.prefab]
+                : undefined;
+              const actionKey = actionToShortcutKey(itemAction);
+              const binding = prefabShortcuts?.[actionKey] ??
+                itemAction.binding;
+
+              if (binding) {
+                const normalizedBinding = normalizeKeys(binding);
                 const normalizedCurrentKey = normalizeKey(e.code);
                 if (
                   normalizedBinding.includes(normalizedCurrentKey) &&

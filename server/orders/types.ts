@@ -1,11 +1,8 @@
-import { Entity, UnitDataAction } from "@/shared/types.ts";
+import { Entity } from "@/shared/types.ts";
 
 export interface OrderDefinition {
   // The order ID that identifies this order
   id: string;
-
-  // The action data that goes on prefabs
-  action: UnitDataAction;
 
   // Check if the unit can execute this order (mana, conditions, etc)
   canExecute?: (unit: Entity) => boolean;

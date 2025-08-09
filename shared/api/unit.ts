@@ -22,15 +22,30 @@ export const tempUnit = (
 
 export const computeUnitMovementSpeed = (unit: Entity): number => {
   const baseSpeed = unit.movementSpeed ?? 0;
-  let speedBonus = 0;
+  let flatSpeedBonus = 0;
+  let speedMultiplier = 1.0;
 
+  // Add flat bonuses from items
   if (unit.inventory) {
     for (const item of unit.inventory) {
       if (item.movementSpeedBonus) {
-        speedBonus += item.movementSpeedBonus;
+        flatSpeedBonus += item.movementSpeedBonus;
       }
     }
   }
 
-  return baseSpeed + speedBonus;
+  // Add flat bonuses and multipliers from buffs
+  if (unit.buffs) {
+    for (const buff of unit.buffs) {
+      if (buff.movementSpeedBonus) {
+        flatSpeedBonus += buff.movementSpeedBonus;
+      }
+      if (buff.movementSpeedMultiplier) {
+        speedMultiplier *= buff.movementSpeedMultiplier;
+      }
+    }
+  }
+
+  // Apply flat bonuses first, then multipliers
+  return (baseSpeed + flatSpeedBonus) * speedMultiplier;
 };

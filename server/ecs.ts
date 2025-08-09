@@ -137,4 +137,5 @@ import("./systems/playerEntities.ts");
 import("./systems/playerEntities.ts");
 import("./systems/queues.ts");
 import("./systems/goldGeneration.ts");
+import("./systems/buffs.ts");
 import("./orders/index.ts");

@@ -7,7 +7,7 @@ import { handleMove } from "./move.ts";
 import { handleAttack } from "./attack.ts";
 import { handleHold } from "./hold.ts";
 import { getOrder } from "../orders/index.ts";
-import { findActionAndItem } from "../util/actionLookup.ts";
+import { findActionAndItem, findActionByOrder } from "../util/actionLookup.ts";
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
@@ -43,8 +43,9 @@ export const unitOrder = (
       // Use new order system
 
       // Generic mana validation for all orders with mana costs
-      if ("manaCost" in orderDef.action) {
-        const manaCost = orderDef.action.manaCost ?? 0;
+      const action = findActionByOrder(unit, order);
+      if (action && action.type === "auto" && action.manaCost) {
+        const manaCost = action.manaCost;
         if (manaCost > 0 && (unit.mana ?? 0) < manaCost) {
           console.warn(`Cannot execute order ${order} for unit ${unit.id}`);
           return;

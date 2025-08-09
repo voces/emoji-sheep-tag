@@ -114,4 +114,72 @@ describe("computeUnitMovementSpeed", () => {
 
     expect(computeUnitMovementSpeed(unit)).toBeCloseTo(3.35);
   });
+
+  it("should apply movement speed multiplier from buffs", () => {
+    const unit: Entity = {
+      id: "test-unit",
+      movementSpeed: 2.0,
+      buffs: [{
+        remainingDuration: 10,
+        movementSpeedMultiplier: 1.15,
+      }],
+    };
+
+    expect(computeUnitMovementSpeed(unit)).toBe(2.3);
+  });
+
+  it("should combine flat bonuses and multipliers correctly", () => {
+    const unit: Entity = {
+      id: "test-unit",
+      movementSpeed: 2.0,
+      inventory: [{
+        id: "boots",
+        name: "Boots",
+        gold: 50,
+        binding: ["KeyB"],
+        movementSpeedBonus: 0.3, // Flat bonus +0.3
+      }],
+      buffs: [{
+        remainingDuration: 10,
+        movementSpeedMultiplier: 1.15, // 15% multiplier
+      }],
+    };
+
+    // (2.0 + 0.3) * 1.15 = 2.3 * 1.15 = 2.645
+    expect(computeUnitMovementSpeed(unit)).toBeCloseTo(2.645);
+  });
+
+  it("should handle multiple multipliers multiplicatively", () => {
+    const unit: Entity = {
+      id: "test-unit",
+      movementSpeed: 2.0,
+      buffs: [{
+        remainingDuration: 10,
+        movementSpeedMultiplier: 1.15,
+      }, {
+        remainingDuration: 5,
+        movementSpeedMultiplier: 1.1,
+      }],
+    };
+
+    // 2.0 * 1.15 * 1.1 = 2.53
+    expect(computeUnitMovementSpeed(unit)).toBe(2.53);
+  });
+
+  it("should combine flat bonus from buffs with multipliers", () => {
+    const unit: Entity = {
+      id: "test-unit",
+      movementSpeed: 2.0,
+      buffs: [{
+        remainingDuration: 10,
+        movementSpeedBonus: 0.5, // Flat +0.5
+      }, {
+        remainingDuration: 10,
+        movementSpeedMultiplier: 1.2, // 20% multiplier
+      }],
+    };
+
+    // (2.0 + 0.5) * 1.2 = 2.5 * 1.2 = 3.0
+    expect(computeUnitMovementSpeed(unit)).toBe(3.0);
+  });
 });

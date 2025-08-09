@@ -8,6 +8,7 @@ import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
 import { getCurrentMenu, menuStateVar } from "@/vars/menuState.ts";
 import { useMemo } from "react";
 import { Action } from "./Action.tsx";
+import { applyShortcutOverride } from "../../../util/applyShortcutOverrides.ts";
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -24,7 +25,7 @@ selection.addEventListener(
 
 export const ActionBar = () => {
   const selection = useReactiveVar(selectionVar);
-  useReactiveVar(shortcutsVar);
+  const shortcuts = useReactiveVar(shortcutsVar);
   useReactiveVar(menuStateVar);
   const currentMenu = getCurrentMenu();
   useListenToEntityProp(selection, "order");
@@ -43,19 +44,29 @@ export const ActionBar = () => {
     ? currentMenu.action.actions
     : selection?.actions ?? [];
 
-  // Add item actions from inventory
+  // Add item actions from inventory and apply shortcut overrides
   if (!currentMenu && selection?.inventory) {
     const itemActions: UnitDataAction[] = [];
     for (const item of selection.inventory) {
       if (item.actions && (item.charges == null || item.charges > 0)) {
         for (const itemAction of item.actions) {
           // Create an action with the charge count in the name if applicable
-          const actionWithCharges = {
+          let actionWithCharges = {
             ...itemAction,
             name: item.charges
               ? `${itemAction.name} (${item.charges})`
               : itemAction.name,
           };
+
+          // Apply shortcut overrides if the selection has a prefab
+          if (selection.prefab) {
+            actionWithCharges = applyShortcutOverride(
+              actionWithCharges,
+              shortcuts,
+              selection.prefab,
+            );
+          }
+
           itemActions.push(actionWithCharges);
         }
       }

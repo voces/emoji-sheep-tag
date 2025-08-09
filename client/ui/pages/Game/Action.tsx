@@ -15,6 +15,7 @@ const iconMap: Record<string, string> = {
   selfDestruct: "collision",
   back: "stop",
   fox: "fox",
+  speedPot: "purplePotion",
 };
 
 export const Action = ({ action, current, entity }: {
