@@ -57,7 +57,7 @@ describe("advanceCast mirror image", () => {
     wolf.mana = 100; // Ensure it has plenty of mana
 
     // First cast - create initial mirror using new order system
-    mirrorImageOrder.initiate(wolf);
+    mirrorImageOrder.onIssue(wolf);
     advanceCast(wolf, 1.0); // Complete the cast
 
     // Verify mirror were created
@@ -68,7 +68,7 @@ describe("advanceCast mirror image", () => {
     const firstMirrorIds = firstMirrors.map((m) => m.id);
 
     // Second cast - should clear existing mirror and create new ones
-    mirrorImageOrder.initiate(wolf); // This initiates the cast order
+    mirrorImageOrder.onIssue(wolf); // This initiates the cast order
 
     // Advance cast slightly to trigger cast start (which clears old mirror)
     advanceCast(wolf, 0.1);

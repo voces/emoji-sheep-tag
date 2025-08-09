@@ -10,6 +10,7 @@ import { formatDuration } from "@/util/formatDuration.ts";
 import { chatLogVar, chatValueVar } from "@/vars/chat.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";
 import { formatVar } from "@/vars/format.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 
 const PlayerRow = ({ name, color, id }: Player) => {
   const localPlayer = useLocalPlayer();
@@ -85,11 +86,85 @@ const Players = () => {
 
 const Settings = () => {
   const localPlayer = useLocalPlayer();
+  const lobbySettings = useReactiveVar(lobbySettingsVar);
+
   return (
     <div
       className="card v-stack"
-      style={{ width: "40%", flexDirection: "column-reverse" }}
+      style={{ width: "40%", justifyContent: "space-between" }}
     >
+      <div className="v-stack" style={{ gap: 12, marginBottom: 16 }}>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: "bold" }}>
+          Game Settings
+        </h3>
+
+        <div className="v-stack" style={{ gap: 8 }}>
+          <label style={{ fontSize: 12, fontWeight: "bold" }}>
+            Starting Gold - Sheep
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={1000}
+            value={lobbySettings.startingGold.sheep}
+            onChange={(e) => {
+              const value = Math.max(
+                0,
+                Math.min(1000, parseInt(e.target.value) || 0),
+              );
+              send({
+                type: "lobbySettings",
+                startingGold: {
+                  ...lobbySettings.startingGold,
+                  sheep: value,
+                },
+              });
+            }}
+            disabled={!localPlayer?.host}
+            style={{
+              padding: 4,
+              fontSize: 12,
+              backgroundColor: localPlayer?.host ? undefined : "#f5f5f5",
+              color: localPlayer?.host ? undefined : "#666",
+              cursor: localPlayer?.host ? undefined : "not-allowed",
+            }}
+          />
+        </div>
+
+        <div className="v-stack" style={{ gap: 8 }}>
+          <label style={{ fontSize: 12, fontWeight: "bold" }}>
+            Starting Gold - Wolves
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={1000}
+            value={lobbySettings.startingGold.wolves}
+            onChange={(e) => {
+              const value = Math.max(
+                0,
+                Math.min(1000, parseInt(e.target.value) || 0),
+              );
+              send({
+                type: "lobbySettings",
+                startingGold: {
+                  ...lobbySettings.startingGold,
+                  wolves: value,
+                },
+              });
+            }}
+            disabled={!localPlayer?.host}
+            style={{
+              padding: 4,
+              fontSize: 12,
+              backgroundColor: localPlayer?.host ? undefined : "#f5f5f5",
+              color: localPlayer?.host ? undefined : "#666",
+              cursor: localPlayer?.host ? undefined : "not-allowed",
+            }}
+          />
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={() => send({ type: "start" })}

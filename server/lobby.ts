@@ -30,7 +30,7 @@ type LobbySettings = {
   //  * - `"auto"` factors in sheep and wolves to determine an appropiate time
   //  */
   // time: "auto" | number;
-  startingGold: { sheep: number; wolves: 0 };
+  startingGold: { sheep: number; wolves: number };
   // income: [number, number];
   // view: boolean;
 };

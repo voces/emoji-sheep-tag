@@ -16,7 +16,7 @@ describe("shortcutUtils", () => {
       expect(wolfShortcuts["fox"]).toEqual(["KeyF"]);
 
       // Should have speedPot action from speedPot item
-      expect(wolfShortcuts["speedPot"]).toEqual(["KeyP"]);
+      expect(wolfShortcuts["speedPot"]).toEqual(["KeyS"]);
     });
   });
 
@@ -29,7 +29,7 @@ describe("shortcutUtils", () => {
       expect(wolfShortcuts["fox"]).toEqual(["KeyF"]);
 
       // Should have speedPot action from speedPot item
-      expect(wolfShortcuts["speedPot"]).toEqual(["KeyP"]);
+      expect(wolfShortcuts["speedPot"]).toEqual(["KeyS"]);
     });
   });
 

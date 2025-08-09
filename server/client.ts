@@ -16,6 +16,7 @@ import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
 import { purchase, zPurchase } from "./actions/purchase.ts";
+import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 
 export type SocketEventMap = {
@@ -99,6 +100,7 @@ const zClientToServerMessage = z.union([
   zChat,
   zCancel,
   zPurchase,
+  zLobbySettings,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -112,6 +114,7 @@ const actions = {
   chat,
   cancel,
   purchase,
+  lobbySettings,
 };
 
 export const handleSocket = (socket: Socket) => {
@@ -148,6 +151,9 @@ export const handleSocket = (socket: Socket) => {
           players: new Set([...lobby.players, client]),
         }),
         updates: [],
+        lobbySettings: {
+          startingGold: lobby.settings.startingGold,
+        },
       });
       lobby.players.add(client);
       console.log(
@@ -185,6 +191,9 @@ export const handleSocket = (socket: Socket) => {
           (e) => ({ type: "unit", ...e }),
         ),
         rounds: client.lobby.rounds,
+        lobbySettings: {
+          startingGold: client.lobby.settings.startingGold,
+        },
       });
     }),
   );

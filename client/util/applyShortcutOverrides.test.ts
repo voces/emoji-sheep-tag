@@ -10,7 +10,7 @@ describe("applyShortcutOverride", () => {
       name: "Use Speed Potion",
       type: "auto",
       order: "speedPot",
-      binding: ["KeyP"],
+      binding: ["KeyS"],
     };
 
     const shortcuts: Shortcuts = {
@@ -28,7 +28,7 @@ describe("applyShortcutOverride", () => {
       name: "Use Speed Potion",
       type: "auto",
       order: "speedPot",
-      binding: ["KeyP"],
+      binding: ["KeyS"],
     };
 
     const shortcuts: Shortcuts = {
@@ -38,7 +38,7 @@ describe("applyShortcutOverride", () => {
     };
 
     const result = applyShortcutOverride(action, shortcuts, "wolf");
-    expect(result.binding).toEqual(["KeyP"]);
+    expect(result.binding).toEqual(["KeyS"]);
   });
 
   it("should not modify action if override is same as default", () => {
@@ -46,12 +46,12 @@ describe("applyShortcutOverride", () => {
       name: "Use Speed Potion",
       type: "auto",
       order: "speedPot",
-      binding: ["KeyP"],
+      binding: ["KeyS"],
     };
 
     const shortcuts: Shortcuts = {
       wolf: {
-        speedPot: ["KeyP"], // Same as default
+        speedPot: ["KeyS"], // Same as default
       },
     };
 

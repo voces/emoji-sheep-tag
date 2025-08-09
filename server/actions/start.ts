@@ -69,12 +69,21 @@ export const start = (client: Client) => {
       ) ecs.addEntity({ prefab, ...prefabs[prefab], ...partial });
     }
 
-    for (const player of [...sheep, ...wolves]) {
+    for (const player of sheep) {
       player.playerEntity = ecs.addEntity({
         name: player.name,
         owner: player.id,
         isPlayer: true,
-        gold: 1000,
+        gold: lobby.settings.startingGold.sheep,
+      });
+    }
+
+    for (const player of wolves) {
+      player.playerEntity = ecs.addEntity({
+        name: player.name,
+        owner: player.id,
+        isPlayer: true,
+        gold: lobby.settings.startingGold.wolves,
       });
     }
 

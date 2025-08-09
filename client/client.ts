@@ -16,6 +16,7 @@ import { format } from "./api/player.ts";
 import { getStoredPlayerName } from "./util/playerPrefs.ts";
 import { playSound } from "./api/sound.ts";
 import { absurd } from "@/shared/util/absurd.ts";
+import { lobbySettingsVar } from "./ui/vars/lobbySettings.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() });
 
@@ -312,6 +313,12 @@ const zJoin = z.object({
   format: zFormat,
   updates: zUpdate.array().readonly(),
   rounds: zRound.array().readonly().optional(),
+  lobbySettings: z.object({
+    startingGold: z.object({
+      sheep: z.number(),
+      wolves: z.number(),
+    }),
+  }).optional(),
 });
 
 const zLeave = z.object({
@@ -343,6 +350,14 @@ const zChat = z.object({
   message: z.string(),
 });
 
+const zLobbySettings = z.object({
+  type: z.literal("lobbySettings"),
+  startingGold: z.object({
+    sheep: z.number(),
+    wolves: z.number(),
+  }),
+});
+
 const zMessage = z.union([
   zStart,
   zUpdates,
@@ -353,6 +368,7 @@ const zMessage = z.union([
   zStop,
   zPong,
   zChat,
+  zLobbySettings,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;
@@ -428,6 +444,7 @@ const handlers = {
       else map[update.id] = app.addEntity(props);
     }
     if (data.rounds) roundsVar(data.rounds);
+    if (data.lobbySettings) lobbySettingsVar(data.lobbySettings);
   },
   colorChange: (data: z.TypeOf<typeof zColorChange>) => {
     playersVar((players) =>
@@ -553,6 +570,9 @@ const handlers = {
   chat: ({ player, message }: z.TypeOf<typeof zChat>) => {
     const p = playersVar().find((p) => p.id === player);
     addChatMessage(p ? `|c${p.color}|${p.name}|: ${message}` : message);
+  },
+  lobbySettings: ({ startingGold }: z.TypeOf<typeof zLobbySettings>) => {
+    lobbySettingsVar({ startingGold });
   },
 };
 
