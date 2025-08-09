@@ -5,7 +5,11 @@ import { UnitDataAction } from "@/shared/types.ts";
 import { playersVar, useLocalPlayer } from "@/vars/players.ts";
 import { shortcutsVar } from "../Settings.tsx";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
-import { getCurrentMenu, menuStateVar } from "@/vars/menuState.ts";
+import {
+  closeMenusForUnit,
+  getCurrentMenu,
+  menuStateVar,
+} from "@/vars/menuState.ts";
 import { useMemo } from "react";
 import { Action } from "./Action.tsx";
 import { applyShortcutOverride } from "../../../util/applyShortcutOverrides.ts";
@@ -17,10 +21,12 @@ selection.addEventListener(
 );
 selection.addEventListener(
   "delete",
-  (e) =>
+  (e) => {
+    closeMenusForUnit(e.id);
     selectionVar((v) =>
       v !== e && v?.selected && app.entities.has(v) ? v : selection.first()
-    ),
+    );
+  },
 );
 
 export const ActionBar = () => {
