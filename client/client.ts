@@ -635,7 +635,19 @@ declare global {
   var noise: unknown;
 }
 
+// Test hook for mocking send function in tests
+let testSendHookInternal: ((message: ClientToServerMessage) => void) | null = null;
+
+export const setTestSendHook = (hook: ((message: ClientToServerMessage) => void) | null) => {
+  testSendHookInternal = hook;
+};
+
 export const send = (message: ClientToServerMessage) => {
+  if (testSendHookInternal) {
+    testSendHookInternal(message);
+    return;
+  }
+  
   delay(() => {
     try {
       ws?.send(JSON.stringify(message));

@@ -10,12 +10,12 @@ export const CommandButton = styled.div`
   filter: brightness(80%);
   transition: filter 100ms ease-in 100ms;
   cursor: pointer;
-  
+
   &[aria-pressed="true"] {
     filter: brightness(100%);
     transition: filter 100ms ease-out 0ms;
   }
-  
+
   &:hover,
   &.hover {
     border-style: inset;

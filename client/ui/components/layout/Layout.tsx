@@ -13,7 +13,7 @@ export const HStack = styled.div`
 
 export const HoverHighlight = styled.div`
   color: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 10));
-  
+
   &:hover,
   &.hover {
     color: ${({ theme }) => theme.colors.body};
@@ -40,7 +40,7 @@ export const Overlay = styled.div`
 
 export const Positional = styled.div`
   pointer-events: none;
-  
+
   > *:not(.positional) {
     pointer-events: auto;
   }

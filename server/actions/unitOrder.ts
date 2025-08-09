@@ -30,13 +30,12 @@ export const unitOrder = (
     const result = findActionAndItem(unit, order);
     if (!result) {
       console.warn("Action not found", { order, units, target });
-      return;
+      continue;
     }
 
     const { action: _action, item: itemWithAction } = result;
 
     // Handle the action based on order type
-    let actionResult;
 
     // Check if this order is handled by the new registry system
     const orderDef = getOrder(order);
@@ -49,43 +48,40 @@ export const unitOrder = (
         const manaCost = action.manaCost;
         if (manaCost > 0 && (unit.mana ?? 0) < manaCost) {
           console.warn(`Cannot execute order ${order} for unit ${unit.id}`);
-          return;
+          continue;
         }
       }
 
       // Order-specific validation
-      if (orderDef.canExecute && !orderDef.canExecute(unit)) return;
+      if (orderDef.canExecute && !orderDef.canExecute(unit)) continue;
 
       if (orderDef.onIssue(unit) === "immediate") {
         if (action && "soundOnCastStart" in action && action.soundOnCastStart) {
           playSound(action.soundOnCastStart);
         }
       }
-      actionResult = undefined;
     } else {
       // Fall back to legacy handlers
       switch (order) {
         case "move":
-          actionResult = handleMove(unit, target);
+          handleMove(unit, target);
           break;
         case "attack":
-          actionResult = handleAttack(unit, target);
+          handleAttack(unit, target);
           break;
         case "stop":
           delete unit.queue;
           delete unit.order;
-          actionResult = undefined;
           break;
         case "hold":
-          actionResult = handleHold(unit);
+          handleHold(unit);
           break;
         case "selfDestruct":
           unit.health = 0;
-          actionResult = undefined;
           break;
         default:
           console.warn("Unhandled order type", { order, units, target });
-          return;
+          continue;
       }
     }
 
@@ -99,7 +95,5 @@ export const unitOrder = (
         i.charges === undefined || i.charges > 0
       ) || [];
     }
-
-    return actionResult;
   }
 };

@@ -1,5 +1,5 @@
 import { styled } from "npm:styled-components";
-import { VStack, Positional } from "@/components/layout/Layout.tsx";
+import { Positional, VStack } from "@/components/layout/Layout.tsx";
 import { Players } from "./Players.tsx";
 import { Chat } from "./Chat.tsx";
 import { LobbySettings } from "./LobbySettings.tsx";

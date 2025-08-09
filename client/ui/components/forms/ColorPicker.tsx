@@ -10,10 +10,11 @@ const Wrapper = styled.div`
   padding: 0;
   font-size: inherit;
   position: relative;
-  
+
   &.hover,
   &:hover {
-    box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) => theme.shadows.sm};
+    box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) =>
+      theme.shadows.sm};
   }
 `;
 
@@ -22,7 +23,8 @@ const PickerCard = styled.div`
   background: ${({ theme }) => theme.colors.body};
   border: 1px solid ${({ theme }) => theme.colors.border};
   top: 28px;
-  box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) => theme.shadows.md};
+  box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) =>
+    theme.shadows.md};
   display: grid;
   grid-template-columns: repeat(6, 2cap);
   grid-template-rows: repeat(4, 2cap);
@@ -34,8 +36,9 @@ const PickerCard = styled.div`
 const Color = styled.span<{ $color: string; $selected: boolean }>`
   background-color: ${({ $color }) => $color};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  box-shadow: ${({ $selected, theme }) => $selected ? `${theme.colors.shadow} 1px 1px` : "none"};
-  
+  box-shadow: ${({ $selected, theme }) =>
+    $selected ? `${theme.colors.shadow} 1px 1px` : "none"};
+
   &.hover {
     box-shadow: ${({ theme }) => theme.colors.border} 1px 1px;
   }

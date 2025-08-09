@@ -5,10 +5,8 @@ import { styled } from "npm:styled-components";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { SettingsSection } from "./SettingsSection.tsx";
-import {
-  type Shortcuts,
-} from "@/util/shortcutUtils.ts";
-import { VStack, HStack, Overlay } from "@/components/layout/Layout.tsx";
+import { type Shortcuts } from "@/util/shortcutUtils.ts";
+import { HStack, Overlay, VStack } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
 import { Button } from "@/components/forms/Button.tsx";
 
@@ -43,7 +41,6 @@ const CloseButton = styled(Button)`
   margin-left: auto;
   padding: 0 ${({ theme }) => theme.spacing.xxl};
 `;
-
 
 const Shortcuts = () => {
   const sections = useReactiveVar(shortcutsVar);

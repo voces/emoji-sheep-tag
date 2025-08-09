@@ -2,161 +2,91 @@ import { mouse, MouseButtonEvent } from "./mouse.ts";
 import { send } from "./client.ts";
 import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
-import { getLocalPlayer, playersVar } from "./ui/vars/players.ts";
+import { playersVar } from "@/vars/players.ts";
 import { selection } from "./systems/autoSelect.ts";
 import { camera } from "./graphics/three.ts";
-import { UnitDataAction, UnitDataActionTarget } from "@/shared/types.ts";
+import { UnitDataAction } from "@/shared/types.ts";
 import { absurd } from "@/shared/util/absurd.ts";
-import { setFind } from "../server/util/set.ts";
-import { SystemEntity } from "./ecs.ts";
-import { Classification, prefabs } from "@/shared/data.ts";
-import { tiles } from "@/shared/map.ts";
-import { canBuild, isEnemy, testClassification } from "./api/unit.ts";
-import { CursorVariant, updateCursor } from "./graphics/cursor.ts";
-import { playSound, playSoundAt } from "./api/sound.ts";
+import { prefabs } from "@/shared/data.ts";
+import { canBuild } from "./api/unit.ts";
+import { updateCursor } from "./graphics/cursor.ts";
+import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "./ui/pages/Game/Chat.tsx";
-import { showCommandPaletteVar } from "./ui/components/CommandPalette.tsx";
-import { stateVar } from "./ui/vars/state.ts";
-import { newIndicator } from "./systems/indicators.ts";
-import { shortcutsVar } from "./ui/vars/shortcuts.ts";
-import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
-import { showSettingsVar } from "./ui/vars/showSettings.ts";
-import { selectEntity } from "./api/selection.ts";
-import { normalizeKey, normalizeKeys } from "./util/normalizeKey.ts";
+import { showCommandPaletteVar } from "@/components/CommandPalette.tsx";
+import { stateVar } from "@/vars/state.ts";
+import { shortcutsVar } from "@/vars/shortcuts.ts";
+import { showSettingsVar } from "@/vars/showSettings.ts";
+import {
+  selectAllMirrors,
+  selectAllUnitsOfType,
+  selectEntity,
+  selectPrimaryUnit,
+} from "./api/selection.ts";
 import {
   closeAllMenus,
   closeMenu,
-  closeMenusForUnit,
   getCurrentMenu,
   openMenu,
-} from "./ui/vars/menuState.ts";
-import { lookup } from "./systems/lookup.ts";
+} from "@/vars/menuState.ts";
+import {
+  cancelBlueprint,
+  clearBlueprint as clearBlueprintHandler,
+  createBlueprint,
+  getBlueprint,
+  getBlueprintPrefab,
+  getBuilderFromBlueprint,
+  hasBlueprint as hasBlueprintHandler,
+  normalize,
+  updateBlueprint,
+} from "./controls/blueprintHandlers.ts";
+import {
+  cancelOrder as cancelOrderHandler,
+  getActiveOrder,
+  handleSmartTarget,
+  handleTargetOrder,
+  playOrderSound,
+  setActiveOrder,
+} from "./controls/orderHandlers.ts";
+import {
+  checkShortcut,
+  clearKeyboard,
+  findActionForShortcut,
+  handleKeyDown,
+  handleKeyUp,
+  keyboard,
+} from "./controls/keyboardHandlers.ts";
 
-const normalize = (value: number, evenStep: boolean) =>
-  evenStep
-    ? Math.round(value * 2) / 2
-    : (Math.round(value * 2 + 0.5) - 0.5) / 2;
-
-const handleSmartTarget = (e: MouseButtonEvent) => {
-  const target = e.intersects.first();
-  const localPlayer = getLocalPlayer();
-  const selections = selection.clone().filter((s) =>
-    s.owner === localPlayer?.id
-  );
-
-  const orders = Array.from(
-    selections,
-    (
-      e,
-    ) =>
-      [
-        e,
-        e.actions?.filter((a): a is UnitDataActionTarget =>
-          a.type === "target" && (target
-            ? testClassification(e, target, a.targeting)
-            : typeof a.aoe === "number")
-        ).sort((a, b) => {
-          const aValue = a.smart
-            ? Object.entries(a.smart).reduce(
-              (min, [classification, priority]) => {
-                const test = (target && classification !== "ground"
-                    ? testClassification(e, target, [
-                      classification as Classification,
-                    ])
-                    : typeof a.aoe === "number" && classification === "ground")
-                  ? priority
-                  : Infinity;
-                return test < min ? test : min;
-              },
-              Infinity,
-            )
-            : Infinity;
-          const bValue = b.smart
-            ? Object.entries(b.smart).reduce(
-              (min, [classification, priority]) => {
-                const test = (target && classification !== "ground"
-                    ? testClassification(e, target, [
-                      classification as Classification,
-                    ])
-                    : typeof a.aoe === "number" && classification === "ground")
-                  ? priority
-                  : Infinity;
-                return test < min ? test : min;
-              },
-              Infinity,
-            )
-            : Infinity;
-          return aValue - bValue;
-        })[0],
-      ] as const,
-  ).filter((
-    pair,
-  ): pair is readonly [SystemEntity<"selected">, UnitDataActionTarget] =>
-    !!pair[1]
-  );
-  if (!orders.length) return false;
-
-  const groupedOrders = orders.reduce((groups, [unit, action]) => {
-    if (!groups[action.order]) groups[action.order] = [];
-    groups[action.order].push(unit);
-    return groups;
-  }, {} as Record<string, Entity[]>);
-
-  let targetTarget = false;
-
-  for (const order in groupedOrders) {
-    const againstTarget = target && (order !== "move" || target.movementSpeed);
-    if (againstTarget) targetTarget = true;
-
-    send({
-      type: "unitOrder",
-      units: Array.from(groupedOrders[order], (e) => e.id),
-      order: order,
-      target: againstTarget ? target.id : e.world,
-    });
-  }
-
-  newIndicator({
-    x: targetTarget ? target?.position?.x ?? e.world.x : e.world.x,
-    y: targetTarget ? target?.position?.y ?? e.world.y : e.world.y,
-  }, {
-    model: "gravity",
-    color: target && orders.some(([u]) => isEnemy(u, target))
-      ? "#dd3333"
-      : undefined,
-    scale: targetTarget && target?.radius ? target.radius * 4 : 1,
-  });
-
-  cancelOrder();
-
-  return true;
+// Re-export for external use
+export { getActiveOrder, keyboard };
+export const clearBlueprint = clearBlueprintHandler;
+export const hasBlueprint = hasBlueprintHandler;
+export const cancelOrder = (
+  check?: (order: string | undefined, blueprint: string | undefined) => boolean,
+) => {
+  if (check && !check(getActiveOrder()?.order, getBlueprintPrefab())) return;
+  cancelOrderHandler(check);
+  cancelBlueprint();
 };
 
-const getBuilderFromBlueprint = () => {
-  if (!blueprint) return;
-  const unitType = blueprint.prefab;
-  return setFind(
-    selection,
-    (u) =>
-      u.actions?.some((a) => a.type === "build" && a.unitType === unitType) ??
-        false,
-  );
-};
-
+// Mouse event handlers
 mouse.addEventListener("mouseButtonDown", (e) => {
+  // Handle focus/blur for UI elements
   if (
     document.activeElement instanceof HTMLElement &&
     document.activeElement !== e.element
-  ) document.activeElement.blur();
+  ) {
+    document.activeElement.blur();
+  }
 
   if (
     (e.element instanceof HTMLElement || e.element instanceof SVGElement) &&
     e.element.id !== "ui"
   ) {
     e.element.focus();
-    if ("click" in e.element) e.element.click();
-    else {
+    if ("click" in e.element) {
+      e.element.click();
+    } else {
       e.element.dispatchEvent(
         new MouseEvent("click", {
           view: window,
@@ -168,128 +98,72 @@ mouse.addEventListener("mouseButtonDown", (e) => {
     return;
   }
 
-  // if (document.activeElement && document.activeElement !== e.element) document.activeElement.dispatchEvent()
-  // if (showChatBoxVar() === "open") showChatBoxVar("dismissed");
-  // if (showCommandPaletteVar() === "open") showCommandPaletteVar("dismissed");
-
   if (e.button === "right") {
     if (selection.size) {
-      playSoundAt(
-        pick("click1", "click2", "click3", "click4"),
-        e.world.x,
-        e.world.y,
-        0.1,
-      );
-
+      playOrderSound(e.world.x, e.world.y);
       handleSmartTarget(e);
     }
   } else if (e.button === "left") {
-    if (blueprint) {
-      const prefab = blueprint.prefab;
-      const unit = getBuilderFromBlueprint();
-      if (!unit) return;
-      const x = normalize(
-        e.world.x,
-        (prefabs[prefab]?.tilemap?.width ?? 0) % 4 === 0,
-      );
-      const y = normalize(
-        e.world.y,
-        (prefabs[prefab]?.tilemap?.height ?? 0) % 4 === 0,
-      );
-      if (!canBuild(unit, prefab, x, y)) return;
-
-      app.removeEntity(blueprint);
-      blueprint = undefined;
-      updateCursor();
-      if (selection.size) {
-        const source = selection.first()?.position;
-        if (source) {
-          playSoundAt(
-            pick("click1", "click2", "click3", "click4"),
-            e.world.x,
-            e.world.y,
-            0.1,
-          );
-        }
-      }
-      send({ type: "build", unit: unit.id, buildType: prefab, x, y });
-    } else if (activeOrder) {
-      const target = e.intersects.first();
-      const unitsWithTarget = selection.filter((e) =>
-        e.actions?.some((a) =>
-          a.type === "target" && a.order === activeOrder?.order &&
-          target && testClassification(e, target, a.targeting)
-        )
-      );
-      if (target && unitsWithTarget.size) {
-        send({
-          type: "unitOrder",
-          units: Array.from(unitsWithTarget, (e) => e.id),
-          order: activeOrder.order,
-          target: target.id,
-        });
-      }
-
-      const unitsWithoutTarget = selection.filter((e) =>
-        !unitsWithTarget.has(e) &&
-        e.actions?.some((a) =>
-          a.type === "target" && a.order === activeOrder?.order &&
-          typeof a.aoe === "number"
-        )
-      );
-      if (unitsWithoutTarget.size) {
-        send({
-          type: "unitOrder",
-          units: Array.from(unitsWithoutTarget, (e) => e.id),
-          order: activeOrder.order,
-          target: e.world,
-        });
-      }
-
-      if (unitsWithTarget.size || unitsWithoutTarget.size) {
-        newIndicator({
-          x: unitsWithTarget.size
-            ? target?.position?.x ?? e.world.x
-            : e.world.x,
-          y: unitsWithTarget.size
-            ? target?.position?.y ?? e.world.y
-            : e.world.y,
-        }, {
-          model: "gravity",
-          color: target && unitsWithTarget.some((u) => isEnemy(u, target))
-            ? "#dd3333"
-            : undefined,
-          scale: unitsWithTarget.size && target?.radius ? target.radius * 4 : 1,
-        });
-
-        cancelOrder();
-      }
-    } else if (e.intersects.size) {
-      selectEntity(e.intersects.first()!);
-    }
+    handleLeftClick(e);
   }
 });
 
-let hover: Element | null = null;
-let hovers: Element[] = [];
-mouse.addEventListener("mouseMove", (e) => {
+const handleLeftClick = (e: MouseButtonEvent) => {
+  const blueprint = getBlueprint();
+
   if (blueprint) {
-    const builder = getBuilderFromBlueprint();
-    if (!builder) return;
-    const x = normalize(
-      e.world.x,
-      (prefabs[blueprint.prefab]?.tilemap?.width ?? 0) % 4 === 0,
-    );
-    const y = normalize(
-      e.world.y,
-      (prefabs[blueprint.prefab]?.tilemap?.height ?? 0) % 4 === 0,
-    );
-    blueprint.position = { x, y };
-    blueprint.blueprint = canBuild(builder, blueprint.prefab, x, y)
-      ? 0x0000ff
-      : 0xff0000;
+    handleBlueprintClick(e);
+  } else if (getActiveOrder()) {
+    if (!handleTargetOrder(e)) {
+      // If no target order was handled and there's an intersection, select it
+      if (e.intersects.size) {
+        selectEntity(e.intersects.first()!);
+      }
+    }
+  } else if (e.intersects.size) {
+    selectEntity(e.intersects.first()!);
+  }
+};
+
+const handleBlueprintClick = (e: MouseButtonEvent) => {
+  const blueprint = getBlueprint();
+  if (!blueprint) return;
+
+  const prefab = blueprint.prefab;
+  const unit = getBuilderFromBlueprint();
+  if (!unit) return;
+
+  const x = normalize(
+    e.world.x,
+    (prefabs[prefab]?.tilemap?.width ?? 0) % 4 === 0,
+  );
+  const y = normalize(
+    e.world.y,
+    (prefabs[prefab]?.tilemap?.height ?? 0) % 4 === 0,
+  );
+
+  if (!canBuild(unit, prefab, x, y)) return;
+
+  cancelBlueprint();
+
+  if (selection.size) {
+    const source = selection.first()?.position;
+    if (source) {
+      playOrderSound(e.world.x, e.world.y);
+    }
   }
 
+  send({ type: "build", unit: unit.id, buildType: prefab, x, y });
+};
+
+// Mouse move handler
+let hover: Element | null = null;
+let hovers: Element[] = [];
+
+mouse.addEventListener("mouseMove", (e) => {
+  updateBlueprint(e.world.x, e.world.y);
+
+  // Handle hover events
   if (hover !== e.element) {
     hover?.dispatchEvent(
       new MouseEvent("mouseout", {
@@ -308,6 +182,7 @@ mouse.addEventListener("mouseMove", (e) => {
     hover = e.element;
   }
 
+  // Handle hover classes
   for (const el of hovers) {
     if (!e.elements.includes(el)) el?.classList.remove("hover");
   }
@@ -319,275 +194,143 @@ mouse.addEventListener("mouseMove", (e) => {
   updateCursor(true);
 });
 
-export const keyboard: Record<string, boolean> = {};
-// Normalized keyboard state for shortcut checking
-const normalizedKeyboard: Record<string, boolean> = {};
-
-const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
-  switch (a.type) {
-    case "auto":
-      return b.type === "auto" && a.order === b.order;
-    case "build":
-      return b.type === "build" && a.unitType === b.unitType;
-    case "target":
-      return b.type === "target" && a.order === b.order;
-    case "purchase":
-      return b.type === "purchase" && a.itemId === b.itemId;
-    case "menu":
-      return b.type === "menu";
-    default:
-      absurd(a);
-  }
-};
-
-const cancelBlueprint = () => {
-  if (blueprint) {
-    app.removeEntity(blueprint);
-    blueprint = undefined;
-    updateCursor();
-  }
-};
-
-export const cancelOrder = (
-  check?: (order: string | undefined, blueprint: string | undefined) => boolean,
-) => {
-  if (check && !check(activeOrder?.order, blueprint?.prefab)) return;
-  if (activeOrder) {
-    activeOrder = undefined;
-    updateCursor();
-  }
-  cancelBlueprint();
-};
-
-document.addEventListener("pointerlockchange", () => {
-  if (!document.pointerLockElement) cancelBlueprint();
-});
-
-let blueprintIndex = 0;
-let blueprint: SystemEntity<"prefab"> | undefined;
-export const clearBlueprint = (
-  fn?: (blueprint: SystemEntity<"prefab">) => void,
-) => {
-  if (blueprint && (!fn || fn(blueprint))) cancelBlueprint();
-};
-export const hasBlueprint = () => !!blueprint;
-
-let activeOrder: { variant: CursorVariant; order: string } | undefined;
-export const getActiveOrder = () => activeOrder;
-
+// Keyboard event handlers
 globalThis.addEventListener("keydown", (e) => {
-  keyboard[e.code] = true;
-  normalizedKeyboard[normalizeKey(e.code)] = true;
+  handleKeyDown(e.code);
 
   if (showSettingsVar()) return false;
 
   const shortcuts = shortcutsVar();
-  const checkShortcut = (shortcut: string[]) => {
-    const normalizedShortcut = normalizeKeys(shortcut);
-    const normalizedCurrentKey = normalizeKey(e.code);
-    return normalizedShortcut.includes(normalizedCurrentKey) &&
-      normalizedShortcut.every((s) => normalizedKeyboard[s]);
-  };
 
-  if (
-    document.activeElement instanceof HTMLInputElement &&
-    (document.activeElement.value || e.shiftKey || e.ctrlKey || e.metaKey)
-  ) return;
+  // Handle UI shortcuts
+  if (handleUIShortcuts(e, shortcuts)) return false;
 
-  if (
-    checkShortcut(shortcuts.misc.openCommandPalette) &&
-    showCommandPaletteVar() === "closed"
-  ) {
-    e.preventDefault();
-    showCommandPaletteVar("open");
-    return false;
-  }
+  // Skip if in chat or command palette
+  if (shouldSkipGameShortcuts(e)) return false;
 
-  if (
-    checkShortcut(shortcuts.misc.openChat) &&
-    showChatBoxVar() !== "open" && showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
-  ) {
-    e.preventDefault();
-    showChatBoxVar("open");
-    return false;
-  }
-
-  if (
-    checkShortcut(shortcuts.misc.selectOwnUnit) &&
-    showChatBoxVar() !== "open" && showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
-  ) {
-    e.preventDefault();
-    const localPlayer = getLocalPlayer();
-    if (localPlayer) {
-      // Find sheep or wolf owned by the local player
-      let ownedUnit: Entity | undefined;
-      for (const entity of app.entities) {
-        if (
-          entity.owner === localPlayer.id &&
-          (entity.prefab === "sheep" || entity.prefab === "wolf")
-        ) {
-          ownedUnit = entity;
-          break;
-        }
-      }
-      if (ownedUnit) {
-        selectEntity(ownedUnit);
-      }
-    }
-    return false;
-  }
-
-  if (
-    checkShortcut(shortcuts.misc.selectMirrors) &&
-    showChatBoxVar() !== "open" && showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
-  ) {
-    e.preventDefault();
-    const localPlayer = getLocalPlayer();
-    if (localPlayer) {
-      // Find all mirror entities owned by the local player
-      const mirrorEntities: Entity[] = [];
-      for (const entity of app.entities) {
-        if (entity.owner === localPlayer.id && entity.isMirror === true) {
-          mirrorEntities.push(entity);
-        }
-      }
-
-      if (mirrorEntities.length > 0) {
-        // Clear current selection first
-        for (const entity of selection) {
-          closeMenusForUnit(entity.id);
-          delete (entity as Entity).selected;
-        }
-        // Select all mirror entities
-        for (const entity of mirrorEntities) {
-          entity.selected = true;
-        }
-      }
-    }
-    return false;
-  }
-
-  // Arrow keys to switch between commands; not modifiable
-  if (
-    (showChatBoxVar() === "open" || showCommandPaletteVar() === "open") &&
-    !("fromHud" in e)
-  ) {
-    if (
-      showCommandPaletteVar() === "open" && e.key === "ArrowUp" ||
-      e.key === "ArrowDown"
-    ) e.preventDefault();
-    return false;
-  }
-
-  let units: Entity[] = [];
-  let action: UnitDataAction | undefined;
-
-  const currentMenu = getCurrentMenu();
-  const menuUnit = currentMenu ? lookup[currentMenu.unitId] : undefined;
-  if (currentMenu && menuUnit) {
-    for (const a of currentMenu.action.actions) {
-      if (!a.binding) continue;
-      const normalizedBinding = normalizeKeys(a.binding);
-      const normalizedCurrentKey = normalizeKey(e.code);
-      if (
-        normalizedBinding.includes(normalizedCurrentKey) &&
-        normalizedBinding.every((b) => normalizedKeyboard[b]) &&
-        (!action || isSameAction(action, a))
-      ) {
-        action = a;
-        units.push(menuUnit);
-      }
-    }
-  } else {
-    for (const entity of selection) {
-      // Check unit's base actions
-      if (entity.actions) {
-        for (const a of entity.actions) {
-          if (a.binding) {
-            const normalizedBinding = normalizeKeys(a.binding);
-            const normalizedCurrentKey = normalizeKey(e.code);
-            if (
-              normalizedBinding.includes(normalizedCurrentKey) &&
-              normalizedBinding.every((b) => normalizedKeyboard[b]) &&
-              (!action || isSameAction(action, a))
-            ) {
-              action = a;
-              units.push(entity);
-            }
-          }
-        }
-      }
-
-      // Check item actions from inventory
-      if (entity.inventory) {
-        for (const item of entity.inventory) {
-          if (
-            item.actions && item.actions.length > 0 &&
-            (!item.charges || item.charges > 0)
-          ) {
-            for (const itemAction of item.actions) {
-              // Check for shortcut override
-              const prefabShortcuts = entity.prefab
-                ? shortcuts[entity.prefab]
-                : undefined;
-              const actionKey = actionToShortcutKey(itemAction);
-              const binding = prefabShortcuts?.[actionKey] ??
-                itemAction.binding;
-
-              if (binding) {
-                const normalizedBinding = normalizeKeys(binding);
-                const normalizedCurrentKey = normalizeKey(e.code);
-                if (
-                  normalizedBinding.includes(normalizedCurrentKey) &&
-                  normalizedBinding.every((b) => normalizedKeyboard[b]) &&
-                  (!action || isSameAction(action, itemAction))
-                ) {
-                  action = itemAction;
-                  units.push(entity);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+  // Handle action shortcuts
+  const { units, action } = findActionForShortcut(e, shortcuts);
 
   if (!action) {
-    // Cancel
-    if (checkShortcut(shortcuts.misc.cancel)) {
+    // Handle cancel
+    if (checkShortcut(shortcuts.misc.cancel, e.code)) {
       cancelOrder();
       return false;
     }
     return;
   }
 
+  handleAction(action, units);
+});
+
+const handleUIShortcuts = (
+  e: KeyboardEvent,
+  shortcuts: Record<string, Record<string, string[]>>,
+): boolean => {
+  // Skip if in input field
+  if (
+    document.activeElement instanceof HTMLInputElement &&
+    (document.activeElement.value || e.shiftKey || e.ctrlKey || e.metaKey)
+  ) {
+    return true;
+  }
+
+  // Command palette
+  if (
+    checkShortcut(shortcuts.misc.openCommandPalette, e.code) &&
+    showCommandPaletteVar() === "closed"
+  ) {
+    e.preventDefault();
+    showCommandPaletteVar("open");
+    return true;
+  }
+
+  // Chat
+  if (
+    checkShortcut(shortcuts.misc.openChat, e.code) &&
+    showChatBoxVar() !== "open" &&
+    showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    e.preventDefault();
+    showChatBoxVar("open");
+    return true;
+  }
+
+  // Selection shortcuts
+  if (
+    checkShortcut(shortcuts.misc.selectOwnUnit, e.code) &&
+    showChatBoxVar() !== "open" &&
+    showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    e.preventDefault();
+    selectPrimaryUnit();
+    return true;
+  }
+
+  if (
+    checkShortcut(shortcuts.misc.selectMirrors, e.code) &&
+    showChatBoxVar() !== "open" &&
+    showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    e.preventDefault();
+    selectAllMirrors();
+    return true;
+  }
+
+  if (
+    checkShortcut(shortcuts.misc.selectFoxes, e.code) &&
+    showChatBoxVar() !== "open" &&
+    showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    e.preventDefault();
+    selectAllUnitsOfType("fox");
+    return true;
+  }
+
+  return false;
+};
+
+const shouldSkipGameShortcuts = (e: KeyboardEvent): boolean => {
+  if (
+    (showChatBoxVar() === "open" || showCommandPaletteVar() === "open") &&
+    !("fromHud" in e)
+  ) {
+    if (
+      showCommandPaletteVar() === "open" &&
+      (e.key === "ArrowUp" || e.key === "ArrowDown")
+    ) {
+      e.preventDefault();
+    }
+    return true;
+  }
+  return false;
+};
+
+const handleAction = (action: UnitDataAction, units: Entity[]) => {
   cancelOrder();
 
-  // Check if any unit has enough mana for the action
+  // Filter units by mana
   const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
   const unitsTotal = units.length;
   units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
 
   if (units.length === 0 && unitsTotal) {
-    // Play insufficient mana sound
     playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.3 });
     return;
   }
 
-  // Check if player has enough gold for build and purchase actions
+  // Check gold for build/purchase
   if (action.type === "build" || action.type === "purchase") {
     const goldCost = action.goldCost ?? 0;
     if (goldCost > 0 && units.length > 0) {
-      // Find the owning player of the unit performing the build/purchase
       const owningPlayer = playersVar().find((p) => p.id === units[0].owner);
       const playerGold = owningPlayer?.entity?.gold ?? 0;
 
       if (playerGold < goldCost) {
-        // Play insufficient gold sound
         playSound(pick("click1", "click2", "click3", "click4"), {
           volume: 0.3,
         });
@@ -598,108 +341,72 @@ globalThis.addEventListener("keydown", (e) => {
 
   switch (action.type) {
     case "auto":
-      // Handle special "back" order for closing menus
-      if (action.order === "back" && getCurrentMenu()) {
-        playSound(pick("click1", "click2", "click3", "click4"), {
-          volume: 0.1,
-        });
-        closeMenu();
-        break;
-      }
-
-      if (units.length === 0 && units[0].position) {
-        playSoundAt(
-          pick("click1", "click2", "click3", "click4"),
-          units[0].position.x,
-          units[0].position.y,
-          0.1,
-        );
-      } else {
-        playSound(pick("click1", "click2", "click3", "click4"), {
-          volume: 0.1,
-        });
-      }
-
-      send({
-        type: "unitOrder",
-        order: action.order,
-        units: units.map((u) => u.id),
-      });
+      handleAutoAction(action, units);
       break;
-    case "build": {
-      const x = normalize(
-        mouse.world.x,
-        (prefabs[action.unitType]?.tilemap?.width ?? 0) % 4 === 0,
-      );
-      const y = normalize(
-        mouse.world.y,
-        (prefabs[action.unitType]?.tilemap?.height ?? 0) % 4 === 0,
-      );
-      blueprint = app.addEntity({
-        id: `blueprint-${blueprintIndex++}`,
-        prefab: action.unitType,
-        position: { x, y },
-        owner: getLocalPlayer()?.id,
-        model: prefabs[action.unitType]?.model,
-        modelScale: prefabs[action.unitType]?.modelScale,
-        blueprint: canBuild(units[0], action.unitType, x, y)
-          ? 0x0000ff
-          : 0xff0000,
-      });
-      updateCursor();
+    case "build":
+      createBlueprint(action.unitType, mouse.world.x, mouse.world.y);
       break;
-    }
     case "target":
-      activeOrder = {
-        order: action.order,
-        variant: action.order === "attack" ? "enemy" : "ally",
-      };
-      updateCursor();
+      setActiveOrder(
+        action.order,
+        action.order === "attack" ? "enemy" : "ally",
+      );
       break;
     case "purchase":
-      // Purchase is instant - send the purchase command immediately
       playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.3 });
       send({
         type: "purchase",
         unit: units[0].id,
         itemId: action.itemId,
       });
-      // Close the menu after purchase
       closeAllMenus();
       break;
     case "menu":
-      // Open the menu interface
       playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.1 });
       openMenu(action, units[0].id);
       break;
-
     default:
       absurd(action);
   }
-});
+};
 
-globalThis.addEventListener("keyup", (e) => {
-  delete keyboard[e.code];
-  delete normalizedKeyboard[normalizeKey(e.code)];
-});
+const handleAutoAction = (action: { order: string }, units: Entity[]) => {
+  // Handle special "back" order for closing menus
+  if (action.order === "back" && getCurrentMenu()) {
+    playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.1 });
+    closeMenu();
+    return;
+  }
 
-globalThis.addEventListener("blur", () => {
-  for (const key in keyboard) delete keyboard[key];
-  for (const key in normalizedKeyboard) delete normalizedKeyboard[key];
-});
+  if (units.length > 0 && units[0].position) {
+    playOrderSound(units[0].position.x, units[0].position.y);
+  } else {
+    playOrderSound();
+  }
 
+  send({
+    type: "unitOrder",
+    order: action.order,
+    units: units.map((u) => u.id),
+  });
+};
+
+globalThis.addEventListener("keyup", (e) => handleKeyUp(e.code));
+globalThis.addEventListener("blur", clearKeyboard);
+
+// Camera controls
 globalThis.addEventListener("wheel", (e) => {
   if (
-    document.elementFromPoint(
-      mouse.pixels.x,
-      mouse.pixels.y,
-    )?.id !== "ui"
-  ) return false;
-
+    document.elementFromPoint(mouse.pixels.x, mouse.pixels.y)?.id !== "ui"
+  ) {
+    return false;
+  }
   camera.position.z += e.deltaY > 0 ? 1 : -1;
 });
 
+// Camera panning
 let startPan: number | undefined;
+
 app.addSystem({
   update: (delta, time) => {
     if (showSettingsVar()) return false;
@@ -718,13 +425,15 @@ app.addSystem({
         ? (mouse.pixels.y <= 12 ? 2 : 0) +
           (globalThis.innerHeight - mouse.pixels.y <= 12 ? -2 : 0)
         : 0);
+
     const panDuration = typeof startPan === "number" ? (time - startPan) : 0;
+
     if (x) {
       x *= 1 + 1.3 * Math.exp(-10 * panDuration) + (panDuration / 5) ** 0.5 -
         0.32;
       camera.position.x = Math.min(
         Math.max(0, camera.position.x + x * delta * 10),
-        tiles[0].length,
+        prefabs.map?.tilemap?.width ?? 100,
       );
     }
     if (y) {
@@ -732,14 +441,23 @@ app.addSystem({
         0.32;
       camera.position.y = Math.min(
         Math.max(0, camera.position.y + y * delta * 10),
-        tiles.length,
+        prefabs.map?.tilemap?.height ?? 100,
       );
     }
-    if ((x || y) && typeof startPan !== "number") startPan = time;
-    else if (!x && !y && typeof startPan === "number") startPan = undefined;
+
+    if ((x || y) && typeof startPan !== "number") {
+      startPan = time;
+    } else if (!x && !y && typeof startPan === "number") {
+      startPan = undefined;
+    }
 
     updateCursor();
   },
+});
+
+// Pointer lock
+document.addEventListener("pointerlockchange", () => {
+  if (!document.pointerLockElement) cancelBlueprint();
 });
 
 for (const event of ["pointerdown", "keydown", "contextmenu"]) {
@@ -749,10 +467,14 @@ for (const event of ["pointerdown", "keydown", "contextmenu"]) {
         await globalThis.document.body.requestPointerLock({
           unadjustedMovement: true,
         });
-      } catch { /** do nothing */ }
+      } catch { /* do nothing */ }
     }
   });
 }
+
+// Shortcut overrides system
+import { SystemEntity } from "./ecs.ts";
+import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 
 const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
   const shortcuts = shortcutsVar()[e.prefab];
@@ -768,7 +490,6 @@ const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
 
     let updatedAction = action;
 
-    // Override binding if different
     if (
       binding && (
         !action.binding ||
@@ -780,7 +501,6 @@ const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
       updatedAction = { ...action, binding };
     }
 
-    // Recursively handle menu actions
     if (updatedAction.type === "menu") {
       const menuName = actionToShortcutKey(updatedAction);
       const menuAction = updatedAction as UnitDataAction & { type: "menu" };
@@ -788,7 +508,6 @@ const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
         overrideAction(subAction, menuName)
       );
 
-      // Check if any sub-actions were modified
       if (
         updatedSubActions.some((newSub, i) => newSub !== menuAction.actions[i])
       ) {
@@ -804,11 +523,13 @@ const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
   if (!overridden) return;
   e.actions = newActions;
 };
+
 const unitsWithActions = app.addSystem({
   props: ["prefab", "actions"],
   onAdd: shortcutOverrides,
   onChange: shortcutOverrides,
 });
+
 shortcutsVar.subscribe(() => {
   for (const e of unitsWithActions.entities) shortcutOverrides(e);
 });

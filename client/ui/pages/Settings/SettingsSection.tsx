@@ -10,7 +10,7 @@ import {
   getActionDisplayName,
   type Shortcuts,
 } from "@/util/shortcutUtils.ts";
-import { VStack, HStack, HoverHighlight } from "@/components/layout/Layout.tsx";
+import { HoverHighlight, HStack, VStack } from "@/components/layout/Layout.tsx";
 
 const ShortcutRowContainer = styled(HStack)<{ $isNested?: boolean }>`
   padding-left: ${({ $isNested }) => $isNested ? "16px" : "0"};
@@ -21,7 +21,8 @@ const ShortcutLabel = styled.p`
   flex-basis: 1;
 `;
 
-const ShortcutInputContainer = styled(HStack)``;
+const ShortcutInputContainer = styled(HStack)`
+`;
 
 const ShortcutInput = styled.input`
   width: 100%;
@@ -40,10 +41,11 @@ const ResetButton = styled.button`
   padding: ${({ theme }) => theme.spacing.sm};
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   cursor: pointer;
-  
+
   &:hover,
   &.hover {
-    box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) => theme.shadows.sm};
+    box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) =>
+      theme.shadows.sm};
   }
 `;
 

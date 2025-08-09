@@ -25,22 +25,24 @@ const PaletteContainer = styled(Card)<{ $state: string }>`
 `;
 
 const CommandOption = styled.div<{ $focused?: boolean }>`
-  background-color: ${({ $focused, theme }) => $focused ? theme.colors.shadow : "transparent"};
+  background-color: ${({ $focused, theme }) =>
+    $focused ? theme.colors.shadow : "transparent"};
   margin: ${({ $focused, theme }) => $focused ? `0 -${theme.spacing.lg}` : "0"};
   padding: ${({ $focused, theme }) => $focused ? `0 ${theme.spacing.lg}` : "0"};
   cursor: pointer;
-  
+
   &:hover,
   &.hover {
     background-color: ${({ theme }) => theme.colors.shadow};
-    margin: 0 -${({ theme }) => theme.spacing.lg};
+    margin: 0 - ${({ theme }) => theme.spacing.lg};
     padding: 0 ${({ theme }) => theme.spacing.lg};
   }
 `;
 
 const CommandDescription = styled.div`
   font-size: 70%;
-  color: color-mix(in oklab, ${({ theme }) => theme.colors.body} 70%, transparent);
+  color: color-mix(in oklab, ${({ theme }) =>
+    theme.colors.body} 70%, transparent);
 `;
 
 const Highlight = styled.span`

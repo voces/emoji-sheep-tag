@@ -21,10 +21,14 @@ const ChatMessage = styled.div`
   opacity: 1;
   animation: fadeOut 3s ease forwards;
   animation-delay: 7s;
-  
+
   @keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
   }
 `;
 
@@ -38,8 +42,9 @@ const ChatInput = styled.input<{ $state: string }>`
   padding-left: ${({ theme }) => theme.spacing.sm};
   margin-left: -${({ theme }) => theme.spacing.sm};
   border: 0;
-  
-  ${({ $state, theme }) => $state === "open" && `
+
+  ${({ $state, theme }) =>
+    $state === "open" && `
     opacity: 1;
     background-color: color-mix(
       in oklab,
@@ -48,9 +53,8 @@ const ChatInput = styled.input<{ $state: string }>`
     );
     box-shadow: color-mix(in oklab, ${theme.colors.shadow} 70%, transparent)
       1px 1px 4px 1px;
-  `}
-  
-  ${({ $state, theme }) => $state === "dismissed" && `
+  `} ${({ $state, theme }) =>
+    $state === "dismissed" && `
     opacity: 0.5;
     background-color: color-mix(
       in oklab,
@@ -59,7 +63,7 @@ const ChatInput = styled.input<{ $state: string }>`
     );
     box-shadow: color-mix(in oklab, ${theme.colors.shadow} 20%, transparent)
       1px 1px 4px 1px;
-  `}
+  `};
 `;
 
 export const Chat = () => {

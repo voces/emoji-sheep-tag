@@ -109,7 +109,9 @@ export const Command = ({
       {icon && (
         <SvgIcon icon={icon} color={localPlayer?.color} scale={iconScale} />
       )}
-      {binding?.length && <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>}
+      {binding?.length && (
+        <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>
+      )}
       {tooltip}
     </CommandButton>
   );

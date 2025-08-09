@@ -10,7 +10,7 @@ export const theme: DefaultTheme = {
     purple: "#9370db",
     gold: "#FFCC00",
     mana: "#5fa7ff",
-    
+
     // UI colors from CSS vars
     primary: "hsl(202, 86%, 40%)",
     body: "white",
@@ -18,7 +18,7 @@ export const theme: DefaultTheme = {
     border: "black",
     shadow: "#222",
   },
-  
+
   spacing: {
     xs: "2px",
     sm: "4px",
@@ -27,32 +27,32 @@ export const theme: DefaultTheme = {
     xl: "24px",
     xxl: "32px",
   },
-  
+
   borderRadius: {
     sm: "2px",
     md: "4px",
     lg: "8px",
   },
-  
+
   shadows: {
     sm: "1px 1px 1px 2px",
     md: "1px 1px 3px",
     lg: "2px 2px 8px",
   },
-  
+
   fontSize: {
     sm: "0.875rem",
     md: "1rem",
     lg: "1.2rem",
     xl: "1.5rem",
   },
-  
+
   lineHeight: {
     tight: "1.25",
     normal: "1.5",
     loose: "1.75",
   },
-  
+
   fontFamily: {
     sans: '"Trebuchet MS", sans-serif',
   },

@@ -39,7 +39,9 @@ describe("Lobby Settings UI", () => {
       },
     ]);
 
-    const { getByDisplayValue, getByText } = render(<Lobby />, { wrapper: TestWrapper });
+    const { getByDisplayValue, getByText } = render(<Lobby />, {
+      wrapper: TestWrapper,
+    });
 
     // Settings should be visible
     expect(getByText("Game Settings")).toBeTruthy();
@@ -106,7 +108,6 @@ describe("Lobby Settings UI", () => {
     expect(sheepInput.disabled).toBe(true);
     expect(wolvesInput.disabled).toBe(true);
   });
-
 
   it("should allow host to interact with inputs", () => {
     // Set up host player

@@ -24,7 +24,7 @@ const ActionBarContainer = styled(Card)`
   gap: 10px;
   padding: 12px;
   display: flex;
-  
+
   &:empty {
     display: none;
   }
@@ -128,9 +128,7 @@ export const ActionBar = () => {
   if (!selection || selection.owner !== localPlayer?.id) return null;
 
   return (
-    <ActionBarContainer
-      role="toolbar"
-    >
+    <ActionBarContainer role="toolbar">
       {displayActions.map((action) => (
         <Action
           key={`${selection.id}-${action.type}-${action.name}`}

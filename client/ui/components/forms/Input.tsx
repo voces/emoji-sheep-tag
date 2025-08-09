@@ -10,7 +10,6 @@ export const Input = styled.input`
     background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 5));
   }
 
-
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;

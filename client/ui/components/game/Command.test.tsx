@@ -63,7 +63,9 @@ describe("Command", () => {
   });
 
   it("should display complex keyboard shortcut", () => {
-    render(<Command name="Special" binding={["ControlLeft", "KeyS"]} />, { wrapper: Wrapper });
+    render(<Command name="Special" binding={["ControlLeft", "KeyS"]} />, {
+      wrapper: Wrapper,
+    });
 
     expect(screen.getByText("⌃ + S")).toBeTruthy();
   });
@@ -93,7 +95,9 @@ describe("Command", () => {
   });
 
   it("should dispatch multiple keyboard events for chord", () => {
-    render(<Command name="Multi" binding={["ControlLeft", "KeyA"]} />, { wrapper: Wrapper });
+    render(<Command name="Multi" binding={["ControlLeft", "KeyA"]} />, {
+      wrapper: Wrapper,
+    });
 
     const dispatchedEvents: KeyboardEvent[] = [];
     const originalDispatch = document.dispatchEvent;
