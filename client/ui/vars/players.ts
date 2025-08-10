@@ -1,10 +1,12 @@
 import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
 import type { Entity } from "@/shared/types.ts";
+import type { Team } from "@/shared/zod.ts";
 
 export type Player = {
   id: string;
   name: string;
   color: string;
+  team?: Team;
   local?: boolean;
   host?: boolean;
   sheepCount: number;

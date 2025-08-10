@@ -98,3 +98,5 @@ export const app = newApp<Entity>(
 (globalThis as any).app = app;
 
 onRender((delta, time) => app.update(delta, time));
+
+export const map: Record<string, Entity> = {};

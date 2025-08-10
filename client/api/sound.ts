@@ -49,7 +49,6 @@ export const playSound = (
   soundKey: string,
   { volume = 1, loop = false }: { volume?: number; loop?: boolean } = {},
 ) => {
-  console.log("playSound", soundKey);
   if (!listener) return;
   const soundPath = sounds[soundKey];
   const sound = new Audio(listener);

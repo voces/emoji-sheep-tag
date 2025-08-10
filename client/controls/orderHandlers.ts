@@ -71,7 +71,8 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
               }
             } else {
               // Without target (ground click): only "ground" classification matches
-              test = typeof action.aoe === "number" && classification === "ground";
+              test = typeof action.aoe === "number" &&
+                classification === "ground";
             }
             const currentValue = test ? priority : Infinity;
             return currentValue < min ? currentValue : min;

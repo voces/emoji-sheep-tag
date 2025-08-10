@@ -1,4 +1,5 @@
 import "./client.ts";
+import { startPing } from "./messaging.ts";
 import "./ui/root.tsx";
 import "./controls.ts";
 import "./systems/lookup.ts";
@@ -14,3 +15,6 @@ import "./systems/indicators.ts";
 import "./systems/mirrors.ts";
 import "./systems/playerEntityReferences.ts";
 import "./graphics/cursor.ts";
+
+// Start the ping system
+startPing();

@@ -4,8 +4,15 @@ import { expect } from "jsr:@std/expect";
 import { app, Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { playersVar } from "@/vars/players.ts";
-import { setTestSendHook } from "../client.ts";
+import { connect, setServer } from "../connection.ts";
+import {
+  clearTestServerMessages,
+  getTestServerMessages,
+} from "@/testing/setup.ts";
 import { ClientToServerMessage } from "../../server/client.ts";
+import { MouseButtonEvent } from "../mouse.ts";
+import { Vector2 } from "three";
+import { ExtendedSet } from "../util/ExtendedSet.ts";
 import {
   cancelOrder,
   getActiveOrder,
@@ -92,9 +99,7 @@ describe("order handlers", () => {
   });
 
   describe("smart target selection", () => {
-    let sentMessages: ClientToServerMessage[] = [];
-
-    beforeEach(() => {
+    beforeEach(async () => {
       // Set up local player
       playersVar([{
         id: "player-1",
@@ -105,17 +110,15 @@ describe("order handlers", () => {
         entity: { id: "player-entity-1", gold: 100 },
       }]);
 
-      sentMessages = [];
-      setTestSendHook((message) => {
-        sentMessages.push(message);
-      });
+      clearTestServerMessages();
+      setServer("localhost:8888");
+      connect();
+
+      // Wait for connection to establish
+      await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
-    afterEach(() => {
-      setTestSendHook(null);
-    });
-
-    it("should issue move order when right-clicking on ground with wolf", () => {
+    it("should issue move order when right-clicking on ground with wolf", async () => {
       // Create a wolf with both attack and move actions (like real wolf)
       const wolf = app.addEntity({
         id: "wolf-1",
@@ -146,17 +149,26 @@ describe("order handlers", () => {
 
       // Mock mouse event for ground click (no intersections)
       const mockMouseEvent = {
-        intersects: {
-          first: () => null, // No target = ground click
-        },
-        world: { x: 20, y: 20 },
-      } as any; // Use any since we're only mocking the parts we need
+        intersects: new ExtendedSet(),
+        world: new Vector2(20, 20),
+        button: "right",
+        pixels: new Vector2(0, 0),
+        percent: new Vector2(0, 0),
+        angle: 0,
+        element: null,
+        elements: [],
+      } as unknown as MouseButtonEvent;
 
       const result = handleSmartTarget(mockMouseEvent);
 
       expect(result).toBe(true);
-      expect(sentMessages).toHaveLength(1);
-      const message = sentMessages[0];
+
+      // Wait for message to arrive at test server
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const messages = getTestServerMessages();
+      expect(messages).toHaveLength(1);
+      const message = messages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("move");
@@ -165,8 +177,7 @@ describe("order handlers", () => {
       }
     });
 
-
-    it("should issue attack order when right-clicking on enemy structure", () => {
+    it("should issue attack order when right-clicking on enemy structure", async () => {
       // Create a wolf with attack action
       const wolf = app.addEntity({
         id: "wolf-2",
@@ -197,18 +208,28 @@ describe("order handlers", () => {
       (wolf as Entity).selected = true;
 
       // Mock mouse event for enemy structure click
+      const mockIntersects = new ExtendedSet([enemyHut]);
       const mockMouseEvent = {
-        intersects: {
-          first: () => enemyHut, // Target enemy structure
-        },
-        world: { x: 15, y: 15 },
-      } as any;
+        intersects: mockIntersects,
+        world: new Vector2(15, 15),
+        button: "right",
+        pixels: new Vector2(0, 0),
+        percent: new Vector2(0, 0),
+        angle: 0,
+        element: null,
+        elements: [],
+      } as unknown as MouseButtonEvent;
 
       const result = handleSmartTarget(mockMouseEvent);
 
       expect(result).toBe(true);
-      expect(sentMessages).toHaveLength(1);
-      const message = sentMessages[0];
+
+      // Wait for message to arrive at test server
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const messages = getTestServerMessages();
+      expect(messages).toHaveLength(1);
+      const message = messages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("attack");
@@ -217,7 +238,7 @@ describe("order handlers", () => {
       }
     });
 
-    it("should issue attack order when right-clicking on enemy unit", () => {
+    it("should issue attack order when right-clicking on enemy unit", async () => {
       // Create a wolf with attack action
       const wolf = app.addEntity({
         id: "wolf-3",
@@ -247,18 +268,28 @@ describe("order handlers", () => {
       (wolf as Entity).selected = true;
 
       // Mock mouse event for enemy unit click
+      const mockIntersects = new ExtendedSet([enemySheep]);
       const mockMouseEvent = {
-        intersects: {
-          first: () => enemySheep, // Target enemy unit
-        },
-        world: { x: 12, y: 12 },
-      } as any;
+        intersects: mockIntersects,
+        world: new Vector2(12, 12),
+        button: "right",
+        pixels: new Vector2(0, 0),
+        percent: new Vector2(0, 0),
+        angle: 0,
+        element: null,
+        elements: [],
+      } as unknown as MouseButtonEvent;
 
       const result = handleSmartTarget(mockMouseEvent);
 
       expect(result).toBe(true);
-      expect(sentMessages).toHaveLength(1);
-      const message = sentMessages[0];
+
+      // Wait for message to arrive at test server
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const messages = getTestServerMessages();
+      expect(messages).toHaveLength(1);
+      const message = messages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("attack");
