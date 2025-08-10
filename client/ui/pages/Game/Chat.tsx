@@ -45,6 +45,16 @@ const ChatInput = styled.input<{ $state: string }>`
 
   ${({ $state, theme }) =>
     $state === "open" && `
+    &:focus:not([disabled]) {
+      opacity: 1;
+      background-color: color-mix(
+        in oklab,
+        ${theme.colors.background} 70%,
+        transparent
+      );
+      box-shadow: color-mix(in oklab, ${theme.colors.shadow} 70%, transparent)
+        1px 1px 4px 1px;
+    }
     opacity: 1;
     background-color: color-mix(
       in oklab,

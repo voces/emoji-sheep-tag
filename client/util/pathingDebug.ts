@@ -17,8 +17,8 @@ export const clearDebugCircles = (e: Entity) => {
 
 export const updateDebugCircles = (e: Entity) => {
   if (
-    !flags.debugPathing || !e.position || !e.order || !("path" in e.order) ||
-    !e.order.path?.length
+    !flags.debug || !flags.debugPathing || !e.position || !e.order ||
+    !("path" in e.order) || !e.order.path?.length
   ) {
     return clearDebugCircles(e);
   }

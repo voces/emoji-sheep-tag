@@ -20,7 +20,6 @@ import { findAction } from "../util/actionLookup.ts";
 import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 import { deductPlayerGold } from "./player.ts";
-import { UnitDeathEvent } from "../ecs.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -339,8 +338,6 @@ export const damageEntity = (
 ): void => {
   if (!target.health) return;
 
-  const app = currentApp();
-
   const baseDamage = amount !== undefined
     ? amount
     : computeUnitDamage(attacker);
@@ -350,7 +347,6 @@ export const damageEntity = (
 
   target.health = Math.max(0, target.health - finalDamage);
 
-  if (target.health === 0) {
-    app.dispatchTypedEvent("unitDeath", new UnitDeathEvent(target, attacker));
-  }
+  // Track the last attacker unconditionally
+  target.lastAttacker = attacker.id;
 };

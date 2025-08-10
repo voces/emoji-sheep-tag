@@ -1,4 +1,4 @@
-import { GameMessage, Update } from "../client/client.ts";
+import { Update } from "../client/client.ts";
 import { Entity } from "@/shared/types.ts";
 import { send } from "./lobbyApi.ts";
 
@@ -22,31 +22,40 @@ export const remove = (entityId: string) => {
   updates[entityId] = { __delete: true } as Partial<Entity>;
 };
 
-const messages: GameMessage[] = [];
+// Keep kill messages for now since they're different from sound
+const killMessages: Array<
+  {
+    type: "kill";
+    killer: { player: string; unit: string };
+    victim: { player: string; unit: string };
+  }
+> = [];
 
-export const message = (message: GameMessage) => {
-  messages.push(message);
-};
-
-export const playSound = (soundKey: string, volume?: number) => {
-  messages.push({ type: "sound", soundKey, volume });
+export const message = (
+  message: {
+    type: "kill";
+    killer: { player: string; unit: string };
+    victim: { player: string; unit: string };
+  },
+) => {
+  killMessages.push(message);
 };
 
 export const flushUpdates = () => {
   const updatesArray: Update[] = Object.entries(updates).map(([id, update]) =>
     "__delete" in update
-      ? ({ type: "delete", id })
-      : ({ type: "unit", id, ...update })
+      ? { type: "delete", id }
+      : { type: "unit", id, ...update }
   );
-  updatesArray.push(...messages);
+  updatesArray.push(...killMessages);
   if (updatesArray.length) {
     send({ type: "updates", updates: updatesArray });
     updates = {};
-    messages.splice(0);
+    killMessages.splice(0);
   }
 };
 
 export const clearUpdatesCache = () => {
   updates = {};
-  messages.splice(0);
+  killMessages.splice(0);
 };

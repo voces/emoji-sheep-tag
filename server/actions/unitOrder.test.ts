@@ -404,6 +404,9 @@ describe("unitOrder special abilities", () => {
 
     // Use sheep which has destroy last farm action
     const sheep = newUnit("test-client", "sheep", 5, 5);
+    // Create a hut to destroy
+    const hut = newUnit("test-client", "hut", 10, 10);
+    expect(hut.health).toBe(120);
 
     // Execute destroy last farm action
     unitOrder(client, {
@@ -412,9 +415,8 @@ describe("unitOrder special abilities", () => {
       order: "destroyLastFarm",
     });
 
-    // This action doesn't set a specific order, it executes immediately
-    // We just verify it doesn't throw an error and processes correctly
-    expect(true).toBe(true);
+    // Verify the hut was destroyed (health set to 0)
+    expect(hut.health).toBe(0);
   });
 
   it("should handle mirror image with insufficient mana", () => {

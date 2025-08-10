@@ -8,7 +8,7 @@ import { handleAttack } from "./attack.ts";
 import { handleHold } from "./hold.ts";
 import { getOrder } from "../orders/index.ts";
 import { findActionAndItem, findActionByOrder } from "../util/actionLookup.ts";
-import { playSound } from "../updates.ts";
+import { currentApp } from "../contexts.ts";
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
@@ -21,6 +21,7 @@ export const unitOrder = (
   client: Client,
   { units, order, target }: z.TypeOf<typeof zOrderEvent>,
 ) => {
+  console.log("unitOrder", { units, order, target });
   for (const uId of units) {
     const unit = lookup(uId);
     if (!unit) throw new UnknownEntity(uId);
@@ -56,8 +57,23 @@ export const unitOrder = (
       if (orderDef.canExecute && !orderDef.canExecute(unit)) continue;
 
       if (orderDef.onIssue(unit) === "immediate") {
-        if (action && "soundOnCastStart" in action && action.soundOnCastStart) {
-          playSound(action.soundOnCastStart);
+        if (
+          action && "soundOnCastStart" in action && action.soundOnCastStart &&
+          unit.position && unit.owner
+        ) {
+          const app = currentApp();
+          app.addEntity({
+            id: `sound-${Date.now()}-${Math.random()}`,
+            owner: unit.owner,
+            position: { x: unit.position.x, y: unit.position.y },
+            sounds: {
+              birth: [action.soundOnCastStart],
+            },
+            buffs: [{
+              remainingDuration: 0.1,
+              expiration: "Sound",
+            }],
+          });
         }
       }
     } else {

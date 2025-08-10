@@ -1,3 +1,5 @@
+import { flags } from "../flags.ts";
+
 const newPanel = (name: string, fg: string, bg: string) => {
   let min = Infinity, max = 0;
   const round = Math.round;
@@ -184,4 +186,4 @@ const newStats = () => {
 export const stats = newStats();
 document.body.appendChild(stats.dom);
 stats.dom.id = "stats";
-stats.dom.style.display = "none";
+if (!flags.debug || !flags.debugStats) stats.dom.style.display = "none";

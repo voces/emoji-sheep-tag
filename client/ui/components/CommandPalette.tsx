@@ -10,6 +10,7 @@ import { stateVar } from "@/vars/state.ts";
 import { flags } from "../../flags.ts";
 import { Card } from "@/components/layout/Card.tsx";
 import { Input } from "@/components/forms/Input.tsx";
+import { getLocalPlayer } from "@/vars/players.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -34,7 +35,7 @@ const CommandOption = styled.div<{ $focused?: boolean }>`
   &:hover,
   &.hover {
     background-color: ${({ theme }) => theme.colors.shadow};
-    margin: 0 - ${({ theme }) => theme.spacing.lg};
+    margin: ${({ theme }) => `0 -${theme.spacing.lg}`};
     padding: 0 ${({ theme }) => theme.spacing.lg};
   }
 `;
@@ -122,12 +123,28 @@ export const CommandPalette = () => {
     {
       name: "Cancel round",
       description: "Cancels the current round",
-      valid: () => stateVar() === "playing",
+      valid: () => stateVar() === "playing" && !!getLocalPlayer()?.host,
       callback: () => send({ type: "cancel" }),
+    },
+    {
+      name: `${flags.debug ? "Disable" : "Enable"} debugging`,
+      description: flags.debug
+        ? "Disable debugging and hide debug commands."
+        : "Show debug commands.",
+      callback: () => {
+        flags.debug = !flags.debug;
+        const stats = document.getElementById("stats");
+        if (!flags.debug) {
+          globalThis.latency = 0;
+          globalThis.noise = 0;
+          if (stats) stats.style.display = "none";
+        } else if (stats) stats.style.display = flags.debugStats ? "" : "none";
+      },
     },
     {
       name: "Set latency",
       description: "Artificially increase latency",
+      valid: () => flags.debug,
       prompts: ["Latency (MS)"],
       callback: (latency) =>
         addChatMessage(
@@ -137,29 +154,37 @@ export const CommandPalette = () => {
     {
       name: "Set noise",
       description: "Artificially increase noise on latency",
+      valid: () => flags.debug,
       prompts: ["Noise (MS)"],
       callback: (noise) =>
         addChatMessage(`Noise set to ${globalThis.noise = parseFloat(noise)}.`),
     },
     {
-      name: "Toggle stats",
-      description: "Show or hide latency, memory, and frames per second",
+      name: `${flags.debugStats ? "Hide" : "Show"} stats`,
+      description: `${
+        flags.debugStats ? "Hide" : "Show"
+      } latency, memory, and frames per second`,
+      valid: () => flags.debug,
       callback: () => {
+        flags.debugStats = !flags.debugStats;
+        if (flags.debugStats) localStorage.setItem("debug-stats", "true");
+        else localStorage.removeItem("debug-stats");
+
         const stats = document.getElementById("stats");
-        if (!stats) return;
-        stats.style.display = stats.style.display === "none" ? "" : "none";
+        if (stats) stats.style.display = flags.debugStats ? "" : "none";
       },
     },
     {
       name: `${flags.debugPathing ? "Disable" : "Enable"} path debugging`,
       description: `${flags.debugPathing ? "Hide" : "Show"} pathing traces`,
+      valid: () => flags.debug,
       callback: () => {
         flags.debugPathing = !flags.debugPathing;
         if (flags.debugPathing) localStorage.setItem("debug-pathing", "true");
         else localStorage.removeItem("debug-pathing");
       },
     },
-  ], [flags.debugPathing]);
+  ], [flags.debug, flags.debugStats, flags.debugPathing]);
 
   const filteredCommands = useMemoWithPrevious<CommandOption[]>((prev) => {
     if (prompt) return prev ?? [];

@@ -6,9 +6,7 @@ import { selection } from "./autoSelect.ts";
 app.addSystem({
   props: ["id"],
   onAdd: (e) => {
-    if (e.tilemap && e.position && e.owner) {
-      playSoundAt("construction1", e.position.x, e.position.y, 0.3);
-    }
+    if (e.sounds?.birth) playEntitySound(e, "birth", { volume: 0.5 });
   },
   onRemove: (e) => {
     if (stateVar() !== "playing" && e.prefab !== "sheep") return;

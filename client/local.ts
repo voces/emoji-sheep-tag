@@ -50,17 +50,33 @@ export class LocalWebSocket {
   readyState: number = 0; // CONNECTING
   // deno-lint-ignore ban-types
   private eventListeners: { [key: string]: Function[] } = {};
-  private port: MessagePort;
+  private port: MessagePort | undefined;
   private id: number;
   private openTimeout: number | undefined;
+  private initTimeout: number | undefined;
 
   constructor() {
     initChannel();
-    if (!worker) loadLocal();
+    this.id = Math.random();
+
+    // Check if worker exists immediately (from previous tab)
+    if (worker) {
+      this.initializePort();
+    } else {
+      // Wait for broadcast channel response or loadLocal to create worker
+      if (!worker) loadLocal();
+      this.initTimeout = setTimeout(() => {
+        this.initTimeout = undefined;
+        if (worker) {
+          this.initializePort();
+        }
+      }, 100); // Wait a bit longer than loadLocal's timeout
+    }
+  }
+
+  private initializePort() {
     this.port = worker!.port;
     this.port.addEventListener("message", (e) => this.onMessage(e));
-
-    this.id = Math.random();
     this.port.postMessage({ type: "connect", id: this.id });
 
     this.openTimeout = setTimeout(() => {
@@ -72,8 +88,10 @@ export class LocalWebSocket {
     globalThis.addEventListener(
       "beforeunload",
       () => {
-        this.port.postMessage({ type: "close", id: this.id });
-        this.port.close();
+        if (this.port) {
+          this.port.postMessage({ type: "close", id: this.id });
+          this.port.close();
+        }
       },
     );
   }
@@ -82,22 +100,31 @@ export class LocalWebSocket {
     if (this.readyState !== 1) {
       throw new Error("WebSocket is not open");
     }
+    if (!this.port) {
+      throw new Error("WebSocket port not initialized");
+    }
     this.port.postMessage({ type: "message", id: this.id, data });
   }
 
   close() {
     if (this.readyState === 3) return;
 
-    // Clear any pending open timeout
+    // Clear any pending timeouts
     if (this.openTimeout) {
       clearTimeout(this.openTimeout);
       this.openTimeout = undefined;
     }
+    if (this.initTimeout) {
+      clearTimeout(this.initTimeout);
+      this.initTimeout = undefined;
+    }
 
     this.readyState = 3; // CLOSED
-    this.port.postMessage({ type: "close", id: this.id });
+    if (this.port) {
+      this.port.postMessage({ type: "close", id: this.id });
+      this.port.close();
+    }
     this.dispatchEvent("close", {});
-    this.port.close();
   }
 
   addEventListener<K extends keyof SocketEventMap>(
@@ -142,18 +169,23 @@ export class LocalWebSocket {
 let started = false;
 export const loadLocal = () => {
   initChannel();
-  if (!worker) {
-    const workerScript = document.querySelector("script#worker")?.textContent;
-    if (!workerScript) throw new Error("Could not locate worker script");
-    const blob = new Blob([workerScript], { type: "application/javascript" });
-    sharedBlobURL = URL.createObjectURL(blob);
-    channel!.postMessage({ type: "blobUrl", url: sharedBlobURL });
-    worker = new SharedWorker(sharedBlobURL, { name: "emoji-sheep-tag" });
-  }
-  if (!started) {
-    worker.port.start();
-    started = true;
-  }
+
+  // Wait briefly for broadcast channel response before creating new worker
+  setTimeout(() => {
+    if (!worker) {
+      const workerScript = document.querySelector("script#worker")?.textContent;
+      if (!workerScript) throw new Error("Could not locate worker script");
+      const blob = new Blob([workerScript], { type: "application/javascript" });
+      sharedBlobURL = URL.createObjectURL(blob);
+      channel!.postMessage({ type: "blobUrl", url: sharedBlobURL });
+      worker = new SharedWorker(sharedBlobURL, { name: "emoji-sheep-tag" });
+    }
+    if (!started) {
+      worker.port.start();
+      started = true;
+    }
+  }, 50);
+
   setServer("local");
 };
 

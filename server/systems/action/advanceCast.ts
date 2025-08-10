@@ -1,7 +1,7 @@
 import { Entity } from "@/shared/types.ts";
 import { getOrder } from "../../orders/index.ts";
 import { findActionByOrder } from "../../util/actionLookup.ts";
-import { playSound } from "../../updates.ts";
+import { currentApp } from "../../contexts.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {
   if (e.order?.type !== "cast") return delta;
@@ -17,8 +17,18 @@ export const advanceCast = (e: Entity, delta: number) => {
       if (manaCost > 0 && e.mana) e.mana -= manaCost;
     }
 
-    if (action && "soundOnCastStart" in action && action.soundOnCastStart) {
-      playSound(action.soundOnCastStart);
+    if (
+      action && "soundOnCastStart" in action && action.soundOnCastStart &&
+      e.position && e.owner
+    ) {
+      const app = currentApp();
+      app.addEntity({
+        id: `sound-${Date.now()}-${Math.random()}`,
+        owner: e.owner,
+        position: { x: e.position.x, y: e.position.y },
+        sounds: { birth: [action.soundOnCastStart] },
+        buffs: [{ remainingDuration: 0.1, expiration: "Sound" }],
+      });
     }
 
     orderDef?.onCastStart?.(e);

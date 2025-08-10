@@ -73,6 +73,7 @@ export type Buff = {
   readonly attackSpeedMultiplier?: number;
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
+  readonly expiration?: string;
 };
 
 export type UnitDataAction = {
@@ -119,6 +120,7 @@ export type Entity = {
   model?: string;
   modelScale?: number;
   sounds?: {
+    birth?: ReadonlyArray<string>;
     death?: ReadonlyArray<string>;
     what?: ReadonlyArray<string>;
   };
@@ -165,6 +167,7 @@ export type Entity = {
     readonly target: { readonly x: number; readonly y: number };
   } | null;
   attackCooldownRemaining?: number | null;
+  lastAttacker?: string | null;
 
   isMirror?: boolean;
   mirrors?: ReadonlyArray<string> | null;

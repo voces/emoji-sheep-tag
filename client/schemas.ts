@@ -154,6 +154,7 @@ const zBuff = z.object({
   attackSpeedMultiplier: z.number().optional(),
   movementSpeedBonus: z.number().optional(),
   movementSpeedMultiplier: z.number().optional(),
+  expiration: z.string().optional(),
 });
 
 const zUpdate = z.object({
@@ -197,6 +198,7 @@ const zUpdate = z.object({
     target: z.object({ x: z.number(), y: z.number() }),
   }).nullable().optional(),
   attackCooldownRemaining: z.number().nullable().optional(),
+  lastAttacker: z.string().nullable().optional(),
 
   isMirror: z.boolean().optional(),
   mirrors: z.array(z.string()).readonly().nullable().optional(),
@@ -224,6 +226,7 @@ const zUpdate = z.object({
   model: z.string().optional(),
   modelScale: z.number().optional(),
   sounds: z.object({
+    birth: z.array(z.string()).readonly().optional(),
     attack: z.array(z.string()).readonly().optional(),
     death: z.array(z.string()).readonly().optional(),
     ready: z.array(z.string()).readonly().optional(),
@@ -243,20 +246,14 @@ const zKill = z.object({
   victim: z.object({ player: z.string(), unit: z.string() }),
 });
 
-const zSound = z.object({
-  type: z.literal("sound"),
-  soundKey: z.string(),
-  volume: z.number().optional(),
-});
-
-const zGameMessage = z.union([zKill, zSound]);
+const zGameMessage = z.union([zKill]);
 
 export type GameMessage = z.TypeOf<typeof zGameMessage>;
 
 // Events that come down from a loo
 const zUpdates = z.object({
   type: z.literal("updates"),
-  updates: z.union([zUpdate, zDelete, zKill, zSound]).array().readonly(),
+  updates: z.union([zUpdate, zDelete, zKill]).array().readonly(),
 });
 
 export type Update = z.TypeOf<typeof zUpdates>["updates"][number];

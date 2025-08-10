@@ -31,17 +31,7 @@ const id = (type?: string) => {
   }
 };
 
-export class UnitDeathEvent extends Event {
-  constructor(readonly unit: Entity, readonly killer: Entity | undefined) {
-    super("unitDeath");
-  }
-}
-
-export type GameEvents = {
-  unitDeath: UnitDeathEvent;
-};
-
-class GameTarget extends TypedEventTarget<GameEvents> {
+class GameTarget extends TypedEventTarget<Record<string, never>> {
   constructor(readonly initializeEntity: (input: Partial<Entity>) => Entity) {
     super();
   }
@@ -122,8 +112,6 @@ export const newEcs = () => {
   return app;
 };
 
-import("./events/death.ts");
-import("./st/index.ts");
 import("./systems/action/action.ts");
 import("./systems/autoAttack.ts");
 import("./systems/death.ts");

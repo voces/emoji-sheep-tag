@@ -40,7 +40,7 @@ const setup = () => {
   return ecs;
 };
 
-it.only("integration: sheep walking around a corner", async () => {
+it("integration: sheep walking around a corner", async () => {
   const ecs = setup();
 
   const sheep = ecs.addEntity<Entity>({

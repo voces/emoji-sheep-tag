@@ -97,10 +97,11 @@ export const playEntitySound = (
   if (!sound) return;
 
   x ??= entity.position?.x;
-  if (typeof x !== "number") return;
-
   y ??= entity.position?.y;
-  if (typeof y !== "number") return;
+  if (typeof x !== "number" || typeof y !== "number") {
+    playSound(sound, { volume });
+    return;
+  }
 
   playSoundAt(sound, x, y, volume);
 };

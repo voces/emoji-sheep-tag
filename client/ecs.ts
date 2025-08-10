@@ -1,8 +1,6 @@
 import { App, newApp, SystemEntity as ECSSystemEntity } from "jsr:@verit/ecs";
 import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "@/shared/types.ts";
-import { TypedEventTarget } from "typed-event-target";
-import { GameEvents } from "../server/ecs.ts";
 
 export type Entity = CommonEntity & {
   selected?: boolean;
@@ -17,22 +15,6 @@ export type Entity = CommonEntity & {
 };
 
 export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;
-
-class EntityCreatedEvent extends Event {
-  constructor(readonly entity: Entity) {
-    super("entityCreated");
-  }
-}
-
-type LocalGameEvents = {
-  entityCreated: EntityCreatedEvent;
-};
-
-class GameTarget extends TypedEventTarget<LocalGameEvents & GameEvents> {
-  constructor(readonly initializeEntity: (input: Partial<Entity>) => Entity) {
-    super();
-  }
-}
 
 type Listeners = {
   [key in keyof Entity]?: Set<((entity: Entity, prev: unknown) => void)>;
@@ -59,41 +41,36 @@ export const listen = <P extends keyof Entity>(
 };
 
 // let counter = 0;
-export const app = newApp<Entity>(
-  new GameTarget(
-    (entity) => {
-      if (!entity.id) throw new Error("Expected entity to have an id");
-      // Newest entity on top; works with 2D graphics
-      // entity.zIndex ??= counter++ / 100000;
-      const listeners: Listeners = {};
-      const proxy = new Proxy(entity as Entity, {
-        set: (target, prop, value) => {
-          const prev = target[prop as keyof Entity];
-          if (prev === value) return true;
-          // deno-lint-ignore no-explicit-any
-          (target as any)[prop] = value;
-          app.queueEntityChange(proxy, prop as keyof Entity);
-          listeners[prop as keyof Entity]?.forEach((fn) => fn(proxy, prev));
-          return true;
-        },
-        deleteProperty: (target, prop) => {
-          const prev = target[prop as keyof Entity];
-          if (prev == null) return true;
-          // deno-lint-ignore no-explicit-any
-          delete (target as any)[prop];
-          app.queueEntityChange(proxy, prop as keyof Entity);
-          listeners[prop as keyof Entity]?.forEach((fn) => fn(proxy, prev));
-          return true;
-        },
-      });
-      allListeners.set(proxy, listeners);
-      queueMicrotask(() =>
-        app.dispatchTypedEvent("entityCreated", new EntityCreatedEvent(proxy))
-      );
-      return proxy;
-    },
-  ),
-) as GameTarget & App<Entity>;
+export const app = newApp<Entity>({
+  initializeEntity: (entity: Partial<Entity>) => {
+    if (!entity.id) throw new Error("Expected entity to have an id");
+    // Newest entity on top; works with 2D graphics
+    // entity.zIndex ??= counter++ / 100000;
+    const listeners: Listeners = {};
+    const proxy = new Proxy(entity as Entity, {
+      set: (target, prop, value) => {
+        const prev = target[prop as keyof Entity];
+        if (prev === value) return true;
+        // deno-lint-ignore no-explicit-any
+        (target as any)[prop] = value;
+        app.queueEntityChange(proxy, prop as keyof Entity);
+        listeners[prop as keyof Entity]?.forEach((fn) => fn(proxy, prev));
+        return true;
+      },
+      deleteProperty: (target, prop) => {
+        const prev = target[prop as keyof Entity];
+        if (prev == null) return true;
+        // deno-lint-ignore no-explicit-any
+        delete (target as any)[prop];
+        app.queueEntityChange(proxy, prop as keyof Entity);
+        listeners[prop as keyof Entity]?.forEach((fn) => fn(proxy, prev));
+        return true;
+      },
+    });
+    allListeners.set(proxy, listeners);
+    return proxy;
+  },
+}) as App<Entity>;
 // deno-lint-ignore no-explicit-any
 (globalThis as any).app = app;
 

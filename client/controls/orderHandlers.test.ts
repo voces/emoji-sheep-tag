@@ -9,7 +9,6 @@ import {
   clearTestServerMessages,
   getTestServerMessages,
 } from "@/testing/setup.ts";
-import { ClientToServerMessage } from "../../server/client.ts";
 import { MouseButtonEvent } from "../mouse.ts";
 import { Vector2 } from "three";
 import { ExtendedSet } from "../util/ExtendedSet.ts";

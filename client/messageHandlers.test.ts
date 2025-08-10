@@ -570,19 +570,6 @@ describe("updates", () => {
     expect(chatLogVar()[chatLogVar().length - 1].message).toContain("killed");
   });
 
-  it("handles sound update", () => {
-    handlers.updates({
-      type: "updates",
-      updates: [{
-        type: "sound",
-        soundKey: "test-sound",
-      }],
-    });
-
-    // Sound playing is hard to test without mocking, just ensure no errors
-    expect(true).toBe(true);
-  });
-
   it("processes multiple updates atomically", () => {
     // Setup playing state with initial entity
     handlers.join({

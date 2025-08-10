@@ -282,7 +282,7 @@ export const prefabs: Record<
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 120,
     completionTime: 0.7,
-    sounds: { death: ["explosion1"] },
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
   },
   tinyHut: {
@@ -293,7 +293,7 @@ export const prefabs: Record<
     tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     maxHealth: 20,
     completionTime: 0.5,
-    sounds: { death: ["explosion1"] },
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
   },
   wideHut: {
@@ -304,7 +304,7 @@ export const prefabs: Record<
     tilemap: { map: Array(36).fill(3), top: -3, left: -3, width: 6, height: 6 },
     maxHealth: 140,
     completionTime: 1,
-    sounds: { death: ["explosion1"] },
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
   },
   rotundHut: {
@@ -315,7 +315,7 @@ export const prefabs: Record<
     tilemap: { map: Array(64).fill(3), top: -4, left: -4, width: 8, height: 8 },
     maxHealth: 200,
     completionTime: 1.5,
-    sounds: { death: ["explosion1"] },
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
   },
   stackHut: {
@@ -332,7 +332,7 @@ export const prefabs: Record<
     },
     maxHealth: 15,
     completionTime: 3,
-    sounds: { death: ["explosion1"] },
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
   },
   translocationHut: {
@@ -341,7 +341,7 @@ export const prefabs: Record<
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 10,
-    sounds: { death: ["explosion1"] },
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
   },
   fence: {
