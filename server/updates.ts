@@ -1,8 +1,7 @@
-import { Update } from "../client/client.ts";
 import { Entity } from "@/shared/types.ts";
 import { send } from "./lobbyApi.ts";
 
-let updates: Record<string, Partial<Entity>> = {};
+let updates: Record<string, Entity & { __delete?: boolean }> = {};
 
 export const newEntity = (entity: Entity) => {
   updates[entity.id] = entity;
@@ -14,48 +13,24 @@ export const update = <K extends keyof Entity>(
   value: Entity[K],
 ) => {
   if (!updates[entityId]) {
-    updates[entityId] = { [prop]: value } as Partial<Entity>;
+    updates[entityId] = { id: entityId, [prop]: value };
   } else updates[entityId][prop] = value;
 };
 
 export const remove = (entityId: string) => {
-  updates[entityId] = { __delete: true } as Partial<Entity>;
-};
-
-// Keep kill messages for now since they're different from sound
-const killMessages: Array<
-  {
-    type: "kill";
-    killer: { player: string; unit: string };
-    victim: { player: string; unit: string };
-  }
-> = [];
-
-export const message = (
-  message: {
-    type: "kill";
-    killer: { player: string; unit: string };
-    victim: { player: string; unit: string };
-  },
-) => {
-  killMessages.push(message);
+  if (!updates[entityId]) {
+    updates[entityId] = { id: entityId, __delete: true };
+  } else updates[entityId].__delete = true;
 };
 
 export const flushUpdates = () => {
-  const updatesArray: Update[] = Object.entries(updates).map(([id, update]) =>
-    "__delete" in update
-      ? { type: "delete", id }
-      : { type: "unit", id, ...update }
-  );
-  updatesArray.push(...killMessages);
+  const updatesArray = Object.entries(updates);
   if (updatesArray.length) {
-    send({ type: "updates", updates: updatesArray });
+    send({ type: "updates", updates: Object.values(updates) });
     updates = {};
-    killMessages.splice(0);
   }
 };
 
 export const clearUpdatesCache = () => {
   updates = {};
-  killMessages.splice(0);
 };

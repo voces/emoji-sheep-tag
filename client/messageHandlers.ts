@@ -1,6 +1,6 @@
-import { getPlayer, playersVar } from "@/vars/players.ts";
+import { playersVar } from "@/vars/players.ts";
 import { stateVar } from "@/vars/state.ts";
-import { app, Entity, map } from "./ecs.ts";
+import { app, map } from "./ecs.ts";
 import { camera } from "./graphics/three.ts";
 import { center, tiles } from "@/shared/map.ts";
 import { stats } from "./util/Stats.ts";
@@ -9,7 +9,6 @@ import { addChatMessage } from "@/vars/chat.ts";
 import { roundsVar } from "@/vars/rounds.ts";
 import { formatVar } from "@/vars/format.ts";
 import { format } from "./api/player.ts";
-import { absurd } from "@/shared/util/absurd.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import type { ServerToClientMessage } from "./schemas.ts";
 
@@ -77,9 +76,8 @@ export const handlers = {
       for (const key in map) delete map[key];
     }
     for (const update of data.updates) {
-      const { type: _type, ...props } = update;
-      if (update.id in map) Object.assign(map[update.id], props);
-      else map[update.id] = app.addEntity(props as Partial<Entity>);
+      if (update.id in map) Object.assign(map[update.id], update);
+      else map[update.id] = app.addEntity(update);
     }
     if (data.rounds) roundsVar(data.rounds);
     if (data.lobbySettings) lobbySettingsVar(data.lobbySettings);
@@ -158,33 +156,14 @@ export const handlers = {
     if (d.round) roundsVar((r) => [...r, d.round!]);
   },
   updates: (data: Extract<ServerToClientMessage, { type: "updates" }>) => {
-    for (const update of data.updates) {
-      switch (update.type) {
-        case "unit": {
-          if (stateVar() !== "playing") break;
-          const { type: _type, ...props } = update;
-          if (update.id in map) Object.assign(map[update.id], props);
-          else map[update.id] = app.addEntity(props as Partial<Entity>);
-          break;
-        }
-        case "delete": {
-          if (stateVar() !== "playing") break;
-          if (update.id in map) {
-            app.removeEntity(map[update.id]);
-            delete map[update.id];
-          }
-          break;
-        }
-        case "kill": {
-          const killer = getPlayer(update.killer.player);
-          const victim = getPlayer(update.victim.player);
-          if (killer && victim) {
-            addChatMessage(`${format(killer)} killed ${format(victim)}`);
-          }
-          break;
-        }
-        default:
-          absurd(update);
+    if (stateVar() !== "playing") return;
+    for (const { __delete, ...update } of data.updates) {
+      if (update.id in map) Object.assign(map[update.id], update);
+      else map[update.id] = app.addEntity(update);
+
+      if (__delete) {
+        app.removeEntity(map[update.id]);
+        delete map[update.id];
       }
     }
   },

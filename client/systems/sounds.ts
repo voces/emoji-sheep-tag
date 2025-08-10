@@ -1,7 +1,11 @@
 import { playEntitySound, playSoundAt } from "../api/sound.ts";
 import { app } from "../ecs.ts";
+import { getPlayer } from "@/vars/players.ts";
 import { stateVar } from "../ui/vars/state.ts";
 import { selection } from "./autoSelect.ts";
+import { lookup } from "./lookup.ts";
+import { addChatMessage } from "@/vars/chat.ts";
+import { format } from "../api/player.ts";
 
 app.addSystem({
   props: ["id"],
@@ -9,17 +13,29 @@ app.addSystem({
     if (e.sounds?.birth) playEntitySound(e, "birth", { volume: 0.5 });
   },
   onRemove: (e) => {
-    if (stateVar() !== "playing" && e.prefab !== "sheep") return;
+    if (stateVar() !== "playing") return console.log("not playing");
     if (typeof e.health === "number" && typeof e.maxHealth === "number") {
       playEntitySound(e, ["death"], { volume: e.tilemap ? 0.3 : 0.6 });
     }
+    if (e.prefab === "sheep" && e.lastAttacker && e.owner) {
+      const killingUnit = lookup[e.lastAttacker];
+      if (!killingUnit || !killingUnit.owner) {
+        return console.log("precond2", killingUnit);
+      }
+      const killingPlayer = getPlayer(killingUnit.owner);
+      const victim = getPlayer(e.owner);
+      if (killingPlayer && victim) {
+        addChatMessage(`${format(killingPlayer)} killed ${format(victim)}`);
+      } else console.log("precond3", killingPlayer, victim);
+    } else console.log("precond", { ...e });
   },
 });
 
 app.addSystem({
   props: ["health"],
   onChange: (e) =>
-    e.position && playSoundAt("thud1", e.position.x, e.position.y, 0.2),
+    (typeof e.health !== "number" || e.health > 0) && e.position &&
+    playSoundAt("thud1", e.position.x, e.position.y, 0.2),
 });
 
 app.addSystem({

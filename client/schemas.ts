@@ -117,14 +117,14 @@ const zBaseAction = z.union([
 ]);
 
 // Define the recursive action type using z.lazy with proper typing
-export type ActionType = z.infer<typeof zBaseAction> | {
+type ActionType = z.infer<typeof zBaseAction> | {
   name: string;
   type: "menu";
   binding?: ReadonlyArray<string>;
   actions: ReadonlyArray<ActionType>;
 };
 
-const zAction: z.ZodType<ActionType> = z.lazy(() =>
+const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
   z.union([
     zBaseAction,
     z.object({
@@ -158,8 +158,8 @@ const zBuff = z.object({
 });
 
 const zUpdate = z.object({
-  type: z.literal("unit"),
   id: z.string(),
+  __delete: z.boolean().optional(),
 
   // Data
   prefab: z.string().optional(),
@@ -235,28 +235,13 @@ const zUpdate = z.object({
   }).optional(),
 }).strict();
 
-const zDelete = z.object({
-  type: z.literal("delete"),
-  id: z.string(),
-});
-
-const zKill = z.object({
-  type: z.literal("kill"),
-  killer: z.object({ player: z.string(), unit: z.string() }),
-  victim: z.object({ player: z.string(), unit: z.string() }),
-});
-
-const zGameMessage = z.union([zKill]);
-
-export type GameMessage = z.TypeOf<typeof zGameMessage>;
-
 // Events that come down from a loo
 const zUpdates = z.object({
   type: z.literal("updates"),
-  updates: z.union([zUpdate, zDelete, zKill]).array().readonly(),
+  updates: zUpdate.array().readonly(),
 });
 
-export type Update = z.TypeOf<typeof zUpdates>["updates"][number];
+export type Update = z.infer<typeof zUpdates>["updates"][number];
 
 const zColorChange = z.object({
   type: z.literal("colorChange"),

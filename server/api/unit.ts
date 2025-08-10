@@ -346,7 +346,5 @@ export const damageEntity = (
     : applyDamageModifiers(baseDamage, attacker, target);
 
   target.health = Math.max(0, target.health - finalDamage);
-
-  // Track the last attacker unconditionally
   target.lastAttacker = attacker.id;
 };

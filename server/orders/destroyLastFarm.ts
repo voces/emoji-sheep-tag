@@ -25,7 +25,10 @@ export const destroyLastFarmOrder = {
       unit.owner,
       (entity) => !!entity.tilemap,
     );
-    if (lastFarm) lastFarm.health = 0;
+    if (lastFarm) {
+      lastFarm.health = 0;
+      lastFarm.lastAttacker = null;
+    }
     return "immediate";
   },
 } satisfies OrderDefinition;

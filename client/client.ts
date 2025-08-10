@@ -1,5 +1,5 @@
 // Re-export types and schemas
-export type { GameMessage, ServerToClientMessage, Update } from "./schemas.ts";
+export type { ServerToClientMessage, Update } from "./schemas.ts";
 export { zFormat } from "./schemas.ts";
 
 // Re-export connection functions

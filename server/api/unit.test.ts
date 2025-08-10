@@ -15,13 +15,11 @@ import { newLobby } from "../lobby.ts";
 import { interval } from "../api/timing.ts";
 import { init } from "../st/data.ts";
 import { items } from "@/shared/data.ts";
-import { clearAutoStartTimeouts } from "../systems/death.ts";
 
 afterEach(() => {
   try {
     lobbyContext.context.round?.clearInterval();
   } catch { /* do nothing */ }
-  clearAutoStartTimeouts();
   lobbyContext.context = undefined;
   clientContext.context = undefined;
 });
@@ -244,11 +242,11 @@ describe("damageEntity", () => {
   it("should deal computed damage with default behavior", () => {
     setupEcs();
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
-    const target = newUnit("target-owner", "sheep", 20, 20);
+    const target = newUnit("target-owner", "hut", 20, 20);
 
     damageEntity(attacker, target);
 
-    expect(target.health).toBe(0); // 20 - 70 (wolf damage) = 0 (capped)
+    expect(target.health).toBe(50); // 120 - 70 (wolf damage) = 50
   });
 
   it("should deal specified amount when provided", () => {
@@ -272,7 +270,7 @@ describe("damageEntity", () => {
     expect(target.health).toBe(80); // 120 - (20 * 2) = 80
   });
 
-  it("should apply damage mitigation for mirror attackers against tilemaps", () => {
+  it("should apply damage mitigation for mirror attackers against structures", () => {
     setupEcs();
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
@@ -283,7 +281,7 @@ describe("damageEntity", () => {
     expect(target.health).toBe(103.2); // 120 - (70 * 0.24) = 103.2
   });
 
-  it("should apply extreme damage mitigation for mirror attackers against non-tilemaps", () => {
+  it("should apply extreme damage mitigation for mirror attackers against units", () => {
     setupEcs();
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "sheep", 20, 20);
@@ -333,7 +331,7 @@ describe("damageEntity", () => {
   it("should not reduce health below 0", () => {
     setupEcs();
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
-    const target = newUnit("target-owner", "sheep", 20, 20);
+    const target = newUnit("target-owner", "tinyHut", 20, 20);
 
     damageEntity(attacker, target);
 
@@ -355,10 +353,10 @@ describe("damageEntity", () => {
   it("should track last attacker when unit dies", () => {
     setupEcs();
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
-    const target = newUnit("target-owner", "sheep", 20, 20);
+    const target = newUnit("target-owner", "hut", 20, 20);
 
     // Damage target to kill it
-    damageEntity(attacker, target);
+    damageEntity(attacker, target, 120);
 
     expect(target.health).toBe(0);
     expect(target.lastAttacker).toBe(attacker.id);

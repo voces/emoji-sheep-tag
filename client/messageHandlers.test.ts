@@ -161,7 +161,6 @@ describe("join", () => {
       players: [],
       format: { sheep: 0, wolves: 0 },
       updates: [{
-        type: "unit",
         id: "test-entity",
         prefab: "sheep",
         position: { x: 10, y: 20 },
@@ -371,7 +370,6 @@ describe("stop", () => {
       players: [],
       format: { sheep: 0, wolves: 0 },
       updates: [{
-        type: "unit",
         id: "test-entity",
         prefab: "sheep",
       }],
@@ -462,7 +460,6 @@ describe("updates", () => {
     handlers.updates({
       type: "updates",
       updates: [{
-        type: "unit",
         id: "unit-1",
         prefab: "sheep",
         position: { x: 10, y: 20 },
@@ -484,7 +481,6 @@ describe("updates", () => {
       players: [],
       format: { sheep: 0, wolves: 0 },
       updates: [{
-        type: "unit",
         id: "unit-1",
         prefab: "sheep",
         health: 100,
@@ -494,7 +490,6 @@ describe("updates", () => {
     handlers.updates({
       type: "updates",
       updates: [{
-        type: "unit",
         id: "unit-1",
         health: 50,
         position: { x: 15, y: 25 },
@@ -514,7 +509,6 @@ describe("updates", () => {
       players: [],
       format: { sheep: 0, wolves: 0 },
       updates: [{
-        type: "unit",
         id: "unit-1",
         prefab: "sheep",
       }],
@@ -525,49 +519,12 @@ describe("updates", () => {
     handlers.updates({
       type: "updates",
       updates: [{
-        type: "delete",
         id: "unit-1",
+        __delete: true,
       }],
     });
 
     expect(map["unit-1"]).toBeUndefined();
-  });
-
-  it("handles kill update", () => {
-    // Setup players first
-    handlers.join({
-      type: "join",
-      status: "lobby",
-      players: [{
-        id: "player-1",
-        name: "Killer",
-        color: "#FF0000",
-        team: "wolf",
-        sheepCount: 0,
-      }, {
-        id: "player-2",
-        name: "Victim",
-        color: "#00FF00",
-        team: "sheep",
-        sheepCount: 0,
-      }],
-      format: { sheep: 1, wolves: 1 },
-      updates: [],
-    });
-
-    const initialChatCount = chatLogVar().length;
-
-    handlers.updates({
-      type: "updates",
-      updates: [{
-        type: "kill",
-        killer: { player: "player-1", unit: "unit-1" },
-        victim: { player: "player-2", unit: "unit-2" },
-      }],
-    });
-
-    expect(chatLogVar()).toHaveLength(initialChatCount + 1);
-    expect(chatLogVar()[chatLogVar().length - 1].message).toContain("killed");
   });
 
   it("processes multiple updates atomically", () => {
@@ -578,7 +535,6 @@ describe("updates", () => {
       players: [],
       format: { sheep: 0, wolves: 0 },
       updates: [{
-        type: "unit",
         id: "unit-1",
         prefab: "sheep",
         health: 100,
@@ -589,19 +545,14 @@ describe("updates", () => {
       type: "updates",
       updates: [
         {
-          type: "unit",
           id: "unit-1",
           health: 50,
+          __delete: true,
         },
         {
-          type: "unit",
           id: "unit-2",
           prefab: "wolf",
           health: 80,
-        },
-        {
-          type: "delete",
-          id: "unit-1",
         },
       ],
     });
@@ -617,7 +568,6 @@ describe("updates", () => {
     handlers.updates({
       type: "updates",
       updates: [{
-        type: "unit",
         id: "unit-1",
         prefab: "sheep",
       }],
