@@ -1,7 +1,7 @@
 //@deno-types="npm:@types/react"
 import React from "react";
 import { ThemeProvider } from "npm:styled-components";
-import { theme } from "../client/ui/theme.ts";
+import { theme } from "../ui/theme.ts";
 
 /**
  * Test wrapper that provides theme context

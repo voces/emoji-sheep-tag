@@ -6,89 +6,32 @@ import {
   getPlayerGold,
   grantPlayerGold,
 } from "./player.ts";
-import { Client } from "../client.ts";
-import { clientContext, lobbyContext } from "../contexts.ts";
-import { newLobby } from "../lobby.ts";
-import { newEcs } from "../ecs.ts";
-import { interval } from "./timing.ts";
-import { init } from "../st/data.ts";
+import { cleanupTest, createTestSetup } from "@/server-testing/setup.ts";
 
-afterEach(() => {
-  try {
-    lobbyContext.context.round?.clearInterval();
-  } catch { /* do nothing */ }
-  lobbyContext.context = undefined;
-  clientContext.context = undefined;
-});
-
-const setup = () => {
-  const ecs = newEcs();
-  const client = new Client({
-    readyState: WebSocket.OPEN,
-    send: () => {},
-    close: () => {},
-    addEventListener: () => {},
-  });
-  client.id = "test-client";
-  clientContext.context = client;
-  const lobby = newLobby();
-  lobbyContext.context = lobby;
-  lobby.round = {
-    sheep: new Set(),
-    wolves: new Set(),
-    ecs,
-    start: Date.now(),
-    clearInterval: interval(() => ecs.update(), 0.05),
-  };
-
-  init({
-    sheep: [],
-    wolves: [{ client }],
-  });
-
-  return { ecs, client, lobby };
-};
+afterEach(cleanupTest);
 
 describe("player API", () => {
   describe("getPlayer", () => {
     it("should find player in wolves", () => {
-      setup();
-
-      const client = new Client({
-        readyState: WebSocket.OPEN,
-        send: () => {},
-        close: () => {},
-        addEventListener: () => {},
+      const { clients } = createTestSetup({
+        wolves: ["wolf-player"],
       });
-      client.id = "wolf-player";
-      client.playerEntity = { id: "wolf-player" };
-
-      lobbyContext.context.round!.wolves.add(client);
 
       const result = getPlayer("wolf-player");
-      expect(result).toBe(client.playerEntity);
+      expect(result).toBe(clients.get("wolf-player")!.playerEntity);
     });
 
     it("should find player in sheep", () => {
-      setup();
-
-      const client = new Client({
-        readyState: WebSocket.OPEN,
-        send: () => {},
-        close: () => {},
-        addEventListener: () => {},
+      const { clients } = createTestSetup({
+        sheep: ["sheep-player"],
       });
-      client.id = "sheep-player";
-      client.playerEntity = { id: "sheep-player" };
-
-      lobbyContext.context.round!.sheep.add(client);
 
       const result = getPlayer("sheep-player");
-      expect(result).toBe(client.playerEntity);
+      expect(result).toBe(clients.get("sheep-player")!.playerEntity);
     });
 
     it("should return undefined for unknown player", () => {
-      setup();
+      createTestSetup();
 
       const result = getPlayer("unknown-player");
       expect(result).toBeUndefined();
@@ -97,18 +40,10 @@ describe("player API", () => {
 
   describe("grantPlayerGold", () => {
     it("should grant gold to player with existing gold", () => {
-      setup();
-
-      const client = new Client({
-        readyState: WebSocket.OPEN,
-        send: () => {},
-        close: () => {},
-        addEventListener: () => {},
+      createTestSetup({
+        wolves: ["test-player"],
+        gold: 50,
       });
-      client.id = "test-player";
-      client.playerEntity = { id: "player-entity", gold: 50 };
-
-      lobbyContext.context.round!.wolves.add(client);
 
       grantPlayerGold("test-player", 5);
 
@@ -116,18 +51,10 @@ describe("player API", () => {
     });
 
     it("should grant gold to player with no existing gold", () => {
-      setup();
-
-      const client = new Client({
-        readyState: WebSocket.OPEN,
-        send: () => {},
-        close: () => {},
-        addEventListener: () => {},
+      createTestSetup({
+        wolves: ["test-player"],
+        gold: 0,
       });
-      client.id = "test-player";
-      client.playerEntity = { id: "player-entity" };
-
-      lobbyContext.context.round!.wolves.add(client);
 
       grantPlayerGold("test-player", 10);
 
@@ -135,18 +62,10 @@ describe("player API", () => {
     });
 
     it("should not grant negative or zero gold", () => {
-      setup();
-
-      const client = new Client({
-        readyState: WebSocket.OPEN,
-        send: () => {},
-        close: () => {},
-        addEventListener: () => {},
+      createTestSetup({
+        wolves: ["test-player"],
+        gold: 50,
       });
-      client.id = "test-player";
-      client.playerEntity = { id: "player-entity", gold: 50 };
-
-      lobbyContext.context.round!.wolves.add(client);
 
       grantPlayerGold("test-player", 0);
       grantPlayerGold("test-player", -5);
@@ -155,7 +74,7 @@ describe("player API", () => {
     });
 
     it("should handle unknown player gracefully", () => {
-      setup();
+      createTestSetup();
 
       grantPlayerGold("unknown-player", 10);
 
@@ -165,18 +84,10 @@ describe("player API", () => {
 
   describe("deductPlayerGold", () => {
     it("should deduct gold from player", () => {
-      setup();
-
-      const client = new Client({
-        readyState: WebSocket.OPEN,
-        send: () => {},
-        close: () => {},
-        addEventListener: () => {},
+      createTestSetup({
+        wolves: ["test-player"],
+        gold: 50,
       });
-      client.id = "test-player";
-      client.playerEntity = { id: "player-entity", gold: 50 };
-
-      lobbyContext.context.round!.wolves.add(client);
 
       deductPlayerGold("test-player", 15);
 

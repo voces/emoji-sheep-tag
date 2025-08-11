@@ -8,7 +8,7 @@ import { connect, setServer } from "../connection.ts";
 import {
   clearTestServerMessages,
   getTestServerMessages,
-} from "@/testing/setup.ts";
+} from "@/client-testing/setup.ts";
 import { MouseButtonEvent } from "../mouse.ts";
 import { Vector2 } from "three";
 import { ExtendedSet } from "../util/ExtendedSet.ts";

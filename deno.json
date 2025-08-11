@@ -10,12 +10,13 @@
     "three/SVGLoader": "https://esm.sh/three@0.166.1/addons/loaders/SVGLoader.js?pin=v135",
     "jsdom": "https://esm.sh/jsdom@24.1.0&pin=v135",
     "react": "npm:react",
-    "@/testing/": "./testing/",
     "@/shared/": "./shared/",
     "@/components/": "./client/ui/components/",
     "@/hooks/": "./client/ui/hooks/",
     "@/vars/": "./client/ui/vars/",
-    "@/util/": "./client/ui/util/"
+    "@/util/": "./client/ui/util/",
+    "@/client-testing/": "./client/testing/",
+    "@/server-testing/": "./server/testing/"
   },
   "compilerOptions": {
     "lib": [

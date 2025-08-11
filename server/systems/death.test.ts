@@ -1,76 +1,20 @@
 import { afterEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { newEcs } from "../ecs.ts";
-import { Client } from "../client.ts";
-import { clientContext, lobbyContext } from "../contexts.ts";
-import { newLobby } from "../lobby.ts";
 import { getPlayerGold } from "../api/player.ts";
 import { damageEntity, newUnit } from "../api/unit.ts";
-import { interval } from "../api/timing.ts";
-import { init } from "../st/data.ts";
+import { cleanupTest, createTestSetup } from "../testing/setup.ts";
 // Import death system explicitly to ensure it's loaded
 import "./death.ts";
 
-afterEach(() => {
-  try {
-    lobbyContext.context.round?.clearInterval();
-  } catch { /* do nothing */ }
-  lobbyContext.context = undefined;
-  clientContext.context = undefined;
-});
-
-const setup = () => {
-  const ecs = newEcs();
-  const client = new Client({
-    readyState: WebSocket.OPEN,
-    send: () => {},
-    close: () => {},
-    addEventListener: () => {},
-  });
-  client.id = "test-client";
-  clientContext.context = client;
-  const lobby = newLobby();
-  lobbyContext.context = lobby;
-  lobby.round = {
-    sheep: new Set(),
-    wolves: new Set(),
-    ecs,
-    start: Date.now(),
-    clearInterval: interval(() => ecs.update(), 0.05),
-  };
-
-  init({
-    sheep: [],
-    wolves: [{ client }],
-  });
-
-  return { ecs, client, lobby };
-};
+afterEach(cleanupTest);
 
 describe("death system bounty integration", () => {
   it("should grant bounty when wolf kills hut", () => {
-    setup();
-
-    const wolfClient = new Client({
-      readyState: WebSocket.OPEN,
-      send: () => {},
-      close: () => {},
-      addEventListener: () => {},
+    createTestSetup({
+      wolves: ["wolf-player"],
+      sheep: ["sheep-player"],
+      gold: 10,
     });
-    wolfClient.id = "wolf-player";
-    wolfClient.playerEntity = { id: "wolf-entity", gold: 10 };
-
-    const sheepClient = new Client({
-      readyState: WebSocket.OPEN,
-      send: () => {},
-      close: () => {},
-      addEventListener: () => {},
-    });
-    sheepClient.id = "sheep-player";
-    sheepClient.playerEntity = { id: "sheep-entity", gold: 5 };
-
-    lobbyContext.context.round!.wolves.add(wolfClient);
-    lobbyContext.context.round!.sheep.add(sheepClient);
 
     const wolf = newUnit("wolf-player", "wolf", 0, 0);
     const hut = newUnit("sheep-player", "hut", 5, 5);
@@ -89,28 +33,11 @@ describe("death system bounty integration", () => {
   });
 
   it("should grant correct bounty amounts for different structures", () => {
-    setup();
-
-    const wolfClient = new Client({
-      readyState: WebSocket.OPEN,
-      send: () => {},
-      close: () => {},
-      addEventListener: () => {},
+    createTestSetup({
+      wolves: ["wolf-player"],
+      sheep: ["sheep-player"],
+      gold: 0,
     });
-    wolfClient.id = "wolf-player";
-    wolfClient.playerEntity = { id: "wolf-entity", gold: 0 };
-
-    const sheepClient = new Client({
-      readyState: WebSocket.OPEN,
-      send: () => {},
-      close: () => {},
-      addEventListener: () => {},
-    });
-    sheepClient.id = "sheep-player";
-    sheepClient.playerEntity = { id: "sheep-entity", gold: 0 };
-
-    lobbyContext.context.round!.wolves.add(wolfClient);
-    lobbyContext.context.round!.sheep.add(sheepClient);
 
     const wolf = newUnit("wolf-player", "wolf", 0, 0);
 

@@ -1,4 +1,4 @@
-import "@/testing/setup.ts";
+import "@/client-testing/setup.ts";
 import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { send } from "./messaging.ts";
@@ -6,7 +6,7 @@ import { connect, setServer } from "./connection.ts";
 import {
   clearTestServerMessages,
   getTestServerMessages,
-} from "@/testing/setup.ts";
+} from "@/client-testing/setup.ts";
 import type { ClientToServerMessage } from "../server/client.ts";
 
 describe("messaging.ts", () => {

@@ -1,10 +1,10 @@
-import "@/testing/setup.ts";
+import "@/client-testing/setup.ts";
 import { describe, it } from "jsr:@std/testing/bdd";
 import { render, screen } from "npm:@testing-library/react";
 import { userEvent } from "npm:@testing-library/user-event";
 import { expect } from "jsr:@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
-import { getAllTexts } from "@/testing/utils.tsx";
+import { getAllTexts } from "@/client-testing/utils.tsx";
 import { Command } from "./Command.tsx";
 import { playersVar } from "@/vars/players.ts";
 

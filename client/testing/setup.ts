@@ -1,10 +1,10 @@
 import "npm:global-jsdom/register";
 import { afterEach, beforeEach } from "jsr:@std/testing/bdd";
 import { cleanup } from "npm:@testing-library/react";
-import { __testing_reset_all_vars } from "../client/ui/hooks/useVar.tsx";
-import { data } from "../client/data.ts";
-import { app, map } from "../client/ecs.ts";
-import type { ClientToServerMessage } from "../server/client.ts";
+import { __testing_reset_all_vars } from "../ui/hooks/useVar.tsx";
+import { data } from "../data.ts";
+import { app, map } from "../ecs.ts";
+import type { ClientToServerMessage } from "../../server/client.ts";
 
 // Test WebSocket server for messaging tests - fresh server per test for true isolation
 let testServer: Deno.HttpServer | undefined;
@@ -98,7 +98,7 @@ beforeEach(async () => {
 afterEach(async () => {
   // Stop ping timer to prevent timer leaks
   try {
-    const { stopPing } = await import("../client/messaging.ts");
+    const { stopPing } = await import("../messaging.ts");
     stopPing();
   } catch {
     // Ignore import errors during cleanup
@@ -106,7 +106,7 @@ afterEach(async () => {
 
   // Close client WebSocket connections
   try {
-    const { resetConnection } = await import("../client/connection.ts");
+    const { resetConnection } = await import("../connection.ts");
     resetConnection();
   } catch {
     // Ignore import errors during cleanup
@@ -114,7 +114,7 @@ afterEach(async () => {
 
   // Clean up local/offline mode resources
   try {
-    const localModule = await import("../client/local.ts");
+    const localModule = await import("../local.ts");
     if ("__testing_cleanup_local" in localModule) {
       (localModule as { __testing_cleanup_local: () => void })
         .__testing_cleanup_local();

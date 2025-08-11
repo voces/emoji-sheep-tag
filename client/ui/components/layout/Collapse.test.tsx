@@ -1,4 +1,4 @@
-import "@/testing/setup.ts";
+import "@/client-testing/setup.ts";
 import { describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { render, screen, waitFor } from "npm:@testing-library/react";

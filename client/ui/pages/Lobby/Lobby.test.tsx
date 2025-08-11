@@ -1,11 +1,11 @@
-import "@/testing/setup.ts";
+import "@/client-testing/setup.ts";
 import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { render } from "npm:@testing-library/react";
 import { Lobby } from "./index.tsx";
 import { playersVar } from "@/vars/players.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
-import { TestWrapper } from "@/testing/utils.tsx";
+import { TestWrapper } from "@/client-testing/utils.tsx";
 
 // We'll test the UI behavior, not the actual network sending
 // The send function calls are handled by the parent component/client

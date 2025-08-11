@@ -1,44 +1,14 @@
 import { afterEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { Buff, Entity } from "@/shared/types.ts";
-import { newEcs } from "../ecs.ts";
-import { Client } from "../client.ts";
-import { clientContext, lobbyContext } from "../contexts.ts";
-import { newLobby } from "../lobby.ts";
+import { cleanupTest, createTestSetup } from "@/server-testing/setup.ts";
 import "./buffs.ts"; // Import to register the system
 
-afterEach(() => {
-  try {
-    lobbyContext.context.round?.clearInterval();
-  } catch { /* do nothing */ }
-  lobbyContext.context = undefined;
-  clientContext.context = undefined;
-});
-
-const setup = () => {
-  const ecs = newEcs();
-  const client = new Client({
-    readyState: WebSocket.OPEN,
-    send: () => {},
-    close: () => {},
-    addEventListener: () => {},
-  });
-  clientContext.context = client;
-  const lobby = newLobby();
-  lobby.round = {
-    ecs,
-    sheep: new Set(),
-    wolves: new Set(),
-    start: Date.now(),
-    clearInterval: () => {},
-  };
-  lobbyContext.context = lobby;
-  return { ecs, client, lobby };
-};
+afterEach(cleanupTest);
 
 describe("buffs system", () => {
   it("should reduce buff duration over time", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup();
 
     const buff: Buff = {
       remainingDuration: 10,
@@ -58,7 +28,7 @@ describe("buffs system", () => {
   });
 
   it("should remove expired buffs", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup();
 
     const buff: Buff = {
       remainingDuration: 2,
@@ -77,7 +47,7 @@ describe("buffs system", () => {
   });
 
   it("should handle multiple buffs with different durations", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup();
 
     const buff1: Buff = {
       remainingDuration: 5,
@@ -104,7 +74,7 @@ describe("buffs system", () => {
   });
 
   it("should preserve buffs immutability", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup();
 
     const originalBuff: Buff = {
       remainingDuration: 10,
@@ -128,7 +98,7 @@ describe("buffs system", () => {
   });
 
   it("should delete buffs property when all buffs expire", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup();
 
     const buff1: Buff = {
       remainingDuration: 2,
@@ -152,7 +122,7 @@ describe("buffs system", () => {
   });
 
   it("should handle fractional time updates", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup();
 
     const buff: Buff = {
       remainingDuration: 5.5,
@@ -173,7 +143,7 @@ describe("buffs system", () => {
   });
 
   it("should handle movement speed multiplier buffs", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup();
 
     const buff: Buff = {
       remainingDuration: 10,

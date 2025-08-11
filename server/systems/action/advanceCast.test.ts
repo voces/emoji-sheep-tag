@@ -1,54 +1,16 @@
 import { afterEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { newUnit } from "../../api/unit.ts";
-import { clientContext, lobbyContext } from "../../contexts.ts";
-import { newEcs } from "../../ecs.ts";
-import { newLobby } from "../../lobby.ts";
-import { Client } from "../../client.ts";
 import { advanceCast } from "./advanceCast.ts";
-import { interval } from "../../api/timing.ts";
-import { init } from "../../st/data.ts";
+import { cleanupTest, createTestSetup } from "@/server-testing/setup.ts";
 
-afterEach(() => {
-  try {
-    lobbyContext.context.round?.clearInterval();
-  } catch { /* do nothing */ }
-  lobbyContext.context = undefined;
-  clientContext.context = undefined;
-});
-
-const setup = () => {
-  const ecs = newEcs();
-  const client = new Client({
-    readyState: WebSocket.OPEN,
-    send: () => {},
-    close: () => {},
-    addEventListener: () => {},
-  });
-  client.id = "test-client";
-  clientContext.context = client;
-  const lobby = newLobby();
-  lobbyContext.context = lobby;
-  lobby.round = {
-    sheep: new Set(),
-    wolves: new Set(),
-    ecs,
-    start: Date.now(),
-    clearInterval: interval(() => ecs.update(), 0.05),
-  };
-
-  // Initialize game data to avoid errors
-  init({
-    sheep: [],
-    wolves: [{ client }],
-  });
-
-  return { ecs, client };
-};
+afterEach(cleanupTest);
 
 describe("advanceCast mirror image", () => {
   it("should clear existing mirrors when starting a new cast", async () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup({
+      wolves: ["test-client"],
+    });
 
     // Import mirror image order for proper testing
     const { mirrorImageOrder } = await import("../../orders/mirrorImage.ts");
@@ -105,7 +67,9 @@ describe("advanceCast mirror image", () => {
   });
 
   it("should consume mana when mirror image cast starts", () => {
-    setup();
+    createTestSetup({
+      wolves: ["test-client"],
+    });
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.mana = 100;
@@ -134,7 +98,9 @@ describe("advanceCast mirror image", () => {
   });
 
   it("should handle partial cast time correctly", () => {
-    setup();
+    createTestSetup({
+      wolves: ["test-client"],
+    });
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
@@ -157,7 +123,9 @@ describe("advanceCast mirror image", () => {
   });
 
   it("should create new mirrors after cast completes", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup({
+      wolves: ["test-client"],
+    });
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.mana = 50;
@@ -200,7 +168,9 @@ describe("advanceCast mirror image", () => {
   });
 
   it("should handle mirror image with no positions (no mirrors created)", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup({
+      wolves: ["test-client"],
+    });
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.prefab = "wolf";
@@ -236,7 +206,9 @@ describe("advanceCast mirror image", () => {
 
 describe("advanceCast other abilities", () => {
   it("should spawn fox after cast completes", () => {
-    const { ecs } = setup();
+    const { ecs } = createTestSetup({
+      wolves: ["test-client"],
+    });
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.owner = "test-client";
@@ -268,7 +240,9 @@ describe("advanceCast other abilities", () => {
   // It's tested in the unitOrder.test.ts file instead
 
   it("should handle unknown cast orderId gracefully", () => {
-    setup();
+    createTestSetup({
+      wolves: ["test-client"],
+    });
 
     const unit = newUnit("test-client", "wolf", 5, 5);
 
@@ -287,7 +261,9 @@ describe("advanceCast other abilities", () => {
   });
 
   it("should handle partial time advancement correctly", () => {
-    setup();
+    createTestSetup({
+      wolves: ["test-client"],
+    });
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 

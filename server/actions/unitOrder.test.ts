@@ -1,56 +1,19 @@
 import { afterEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { waitFor } from "@/shared/util/test/waitFor.ts";
-import { interval } from "../api/timing.ts";
 import { addItem, newUnit } from "../api/unit.ts";
-import { Client } from "../client.ts";
-import { clientContext, lobbyContext } from "../contexts.ts";
-import { newEcs } from "../ecs.ts";
-import { newLobby } from "../lobby.ts";
 import { unitOrder } from "./unitOrder.ts";
 import { advanceCast } from "../systems/action/advanceCast.ts";
-import { init } from "../st/data.ts";
+import { cleanupTest, createTestSetup } from "../testing/setup.ts";
 
-afterEach(() => {
-  try {
-    lobbyContext.context.round?.clearInterval();
-  } catch { /* do nothing */ }
-  lobbyContext.context = undefined;
-  clientContext.context = undefined;
-});
-
-const setup = () => {
-  const ecs = newEcs();
-  const client = new Client({
-    readyState: WebSocket.OPEN,
-    send: () => {},
-    close: () => {},
-    addEventListener: () => {},
-  });
-  client.id = "test-client";
-  clientContext.context = client;
-  const lobby = newLobby();
-  lobbyContext.context = lobby;
-  lobby.round = {
-    sheep: new Set(),
-    wolves: new Set(),
-    ecs,
-    start: Date.now(),
-    clearInterval: interval(() => ecs.update(), 0.05),
-  };
-
-  // Initialize game data to avoid errors
-  init({
-    sheep: [],
-    wolves: [{ client }],
-  });
-
-  return { ecs, client };
-};
+afterEach(cleanupTest);
 
 describe("unitOrder fox item integration", () => {
   it("should cast fox ability from item with charges", async () => {
-    const { ecs, client } = setup();
+    const { ecs, clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Create a wolf unit
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -84,7 +47,10 @@ describe("unitOrder fox item integration", () => {
   });
 
   it("should not cast fox when no charges remaining", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
@@ -103,7 +69,10 @@ describe("unitOrder fox item integration", () => {
   });
 
   it("should stack charges and consume one per use", async () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
@@ -146,19 +115,16 @@ describe("unitOrder fox item integration", () => {
   });
 
   it("should not allow other clients to use unit's fox item", () => {
-    const { client: _client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client", "other-client"],
+    });
+    const _client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     addItem(wolf, "foxItem");
 
-    // Create different client
-    const otherClient = new Client({
-      readyState: WebSocket.OPEN,
-      send: () => {},
-      close: () => {},
-      addEventListener: () => {},
-    });
-    otherClient.id = "other-client";
+    // Get different client
+    const otherClient = clients.get("other-client")!;
 
     const initialOrder = wolf.order;
     const initialInventory = [...wolf.inventory!];
@@ -176,7 +142,10 @@ describe("unitOrder fox item integration", () => {
   });
 
   it("should handle charge consumption generically for any item action", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
@@ -196,7 +165,10 @@ describe("unitOrder fox item integration", () => {
 
 describe("unitOrder basic actions", () => {
   it("should execute stop action", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use sheep which has stop action
     const sheep = newUnit("test-client", "sheep", 5, 5);
@@ -214,7 +186,10 @@ describe("unitOrder basic actions", () => {
   });
 
   it("should execute hold action", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use wolf which has hold action
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -228,7 +203,10 @@ describe("unitOrder basic actions", () => {
   });
 
   it("should execute move action with target position", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use sheep which has move action
     const sheep = newUnit("test-client", "sheep", 5, 5);
@@ -250,7 +228,10 @@ describe("unitOrder basic actions", () => {
   });
 
   it("should execute move action with target entity", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use sheep which has move action
     const sheep = newUnit("test-client", "sheep", 5, 5);
@@ -271,7 +252,10 @@ describe("unitOrder basic actions", () => {
   });
 
   it("should not execute actions for units not owned by client", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Create sheep owned by different client
     const sheep = newUnit("other-client", "sheep", 5, 5);
@@ -285,7 +269,10 @@ describe("unitOrder basic actions", () => {
   });
 
   it("should skip unknown units silently", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Try to execute action on non-existent unit - should not throw
     expect(() => {
@@ -300,7 +287,10 @@ describe("unitOrder basic actions", () => {
 
 describe("unitOrder combat actions", () => {
   it("should execute attack action with target entity", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     const targetUnit = newUnit("other-client", "sheep", 15, 20);
@@ -320,7 +310,10 @@ describe("unitOrder combat actions", () => {
   });
 
   it("should execute attack action with ground target (attack-ground)", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     const target = { x: 15, y: 20 };
@@ -342,7 +335,10 @@ describe("unitOrder combat actions", () => {
   });
 
   it("should not attack if target entity doesn't exist", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     const initialOrder = wolf.order;
@@ -360,7 +356,10 @@ describe("unitOrder combat actions", () => {
   });
 
   it("should handle attack action without target", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     const initialOrder = wolf.order;
@@ -375,7 +374,10 @@ describe("unitOrder combat actions", () => {
 
 describe("unitOrder special abilities", () => {
   it("should execute mirror image action", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -400,7 +402,10 @@ describe("unitOrder special abilities", () => {
   });
 
   it("should execute destroy last farm action", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use sheep which has destroy last farm action
     const sheep = newUnit("test-client", "sheep", 5, 5);
@@ -420,7 +425,10 @@ describe("unitOrder special abilities", () => {
   });
 
   it("should handle mirror image with insufficient mana", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -442,7 +450,10 @@ describe("unitOrder special abilities", () => {
   });
 
   it("should consume mana for mirror image", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -466,7 +477,10 @@ describe("unitOrder special abilities", () => {
 
 describe("unitOrder self destruct", () => {
   it("should execute self destruct action for hut", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use hut which has self destruct action
     const hut = newUnit("test-client", "hut", 5, 5);
@@ -485,7 +499,10 @@ describe("unitOrder self destruct", () => {
   });
 
   it("should not execute self destruct if unit doesn't have the action", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use wolf which doesn't have self destruct action
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -506,7 +523,10 @@ describe("unitOrder self destruct", () => {
   });
 
   it("should allow self destruct regardless of current health if action exists", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     // Use tiny hut which has self destruct action
     const tinyHut = newUnit("test-client", "tinyHut", 5, 5);
@@ -527,7 +547,10 @@ describe("unitOrder self destruct", () => {
 
 describe("unitOrder generalized charge system", () => {
   it("should consume charges for any item-based action", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
@@ -569,7 +592,10 @@ describe("unitOrder generalized charge system", () => {
   });
 
   it("should handle items without charges (unlimited use)", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
@@ -598,7 +624,10 @@ describe("unitOrder generalized charge system", () => {
   });
 
   it("should remove items when charges reach zero", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
@@ -614,7 +643,10 @@ describe("unitOrder generalized charge system", () => {
   });
 
   it("should not consume charges for non-item actions", () => {
-    const { client } = setup();
+    const { clients } = createTestSetup({
+      wolves: ["test-client"],
+    });
+    const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
