@@ -231,3 +231,19 @@ app.addSystem({
   onChange: updateAlpha,
   onRemove: updateAlpha,
 });
+
+app.addSystem({
+  props: ["order", "position"],
+  updateEntity: (e) => {
+    const model = e.model ?? e.prefab;
+    if (e.order.type !== "cast" || !model) return;
+    const r = Math.random() * Math.PI * 2;
+    collections[model]?.setPositionAt(
+      e.id,
+      e.position.x + 0.05 * Math.cos(r),
+      e.position.y + 0.05 * Math.sin(r),
+      e.facing,
+      e.zIndex,
+    );
+  },
+});

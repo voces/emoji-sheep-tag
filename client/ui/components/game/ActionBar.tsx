@@ -67,7 +67,7 @@ export const ActionBar = () => {
     : selection?.actions ?? [];
 
   // Add item actions from inventory and apply shortcut overrides
-  if (!currentMenu && selection?.inventory) {
+  if (!currentMenu && selection?.inventory && !selection.isMirror) {
     const itemActions: UnitDataAction[] = [];
     for (const item of selection.inventory) {
       if (item.actions && (item.charges == null || item.charges > 0)) {

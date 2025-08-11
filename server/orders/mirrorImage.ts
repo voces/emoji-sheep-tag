@@ -98,6 +98,11 @@ export const mirrorImageOrder = {
         if (unit.health !== undefined) mirror.health = unit.health;
         if (unit.mana !== undefined) mirror.mana = unit.mana;
 
+        // Copy inventory from original unit
+        if (unit.inventory) {
+          mirror.inventory = [...unit.inventory];
+        }
+
         mirrors.push(mirror.id);
       }
       unit.mirrors = mirrors;

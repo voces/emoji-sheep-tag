@@ -32,8 +32,8 @@ export function findAction(
     }
   }
 
-  // Check item actions
-  if (entity.inventory) {
+  // Check item actions (skip for mirror images)
+  if (entity.inventory && !entity.isMirror) {
     for (const item of entity.inventory) {
       if (item.actions && (item.charges === undefined || item.charges > 0)) {
         for (const itemAction of item.actions) {
@@ -97,8 +97,8 @@ export function findActionAndItem(
     }
   }
 
-  // Check item actions
-  if (entity.inventory) {
+  // Check item actions (skip for mirror images)
+  if (entity.inventory && !entity.isMirror) {
     for (const item of entity.inventory) {
       if (item.actions && (item.charges === undefined || item.charges > 0)) {
         for (const itemAction of item.actions) {
