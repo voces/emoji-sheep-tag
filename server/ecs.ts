@@ -1,7 +1,6 @@
 import { App, newApp, System } from "jsr:@verit/ecs";
 import { Entity } from "@/shared/types.ts";
 import { newEntity, remove, update } from "./updates.ts";
-import { TypedEventTarget } from "typed-event-target";
 
 // Alphanumeric, minus 0, O, l, and I
 const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -31,31 +30,9 @@ const id = (type?: string) => {
   }
 };
 
-class GameTarget extends TypedEventTarget<Record<string, never>> {
-  constructor(readonly initializeEntity: (input: Partial<Entity>) => Entity) {
-    super();
-  }
-
-  tick = 0;
-
-  delete(child: Entity) {
-    const app = this as unknown as Game;
-    for (const system of app.systems) {
-      // deno-lint-ignore no-explicit-any
-      if (system.entities.has(child as any)) {
-        // deno-lint-ignore no-explicit-any
-        system.entities.delete(child as any);
-        system.onRemove?.(child);
-      }
-    }
-
-    app.entities.delete(child);
-
-    remove(child.id);
-  }
-}
-
-export type Game = GameTarget & App<Entity>;
+export type Game = App<Entity> & {
+  tick: number;
+};
 
 const initHooks: ((game: Game) => void)[] = [];
 export const onInit = (fn: (game: Game) => void) => {
@@ -76,36 +53,43 @@ export const addSystem = <K extends keyof Entity>(
   );
 
 export const newEcs = () => {
-  const app = newApp<Entity>(
-    new GameTarget(
-      (input) => {
-        const entity: Entity = {
-          ...input,
-          id: input.id || id(input.prefab),
-        };
-        const proxy = new Proxy(entity, {
-          set: (target, prop, value) => {
-            if (target[prop as keyof Entity] === value) return true;
-            // deno-lint-ignore no-explicit-any
-            (target as any)[prop] = value;
-            app.queueEntityChange(proxy, prop as keyof Entity);
-            update(target.id, prop as keyof Entity, value);
-            return true;
-          },
-          deleteProperty: (target, prop) => {
-            if (target[prop as keyof Entity] == null) return true;
-            // deno-lint-ignore no-explicit-any
-            delete (target as any)[prop];
-            app.queueEntityChange(proxy, prop as keyof Entity);
-            update(target.id, prop as keyof Entity, null);
-            return true;
-          },
-        });
-        newEntity(entity);
-        return proxy;
+  const initializeEntity = (input: Partial<Entity>) => {
+    const entity: Entity = {
+      ...input,
+      id: input.id || id(input.prefab),
+    };
+    const proxy = new Proxy(entity, {
+      set: (target, prop, value) => {
+        if (target[prop as keyof Entity] === value) return true;
+        // deno-lint-ignore no-explicit-any
+        (target as any)[prop] = value;
+        app.queueEntityChange(proxy, prop as keyof Entity);
+        update(target.id, prop as keyof Entity, value);
+        return true;
       },
-    ),
-  ) as Game;
+      deleteProperty: (target, prop) => {
+        if (target[prop as keyof Entity] == null) return true;
+        // deno-lint-ignore no-explicit-any
+        delete (target as any)[prop];
+        app.queueEntityChange(proxy, prop as keyof Entity);
+        update(target.id, prop as keyof Entity, null);
+        return true;
+      },
+    });
+    newEntity(entity);
+    return proxy;
+  };
+
+  const app = newApp<Entity>({ initializeEntity }) as Game;
+
+  // Add custom properties and override removeEntity to handle networking
+  app.tick = 0;
+
+  const originalRemoveEntity = app.removeEntity.bind(app);
+  app.removeEntity = (entity: Entity) => {
+    remove(entity.id);
+    return originalRemoveEntity(entity);
+  };
 
   for (const hook of initHooks) hook(app);
 

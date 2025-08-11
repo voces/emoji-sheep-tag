@@ -57,7 +57,7 @@ export const mirrorImageOrder = {
       for (const mirrorId of unit.mirrors) {
         const mirror = lookup(mirrorId);
         if (mirror) {
-          currentApp().delete(mirror);
+          currentApp().removeEntity(mirror);
         }
       }
       delete unit.mirrors;

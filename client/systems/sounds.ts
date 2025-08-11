@@ -13,21 +13,19 @@ app.addSystem({
     if (e.sounds?.birth) playEntitySound(e, "birth", { volume: 0.5 });
   },
   onRemove: (e) => {
-    if (stateVar() !== "playing") return console.log("not playing");
+    if (stateVar() !== "playing") return;
     if (typeof e.health === "number" && typeof e.maxHealth === "number") {
       playEntitySound(e, ["death"], { volume: e.tilemap ? 0.3 : 0.6 });
     }
     if (e.prefab === "sheep" && e.lastAttacker && e.owner) {
       const killingUnit = lookup[e.lastAttacker];
-      if (!killingUnit || !killingUnit.owner) {
-        return console.log("precond2", killingUnit);
-      }
+      if (!killingUnit || !killingUnit.owner) return;
       const killingPlayer = getPlayer(killingUnit.owner);
       const victim = getPlayer(e.owner);
       if (killingPlayer && victim) {
         addChatMessage(`${format(killingPlayer)} killed ${format(victim)}`);
-      } else console.log("precond3", killingPlayer, victim);
-    } else console.log("precond", { ...e });
+      }
+    }
   },
 });
 

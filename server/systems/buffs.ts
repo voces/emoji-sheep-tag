@@ -25,7 +25,7 @@ addSystem((game) => ({
     for (const buff of expiringBuffs) {
       if (buff.expiration === "Sound") {
         // Delete the entity when sound buff expires
-        game.delete(entity);
+        game.removeEntity(entity);
         return; // Exit early since entity is deleted
       }
     }

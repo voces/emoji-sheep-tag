@@ -21,7 +21,6 @@ export const unitOrder = (
   client: Client,
   { units, order, target }: z.TypeOf<typeof zOrderEvent>,
 ) => {
-  console.log("unitOrder", { units, order, target });
   for (const uId of units) {
     const unit = lookup(uId);
     if (!unit) throw new UnknownEntity(uId);

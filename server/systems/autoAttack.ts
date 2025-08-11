@@ -17,12 +17,11 @@ addSystem(() => {
   return {
     props: ["attack", "position"],
     entities,
-    onAdd: (e) => idleCheck(e),
     update: () => {
       let offset = -1;
       for (const e of entities) {
         offset++;
-        if ((counter + offset) % 17) continue;
+        if ((counter + offset) % 11) continue;
         idleCheck(e);
       }
       counter++;

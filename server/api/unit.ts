@@ -114,7 +114,7 @@ const isReachableTarget = (attacker: Entity, target: Entity) => {
   if (!attacker.position) return false;
 
   // If within attack range...
-  if (canSwing(attacker, target)) return true;
+  if (canSwing(attacker, target, true)) return true;
 
   // Cannot walk
   if (!attacker.movementSpeed) return false;

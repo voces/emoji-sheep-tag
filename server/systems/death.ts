@@ -17,8 +17,6 @@ addSystem((game) => ({
       timeout(() => {
         endRound();
 
-        console.log("kill!");
-
         // Auto start
         const lobby = lobbyContext.context;
         setTimeout(() => {
@@ -32,6 +30,6 @@ addSystem((game) => ({
       }, 0.05);
     }
 
-    game.delete(unit);
+    game.removeEntity(unit);
   },
 }));
