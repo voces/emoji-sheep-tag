@@ -92,8 +92,8 @@ export const unitOrder = (
           handleHold(unit);
           break;
         case "selfDestruct":
-          unit.health = 0;
           unit.lastAttacker = null;
+          unit.health = 0;
           break;
         default:
           console.warn("Unhandled order type", { order, units, target });

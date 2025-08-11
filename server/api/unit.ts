@@ -345,6 +345,6 @@ export const damageEntity = (
     ? baseDamage
     : applyDamageModifiers(baseDamage, attacker, target);
 
-  target.health = Math.max(0, target.health - finalDamage);
   target.lastAttacker = attacker.id;
+  target.health = Math.max(0, target.health - finalDamage);
 };

@@ -134,6 +134,7 @@ export const prefabs: Record<
     | "sounds"
     | "completionTime"
     | "inventory"
+    | "bounty"
   >
 > = {
   sheep: {
@@ -284,6 +285,7 @@ export const prefabs: Record<
     completionTime: 0.7,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
+    bounty: 1,
   },
   tinyHut: {
     name: "Tiny Hut",
@@ -295,6 +297,7 @@ export const prefabs: Record<
     completionTime: 0.5,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
+    bounty: 1,
   },
   wideHut: {
     name: "Wide Hut",
@@ -306,6 +309,7 @@ export const prefabs: Record<
     completionTime: 1,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
+    bounty: 3,
   },
   rotundHut: {
     name: "Rotund Hut",
@@ -317,6 +321,7 @@ export const prefabs: Record<
     completionTime: 1.5,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
+    bounty: 4,
   },
   stackHut: {
     name: "Stack Hut",
@@ -334,6 +339,7 @@ export const prefabs: Record<
     completionTime: 3,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
+    bounty: 4,
   },
   translocationHut: {
     name: "Translocation Hut",
@@ -343,6 +349,7 @@ export const prefabs: Record<
     maxHealth: 10,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
+    bounty: 5,
   },
   fence: {
     radius: 0.25,

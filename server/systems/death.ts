@@ -4,11 +4,19 @@ import { endRound } from "../lobbyApi.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { start } from "../actions/start.ts";
 import { timeout } from "../api/timing.ts";
+import { grantPlayerGold } from "../api/player.ts";
+import { lookup } from "./lookup.ts";
 
 addSystem((game) => ({
   props: ["health"],
   onChange: (unit) => {
     if (unit.health > 0) return;
+
+    // Grant bounty to killer if entity has bounty and lastAttacker
+    if (unit.bounty && unit.lastAttacker) {
+      const killer = lookup(unit.lastAttacker);
+      if (killer?.owner) grantPlayerGold(killer.owner, unit.bounty);
+    }
 
     if (
       unit.prefab === "sheep" &&

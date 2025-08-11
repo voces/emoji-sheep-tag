@@ -209,6 +209,9 @@ const zUpdate = z.object({
   // Buffs
   buffs: zBuff.array().readonly().nullable().optional(),
 
+  // Bounty
+  bounty: z.number().optional(),
+
   // Pathing
   radius: z.number().optional(),
   pathing: z.number().optional(),

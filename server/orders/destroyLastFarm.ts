@@ -26,8 +26,8 @@ export const destroyLastFarmOrder = {
       (entity) => !!entity.tilemap,
     );
     if (lastFarm) {
-      lastFarm.health = 0;
       lastFarm.lastAttacker = null;
+      lastFarm.health = 0;
     }
     return "immediate";
   },

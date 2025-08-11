@@ -189,6 +189,9 @@ export type Entity = {
   // Buffs
   buffs?: ReadonlyArray<Buff> | null;
 
+  // Bounty
+  bounty?: number;
+
   // Orders
   order?: Order | null;
   queue?: ReadonlyArray<Order> | null;
