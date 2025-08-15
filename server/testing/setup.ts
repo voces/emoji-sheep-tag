@@ -1,9 +1,10 @@
+import { it as baseIt } from "jsr:@std/testing/bdd";
 import { newEcs } from "../ecs.ts";
 import { Client } from "../client.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { newLobby } from "../lobby.ts";
-import { interval } from "../api/timing.ts";
 import { init } from "../st/data.ts";
+import { FakeTime } from "jsr:@std/testing/time";
 
 export type TestSetupOptions = {
   wolves?: string[];
@@ -15,7 +16,8 @@ export type TestSetup = {
   ecs: ReturnType<typeof newEcs>;
   lobby: ReturnType<typeof newLobby>;
   clients: Map<string, Client>;
-};
+  tick: (count?: number) => void;
+} & Disposable;
 
 /**
  * Creates a test setup with ECS, lobby, and clients
@@ -86,8 +88,10 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     wolves: new Set(wolfClients.map((w) => w.client)),
     ecs,
     start: Date.now(),
-    clearInterval: interval(() => ecs.update(), 0.05),
+    clearInterval: () => {},
   };
+
+  const time = new FakeTime();
 
   // Initialize game data
   init({
@@ -114,7 +118,18 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     });
   }
 
-  return { ecs, lobby, clients };
+  return {
+    ecs,
+    lobby,
+    clients,
+    tick: (count: number = 1) => {
+      while (count--) {
+        time.tick(50);
+        ecs.update(0.05);
+      }
+    },
+    [Symbol.dispose]: () => time.restore(),
+  };
 };
 
 /**
@@ -127,3 +142,89 @@ export const cleanupTest = () => {
   lobbyContext.context = undefined;
   clientContext.context = undefined;
 };
+
+// Generator-based test wrapper types and implementation
+export type TestContext = {
+  ecs: ReturnType<typeof createTestSetup>["ecs"];
+  clients: ReturnType<typeof createTestSetup>["clients"];
+  lobby: ReturnType<typeof createTestSetup>["lobby"];
+};
+
+export type TestFn = (
+  context: TestContext,
+) => Generator<void, void, unknown> | void;
+
+/**
+ * Generator-based test wrapper that automatically handles ecs.batch() calls
+ * and runs ECS updates between yield points to trigger system processing.
+ *
+ * Usage:
+ * ```typescript
+ * it("test name", function* ({ ecs }) {
+ *   const unit = newUnit("player", "wolf", 0, 0);
+ *   unit.health = 50;
+ *   yield; // Batch boundary - runs ecs.update()
+ *
+ *   expect(unit.health).toBe(50);
+ * });
+ * ```
+ *
+ * Supports `.only` for running individual tests:
+ * ```typescript
+ * it.only("run only this test", function* ({ ecs }) {
+ *   // This test will run in isolation
+ * });
+ * ```
+ */
+function createItImpl(itFn: typeof baseIt | typeof baseIt.only) {
+  function itImpl(name: string, testFn: TestFn): void;
+  function itImpl(
+    name: string,
+    setupOptions: TestSetupOptions,
+    testFn: TestFn,
+  ): void;
+  function itImpl(
+    name: string,
+    setupOptionsOrTestFn: TestSetupOptions | TestFn,
+    testFn?: TestFn,
+  ) {
+    let setupOptions: TestSetupOptions;
+    let actualTestFn: TestFn;
+
+    if (typeof setupOptionsOrTestFn === "function") {
+      setupOptions = {
+        wolves: ["wolf-player"],
+        sheep: ["sheep-player"],
+        gold: 10,
+      };
+      actualTestFn = setupOptionsOrTestFn;
+    } else {
+      setupOptions = setupOptionsOrTestFn;
+      actualTestFn = testFn!;
+    }
+
+    itFn(name, () => {
+      using testSetup = createTestSetup(setupOptions);
+
+      const generator = testSetup.ecs.batch(() => actualTestFn(testSetup));
+      if (!generator) return;
+
+      // Execute the first part of the generator inside ecs.batch
+      let result = testSetup.ecs.batch(() => generator.next());
+
+      while (!result.done) {
+        // Run ECS update to process systems (like death/bounty)
+        testSetup.tick();
+
+        // Execute the next part of the generator inside ecs.batch
+        result = testSetup.ecs.batch(() => generator.next());
+      }
+    });
+  }
+
+  return itImpl;
+}
+
+export const it = Object.assign(createItImpl(baseIt), {
+  only: createItImpl(baseIt.only),
+});

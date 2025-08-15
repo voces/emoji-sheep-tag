@@ -1,4 +1,4 @@
-import { afterEach, describe, it } from "jsr:@std/testing/bdd";
+import { afterEach, describe } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import {
   addItem,
@@ -8,59 +8,20 @@ import {
   newUnit,
 } from "./unit.ts";
 import { Entity, Item } from "@/shared/types.ts";
-import { newEcs } from "../ecs.ts";
-import { clientContext, lobbyContext } from "../contexts.ts";
-import { Client } from "../client.ts";
-import { newLobby } from "../lobby.ts";
-import { interval } from "../api/timing.ts";
-import { init } from "../st/data.ts";
 import { items } from "@/shared/data.ts";
+import { cleanupTest, it } from "@/server-testing/setup.ts";
 
-afterEach(() => {
-  try {
-    lobbyContext.context.round?.clearInterval();
-  } catch { /* do nothing */ }
-  lobbyContext.context = undefined;
-  clientContext.context = undefined;
-});
-
-const setupEcs = () => {
-  const ecs = newEcs();
-  const client = new Client({
-    readyState: WebSocket.OPEN,
-    send: () => {},
-    close: () => {},
-    addEventListener: () => {},
-  });
-  client.id = "test-client";
-  clientContext.context = client;
-  const lobby = newLobby();
-  lobbyContext.context = lobby;
-  lobby.round = {
-    sheep: new Set(),
-    wolves: new Set(),
-    ecs,
-    start: Date.now(),
-    clearInterval: interval(() => ecs.update(), 0.05),
-  };
-
-  // Initialize game data to avoid errors
-  init({
-    sheep: [],
-    wolves: [{ client }],
-  });
-
-  return { ecs, client };
-};
+afterEach(cleanupTest);
 
 describe("addItem", () => {
-  it("should add new item to empty inventory", () => {
+  it("should add new item to empty inventory", function* () {
     const unit: Entity = {
       id: "test-unit",
       inventory: [],
     };
 
     const result = addItem(unit, "foxItem");
+    yield;
 
     expect(result).toBe(true);
     expect(unit.inventory).toHaveLength(1);
@@ -68,19 +29,20 @@ describe("addItem", () => {
     expect(unit.inventory![0].name).toBe("Fox Token");
   });
 
-  it("should initialize inventory if undefined", () => {
+  it("should initialize inventory if undefined", function* () {
     const unit: Entity = {
       id: "test-unit",
     };
 
     const result = addItem(unit, "foxItem");
+    yield;
 
     expect(result).toBe(true);
     expect(unit.inventory).toBeDefined();
     expect(unit.inventory).toHaveLength(1);
   });
 
-  it("should stack charges for existing items", () => {
+  it("should stack charges for existing items", function* () {
     const unit: Entity = {
       id: "test-unit",
       inventory: [{
@@ -101,25 +63,27 @@ describe("addItem", () => {
     };
 
     const result = addItem(unit, "foxItem");
+    yield;
 
     expect(result).toBe(true);
     expect(unit.inventory).toHaveLength(1);
     expect(unit.inventory![0].charges).toBe(3);
   });
 
-  it("should return false for invalid item id", () => {
+  it("should return false for invalid item id", function* () {
     const unit: Entity = {
       id: "test-unit",
       inventory: [],
     };
 
     const result = addItem(unit, "invalidItem");
+    yield;
 
     expect(result).toBe(false);
     expect(unit.inventory).toHaveLength(0);
   });
 
-  it("should add multiple different items", () => {
+  it("should add multiple different items", function* () {
     const unit: Entity = {
       id: "test-unit",
       inventory: [],
@@ -127,6 +91,7 @@ describe("addItem", () => {
 
     addItem(unit, "foxItem");
     // Note: we can only test with foxItem since other items may not exist in prefabs
+    yield;
 
     expect(unit.inventory).toHaveLength(1);
     expect(unit.inventory![0].id).toBe("foxItem");
@@ -134,241 +99,266 @@ describe("addItem", () => {
 });
 
 describe("computeUnitDamage", () => {
-  it("should return 0 for unit without attack", () => {
-    setupEcs();
+  it("should return 0 for unit without attack", function* () {
     const unit = newUnit("test-owner", "sheep", 10, 10);
+    yield;
     expect(computeUnitDamage(unit)).toBe(0);
   });
 
-  it("should return base damage for unit with no items", () => {
-    setupEcs();
+  it("should return base damage for unit with no items", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
+    yield;
     expect(computeUnitDamage(unit)).toBe(70); // Wolf base damage
   });
 
-  it("should add item damage bonuses", () => {
-    setupEcs();
+  it("should add item damage bonuses", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     unit.inventory = [items.claw];
+    yield;
     expect(computeUnitDamage(unit)).toBe(90); // 70 + 20
   });
 
-  it("should add multiple item damage bonuses", () => {
-    setupEcs();
+  it("should add multiple item damage bonuses", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     unit.inventory = [
       items.claw,
       { ...items.claw, id: "claw2", damage: 15 }, // Second claw with different damage
     ];
+    yield;
     expect(computeUnitDamage(unit)).toBe(105); // 70 + 20 + 15
   });
 
-  it("should ignore items without damage property", () => {
-    setupEcs();
+  it("should ignore items without damage property", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     unit.inventory = [items.foxItem]; // foxItem has no damage property
+    yield;
     expect(computeUnitDamage(unit)).toBe(70); // Only wolf base damage
   });
 });
 
 describe("computeUnitAttackSpeed", () => {
-  it("should return 1.0 for unit with no items", () => {
-    setupEcs();
+  it("should return 1.0 for unit with no items", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
+    yield;
     expect(computeUnitAttackSpeed(unit)).toBe(1.0);
   });
 
-  it("should return 1.0 for unit with items that have no attack speed multiplier", () => {
-    setupEcs();
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [items.claw, items.foxItem]; // Neither has attackSpeedMultiplier
-    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
-  });
+  it(
+    "should return 1.0 for unit with items that have no attack speed multiplier",
+    function* () {
+      const unit = newUnit("test-owner", "wolf", 10, 10);
+      unit.inventory = [items.claw, items.foxItem]; // Neither has attackSpeedMultiplier
+      yield;
+      expect(computeUnitAttackSpeed(unit)).toBe(1.0);
+    },
+  );
 
-  it("should apply single attack speed multiplier", () => {
-    setupEcs();
+  it("should apply single attack speed multiplier", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     unit.inventory = [items.swiftness]; // 1.15x multiplier
+    yield;
     expect(computeUnitAttackSpeed(unit)).toBe(1.15);
   });
 
-  it("should stack multiple attack speed multipliers multiplicatively", () => {
-    setupEcs();
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [
-      items.swiftness, // 1.15x
-      { ...items.swiftness, id: "swiftness2", attackSpeedMultiplier: 1.2 }, // 1.2x
-    ];
-    expect(computeUnitAttackSpeed(unit)).toBeCloseTo(1.38, 2); // 1.15 * 1.2 = 1.38
-  });
+  it(
+    "should stack multiple attack speed multipliers multiplicatively",
+    function* () {
+      const unit = newUnit("test-owner", "wolf", 10, 10);
+      unit.inventory = [
+        items.swiftness, // 1.15x
+        { ...items.swiftness, id: "swiftness2", attackSpeedMultiplier: 1.2 }, // 1.2x
+      ];
+      yield;
+      expect(computeUnitAttackSpeed(unit)).toBeCloseTo(1.38, 2); // 1.15 * 1.2 = 1.38
+    },
+  );
 
-  it("should ignore items without attack speed multiplier", () => {
-    setupEcs();
+  it("should ignore items without attack speed multiplier", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     unit.inventory = [
       items.swiftness, // 1.15x
       items.claw, // No attack speed multiplier
       items.foxItem, // No attack speed multiplier
     ];
+    yield;
     expect(computeUnitAttackSpeed(unit)).toBe(1.15);
   });
 
-  it("should return 1.0 for unit with empty inventory", () => {
-    setupEcs();
+  it("should return 1.0 for unit with empty inventory", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     unit.inventory = [];
+    yield;
     expect(computeUnitAttackSpeed(unit)).toBe(1.0);
   });
 
-  it("should return 1.0 for unit with no inventory property", () => {
-    setupEcs();
+  it("should return 1.0 for unit with no inventory property", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     (unit as { inventory?: ReadonlyArray<Item> }).inventory = undefined;
+    yield;
     expect(computeUnitAttackSpeed(unit)).toBe(1.0);
   });
 });
 
 describe("damageEntity", () => {
-  it("should do nothing if target has no health", () => {
-    setupEcs();
+  it("should do nothing if target has no health", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "fence", 20, 20); // Fence has no health
 
     damageEntity(attacker, target);
+    yield;
 
     expect(target.health).toBeUndefined();
   });
 
-  it("should deal computed damage with default behavior", () => {
-    setupEcs();
+  it("should deal computed damage with default behavior", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
 
     damageEntity(attacker, target);
+    yield;
 
     expect(target.health).toBe(50); // 120 - 70 (wolf damage) = 50
   });
 
-  it("should deal specified amount when provided", () => {
-    setupEcs();
+  it("should deal specified amount when provided", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
 
     damageEntity(attacker, target, 25);
+    yield;
 
     expect(target.health).toBe(95); // 120 - 25
   });
 
-  it("should apply damage amplification for targets with progress", () => {
-    setupEcs();
-    const attacker = newUnit("attacker-owner", "fox", 10, 10);
-    const target = newUnit("target-owner", "hut", 20, 20);
-    target.progress = 0.5; // Building in progress
+  it(
+    "should apply damage amplification for targets with progress",
+    function* () {
+      const attacker = newUnit("attacker-owner", "fox", 10, 10);
+      const target = newUnit("target-owner", "hut", 20, 20);
+      target.progress = 0.5; // Building in progress
+      yield;
 
-    damageEntity(attacker, target, undefined, false);
+      damageEntity(attacker, target, undefined, false);
+      yield;
 
-    expect(target.health).toBe(80); // 120 - (20 * 2) = 80
-  });
+      expect(target.health).toBe(80); // 120 - (20 * 2) = 80
+    },
+  );
 
-  it("should apply damage mitigation for mirror attackers against structures", () => {
-    setupEcs();
-    const attacker = newUnit("attacker-owner", "wolf", 10, 10);
-    const target = newUnit("target-owner", "hut", 20, 20);
-    attacker.isMirror = true; // Mirror wolf
+  it(
+    "should apply damage mitigation for mirror attackers against structures",
+    function* () {
+      const attacker = newUnit("attacker-owner", "wolf", 10, 10);
+      const target = newUnit("target-owner", "hut", 20, 20);
+      attacker.isMirror = true; // Mirror wolf
+      yield;
 
-    damageEntity(attacker, target, undefined, false);
+      damageEntity(attacker, target, undefined, false);
+      yield;
 
-    expect(target.health).toBe(103.2); // 120 - (70 * 0.24) = 103.2
-  });
+      expect(target.health).toBe(103.2); // 120 - (70 * 0.24) = 103.2
+    },
+  );
 
-  it("should apply extreme damage mitigation for mirror attackers against units", () => {
-    setupEcs();
-    const attacker = newUnit("attacker-owner", "wolf", 10, 10);
-    const target = newUnit("target-owner", "sheep", 20, 20);
-    attacker.isMirror = true; // Mirror wolf
+  it(
+    "should apply extreme damage mitigation for mirror attackers against units",
+    function* () {
+      const attacker = newUnit("attacker-owner", "wolf", 10, 10);
+      const target = newUnit("target-owner", "sheep", 20, 20);
+      attacker.isMirror = true; // Mirror wolf
+      yield;
 
-    damageEntity(attacker, target, undefined, false);
+      damageEntity(attacker, target, undefined, false);
+      yield;
 
-    expect(target.health).toBe(19.93); // 20 - (70 * 0.001) = 19.93
-  });
+      expect(target.health).toBe(19.93); // 20 - (70 * 0.001) = 19.93
+    },
+  );
 
-  it("should combine progress amplification and mirror mitigation", () => {
-    setupEcs();
-    const attacker = newUnit("attacker-owner", "fox", 10, 10);
-    const target = newUnit("target-owner", "hut", 20, 20);
-    attacker.isMirror = true;
-    target.progress = 0.3; // Building in progress
+  it(
+    "should combine progress amplification and mirror mitigation",
+    function* () {
+      const attacker = newUnit("attacker-owner", "fox", 10, 10);
+      const target = newUnit("target-owner", "hut", 20, 20);
+      attacker.isMirror = true;
+      target.progress = 0.3; // Building in progress
+      yield;
 
-    damageEntity(attacker, target, undefined, false);
+      damageEntity(attacker, target, undefined, false);
+      yield;
 
-    expect(target.health).toBe(110.4); // 120 - (20 * 2 * 0.24) = 110.4
-  });
+      expect(target.health).toBe(110.4); // 120 - (20 * 2 * 0.24) = 110.4
+    },
+  );
 
-  it("should deal pure damage when pure=true", () => {
-    setupEcs();
+  it("should deal pure damage when pure=true", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
     attacker.isMirror = true;
     target.progress = 0.5;
+    yield;
 
     damageEntity(attacker, target, undefined, true);
+    yield;
 
     expect(target.health).toBe(50); // 120 - 70, no modifiers applied
   });
 
-  it("should deal pure specified amount when pure=true", () => {
-    setupEcs();
+  it("should deal pure specified amount when pure=true", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
     attacker.isMirror = true;
     target.progress = 0.5;
+    yield;
 
     damageEntity(attacker, target, 35, true);
+    yield;
 
     expect(target.health).toBe(85); // 120 - 35, no modifiers
   });
 
-  it("should not reduce health below 0", () => {
-    setupEcs();
+  it("should not reduce health below 0", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "tinyHut", 20, 20);
 
     damageEntity(attacker, target);
+    yield;
 
     expect(target.health).toBe(0);
   });
 
-  it("should track last attacker unconditionally", () => {
-    setupEcs();
+  it("should track last attacker unconditionally", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
 
     // Deal non-lethal damage
     damageEntity(attacker, target, 10);
+    yield;
 
     expect(target.health).toBe(110); // 120 - 10
     expect(target.lastAttacker).toBe(attacker.id);
   });
 
-  it("should track last attacker when unit dies", () => {
-    setupEcs();
+  it("should track last attacker when unit dies", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
 
     // Damage target to kill it
     damageEntity(attacker, target, 120);
+    yield;
 
     expect(target.health).toBe(0);
     expect(target.lastAttacker).toBe(attacker.id);
   });
 
-  it("should include item damage bonuses in computed damage", () => {
-    setupEcs();
+  it("should include item damage bonuses in computed damage", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
     attacker.inventory = [items.claw]; // +20 damage
+    yield;
 
     damageEntity(attacker, target);
+    yield;
 
     expect(target.health).toBe(30); // 120 - (70 + 20) = 30
   });

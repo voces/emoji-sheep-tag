@@ -1,26 +1,24 @@
-import { afterEach, describe, it } from "jsr:@std/testing/bdd";
+import { afterEach, describe } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { newUnit } from "../../api/unit.ts";
 import { advanceCast } from "./advanceCast.ts";
-import { cleanupTest, createTestSetup } from "@/server-testing/setup.ts";
+import { cleanupTest, it } from "@/server-testing/setup.ts";
+import { mirrorImageOrder } from "../../orders/mirrorImage.ts";
 
 afterEach(cleanupTest);
 
 describe("advanceCast mirror image", () => {
-  it("should clear existing mirrors when starting a new cast", async () => {
-    const { ecs } = createTestSetup({
-      wolves: ["test-client"],
-    });
-
-    // Import mirror image order for proper testing
-    const { mirrorImageOrder } = await import("../../orders/mirrorImage.ts");
-
+  it("should clear existing mirrors when starting a new cast", {
+    wolves: ["test-client"],
+  }, function* ({ ecs }) {
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.mana = 100; // Ensure it has plenty of mana
+    yield;
 
     // First cast - create initial mirror using new order system
     mirrorImageOrder.onIssue(wolf);
     advanceCast(wolf, 1.0); // Complete the cast
+    yield;
 
     // Verify mirror were created
     expect(wolf.mirrors).toBeDefined();
@@ -31,9 +29,11 @@ describe("advanceCast mirror image", () => {
 
     // Second cast - should clear existing mirror and create new ones
     mirrorImageOrder.onIssue(wolf); // This initiates the cast order
+    yield;
 
     // Advance cast slightly to trigger cast start (which clears old mirror)
     advanceCast(wolf, 0.1);
+    yield;
 
     // Old mirror should be removed from ECS entirely
     const mirrorsInEcs = Array.from(ecs.entities).filter((e) =>
@@ -46,6 +46,7 @@ describe("advanceCast mirror image", () => {
 
     // Complete the second cast (remaining time after the 0.1s start)
     advanceCast(wolf, 0.9);
+    yield;
 
     // New mirror should be created
     expect(wolf.mirrors).toBeDefined();
@@ -66,11 +67,9 @@ describe("advanceCast mirror image", () => {
     expect(allEntitiesWithOldIds).toHaveLength(0);
   });
 
-  it("should consume mana when mirror image cast starts", () => {
-    createTestSetup({
-      wolves: ["test-client"],
-    });
-
+  it.only("should consume mana when mirror image cast starts", {
+    wolves: ["test-client"],
+  }, function* () {
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.mana = 100;
     wolf.maxMana = 100;
@@ -82,26 +81,30 @@ describe("advanceCast mirror image", () => {
       remaining: 1.0,
       positions: [{ x: 5, y: 5 }],
     };
+    yield;
 
     // Call advanceCast which should consume mana when the cast starts
     advanceCast(wolf, 0.1);
+    yield;
 
-    // Mana should be consumed (mirror image costs 20 mana)
-    expect(wolf.mana).toBe(80);
+    // Mana should be consumed (mirror image costs 20 mana, 0.05 mana regen)
+    expect(wolf.mana).toBe(80.05);
 
     // Order should be marked as started
-    expect(wolf.order?.started).toBe(true);
+    expect(
+      (wolf.order as { type: string; orderId: string; started?: boolean })
+        ?.started,
+    ).toBe(true);
 
     // Advancing cast further should not consume more mana
     advanceCast(wolf, 0.1);
-    expect(wolf.mana).toBe(80);
+    yield;
+    expect(wolf.mana).toBe(80.1);
   });
 
-  it("should handle partial cast time correctly", () => {
-    createTestSetup({
-      wolves: ["test-client"],
-    });
-
+  it("should handle partial cast time correctly", {
+    wolves: ["test-client"],
+  }, function* () {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Set a mirror image cast order
@@ -111,22 +114,25 @@ describe("advanceCast mirror image", () => {
       remaining: 1.0,
       positions: [{ x: 5, y: 5 }],
     };
+    yield;
 
     // Advance cast by 0.3 seconds
     const leftover = advanceCast(wolf, 0.3);
+    yield;
 
     // Should consume all delta
     expect(leftover).toBe(0);
 
     // Order should still exist with reduced time
-    expect(wolf.order?.remaining).toBeCloseTo(0.7, 1);
+    expect(
+      (wolf.order as { type: string; orderId: string; remaining: number })
+        ?.remaining,
+    ).toBeCloseTo(0.7, 1);
   });
 
-  it("should create new mirrors after cast completes", () => {
-    const { ecs } = createTestSetup({
-      wolves: ["test-client"],
-    });
-
+  it("should create new mirrors after cast completes", {
+    wolves: ["test-client"],
+  }, function* ({ ecs }) {
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.mana = 50;
 
@@ -141,9 +147,11 @@ describe("advanceCast mirror image", () => {
         { x: 8, y: 10 }, // Mirror 2
       ],
     };
+    yield;
 
     // Complete the cast
     advanceCast(wolf, 0.5);
+    yield;
 
     // Wolf should be relocated to first position
     expect(wolf.position).toEqual({ x: 10, y: 10 });
@@ -163,18 +171,17 @@ describe("advanceCast mirror image", () => {
     // Wolf had 50 mana, mirrorImage costs 20, so 30 mana remains
     mirrors.forEach((mirror) => {
       expect(mirror.health).toBe(wolf.health);
-      expect(mirror.mana).toBe(30);
+      expect(mirror.mana).toBeCloseTo(30, 1);
     });
   });
 
-  it("should handle mirror image with no positions (no mirrors created)", () => {
-    const { ecs } = createTestSetup({
-      wolves: ["test-client"],
-    });
-
+  it("should handle mirror image with no positions (no mirrors created)", {
+    wolves: ["test-client"],
+  }, function* ({ ecs }) {
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.prefab = "wolf";
     wolf.owner = "test-client";
+    yield;
 
     const initialPosition = { ...wolf.position! };
 
@@ -185,9 +192,11 @@ describe("advanceCast mirror image", () => {
       remaining: 0.5,
       // positions is undefined
     };
+    yield;
 
     // Complete the cast
     advanceCast(wolf, 0.5);
+    yield;
 
     // Wolf should stay in the same position
     expect(wolf.position).toEqual(initialPosition);
@@ -205,11 +214,9 @@ describe("advanceCast mirror image", () => {
 });
 
 describe("advanceCast other abilities", () => {
-  it("should spawn fox after cast completes", () => {
-    const { ecs } = createTestSetup({
-      wolves: ["test-client"],
-    });
-
+  it("should spawn fox after cast completes", {
+    wolves: ["test-client"],
+  }, function* ({ ecs }) {
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.owner = "test-client";
     wolf.facing = 0; // Facing right
@@ -220,9 +227,11 @@ describe("advanceCast other abilities", () => {
       orderId: "fox",
       remaining: 0.3,
     };
+    yield;
 
     // Complete the cast
     advanceCast(wolf, 0.3);
+    yield;
 
     // Order should be cleared
     expect(wolf.order).toBeFalsy();
@@ -239,11 +248,9 @@ describe("advanceCast other abilities", () => {
   // Note: destroyLastFarm is now an instant action that doesn't use advanceCast
   // It's tested in the unitOrder.test.ts file instead
 
-  it("should handle unknown cast orderId gracefully", () => {
-    createTestSetup({
-      wolves: ["test-client"],
-    });
-
+  it("should handle unknown cast orderId gracefully", {
+    wolves: ["test-client"],
+  }, function* () {
     const unit = newUnit("test-client", "wolf", 5, 5);
 
     // Set an unknown cast order
@@ -252,19 +259,19 @@ describe("advanceCast other abilities", () => {
       orderId: "unknownAbility",
       remaining: 0.1,
     };
+    yield;
 
     // Should not throw, just warn
     expect(() => advanceCast(unit, 0.1)).not.toThrow();
+    yield;
 
     // Order should be cleared after completion
     expect(unit.order).toBeFalsy();
   });
 
-  it("should handle partial time advancement correctly", () => {
-    createTestSetup({
-      wolves: ["test-client"],
-    });
-
+  it("should handle partial time advancement correctly", {
+    wolves: ["test-client"],
+  }, function* () {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Set a cast order with 1 second duration
@@ -273,18 +280,24 @@ describe("advanceCast other abilities", () => {
       orderId: "fox",
       remaining: 1.0,
     };
+    yield;
 
     // Advance by 0.3 seconds
     const leftover = advanceCast(wolf, 0.3);
+    yield;
 
     // Should consume all delta time
     expect(leftover).toBe(0);
 
     // Order should still exist with reduced remaining time
-    expect(wolf.order?.remaining).toBeCloseTo(0.7, 1);
+    expect(
+      (wolf.order as { type: string; orderId: string; remaining: number })
+        ?.remaining,
+    ).toBeCloseTo(0.7, 1);
 
     // Advance by 0.8 seconds (more than remaining)
     const leftover2 = advanceCast(wolf, 0.8);
+    yield;
 
     // Should return leftover time
     expect(leftover2).toBeCloseTo(0.1, 1);

@@ -1,18 +1,16 @@
-import { afterEach, describe, it } from "jsr:@std/testing/bdd";
+import { afterEach, describe } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { waitFor } from "@/shared/util/test/waitFor.ts";
 import { addItem, newUnit } from "../api/unit.ts";
 import { unitOrder } from "./unitOrder.ts";
 import { advanceCast } from "../systems/action/advanceCast.ts";
-import { cleanupTest, createTestSetup } from "../testing/setup.ts";
+import { cleanupTest, it } from "@/server-testing/setup.ts";
 
 afterEach(cleanupTest);
 
 describe("unitOrder fox item integration", () => {
-  it("should cast fox ability from item with charges", async () => {
-    const { ecs, clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should cast fox ability from item with charges", {
+    wolves: ["test-client"],
+  }, function* ({ ecs, clients }) {
     const client = clients.get("test-client")!;
 
     // Create a wolf unit
@@ -20,6 +18,7 @@ describe("unitOrder fox item integration", () => {
 
     // Add fox item to inventory
     addItem(wolf, "foxItem");
+    yield;
 
     expect(wolf.inventory).toHaveLength(1);
     expect(wolf.inventory![0].charges).toBe(1);
@@ -27,6 +26,7 @@ describe("unitOrder fox item integration", () => {
 
     // Use fox ability from item
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+    yield;
 
     // Should have casting order now
     expect(wolf.order).toBeDefined();
@@ -39,17 +39,16 @@ describe("unitOrder fox item integration", () => {
     expect(wolf.inventory).toHaveLength(0);
 
     // Wait for cast to complete and fox to be spawned
-    await waitFor(() => {
-      const entities = Array.from(ecs.entities);
-      const foxes = entities.filter((e) => e.prefab === "fox");
-      expect(foxes.length).toBe(1);
-    });
+    while (wolf.order?.type === "cast") yield;
+
+    const entities = Array.from(ecs.entities);
+    const foxes = entities.filter((e) => e.prefab === "fox");
+    expect(foxes.length).toBe(1);
   });
 
-  it("should not cast fox when no charges remaining", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should not cast fox when no charges remaining", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -58,20 +57,21 @@ describe("unitOrder fox item integration", () => {
     addItem(wolf, "foxItem");
     // Modify the inventory item to have 0 charges
     wolf.inventory = wolf.inventory!.map((item) => ({ ...item, charges: 0 }));
+    yield;
 
     const initialOrder = wolf.order;
 
     // Try to use fox ability
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+    yield;
 
     // Should not change order
     expect(wolf.order).toBe(initialOrder);
   });
 
-  it("should stack charges and consume one per use", async () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should stack charges and consume one per use", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -79,12 +79,14 @@ describe("unitOrder fox item integration", () => {
     // Add fox item twice (should stack charges)
     addItem(wolf, "foxItem");
     addItem(wolf, "foxItem");
+    yield;
 
     expect(wolf.inventory).toHaveLength(1);
     expect(wolf.inventory![0].charges).toBe(2);
 
     // Use fox ability once
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+    yield;
 
     // Should have casting order
     expect(wolf.order!.type).toBe("cast");
@@ -97,12 +99,11 @@ describe("unitOrder fox item integration", () => {
     expect(wolf.inventory![0].charges).toBe(1);
 
     // Wait for cast to complete
-    await waitFor(() => {
-      expect(wolf.order?.type).not.toBe("cast");
-    });
+    while (wolf.order?.type === "cast") yield;
 
     // Use fox ability again
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+    yield;
 
     // Should cast again
     expect(wolf.order!.type).toBe("cast");
@@ -114,14 +115,12 @@ describe("unitOrder fox item integration", () => {
     expect(wolf.inventory).toHaveLength(0);
   });
 
-  it("should not allow other clients to use unit's fox item", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client", "other-client"],
-    });
-    const _client = clients.get("test-client")!;
-
+  it("should not allow other clients to use unit's fox item", {
+    wolves: ["test-client", "other-client"],
+  }, function* ({ clients }) {
     const wolf = newUnit("test-client", "wolf", 5, 5);
     addItem(wolf, "foxItem");
+    yield;
 
     // Get different client
     const otherClient = clients.get("other-client")!;
@@ -135,28 +134,30 @@ describe("unitOrder fox item integration", () => {
       units: [wolf.id],
       order: "fox",
     });
+    yield;
 
     // Should not change anything
     expect(wolf.order).toBe(initialOrder);
     expect(wolf.inventory).toEqual(initialInventory);
   });
 
-  it("should handle charge consumption generically for any item action", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should handle charge consumption generically for any item action", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add fox item
     addItem(wolf, "foxItem");
+    yield;
     expect(wolf.inventory).toHaveLength(1);
     expect(wolf.inventory![0].charges).toBe(1);
 
     // Use the item action - charge consumption should happen automatically
     // after the action regardless of the specific action type
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+    yield;
 
     // Item should be consumed due to generalized charge logic
     expect(wolf.inventory).toHaveLength(0);
@@ -164,10 +165,9 @@ describe("unitOrder fox item integration", () => {
 });
 
 describe("unitOrder basic actions", () => {
-  it("should execute stop action", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute stop action", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use sheep which has stop action
@@ -176,41 +176,44 @@ describe("unitOrder basic actions", () => {
     // Give the unit some orders and queue
     sheep.order = { type: "walk", target: { x: 10, y: 10 } };
     sheep.queue = [{ type: "walk", target: { x: 20, y: 20 } }];
+    yield;
 
     // Execute stop action
     unitOrder(client, { type: "unitOrder", units: [sheep.id], order: "stop" });
+    yield;
 
     // Should clear order and queue (properties are deleted, becoming undefined or null)
     expect(sheep.order).toBeFalsy();
     expect(sheep.queue).toBeFalsy();
   });
 
-  it("should execute hold action", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute hold action", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use wolf which has hold action
     const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
 
     // Execute hold action
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "hold" });
+    yield;
 
     // Should have hold order
     expect(wolf.order).toBeDefined();
     expect(wolf.order!.type).toBe("hold");
   });
 
-  it("should execute move action with target position", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute move action with target position", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use sheep which has move action
     const sheep = newUnit("test-client", "sheep", 5, 5);
     const target = { x: 15, y: 20 };
+    yield;
 
     // Execute move action
     unitOrder(client, {
@@ -219,6 +222,7 @@ describe("unitOrder basic actions", () => {
       order: "move",
       target,
     });
+    yield;
 
     // Should have walk order with target position
     expect(sheep.order).toBeDefined();
@@ -227,15 +231,15 @@ describe("unitOrder basic actions", () => {
       .toEqual(target);
   });
 
-  it("should execute move action with target entity", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute move action with target entity", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use sheep which has move action
     const sheep = newUnit("test-client", "sheep", 5, 5);
     const targetUnit = newUnit("test-client", "wolf", 15, 20);
+    yield;
 
     // Execute move action with target entity
     unitOrder(client, {
@@ -244,6 +248,7 @@ describe("unitOrder basic actions", () => {
       order: "move",
       target: targetUnit.id,
     });
+    yield;
 
     // Should have walk order with target id
     expect(sheep.order).toBeDefined();
@@ -251,27 +256,27 @@ describe("unitOrder basic actions", () => {
     expect((sheep.order as { targetId: string }).targetId).toBe(targetUnit.id);
   });
 
-  it("should not execute actions for units not owned by client", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should not execute actions for units not owned by client", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Create sheep owned by different client
     const sheep = newUnit("other-client", "sheep", 5, 5);
+    yield;
     const initialOrder = sheep.order;
 
     // Try to execute stop action
     unitOrder(client, { type: "unitOrder", units: [sheep.id], order: "stop" });
+    yield;
 
     // Should not change anything
     expect(sheep.order).toBe(initialOrder);
   });
 
-  it("should skip unknown units silently", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should skip unknown units silently", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Try to execute action on non-existent unit - should not throw
@@ -282,18 +287,19 @@ describe("unitOrder basic actions", () => {
         order: "stop",
       });
     }).toThrow();
+    yield;
   });
 });
 
 describe("unitOrder combat actions", () => {
-  it("should execute attack action with target entity", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute attack action with target entity", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     const targetUnit = newUnit("other-client", "sheep", 15, 20);
+    yield;
 
     // Execute attack action
     unitOrder(client, {
@@ -302,6 +308,7 @@ describe("unitOrder combat actions", () => {
       order: "attack",
       target: targetUnit.id,
     });
+    yield;
 
     // Should have attack order
     expect(wolf.order).toBeDefined();
@@ -309,14 +316,14 @@ describe("unitOrder combat actions", () => {
     expect((wolf.order as { targetId: string }).targetId).toBe(targetUnit.id);
   });
 
-  it("should execute attack action with ground target (attack-ground)", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute attack action with ground target (attack-ground)", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
     const target = { x: 15, y: 20 };
+    yield;
 
     // Execute attack action with ground target
     unitOrder(client, {
@@ -325,6 +332,7 @@ describe("unitOrder combat actions", () => {
       order: "attack",
       target,
     });
+    yield;
 
     // Should have attackMove order for ground targeting
     expect(wolf.order).toBeDefined();
@@ -334,13 +342,13 @@ describe("unitOrder combat actions", () => {
     );
   });
 
-  it("should not attack if target entity doesn't exist", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should not attack if target entity doesn't exist", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
     const initialOrder = wolf.order;
 
     // Try to attack non-existent entity
@@ -350,22 +358,24 @@ describe("unitOrder combat actions", () => {
       order: "attack",
       target: "non-existent",
     });
+    yield;
 
     // Should not change order when target doesn't exist
     expect(wolf.order).toBe(initialOrder);
   });
 
-  it("should handle attack action without target", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should handle attack action without target", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
     const initialOrder = wolf.order;
 
     // Execute attack action without target
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "attack" });
+    yield;
 
     // Should not change order when no target provided
     expect(wolf.order).toBe(initialOrder);
@@ -373,14 +383,14 @@ describe("unitOrder combat actions", () => {
 });
 
 describe("unitOrder special abilities", () => {
-  it("should execute mirror image action", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute mirror image action", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
     const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
 
     // Execute mirror image action
     unitOrder(client, {
@@ -388,6 +398,7 @@ describe("unitOrder special abilities", () => {
       units: [wolf.id],
       order: "mirrorImage",
     });
+    yield;
 
     // Should have cast order for mirror image
     expect(wolf.order).toBeDefined();
@@ -401,16 +412,16 @@ describe("unitOrder special abilities", () => {
     expect(castOrder.positions).toBeDefined();
   });
 
-  it("should execute destroy last farm action", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute destroy last farm action", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use sheep which has destroy last farm action
     const sheep = newUnit("test-client", "sheep", 5, 5);
     // Create a hut to destroy
     const hut = newUnit("test-client", "hut", 10, 10);
+    yield;
     expect(hut.health).toBe(120);
 
     // Execute destroy last farm action
@@ -419,22 +430,24 @@ describe("unitOrder special abilities", () => {
       units: [sheep.id],
       order: "destroyLastFarm",
     });
+    yield;
 
     // Verify the hut was destroyed (health set to 0)
     expect(hut.health).toBe(0);
   });
 
-  it("should handle mirror image with insufficient mana", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should handle mirror image with insufficient mana", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
     const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
     // Set mana to 0
     wolf.mana = 0;
     wolf.maxMana = 100;
+    yield;
 
     const initialOrder = wolf.order;
 
@@ -444,21 +457,22 @@ describe("unitOrder special abilities", () => {
       units: [wolf.id],
       order: "mirrorImage",
     });
+    yield;
 
     // Should not cast if insufficient mana
     expect(wolf.order).toBe(initialOrder);
   });
 
-  it("should consume mana for mirror image", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should consume mana for mirror image", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.mana = 100;
     wolf.maxMana = 100;
+    yield;
 
     // Execute mirror image action
     unitOrder(client, {
@@ -466,26 +480,28 @@ describe("unitOrder special abilities", () => {
       units: [wolf.id],
       order: "mirrorImage",
     });
+    yield;
 
     // Advance cast slightly to trigger cast start (which consumes mana)
     advanceCast(wolf, 0.1);
+    yield;
 
-    // Should have consumed mana (mirror image costs 20 mana)
-    expect(wolf.mana).toBe(80);
+    // Should have consumed mana (mirror image costs 20 mana, 0.05 mana regen)
+    expect(wolf.mana).toBeCloseTo(80.05);
   });
 });
 
 describe("unitOrder self destruct", () => {
-  it("should execute self destruct action for hut", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should execute self destruct action for hut", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use hut which has self destruct action
     const hut = newUnit("test-client", "hut", 5, 5);
     hut.health = 100;
     hut.maxHealth = 100;
+    yield;
 
     // Execute self destruct action
     unitOrder(client, {
@@ -493,21 +509,22 @@ describe("unitOrder self destruct", () => {
       units: [hut.id],
       order: "selfDestruct",
     });
+    yield;
 
     // Should set health to 0
     expect(hut.health).toBe(0);
   });
 
-  it("should not execute self destruct if unit doesn't have the action", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should not execute self destruct if unit doesn't have the action", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     // Use wolf which doesn't have self destruct action
     const wolf = newUnit("test-client", "wolf", 5, 5);
     wolf.health = 100;
     wolf.maxHealth = 100;
+    yield;
 
     const initialHealth = wolf.health;
 
@@ -517,39 +534,42 @@ describe("unitOrder self destruct", () => {
       units: [wolf.id],
       order: "selfDestruct",
     });
+    yield;
 
     // Should not change health since action isn't available
     expect(wolf.health).toBe(initialHealth);
   });
 
-  it("should allow self destruct regardless of current health if action exists", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
-    const client = clients.get("test-client")!;
+  it(
+    "should allow self destruct regardless of current health if action exists",
+    { wolves: ["test-client"] },
+    function* ({ clients }) {
+      const client = clients.get("test-client")!;
 
-    // Use tiny hut which has self destruct action
-    const tinyHut = newUnit("test-client", "tinyHut", 5, 5);
-    tinyHut.health = 1;
-    tinyHut.maxHealth = 100;
+      // Use tiny hut which has self destruct action
+      const tinyHut = newUnit("test-client", "tinyHut", 5, 5);
+      tinyHut.health = 1;
+      tinyHut.maxHealth = 100;
+      yield;
 
-    // Execute self destruct action
-    unitOrder(client, {
-      type: "unitOrder",
-      units: [tinyHut.id],
-      order: "selfDestruct",
-    });
+      // Execute self destruct action
+      unitOrder(client, {
+        type: "unitOrder",
+        units: [tinyHut.id],
+        order: "selfDestruct",
+      });
+      yield;
 
-    // Should set health to 0 even with low health
-    expect(tinyHut.health).toBe(0);
-  });
+      // Should set health to 0 even with low health
+      expect(tinyHut.health).toBe(0);
+    },
+  );
 });
 
 describe("unitOrder generalized charge system", () => {
-  it("should consume charges for any item-based action", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should consume charges for any item-based action", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -569,15 +589,18 @@ describe("unitOrder generalized charge system", () => {
         castDuration: 1.0,
       }],
     }];
+    yield;
 
     // Mock a lightning action handler by temporarily adding to unitOrder switch
     // Since we can't modify the switch at runtime, we'll test with fox action
     // which we know works with the generalized charge system
     addItem(wolf, "foxItem");
+    yield;
     expect(wolf.inventory).toHaveLength(2);
 
     // Use fox action - should consume one charge
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+    yield;
 
     // Should have consumed fox item charge (it had 1 charge, should be removed)
     const remainingItems = wolf.inventory!.filter((i) => i.id === "foxItem");
@@ -591,13 +614,13 @@ describe("unitOrder generalized charge system", () => {
     expect(lightningItems[0].charges).toBe(3);
   });
 
-  it("should handle items without charges (unlimited use)", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should handle items without charges (unlimited use)", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
 
     // Add item without charges property
     wolf.inventory = [{
@@ -614,47 +637,51 @@ describe("unitOrder generalized charge system", () => {
         castDuration: 0.5,
       }],
     }];
+    yield;
 
     // Use the unlimited action
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+    yield;
 
     // Item should still be there since it has no charges to consume
     expect(wolf.inventory).toHaveLength(1);
     expect(wolf.inventory![0].id).toBe("unlimitedItem");
   });
 
-  it("should remove items when charges reach zero", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should remove items when charges reach zero", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add item with exactly 1 charge
     addItem(wolf, "foxItem");
+    yield;
     expect(wolf.inventory![0].charges).toBe(1);
 
     // Use the action
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+    yield;
 
     // Item should be completely removed when charges reach 0
     expect(wolf.inventory).toHaveLength(0);
   });
 
-  it("should not consume charges for non-item actions", () => {
-    const { clients } = createTestSetup({
-      wolves: ["test-client"],
-    });
+  it("should not consume charges for non-item actions", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add fox item to inventory
     addItem(wolf, "foxItem");
+    yield;
 
     // Use a non-item action (stop)
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "stop" });
+    yield;
 
     // Fox item should still have its charge since stop action doesn't use items
     expect(wolf.inventory).toHaveLength(1);

@@ -54,27 +54,48 @@ export const addSystem = <K extends keyof Entity>(
 
 export const newEcs = () => {
   const initializeEntity = (input: Partial<Entity>) => {
-    const entity: Entity = {
-      ...input,
-      id: input.id || id(input.prefab),
+    const entity: Entity = { ...input, id: input.id || id(input.prefab) };
+
+    const setTrap: ProxyHandler<Entity>["set"] = function setTrap(
+      target,
+      prop,
+      value,
+    ) {
+      if (!app.flushScheduled) {
+        const err = new Error(
+          `Setting ${String(prop)} on ${target.id} outside batch`,
+        );
+        Error.captureStackTrace(err, setTrap);
+        console.warn(err);
+      }
+      if (target[prop as keyof Entity] === value) return true;
+      // deno-lint-ignore no-explicit-any
+      (target as any)[prop] = value;
+      app.queueEntityChange(proxy, prop as keyof Entity);
+      update(target.id, prop as keyof Entity, value);
+      return true;
     };
-    const proxy = new Proxy(entity, {
-      set: (target, prop, value) => {
-        if (target[prop as keyof Entity] === value) return true;
-        // deno-lint-ignore no-explicit-any
-        (target as any)[prop] = value;
-        app.queueEntityChange(proxy, prop as keyof Entity);
-        update(target.id, prop as keyof Entity, value);
-        return true;
-      },
-      deleteProperty: (target, prop) => {
+
+    const deleteTrap: ProxyHandler<Entity>["deleteProperty"] =
+      function deleteTrap(target, prop) {
+        if (!app.flushScheduled) {
+          const err = new Error(
+            `Deleting ${String(prop)} on ${target.id} outside batch`,
+          );
+          Error.captureStackTrace(err, deleteTrap);
+          console.warn(err);
+        }
         if (target[prop as keyof Entity] == null) return true;
         // deno-lint-ignore no-explicit-any
         delete (target as any)[prop];
         app.queueEntityChange(proxy, prop as keyof Entity);
         update(target.id, prop as keyof Entity, null);
         return true;
-      },
+      };
+
+    const proxy = new Proxy(entity, {
+      set: setTrap,
+      deleteProperty: deleteTrap,
     });
     newEntity(entity);
     return proxy;
