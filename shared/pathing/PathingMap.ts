@@ -4,6 +4,7 @@ import {
   angleDifference,
   behind,
   distanceBetweenEntities,
+  distanceBetweenPoints,
   infront,
   offset,
   Point,
@@ -92,6 +93,10 @@ interface Cache {
 // 	arena.appendChild(div);
 // 	elems.push(div);
 // };
+
+// Estimated cost remaining
+const h = (a: Point, b: Point) =>
+  Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
 
 export class PathingMap {
   readonly resolution: number;
@@ -279,20 +284,6 @@ export class PathingMap {
     test?: (tile: Tile) => boolean,
   ): Generator<Point, Point> {
     const tile = this.entityToTile(entity, { x: xWorld, y: yWorld });
-
-    // If initial position is fine, push it
-    if (
-      this._pathable(
-        entity.requiresTilemap ?? entity.tilemap ??
-          this.pointToTilemap(xWorld, yWorld, entity.radius, {
-            includeOutOfBounds: true,
-            type: entity.requiresPathing ?? entity.pathing,
-          }),
-        tile.x,
-        tile.y,
-        test,
-      )
-    ) return { x: xWorld, y: yWorld };
 
     // Calculate input from non-entity input
     const target = { x: xWorld, y: yWorld };
@@ -692,6 +683,14 @@ export class PathingMap {
 
     if (distanceFromTarget) distanceFromTarget *= this.resolution;
 
+    // If already in range, just return start
+    if (
+      typeof distanceFromTarget === "number" && "position" in target &&
+      distanceBetweenEntities(entity, target) * this.resolution <
+        distanceFromTarget
+      // Should I return start?
+    ) return [];
+
     const cache: Cache = {
       _linearPathable: memoize((...args) => this._linearPathable(...args)),
       _pathable: memoize((...args) => this._pathable(...args)),
@@ -762,84 +761,76 @@ export class PathingMap {
     const targetPathable = targetTile &&
       targetTile.pathable(pathing) &&
       this.pathable(entity, targetPosition.x, targetPosition.y);
-    let endNearestPathingGen = targetPathable
-      ? undefined
-      : this.nearestPathingGen(targetPosition.x, targetPosition.y, entity);
-    const endTile = targetPathable ? targetTile : (() => {
-      const first = endNearestPathingGen!.next();
-      if (first.done) endNearestPathingGen = undefined;
-      const { x, y } = first.value;
-      return this.grid[
-        Math.round((y - offset) * this.resolution)
-      ][Math.round((x - offset) * this.resolution)];
-    })();
+
     const targetReal = {
       x: targetPosition.x * this.resolution,
       y: targetPosition.y * this.resolution,
     };
-    const targetClosestReal = targetPathable
-      ? {
-        x: targetPosition.x * this.resolution,
-        y: targetPosition.y * this.resolution,
-      }
-      : endTile;
 
-    // If we start and end on the same tile, just move between them
-    if (startTile === endTile && this.pathable(entity)) {
-      if (removed) this.addEntity(entity);
-      for (const entity of removedMovingEntities) this.addEntity(entity);
-      return [
-        { x: start.x, y: start.y },
-        {
-          x: targetClosestReal.x / this.resolution,
-          y: targetClosestReal.y / this.resolution,
-        },
-      ];
-    }
-
-    // If already in range, just return start
-    if (
-      typeof distanceFromTarget === "number" && "position" in target &&
-      distanceBetweenEntities(entity, target) * this.resolution <
-        distanceFromTarget
-    ) {
-      if (removed) this.addEntity(entity);
-      for (const entity of removedMovingEntities) this.addEntity(entity);
-      // Should I return start?
-      return [];
-    }
-
-    // Estimated cost remaining
-    const h = (a: Point, b: Point) =>
-      Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
-
+    const endTag = Math.random();
     const endHeap = new BinaryHeap(
       (node: Tile) => node.__endRealPlusEstimatedCost ?? 0,
     );
-    // This won't desync anything.
-    // eslint-disable-next-line no-restricted-syntax
-    const endTag = Math.random();
-    let endBest = endTile;
-    endHeap.push(endTile);
-    endTile.__endTag = endTag;
-    endTile.__endRealCostFromOrigin = distanceFromTarget
-      ? Math.max(
-        h(targetReal, endTile) - distanceFromTarget,
-        0,
-      )
-      : h(targetClosestReal, endTile);
-    endTile.__endEstimatedCostRemaining = h(endTile, startReal);
-    endTile.__endRealPlusEstimatedCost = endTile.__endEstimatedCostRemaining +
-      endTile.__endRealCostFromOrigin;
-    endTile.__endVisited = false;
-    endTile.__endClosed = false;
-    endTile.__endParent = null;
+    let endBest = targetTile;
+    const endTiles = [targetTile];
 
-    if (endNearestPathingGen && distanceFromTarget) {
-      let { x, y } = endNearestPathingGen.next().value;
+    if (targetPathable) {
+      const targetClosestReal = targetPathable
+        ? {
+          x: targetPosition.x * this.resolution,
+          y: targetPosition.y * this.resolution,
+        }
+        : targetTile;
+
+      // If we start and end on the same tile, just move between them
+      if (startTile === targetTile && this.pathable(entity)) {
+        if (removed) this.addEntity(entity);
+        for (const entity of removedMovingEntities) this.addEntity(entity);
+        return [
+          { x: start.x, y: start.y },
+          {
+            x: targetClosestReal.x / this.resolution,
+            y: targetClosestReal.y / this.resolution,
+          },
+        ];
+      }
+
+      endHeap.push(targetTile);
+      targetTile.__endTag = endTag;
+      targetTile.__endRealCostFromOrigin = distanceFromTarget
+        ? Math.max(
+          h(targetReal, targetTile) - distanceFromTarget,
+          0,
+        )
+        : h(targetClosestReal, targetTile);
+      targetTile.__endEstimatedCostRemaining = h(targetTile, startReal);
+      targetTile.__endRealPlusEstimatedCost =
+        targetTile.__endEstimatedCostRemaining +
+        targetTile.__endRealCostFromOrigin;
+      targetTile.__endVisited = false;
+      targetTile.__endClosed = false;
+      targetTile.__endParent = null;
+    } else {
+      const endNearestPathingGen: Generator<Point, Point, never> = this
+        .nearestPathingGen(targetPosition.x, targetPosition.y, entity);
+
+      let next = endNearestPathingGen.next();
+      let { x, y } = next.value;
+
       let tile = this.grid[
         Math.round((y - offset) * this.resolution)
       ][Math.round((x - offset) * this.resolution)];
+
+      const maxEndEstimate = "position" in target
+        ? distanceBetweenEntities({
+          ...entity,
+          position: {
+            x: this.xTileToWorld(tile.x),
+            y: this.yTileToWorld(tile.y),
+          },
+        }, target) * this.resolution
+        : h(targetReal, tile);
+
       // TODO: This is unbounded and does not scale!
       while (
         "position" in target
@@ -849,10 +840,11 @@ export class PathingMap {
                   x: this.xTileToWorld(tile.x),
                   y: this.yTileToWorld(tile.y),
                 },
-              }, target) * this.resolution < distanceFromTarget
-          : h(targetReal, tile) < distanceFromTarget
+              }, target) * this.resolution <= maxEndEstimate
+          : h(targetReal, tile) <= maxEndEstimate
       ) {
         if (cache._pathable(minimalTilemap, tile.x, tile.y)) {
+          endTiles.push(tile);
           endHeap.push(tile);
           tile.__endTag = endTag;
           tile.__endRealCostFromOrigin = 0;
@@ -865,11 +857,14 @@ export class PathingMap {
         }
 
         // Prime next
-        ({ x, y } = endNearestPathingGen.next().value);
+        if (next.done) break;
+        next = endNearestPathingGen.next();
+        ({ x, y } = next.value);
         tile = this.grid[
           Math.round((y - offset) * this.resolution)
         ][Math.round((x - offset) * this.resolution)];
       }
+      endBest = endHeap[0];
     }
 
     const startHeap = new BinaryHeap(
@@ -898,24 +893,24 @@ export class PathingMap {
       // Start to End
       const startCurrent = startHeap.pop();
 
-      if (startCurrent === endTile) {
-        startBest = endTile;
+      if (endTiles.includes(startCurrent)) {
+        startBest = startCurrent;
         break;
       } else if (startCurrent.__endTag === endTag) {
         startBest = endBest = startCurrent;
         break;
       } else if (
-        typeof distanceFromTarget === "number" && "position" in target
-      ) {
-        if (
-          distanceBetweenEntities(
+        typeof distanceFromTarget === "number" &&
+        ("position" in target
+          ? distanceBetweenEntities(
                 { ...entity, position: startCurrent.world },
                 target,
               ) * this.resolution < distanceFromTarget
-        ) {
-          startBest = startCurrent;
-          break;
-        }
+          : distanceBetweenPoints(startCurrent.world, target) *
+              this.resolution < distanceFromTarget)
+      ) {
+        startBest = startCurrent;
+        break;
       }
 
       startCurrent.__startClosed = true;

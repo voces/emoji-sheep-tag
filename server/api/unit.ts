@@ -5,7 +5,7 @@ import {
   Point,
 } from "@/shared/pathing/math.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
-import { Entity, SystemEntity } from "@/shared/types.ts";
+import { Entity, Item, SystemEntity } from "@/shared/types.ts";
 import { currentApp } from "../contexts.ts";
 import { data } from "../st/data.ts";
 import {
@@ -80,13 +80,18 @@ export const newUnit = (owner: string, type: string, x: number, y: number) =>
   currentApp().addEntity(tempUnit(owner, type, x, y));
 
 export const isEnemy = (source: Entity, target: Entity) => {
+  if (!source.owner || !target.owner) return false;
   const sourceIsSheep = data.sheep.some((s) => s.client.id === source.owner);
   const targetIsSheep = data.sheep.some((s) => s.client.id === target.owner);
   return sourceIsSheep !== targetIsSheep;
 };
 
-export const isAlly = (source: Entity, target: Entity) =>
-  !isEnemy(source, target);
+export const isAlly = (source: Entity, target: Entity) => {
+  if (!source.owner || !target.owner) return false;
+  const sourceIsSheep = data.sheep.some((s) => s.client.id === source.owner);
+  const targetIsSheep = data.sheep.some((s) => s.client.id === target.owner);
+  return sourceIsSheep === targetIsSheep;
+};
 
 export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
   updatePathing(mover, 1);
@@ -252,6 +257,19 @@ export const addItem = (unit: Entity, itemId: string): boolean => {
   }
 
   return true;
+};
+
+export const consumeItem = (unit: Entity, item: Item): boolean => {
+  if (!item.charges) return false;
+  let found = false;
+  unit.inventory = unit.inventory?.map((i) => {
+    if (i === item) {
+      found = true;
+      return { ...i, charges: (i.charges || 1) - 1 };
+    }
+    return i;
+  }).filter((i) => i.charges === undefined || i.charges > 0) || [];
+  return found;
 };
 
 const deductBuildGold = (builder: Entity, type: string) => {

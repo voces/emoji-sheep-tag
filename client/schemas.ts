@@ -1,7 +1,7 @@
 import z from "npm:zod";
 import { zTeam } from "@/shared/zod.ts";
 
-const zPoint = z.object({ x: z.number(), y: z.number() });
+const zPoint = z.object({ x: z.number(), y: z.number() }).readonly();
 
 const zStart = z.object({
   type: z.literal("start"),
@@ -39,6 +39,8 @@ const zOrder = z.union([
     orderId: z.string(),
     remaining: z.number(),
     positions: z.array(zPoint).readonly().optional(),
+    target: zPoint.optional(),
+    path: zPoint.array().readonly().optional(),
     started: z.boolean().optional(),
   }),
   z.object({
@@ -113,6 +115,7 @@ const zBaseAction = z.union([
     ).optional(),
     manaCost: z.number().optional(),
     castDuration: z.number().optional(),
+    range: z.number().optional(),
   }),
 ]);
 
@@ -167,6 +170,7 @@ const zUpdate = z.object({
   owner: z.string().optional(),
   health: z.number().optional(),
   maxHealth: z.number().optional(),
+  healthRegen: z.number().optional(),
   mana: z.number().optional(),
   maxMana: z.number().optional(),
   manaRegen: z.number().optional(),
@@ -175,7 +179,7 @@ const zUpdate = z.object({
   isPlayer: z.boolean().optional(),
   gold: z.number().optional(),
 
-  position: zPoint.readonly().optional(),
+  position: zPoint.optional(),
   movementSpeed: z.number().optional(),
   facing: z.number().optional(),
   turnSpeed: z.number().optional(),

@@ -123,7 +123,7 @@ import("./systems/death.ts");
 import("./systems/kd.ts");
 import("./systems/lookup.ts");
 import("./systems/lookup.ts");
-import("./systems/manaRegen.ts");
+import("./systems/regen.ts");
 import("./systems/pathing.ts");
 import("./systems/pathing.ts");
 import("./systems/playerEntities.ts");

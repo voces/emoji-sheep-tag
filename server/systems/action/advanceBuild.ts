@@ -27,7 +27,23 @@ export const advanceBuild = (e: Entity, delta: number): number => {
       }
     }
 
-    return tweenPath(e, delta);
+    const newDelta = tweenPath(e, delta);
+
+    if (delta === newDelta) {
+      const newPath = calcPath(e, e.order, { distanceFromTarget: d });
+      if (
+        !newPath.length ||
+        (newPath.length === e.order.path.length &&
+          newPath.every((p, i) =>
+            e.order && "path" in e.order && e.order.path?.[i] === p
+          ))
+      ) {
+        delete e.order;
+        return delta;
+      } else e.order = { ...e.order, path: newPath };
+    }
+
+    return newDelta;
   }
 
   build(e, e.order.unitType, e.order.x, e.order.y);

@@ -33,6 +33,7 @@ app.addSystem({
   props: ["health"],
   onChange: (e) =>
     (typeof e.health !== "number" || e.health > 0) && e.position &&
+    e.lastAttacker &&
     playSoundAt("thud1", e.position.x, e.position.y, 0.2),
 });
 

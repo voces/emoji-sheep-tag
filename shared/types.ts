@@ -31,10 +31,12 @@ type Order = Readonly<
     readonly orderId: string;
     readonly remaining: number;
     readonly positions?: ReadonlyArray<Point>;
+    readonly target?: Readonly<Point>;
+    readonly path?: ReadonlyArray<{ x: number; y: number }>;
     readonly started?: boolean;
   } | {
     readonly type: "attackMove";
-    readonly target: Point;
+    readonly target: Readonly<Point>;
     /** Current acquired target */
     readonly targetId?: string;
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
@@ -53,6 +55,7 @@ export type UnitDataActionTarget = {
   readonly smart?: { [key in Classification | "ground"]?: number };
   readonly manaCost?: number;
   readonly castDuration?: number;
+  readonly range?: number;
 };
 
 export type Item = {
@@ -131,6 +134,7 @@ export type Entity = {
   // Data
   health?: number;
   maxHealth?: number;
+  healthRegen?: number;
   mana?: number;
   maxMana?: number;
   manaRegen?: number;

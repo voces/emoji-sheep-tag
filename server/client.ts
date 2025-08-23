@@ -3,7 +3,7 @@ import { z } from "npm:zod";
 import type { ServerToClientMessage } from "../client/client.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import type { Entity } from "@/shared/types.ts";
-import { clientContext, lobbyContext } from "./contexts.ts";
+import { clientContext, currentApp, lobbyContext } from "./contexts.ts";
 import { leave, send } from "./lobbyApi.ts";
 import { build, zBuild } from "./actions/build.ts";
 import { start, zStart } from "./actions/start.ts";
@@ -201,22 +201,30 @@ export const handleSocket = (socket: Socket) => {
   socket.addEventListener(
     "message",
     wrap<(e: SocketEventMap["message"]) => void>(client, (e) => {
+      let batch = (fn: () => void) => fn();
       try {
-        if (typeof e.data !== "string") {
-          throw new Error("Expected data to be a string");
-        }
-        const json = JSON.parse(e.data);
-        // console.log("C->S", json);
-        const message = zClientToServerMessage.parse(json);
-        try {
-          // deno-lint-ignore no-explicit-any
-          actions[message.type](client, message as any);
-        } catch (err) {
-          console.error(err);
-        }
-      } catch (err) {
-        console.error(err);
-        clientContext.with(client, () => leave());
+        batch = currentApp().batch;
+      } catch { /* do nothing */ }
+      try {
+        batch(() => {
+          try {
+            if (typeof e.data !== "string") {
+              throw new Error("Expected data to be a string");
+            }
+            const json = JSON.parse(e.data);
+            // console.log("C->S", json);
+            const message = zClientToServerMessage.parse(json);
+            try {
+              // deno-lint-ignore no-explicit-any
+              actions[message.type](client, message as any);
+            } catch (err) {
+              console.error(err);
+            }
+          } catch (err) {
+            console.error(err);
+            clientContext.with(client, () => leave());
+          }
+        });
       } finally {
         flushUpdates();
       }

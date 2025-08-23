@@ -4,6 +4,7 @@ import { mirrorImageOrder } from "./mirrorImage.ts";
 import { foxOrder } from "./fox.ts";
 import { destroyLastFarmOrder } from "./destroyLastFarm.ts";
 import { speedPotOrder } from "./speedPot.ts";
+import { meteorOrder } from "./meteor.ts";
 
 const orderRegistry = new Map<string, OrderDefinition>();
 
@@ -16,3 +17,4 @@ registerOrder(mirrorImageOrder);
 registerOrder(foxOrder);
 registerOrder(destroyLastFarmOrder);
 registerOrder(speedPotOrder);
+registerOrder(meteorOrder);

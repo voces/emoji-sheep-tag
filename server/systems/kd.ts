@@ -20,7 +20,11 @@ export const getEntitiesInRange = (x: number, y: number, radius: number) => {
   return points.map((p) => {
     const entity = data.pointToEntityMap.get(p);
     // This may happen due to synchronous removal + call?
-    if (!entity) console.warn("Expected point to map to an entity");
+    if (!entity) {
+      console.warn(
+        `Expected point ${JSON.stringify(p)} to map to an entity`,
+      );
+    }
     return entity;
   }).filter(<T>(v: T | undefined): v is T => !!v);
 };
@@ -40,8 +44,10 @@ addSystem((game) => {
     },
     onChange: (e) => {
       const prev = entityToPointMap.get(e);
-      if (prev) kd.replace(prev, e.position);
-      else kd.add(e.position);
+      if (prev) {
+        kd.replace(prev, e.position);
+        pointToEntityMap.delete(prev);
+      } else kd.add(e.position);
       entityToPointMap.set(e, e.position);
       pointToEntityMap.set(e.position, e);
     },

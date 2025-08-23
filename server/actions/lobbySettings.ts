@@ -5,8 +5,8 @@ import { send } from "../lobbyApi.ts";
 export const zLobbySettings = z.object({
   type: z.literal("lobbySettings"),
   startingGold: z.object({
-    sheep: z.number().min(0).max(1000),
-    wolves: z.number().min(0).max(1000),
+    sheep: z.number().min(0).max(100000),
+    wolves: z.number().min(0).max(100000),
   }).optional(),
 });
 

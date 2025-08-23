@@ -3,6 +3,7 @@ import { Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { UnitDataActionTarget } from "@/shared/types.ts";
 import { isEnemy, testClassification } from "../api/unit.ts";
+import { hasAction } from "../util/actionLookup.ts";
 
 type Classification =
   | "enemy"
@@ -127,11 +128,14 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
 export const handleTargetOrder = (e: MouseButtonEvent) => {
   if (!activeOrder) return false;
 
+  const orderToExecute = activeOrder.order;
   const target = e.intersects.first();
   const unitsWithTarget = selection.filter((entity) =>
-    entity.actions?.some((a) =>
-      a.type === "target" && a.order === activeOrder?.order &&
-      target && testClassification(entity, target, a.targeting)
+    hasAction(
+      entity,
+      (a) =>
+        a.type === "target" && a.order === orderToExecute &&
+        !!target && testClassification(entity, target, a.targeting),
     )
   );
 
@@ -139,16 +143,18 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
     send({
       type: "unitOrder",
       units: Array.from(unitsWithTarget, (e) => e.id),
-      order: activeOrder.order,
+      order: orderToExecute,
       target: target.id,
     });
   }
 
   const unitsWithoutTarget = selection.filter((entity) =>
     !unitsWithTarget.has(entity) &&
-    entity.actions?.some((a) =>
-      a.type === "target" && a.order === activeOrder?.order &&
-      typeof a.aoe === "number"
+    hasAction(
+      entity,
+      (a) =>
+        a.type === "target" && a.order === orderToExecute &&
+        typeof a.aoe === "number",
     )
   );
 
@@ -156,7 +162,7 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
     send({
       type: "unitOrder",
       units: Array.from(unitsWithoutTarget, (e) => e.id),
-      order: activeOrder.order,
+      order: orderToExecute,
       target: e.world,
     });
   }

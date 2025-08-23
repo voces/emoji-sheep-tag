@@ -349,7 +349,9 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
     case "target":
       setActiveOrder(
         action.order,
-        action.order === "attack" ? "enemy" : "ally",
+        action.order === "attack" || action.order === "meteor"
+          ? "enemy"
+          : "ally",
       );
       break;
     case "purchase":

@@ -9,6 +9,7 @@ import { handleHold } from "./hold.ts";
 import { getOrder } from "../orders/index.ts";
 import { findActionAndItem, findActionByOrder } from "../util/actionLookup.ts";
 import { currentApp } from "../contexts.ts";
+import { consumeItem } from "../api/unit.ts";
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
@@ -55,7 +56,7 @@ export const unitOrder = (
       // Order-specific validation
       if (orderDef.canExecute && !orderDef.canExecute(unit)) continue;
 
-      if (orderDef.onIssue(unit) === "immediate") {
+      if (orderDef.onIssue(unit, target) === "immediate") {
         if (
           action && "soundOnCastStart" in action && action.soundOnCastStart &&
           unit.position && unit.owner
@@ -74,6 +75,8 @@ export const unitOrder = (
             }],
           });
         }
+
+        if (itemWithAction) consumeItem(unit, itemWithAction);
       }
     } else {
       // Fall back to legacy handlers
@@ -99,17 +102,6 @@ export const unitOrder = (
           console.warn("Unhandled order type", { order, units, target });
           continue;
       }
-    }
-
-    // Consume a charge if this action came from an item
-    if (itemWithAction && itemWithAction.charges) {
-      unit.inventory = unit.inventory?.map((i) =>
-        i.id === itemWithAction.id
-          ? { ...i, charges: (i.charges || 1) - 1 }
-          : i
-      ).filter((i) =>
-        i.charges === undefined || i.charges > 0
-      ) || [];
     }
   }
 };

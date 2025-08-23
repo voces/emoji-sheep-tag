@@ -1,6 +1,7 @@
 import {
   Box3,
   BufferGeometry,
+  Color,
   DoubleSide,
   Group,
   Mesh,
@@ -36,9 +37,33 @@ export const loadSvg = (
     const fillColor = path.userData?.style.fill;
 
     if (fillColor !== undefined && fillColor !== "none") {
+      // Extract opacity from rgba() or hex color with alpha channel
+      let opacity = path.userData?.style.fillOpacity ?? 1;
+      let color = path.color;
+
+      if (typeof fillColor === "string") {
+        // Handle rgba(r, g, b, a) format
+        const rgbaMatch = fillColor.match(
+          /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/,
+        );
+        if (rgbaMatch) {
+          const [, r, g, b, a] = rgbaMatch;
+          color = new Color(`rgb(${r}, ${g}, ${b})`);
+          if (a !== undefined) {
+            opacity = parseFloat(a);
+          }
+        } // Handle 8-digit hex color with alpha channel (e.g., #fc6e5188)
+        else if (fillColor.match(/^#[0-9a-fA-F]{8}$/)) {
+          const alphaHex = fillColor.slice(7, 9);
+          opacity = parseInt(alphaHex, 16) / 255;
+          // Use the color without alpha for three.js
+          color = new Color("#" + fillColor.slice(1, 7));
+        }
+      }
+
       const material = new MeshBasicMaterial({
-        color: path.color,
-        opacity: path.userData?.style.fillOpacity,
+        color,
+        opacity,
         transparent: true,
         side: DoubleSide,
         depthWrite: false,

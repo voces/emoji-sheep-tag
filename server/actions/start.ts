@@ -103,7 +103,7 @@ export const start = (client: Client) => {
       timeout(() => {
         const lobby = lobbyContext.context;
         if (!lobby.round) return;
-        for (const owner of wolves) {
+        for (const owner of wolves.size ? wolves : sheep) {
           newUnit(owner.id, "wolf", center.x, center.y);
         }
       }, 1.8);

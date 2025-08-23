@@ -56,7 +56,7 @@ export const items: Record<string, Item> = {
     id: "claw",
     name: "Claws +20",
     icon: "claw2",
-    gold: 60,
+    gold: 80,
     binding: ["KeyC"],
     damage: 20,
   },
@@ -79,7 +79,7 @@ export const items: Record<string, Item> = {
     id: "swiftness",
     name: "Swift Claws +15%",
     icon: "claw",
-    gold: 40,
+    gold: 60,
     binding: ["KeyV"],
     attackSpeedMultiplier: 1.15,
   },
@@ -87,7 +87,7 @@ export const items: Record<string, Item> = {
     id: "boots",
     name: "Boots +30",
     icon: "runningShoes",
-    gold: 50,
+    gold: 60,
     binding: ["KeyB"],
     movementSpeedBonus: 0.3,
   },
@@ -95,7 +95,7 @@ export const items: Record<string, Item> = {
     id: "speedPot",
     name: "Speed Potion",
     icon: "purplePotion",
-    gold: 30,
+    gold: 25,
     binding: ["KeyS"],
     charges: 1,
     actions: [{
@@ -107,6 +107,22 @@ export const items: Record<string, Item> = {
       attackSpeedMultiplier: 1.1,
       movementSpeedMultiplier: 1.15,
       soundOnCastStart: "jarOpen1",
+    }],
+  },
+  bomber: {
+    id: "bomber",
+    name: "Bomber",
+    icon: "meteor",
+    gold: 35,
+    binding: ["KeyE"],
+    charges: 1,
+    actions: [{
+      name: "Summon Meteor",
+      type: "target",
+      order: "meteor",
+      aoe: 2,
+      binding: ["KeyE"],
+      range: 5,
     }],
   },
 };
@@ -124,6 +140,7 @@ export const prefabs: Record<
     | "requiresTilemap"
     | "attack"
     | "maxHealth"
+    | "healthRegen"
     | "mana"
     | "maxMana"
     | "manaRegen"
@@ -355,6 +372,15 @@ export const prefabs: Record<
     radius: 0.25,
     tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     isDoodad: true,
+  },
+  meteor: {
+    name: "Meteor",
+    maxHealth: 1,
+    healthRegen: -4,
+    radius: 0,
+    pathing: 0,
+    movementSpeed: 5,
+    sounds: { birth: ["explosion1"] },
   },
 };
 

@@ -31,7 +31,7 @@ type LobbySettings = {
   //  */
   // time: "auto" | number;
   startingGold: { sheep: number; wolves: number };
-  // income: [number, number];
+  // income: { sheep: number; wolves: number };
   // view: boolean;
 };
 

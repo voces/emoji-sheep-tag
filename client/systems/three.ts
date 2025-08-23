@@ -30,6 +30,7 @@ import fox from "../assets/fox.svg" with { type: "text" };
 import sapphire from "../assets/sapphire.svg" with { type: "text" };
 import runningShoes from "../assets/running-shoes.svg" with { type: "text" };
 import purplePotion from "../assets/purple-potion.svg" with { type: "text" };
+import meteor from "../assets/meteor.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -55,6 +56,7 @@ export const svgs: Record<string, string> = {
   sapphire,
   runningShoes,
   purplePotion,
+  meteor,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -73,6 +75,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   divinity: loadSvg(divinity, 1),
   shop: loadSvg(shop, 1),
   fox: loadSvg(fox, 1.8),
+  meteor: loadSvg(meteor, 0.5),
 };
 Object.assign(globalThis, { collections });
 
@@ -236,7 +239,7 @@ app.addSystem({
   props: ["order", "position"],
   updateEntity: (e) => {
     const model = e.model ?? e.prefab;
-    if (e.order.type !== "cast" || !model) return;
+    if (!model || e.order.type !== "cast" || "path" in e.order) return;
     const r = Math.random() * Math.PI * 2;
     collections[model]?.setPositionAt(
       e.id,

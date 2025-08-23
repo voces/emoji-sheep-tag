@@ -14,15 +14,14 @@ describe("death system bounty integration", () => {
       const hut = newUnit("sheep-player", "hut", 5, 5);
       yield;
 
-      expect(getPlayerGold("wolf-player")).toBeCloseTo(10, 1);
-
       // Wolf damages the hut to death
+      const goldBefore = getPlayerGold("wolf-player");
       damageEntity(wolf, hut, 1000, true);
       yield;
 
       expect(hut.health).toBe(0);
       expect(hut.lastAttacker).toBe(wolf.id);
-      expect(getPlayerGold("wolf-player")).toBeCloseTo(11, 1);
+      expect(getPlayerGold("wolf-player") - goldBefore).toBeCloseTo(1, 1);
     },
   );
 
@@ -35,18 +34,20 @@ describe("death system bounty integration", () => {
     const wideHut = newUnit("sheep-player", "wideHut", 5, 5);
     yield;
 
+    let goldBefore = getPlayerGold("wolf-player");
     damageEntity(wolf, wideHut, 1000, true);
     yield;
 
-    expect(getPlayerGold("wolf-player")).toBeCloseTo(3, 1);
+    expect(getPlayerGold("wolf-player") - goldBefore).toBeCloseTo(3, 1);
 
     const rotundHut = newUnit("sheep-player", "rotundHut", 10, 10);
     yield;
 
+    goldBefore = getPlayerGold("wolf-player");
     damageEntity(wolf, rotundHut, 1000, true);
     yield;
 
-    expect(getPlayerGold("wolf-player")).toBeCloseTo(7, 1);
+    expect(getPlayerGold("wolf-player") - goldBefore).toBeCloseTo(4, 1);
 
     const translocationHut = newUnit(
       "sheep-player",
@@ -56,9 +57,10 @@ describe("death system bounty integration", () => {
     );
     yield;
 
+    goldBefore = getPlayerGold("wolf-player");
     damageEntity(wolf, translocationHut, 1000, true);
     yield;
 
-    expect(getPlayerGold("wolf-player")).toBeCloseTo(12, 1);
+    expect(getPlayerGold("wolf-player") - goldBefore).toBeCloseTo(5, 1);
   });
 });

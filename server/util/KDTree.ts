@@ -59,7 +59,7 @@ export class KdTree {
       const axis = node.axis;
 
       // Check if this is the node to delete
-      if (node.point.x === point.x && node.point.y === point.y) {
+      if (node.point === point) {
         found = true;
         // If the node has a right child, find the minimum in the right subtree
         if (node.right !== null) {

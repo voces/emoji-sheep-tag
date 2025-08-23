@@ -1,10 +1,51 @@
 import { Entity } from "@/shared/types.ts";
 import { getOrder } from "../../orders/index.ts";
-import { findActionByOrder } from "../../util/actionLookup.ts";
+import {
+  findActionAndItem,
+  findActionByOrder,
+} from "../../util/actionLookup.ts";
 import { currentApp } from "../../contexts.ts";
+import { tweenPath } from "./tweenPath.ts";
+import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
+import { calcPath } from "../pathing.ts";
+import { consumeItem } from "../../api/unit.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {
   if (e.order?.type !== "cast") return delta;
+
+  const { action, item } = findActionAndItem(e, e.order.orderId) ?? {};
+
+  // Handle movement for cast orders with target and range
+  const range = action?.type === "target" ? action.range : undefined;
+  if (range !== undefined && e.order.target) {
+    if (!e.position) {
+      delete e.order;
+      return delta;
+    }
+
+    const dist = distanceBetweenPoints(e.position, e.order.target);
+    if (dist > range) {
+      // Out of range - need to move closer
+      const path = calcPath(e, e.order.target, { distanceFromTarget: range });
+
+      if (!path.length) {
+        // Can't reach target, fail the order
+        delete e.order;
+        return delta;
+      }
+      e.order = { ...e.order, path };
+
+      // Tween along the path
+      delta = tweenPath(e, delta);
+
+      return delta;
+    }
+  }
+
+  if ("path" in e.order) {
+    const { path: _path, ...rest } = e.order;
+    e.order = { ...rest };
+  }
 
   // Handle cast start side effects (only once when cast begins)
   if (!e.order.started) {
@@ -32,6 +73,7 @@ export const advanceCast = (e: Entity, delta: number) => {
     }
 
     orderDef?.onCastStart?.(e);
+    if (item) consumeItem(e, item);
 
     // Mark the order as started
     e.order = { ...e.order, started: true };

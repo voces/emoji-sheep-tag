@@ -62,12 +62,12 @@ export const LobbySettings = () => {
             id="sheep-gold"
             type="number"
             min={0}
-            max={1000}
+            max={100000}
             value={lobbySettings.startingGold.sheep}
             onChange={(e) => {
               const value = Math.max(
                 0,
-                Math.min(1000, parseInt(e.target.value) || 0),
+                Math.min(100000, parseInt(e.target.value) || 0),
               );
               send({
                 type: "lobbySettings",
@@ -89,12 +89,12 @@ export const LobbySettings = () => {
             id="wolves-gold"
             type="number"
             min={0}
-            max={1000}
+            max={100000}
             value={lobbySettings.startingGold.wolves}
             onChange={(e) => {
               const value = Math.max(
                 0,
-                Math.min(1000, parseInt(e.target.value) || 0),
+                Math.min(100000, parseInt(e.target.value) || 0),
               );
               send({
                 type: "lobbySettings",
