@@ -6,14 +6,19 @@ import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
-import { init } from "../st/data.ts";
 import { center, initEntities } from "@/shared/map.ts";
 import { prefabs } from "@/shared/data.ts";
 import { appContext } from "@/shared/context.ts";
 
-export const zStart = z.object({ type: z.literal("start") });
+export const zStart = z.object({
+  type: z.literal("start"),
+  practice: z.boolean().optional(),
+});
 
-export const start = (client: Client) => {
+export const start = (
+  client: Client,
+  { practice = false }: z.TypeOf<typeof zStart>,
+) => {
   const lobby = client.lobby;
   if (
     !lobby || lobby.host !== client ||
@@ -27,15 +32,15 @@ export const start = (client: Client) => {
   const wolves = new Set<Client>();
   const pool = new Set(lobby.players);
   const desiredSize = Math.max(Math.floor((pool.size - 1) / 2), 1);
-  while (sheep.size < desiredSize) {
+  while (pool.size > 0 && (sheep.size < desiredSize || practice)) {
     const scLowest = Math.min(...Array.from(pool, (p) => p.sheepCount));
     const scPool = Array.from(pool).filter((p) => p.sheepCount === scLowest);
-    while (scPool.length && sheep.size < desiredSize) {
+    while (scPool.length && (sheep.size < desiredSize || practice)) {
       const i = Math.floor(Math.random() * scPool.length);
       sheep.add(scPool[i]);
       scPool[i].sheepCount++;
       pool.delete(scPool[i]);
-      scPool.splice(1, 1);
+      scPool.splice(i, 1);
     }
   }
   for (const p of pool) wolves.add(p);
@@ -46,6 +51,7 @@ export const start = (client: Client) => {
     wolves,
     ecs,
     start: Date.now(),
+    practice,
     clearInterval: interval(() => {
       ecs.tick++;
       ecs.update();
@@ -56,11 +62,6 @@ export const start = (client: Client) => {
     lobbyContext.with(lobby, () => appContext.with(ecs, fn));
 
   withContexts(() => {
-    init({
-      sheep: Array.from(sheep).map((client) => ({ client })),
-      wolves: Array.from(wolves).map((client) => ({ client })),
-    });
-
     send({
       type: "start",
       sheep: Array.from(

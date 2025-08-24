@@ -1,4 +1,3 @@
-import { data } from "../st/data.ts";
 import { endRound } from "../lobbyApi.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { start } from "../actions/start.ts";
@@ -6,6 +5,7 @@ import { timeout } from "../api/timing.ts";
 import { grantPlayerGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
 import { addSystem } from "@/shared/context.ts";
+import { getSheep } from "./sheep.ts";
 
 addSystem((app) => ({
   props: ["health"],
@@ -18,12 +18,11 @@ addSystem((app) => ({
       if (killer?.owner) grantPlayerGold(killer.owner, unit.bounty);
     }
 
-    if (
-      unit.prefab === "sheep" &&
-      !data.sheep.some((p) => (p.sheep?.health ?? 0) > 0)
-    ) {
+    if (unit.prefab === "sheep" && !getSheep().some((u) => u.health)) {
       timeout(() => {
         endRound();
+
+        if (lobbyContext.current.round?.practice) return;
 
         // Auto start
         const lobby = lobbyContext.current;
@@ -31,7 +30,11 @@ addSystem((app) => ({
           if (lobby.host) {
             clientContext.with(
               lobby.host,
-              () => lobbyContext.with(lobby, () => start(lobby.host!)),
+              () =>
+                lobbyContext.with(
+                  lobby,
+                  () => start(lobby.host!, { type: "start" }),
+                ),
             );
           }
         }, 250);

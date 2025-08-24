@@ -43,6 +43,7 @@ type Round = {
   wolves: Set<Client>;
   start: number;
   clearInterval: () => void;
+  practice: boolean;
 };
 
 export type Lobby = {

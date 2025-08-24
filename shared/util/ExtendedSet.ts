@@ -41,6 +41,10 @@ export class ExtendedSet<T> extends Set<T> {
     for (const element of this) return element;
   }
 
+  find(mapper: (item: T) => boolean) {
+    for (const element of this) if (mapper(element)) return element;
+  }
+
   findMap<U>(mapper: (item: T) => U | undefined) {
     for (const element of this) {
       const result = mapper(element);

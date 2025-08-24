@@ -13,11 +13,11 @@ const SettingsCard = styled(Card)`
   justify-content: space-between;
   display: flex;
   flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.lg};
 `;
 
 const GameSettingsContainer = styled(VStack)`
   gap: 12px;
-  margin-bottom: ${({ theme }) => theme.spacing.lg};
 `;
 
 const SettingsRow = styled(VStack)`
@@ -109,13 +109,22 @@ export const LobbySettings = () => {
         </SettingsRow>
       </GameSettingsContainer>
 
-      <Button
-        type="button"
-        onClick={() => send({ type: "start" })}
-        disabled={!localPlayer?.host}
-      >
-        Start
-      </Button>
+      <GameSettingsContainer>
+        <Button
+          type="button"
+          onClick={() => send({ type: "start", practice: true })}
+          disabled={!localPlayer?.host}
+        >
+          Practice
+        </Button>
+        <Button
+          type="button"
+          onClick={() => send({ type: "start" })}
+          disabled={!localPlayer?.host}
+        >
+          Start
+        </Button>
+      </GameSettingsContainer>
     </SettingsCard>
   );
 };
