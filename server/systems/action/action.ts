@@ -54,7 +54,10 @@ addSystem({
         "targetId" in e.order && e.order.targetId &&
           lookup(e.order.targetId)?.position ||
         "target" in e.order && e.order.target || undefined;
-      if (lookTarget && e.turnSpeed && e.position) {
+      if (
+        lookTarget && e.turnSpeed && e.position &&
+        lookTarget.x !== e.position.x && lookTarget.y !== e.position.y
+      ) {
         const facing = e.facing ?? DEFAULT_FACING;
         const targetAngle = Math.atan2(
           lookTarget.y - e.position.y,

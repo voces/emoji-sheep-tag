@@ -56,6 +56,7 @@ import {
   handleKeyUp,
   keyboard,
 } from "./controls/keyboardHandlers.ts";
+import { center } from "@/shared/map.ts";
 
 // Re-export for external use
 export { getActiveOrder, keyboard };
@@ -436,7 +437,7 @@ app.addSystem({
         0.32;
       camera.position.x = Math.min(
         Math.max(0, camera.position.x + x * delta * 10),
-        prefabs.map?.tilemap?.width ?? 100,
+        center.x * 2,
       );
     }
     if (y) {
@@ -444,7 +445,7 @@ app.addSystem({
         0.32;
       camera.position.y = Math.min(
         Math.max(0, camera.position.y + y * delta * 10),
-        prefabs.map?.tilemap?.height ?? 100,
+        center.y * 2,
       );
     }
 

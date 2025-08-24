@@ -5,9 +5,11 @@
 - Items
   - Splash
   - Cloak
-  - Bomber
   - Auras?
     - Like team items, but don't like them being required...
   - Scythe?
 - Units sometimes get stuck on corners still...
 - Drag select
+- Wolf sounds
+  - What
+  - Birth
