@@ -76,18 +76,15 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   if (
     document.activeElement instanceof HTMLElement &&
     document.activeElement !== e.element
-  ) {
-    document.activeElement.blur();
-  }
+  ) document.activeElement.blur();
 
   if (
     (e.element instanceof HTMLElement || e.element instanceof SVGElement) &&
     e.element.id !== "ui"
   ) {
     e.element.focus();
-    if ("click" in e.element) {
-      e.element.click();
-    } else {
+    if ("click" in e.element) e.element.click();
+    else {
       e.element.dispatchEvent(
         new MouseEvent("click", {
           view: window,
@@ -104,26 +101,21 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       playOrderSound(e.world.x, e.world.y);
       handleSmartTarget(e);
     }
-  } else if (e.button === "left") {
-    handleLeftClick(e);
-  }
+  } else if (e.button === "left") handleLeftClick(e);
 });
 
 const handleLeftClick = (e: MouseButtonEvent) => {
   const blueprint = getBlueprint();
 
-  if (blueprint) {
-    handleBlueprintClick(e);
-  } else if (getActiveOrder()) {
+  if (blueprint) handleBlueprintClick(e);
+  else if (getActiveOrder()) {
     if (!handleTargetOrder(e)) {
       // If no target order was handled and there's an intersection, select it
       if (e.intersects.size) {
         selectEntity(e.intersects.first()!);
       }
     }
-  } else if (e.intersects.size) {
-    selectEntity(e.intersects.first()!);
-  }
+  } else if (e.intersects.size) selectEntity(e.intersects.first()!);
 };
 
 const handleBlueprintClick = (e: MouseButtonEvent) => {
