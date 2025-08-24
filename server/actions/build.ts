@@ -18,7 +18,7 @@ export const build = (
   client: Client,
   { unit, buildType, x, y }: z.TypeOf<typeof zBuild>,
 ): Entity | void => {
-  const round = lobbyContext.context.round;
+  const round = lobbyContext.current.round;
   if (!round) return;
   const u = lookup(unit);
   if (u?.owner !== client.id) return;

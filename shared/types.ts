@@ -43,24 +43,10 @@ type Order = Readonly<
   }
 >;
 
-export type UnitDataActionTarget = {
-  readonly name: string;
-  readonly type: "target";
-  readonly order: string;
-  /** By default, actions can target everything */
-  readonly targeting?: ReadonlyArray<Classification>;
-  /** `aoe` of `0` allows targeting the ground */
-  readonly aoe?: number;
-  readonly binding?: ReadonlyArray<string>;
-  readonly smart?: { [key in Classification | "ground"]?: number };
-  readonly manaCost?: number;
-  readonly castDuration?: number;
-  readonly range?: number;
-};
-
 export type Item = {
   readonly id: string;
   readonly name: string;
+  readonly description?: string;
   readonly icon?: string;
   readonly gold: number;
   readonly binding: ReadonlyArray<string>;
@@ -79,10 +65,28 @@ export type Buff = {
   readonly expiration?: string;
 };
 
+export type UnitDataActionTarget = {
+  readonly name: string;
+  readonly type: "target";
+  readonly order: string;
+  readonly description?: string;
+  /** By default, actions can target everything */
+  readonly targeting?: ReadonlyArray<Classification>;
+  /** `aoe` of `0` allows targeting the ground */
+  readonly aoe?: number;
+  readonly binding?: ReadonlyArray<string>;
+  readonly smart?: { [key in Classification | "ground"]?: number };
+  readonly manaCost?: number;
+  readonly castDuration?: number;
+  readonly range?: number;
+  readonly damage?: number;
+};
+
 export type UnitDataAction = {
   readonly name: string;
   readonly type: "build";
   readonly unitType: string;
+  readonly description?: string;
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly goldCost?: number;
@@ -91,6 +95,7 @@ export type UnitDataAction = {
   readonly name: string;
   readonly type: "auto";
   readonly order: string;
+  readonly description?: string;
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly castDuration?: number;
@@ -103,15 +108,17 @@ export type UnitDataAction = {
   readonly name: string;
   readonly type: "purchase";
   readonly itemId: string;
-  readonly binding?: ReadonlyArray<string>;
   readonly goldCost: number;
+  readonly description?: string;
+  readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly castDuration?: number;
 } | {
   readonly name: string;
   readonly type: "menu";
-  readonly binding?: ReadonlyArray<string>;
   readonly actions: ReadonlyArray<UnitDataAction>;
+  readonly description?: string;
+  readonly binding?: ReadonlyArray<string>;
 } | UnitDataActionTarget;
 
 export type Entity = {
@@ -141,6 +148,7 @@ export type Entity = {
 
   // Player data
   isPlayer?: boolean;
+  team?: "sheep" | "wolf";
   gold?: number;
 
   movementSpeed?: number;

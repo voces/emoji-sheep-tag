@@ -4,11 +4,11 @@ import {
   findActionAndItem,
   findActionByOrder,
 } from "../../util/actionLookup.ts";
-import { currentApp } from "../../contexts.ts";
 import { tweenPath } from "./tweenPath.ts";
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { calcPath } from "../pathing.ts";
 import { consumeItem } from "../../api/unit.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {
   if (e.order?.type !== "cast") return delta;
@@ -62,8 +62,7 @@ export const advanceCast = (e: Entity, delta: number) => {
       action && "soundOnCastStart" in action && action.soundOnCastStart &&
       e.position && e.owner
     ) {
-      const app = currentApp();
-      app.addEntity({
+      addEntity({
         id: `sound-${Date.now()}-${Math.random()}`,
         owner: e.owner,
         position: { x: e.position.x, y: e.position.y },
@@ -73,7 +72,6 @@ export const advanceCast = (e: Entity, delta: number) => {
     }
 
     orderDef?.onCastStart?.(e);
-    if (item) consumeItem(e, item);
 
     // Mark the order as started
     e.order = { ...e.order, started: true };
@@ -87,6 +85,7 @@ export const advanceCast = (e: Entity, delta: number) => {
   delta -= e.order.remaining;
 
   getOrder(e.order.orderId)?.onCastComplete?.(e);
+  if (item) consumeItem(e, item);
 
   delete e.order;
 

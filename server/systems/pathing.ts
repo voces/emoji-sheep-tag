@@ -1,18 +1,16 @@
 import { App } from "jsr:@verit/ecs";
 import { Entity } from "@/shared/types.ts";
 import { PathingMap } from "@/shared/pathing/PathingMap.ts";
-import { currentApp } from "../contexts.ts";
 import { PathingEntity, TargetEntity } from "@/shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
 import { tiles } from "@/shared/map.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
-import { addSystem } from "../ecs.ts";
+import { addSystem, appContext } from "@/shared/context.ts";
 
 const pathingMaps = new WeakMap<App<Entity>, PathingMap>();
 
 export const pathingMap = () => {
-  const app = currentApp();
-  const pathingMap = pathingMaps.get(app);
+  const pathingMap = pathingMaps.get(appContext.current);
   if (!pathingMap) throw new Error("Expected there to be a pathingmap");
   return pathingMap;
 };
@@ -109,13 +107,13 @@ export const updatePathing = (entity: Entity, max = Infinity) => {
   ) entity.position = nearest;
 };
 
-addSystem((game) => {
+addSystem((app) => {
   const pathingMap = new PathingMap({
     resolution: 4,
     pathing: tiles.reverse(),
   });
 
-  pathingMaps.set(game, pathingMap);
+  pathingMaps.set(app, pathingMap);
 
   return {
     props: ["position", "radius"],

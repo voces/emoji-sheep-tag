@@ -9,6 +9,7 @@ import { send } from "../lobbyApi.ts";
 import { init } from "../st/data.ts";
 import { center, initEntities } from "@/shared/map.ts";
 import { prefabs } from "@/shared/data.ts";
+import { appContext } from "@/shared/context.ts";
 
 export const zStart = z.object({ type: z.literal("start") });
 
@@ -51,7 +52,10 @@ export const start = (client: Client) => {
     }, 0.05),
   };
 
-  lobbyContext.with(lobby, () => {
+  const withContexts = (fn: () => void) =>
+    lobbyContext.with(lobby, () => appContext.with(ecs, fn));
+
+  withContexts(() => {
     init({
       sheep: Array.from(sheep).map((client) => ({ client })),
       wolves: Array.from(wolves).map((client) => ({ client })),
@@ -59,7 +63,10 @@ export const start = (client: Client) => {
 
     send({
       type: "start",
-      sheep: Array.from(sheep, (c) => ({ id: c.id, sheepCount: c.sheepCount })),
+      sheep: Array.from(
+        sheep,
+        (c) => ({ id: c.id, sheepCount: c.sheepCount }),
+      ),
       wolves: Array.from(wolves, (c) => c.id),
     });
 
@@ -74,6 +81,7 @@ export const start = (client: Client) => {
         name: player.name,
         owner: player.id,
         isPlayer: true,
+        team: "sheep",
         gold: lobby.settings.startingGold.sheep,
       });
     }
@@ -83,12 +91,13 @@ export const start = (client: Client) => {
         name: player.name,
         owner: player.id,
         isPlayer: true,
+        team: "wolf",
         gold: lobby.settings.startingGold.wolves,
       });
     }
 
     timeout(() => {
-      const lobby2 = lobbyContext.context;
+      const lobby2 = lobbyContext.current;
       if (!lobby2.round) return;
       const r = Math.random() * Math.PI * 2;
       for (const owner of sheep) {
@@ -101,7 +110,7 @@ export const start = (client: Client) => {
       }
 
       timeout(() => {
-        const lobby = lobbyContext.context;
+        const lobby = lobbyContext.current;
         if (!lobby.round) return;
         for (const owner of wolves.size ? wolves : sheep) {
           newUnit(owner.id, "wolf", center.x, center.y);

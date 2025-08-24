@@ -1,7 +1,7 @@
 import { Entity } from "@/shared/types.ts";
 import { Client } from "../client.ts";
-import { currentApp } from "../contexts.ts";
-import { Game } from "../ecs.ts";
+import { appContext } from "@/shared/context.ts";
+import { App } from "jsr:@verit/ecs";
 
 type Player = {
   client: Client;
@@ -14,9 +14,9 @@ type SheepTagData = {
   wolves: Player[];
 };
 
-const map = new WeakMap<Game, SheepTagData>();
+const map = new WeakMap<App<Entity>, SheepTagData>();
 const getData = () => {
-  const data = map.get(currentApp());
+  const data = map.get(appContext.current);
   if (!data) throw new Error("Expected data to be initialized");
   return data;
 };
@@ -29,4 +29,4 @@ export const data = new Proxy<SheepTagData>({} as SheepTagData, {
   },
 });
 
-export const init = (data: SheepTagData) => map.set(currentApp(), data);
+export const init = (data: SheepTagData) => map.set(appContext.current, data);

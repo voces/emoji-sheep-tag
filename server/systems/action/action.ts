@@ -1,6 +1,5 @@
 import { advanceBuild } from "./advanceBuild.ts";
 import { absurd } from "@/shared/util/absurd.ts";
-import { addSystem } from "../../ecs.ts";
 import { lookup } from "../lookup.ts";
 import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "@/shared/constants.ts";
 import { angleDifference, tweenAbsAngles } from "@/shared/pathing/math.ts";
@@ -8,6 +7,7 @@ import { advanceCast } from "./advanceCast.ts";
 import { advanceWalk } from "./advanceWalk.ts";
 import { advanceAttack } from "./advanceAttack.ts";
 import { advanceAttackMove } from "./advanceAttackMove.ts";
+import { addSystem } from "@/shared/context.ts";
 
 addSystem({
   props: ["order"],

@@ -6,6 +6,10 @@ import { useLocalPlayer } from "@/vars/players.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";
 import { CommandButton, CommandShortcut } from "@/components/Command.tsx";
 
+const ShortcutStyle = styled.span`
+  color: ${({ theme }) => theme.colors.gold};
+`;
+
 const GoldContainer = styled.div`
   display: flex;
   gap: ${({ theme }) => theme.spacing.sm};
@@ -20,6 +24,15 @@ const ManaContainer = styled.div`
   color: ${({ theme }) => theme.colors.mana};
 `;
 
+const Hr = styled.hr`
+  margin: 4px 0;
+  opacity: 0.5;
+`;
+
+const Description = styled.div`
+  line-height: 1.25;
+`;
+
 const IconContainer = styled.span`
   width: 24px;
   height: 24px;
@@ -28,6 +41,7 @@ const IconContainer = styled.span`
 
 export const Command = ({
   name,
+  description,
   icon,
   binding,
   iconScale,
@@ -37,6 +51,7 @@ export const Command = ({
   manaCost,
 }: {
   name: string;
+  description?: string;
   icon?: string;
   binding?: ReadonlyArray<string>;
   iconScale?: number;
@@ -48,8 +63,19 @@ export const Command = ({
   const localPlayer = useLocalPlayer();
 
   const { tooltipContainerProps, tooltip } = useTooltip(useMemo(() => (
-    <div>
-      <div>{name}</div>
+    <>
+      <div>
+        <span>{name}</span>
+        {binding?.length
+          ? (
+            <>
+              {" ("}
+              <ShortcutStyle>{formatShortcut(binding)}</ShortcutStyle>
+              {")"}
+            </>
+          )
+          : null}
+      </div>
       {(goldCost ?? 0) > 0 && (
         <GoldContainer>
           <IconContainer>
@@ -66,7 +92,13 @@ export const Command = ({
           <span>{manaCost}</span>
         </ManaContainer>
       )}
-    </div>
+      {description && (
+        <>
+          <Hr />
+          <Description>{description}</Description>
+        </>
+      )}
+    </>
   ), [name, goldCost, manaCost]));
 
   const handleClick = () => {

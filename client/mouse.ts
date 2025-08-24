@@ -4,7 +4,7 @@ import { camera, scene } from "./graphics/three.ts";
 import { InstancedGroup } from "./graphics/InstancedGroup.ts";
 import { app, Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
-import { ExtendedSet } from "./util/ExtendedSet.ts";
+import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 
 export class MouseEvent extends Event {
   readonly pixels: Vector2;

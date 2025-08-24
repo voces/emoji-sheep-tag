@@ -1,5 +1,5 @@
 import { Entity } from "@/shared/types.ts";
-import { addSystem } from "../ecs.ts";
+import { addSystem } from "@/shared/context.ts";
 
 addSystem({
   props: ["queue"],

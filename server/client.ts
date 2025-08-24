@@ -3,7 +3,7 @@ import { z } from "npm:zod";
 import type { ServerToClientMessage } from "../client/client.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import type { Entity } from "@/shared/types.ts";
-import { clientContext, currentApp, lobbyContext } from "./contexts.ts";
+import { clientContext, lobbyContext } from "./contexts.ts";
 import { leave, send } from "./lobbyApi.ts";
 import { build, zBuild } from "./actions/build.ts";
 import { start, zStart } from "./actions/start.ts";
@@ -18,6 +18,7 @@ import { cancel, zCancel } from "./actions/stop.ts";
 import { purchase, zPurchase } from "./actions/purchase.ts";
 import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
+import { appContext } from "@/shared/context.ts";
 
 export type SocketEventMap = {
   close: unknown;
@@ -43,6 +44,13 @@ const wrap = <T extends (...args: any[]) => unknown>(
 ) =>
 (...args: Parameters<T>) => {
   if (client.lobby) {
+    if (client.lobby.round) {
+      return appContext.with(client.lobby.round.ecs, () =>
+        lobbyContext.with(
+          client.lobby!,
+          () => clientContext.with(client, () => fn(...args)),
+        ));
+    }
     return lobbyContext.with(
       client.lobby!,
       () => clientContext.with(client, () => fn(...args)),
@@ -203,7 +211,7 @@ export const handleSocket = (socket: Socket) => {
     wrap<(e: SocketEventMap["message"]) => void>(client, (e) => {
       let batch = (fn: () => void) => fn();
       try {
-        batch = currentApp().batch;
+        batch = appContext.current.batch;
       } catch { /* do nothing */ }
       try {
         batch(() => {

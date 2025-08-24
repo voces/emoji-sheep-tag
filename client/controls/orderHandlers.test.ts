@@ -11,7 +11,7 @@ import {
 } from "@/client-testing/setup.ts";
 import { MouseButtonEvent } from "../mouse.ts";
 import { Vector2 } from "three";
-import { ExtendedSet } from "../util/ExtendedSet.ts";
+import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import {
   cancelOrder,
   getActiveOrder,
@@ -42,7 +42,7 @@ describe("order handlers", () => {
     });
 
     it("should set active order", () => {
-      setActiveOrder("attack", "enemy");
+      setActiveOrder("attack", "enemy", 0);
 
       const activeOrder = getActiveOrder();
       expect(activeOrder?.order).toBe("attack");
@@ -52,7 +52,7 @@ describe("order handlers", () => {
     it("should update cursor when setting active order", () => {
       // We can't easily test cursor updates without mocking updateCursor,
       // but we can verify the order is set
-      setActiveOrder("heal", "ally");
+      setActiveOrder("heal", "ally", 0);
 
       const activeOrder = getActiveOrder();
       expect(activeOrder?.order).toBe("heal");
@@ -60,7 +60,7 @@ describe("order handlers", () => {
     });
 
     it("should cancel active order", () => {
-      setActiveOrder("attack", "enemy");
+      setActiveOrder("attack", "enemy", 0);
       expect(getActiveOrder()).toBeDefined();
 
       cancelOrder();
@@ -69,7 +69,7 @@ describe("order handlers", () => {
     });
 
     it("should handle conditional cancellation", () => {
-      setActiveOrder("attack", "enemy");
+      setActiveOrder("attack", "enemy", 0);
 
       // Should not cancel if check function returns false
       cancelOrder((order) => order === "heal");
@@ -300,21 +300,21 @@ describe("order handlers", () => {
 
   describe("order variants", () => {
     it("should handle attack orders with enemy variant", () => {
-      setActiveOrder("attack", "enemy");
+      setActiveOrder("attack", "enemy", 0);
 
       const order = getActiveOrder();
       expect(order?.variant).toBe("enemy");
     });
 
     it("should handle heal orders with ally variant", () => {
-      setActiveOrder("heal", "ally");
+      setActiveOrder("heal", "ally", 0);
 
       const order = getActiveOrder();
       expect(order?.variant).toBe("ally");
     });
 
     it("should handle move orders with neutral variant", () => {
-      setActiveOrder("move", "ally");
+      setActiveOrder("move", "ally", 0);
 
       const order = getActiveOrder();
       expect(order?.variant).toBe("ally");
@@ -323,7 +323,7 @@ describe("order handlers", () => {
 
   describe("order state persistence", () => {
     it("should maintain order state across multiple checks", () => {
-      setActiveOrder("attack", "enemy");
+      setActiveOrder("attack", "enemy", 0);
 
       // Multiple calls should return same order
       const order1 = getActiveOrder();
@@ -334,7 +334,7 @@ describe("order handlers", () => {
     });
 
     it("should reset state after cancellation", () => {
-      setActiveOrder("attack", "enemy");
+      setActiveOrder("attack", "enemy", 0);
       expect(getActiveOrder()).toBeDefined();
 
       cancelOrder();
@@ -348,7 +348,7 @@ describe("order handlers", () => {
 
   describe("order validation", () => {
     it("should handle empty order names", () => {
-      setActiveOrder("", "enemy");
+      setActiveOrder("", "enemy", 0);
 
       const order = getActiveOrder();
       expect(order?.order).toBe("");
@@ -356,10 +356,10 @@ describe("order handlers", () => {
     });
 
     it("should handle order replacement", () => {
-      setActiveOrder("attack", "enemy");
+      setActiveOrder("attack", "enemy", 0);
       expect(getActiveOrder()?.order).toBe("attack");
 
-      setActiveOrder("heal", "ally");
+      setActiveOrder("heal", "ally", 0);
       expect(getActiveOrder()?.order).toBe("heal");
       expect(getActiveOrder()?.variant).toBe("ally");
     });

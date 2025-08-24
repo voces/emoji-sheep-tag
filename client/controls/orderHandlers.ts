@@ -2,7 +2,6 @@ import { send } from "../client.ts";
 import { Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { UnitDataActionTarget } from "@/shared/types.ts";
-import { isEnemy, testClassification } from "../api/unit.ts";
 import { hasAction } from "../util/actionLookup.ts";
 
 type Classification =
@@ -19,13 +18,20 @@ import { playSound, playSoundAt } from "../api/sound.ts";
 import { pick } from "../util/pick.ts";
 import { MouseButtonEvent } from "../mouse.ts";
 import { getLocalPlayer } from "@/vars/players.ts";
+import { isEnemy, testClassification } from "@/shared/api/unit.ts";
 
-let activeOrder: { variant: CursorVariant; order: string } | undefined;
+let activeOrder:
+  | { order: string; variant: CursorVariant; aoe: number }
+  | undefined;
 
 export const getActiveOrder = () => activeOrder;
 
-export const setActiveOrder = (order: string, variant: CursorVariant) => {
-  activeOrder = { order, variant };
+export const setActiveOrder = (
+  order: string,
+  variant: CursorVariant,
+  aoe: number,
+) => {
+  activeOrder = { order, variant, aoe };
   updateCursor();
 };
 

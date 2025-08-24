@@ -1,4 +1,4 @@
-import { addSystem } from "../ecs.ts";
+import { addSystem } from "@/shared/context.ts";
 import { data } from "../st/data.ts";
 
 addSystem({

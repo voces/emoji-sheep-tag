@@ -30,11 +30,11 @@ export const injectContextData = <T, U extends Array<unknown>, G>(
 export class ContextManager<Context extends object> {
   private currentContext: Context | undefined;
 
-  get context(): Context {
+  get current(): Context {
     if (!this.currentContext) throw new Error("No context set");
     return this.currentContext;
   }
-  set context(newContext: Context | undefined) {
+  set current(newContext: Context | undefined) {
     this.currentContext = newContext;
   }
 
@@ -56,7 +56,7 @@ export class ContextManager<Context extends object> {
    * Sets the current context to an ephemeral clone of the current context.
    */
   fork<T>(fn: () => T): T {
-    const oldContext = this.context;
+    const oldContext = this.current;
     this.currentContext = { ...oldContext };
     try {
       return fn();

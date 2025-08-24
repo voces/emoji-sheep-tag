@@ -1,4 +1,4 @@
-import { tempUnit } from "@/shared/api/unit.ts";
+import { isEnemy, tempUnit } from "@/shared/api/unit.ts";
 import {
   canSwing,
   distanceBetweenPoints,
@@ -6,8 +6,6 @@ import {
 } from "@/shared/pathing/math.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
 import { Entity, Item, SystemEntity } from "@/shared/types.ts";
-import { currentApp } from "../contexts.ts";
-import { data } from "../st/data.ts";
 import {
   calcPath,
   pathable,
@@ -20,11 +18,13 @@ import { findAction } from "../util/actionLookup.ts";
 import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 import { deductPlayerGold } from "./player.ts";
+import { appContext } from "@/shared/context.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
 export const build = (builder: Entity, type: string, x: number, y: number) => {
-  const app = currentApp();
+  const app = appContext.current;
   if (!isPathingEntity(builder)) return;
 
   const p = pathingMap();
@@ -77,21 +77,7 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
 };
 
 export const newUnit = (owner: string, type: string, x: number, y: number) =>
-  currentApp().addEntity(tempUnit(owner, type, x, y));
-
-export const isEnemy = (source: Entity, target: Entity) => {
-  if (!source.owner || !target.owner) return false;
-  const sourceIsSheep = data.sheep.some((s) => s.client.id === source.owner);
-  const targetIsSheep = data.sheep.some((s) => s.client.id === target.owner);
-  return sourceIsSheep !== targetIsSheep;
-};
-
-export const isAlly = (source: Entity, target: Entity) => {
-  if (!source.owner || !target.owner) return false;
-  const sourceIsSheep = data.sheep.some((s) => s.client.id === source.owner);
-  const targetIsSheep = data.sheep.some((s) => s.client.id === target.owner);
-  return sourceIsSheep === targetIsSheep;
-};
+  addEntity(tempUnit(owner, type, x, y));
 
 export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
   updatePathing(mover, 1);
@@ -230,7 +216,7 @@ export const orderBuild = (
 };
 
 export const isAlive = (unit: Entity) => {
-  if (!currentApp().entities.has(unit)) return false;
+  if (!appContext.current.entities.has(unit)) return false;
   return typeof unit.health !== "number" || unit.health > 0;
 };
 
@@ -238,9 +224,7 @@ export const addItem = (unit: Entity, itemId: string): boolean => {
   const item = items[itemId];
   if (!item) return false;
 
-  if (!unit.inventory) {
-    unit.inventory = [];
-  }
+  if (!unit.inventory) unit.inventory = [];
 
   // Check if item already exists and has charges
   const existingItem = unit.inventory.find((i) => i.id === itemId);

@@ -29,7 +29,7 @@ export const generic = (
     client.color = event.event.color;
     send({ type: "colorChange", id: client.id, color: event.event.color });
   } else if (event.event.type === "nameChange") {
-    const lobby = lobbyContext.context;
+    const lobby = lobbyContext.current;
     const uniqueName = generateUniqueName(
       event.event.name,
       lobby.players,

@@ -6,12 +6,12 @@ import { styled } from "npm:styled-components";
 
 const Tooltip = styled.div`
   position: fixed;
+  max-width: 400px;
   background-color: ${({ theme }) => theme.colors.background};
   box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
   padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) =>
     theme.spacing.md};
   transform: translate(-50%, -100%);
-  white-space: nowrap;
   pointer-events: none;
   z-index: 9999;
 `;

@@ -94,12 +94,16 @@ export const items: Record<string, Item> = {
   speedPot: {
     id: "speedPot",
     name: "Speed Potion",
+    description:
+      "Increases attack speed by 10% and movement speed by 15% for 10 seconds.",
     icon: "purplePotion",
     gold: 25,
     binding: ["KeyS"],
     charges: 1,
     actions: [{
       name: "Use Speed Potion",
+      description:
+        "Increases attack speed by 10% and movement speed by 15% for 10 seconds.",
       type: "auto",
       order: "speedPot",
       binding: ["KeyS"],
@@ -112,17 +116,21 @@ export const items: Record<string, Item> = {
   bomber: {
     id: "bomber",
     name: "Bomber",
+    description: "Bombs an area, damaging structures but not units.",
     icon: "meteor",
     gold: 35,
     binding: ["KeyE"],
     charges: 1,
     actions: [{
       name: "Summon Meteor",
+      description: "Bombs an area, damaging structures but not units.",
       type: "target",
       order: "meteor",
-      aoe: 2,
+      aoe: 1.5,
+      targeting: ["structure"],
       binding: ["KeyE"],
       range: 5,
+      damage: 50,
     }],
   },
 };
@@ -185,14 +193,16 @@ export const prefabs: Record<
         binding: ["KeyT"],
       },
       {
-        name: "Build Stack Hut",
+        name: "Build Temple",
+        description: "Can be built anywhere except in the middle.",
         type: "build",
-        unitType: "stackHut",
+        unitType: "temple",
         binding: ["KeyS"],
         goldCost: 12,
       },
       {
         name: "Build Translocation Hut",
+        description: "Translocates the sheep upon construction.",
         type: "build",
         unitType: "translocationHut",
         binding: ["KeyE"],
@@ -250,12 +260,14 @@ export const prefabs: Record<
       },
       {
         name: "Shop",
+        description: "View items available for purchase.",
         type: "menu",
         binding: ["KeyB"],
         actions: [
           back,
           ...Object.values(items).map((item): UnitDataAction => ({
             name: `Purchase ${item.name}`,
+            description: item.description,
             type: "purchase",
             itemId: item.id,
             binding: item.binding,
@@ -340,8 +352,8 @@ export const prefabs: Record<
     actions: [selfDestruct],
     bounty: 4,
   },
-  stackHut: {
-    name: "Stack Hut",
+  temple: {
+    name: "Temple",
     model: "hinduTemple",
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },

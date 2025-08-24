@@ -42,6 +42,7 @@ export const Action = ({ action, current, entity }: {
       return (
         <Command
           name={action.name}
+          description={action.description}
           icon={iconMap[action.order] ?? action.order}
           binding={action.binding}
           current={current}
@@ -53,6 +54,7 @@ export const Action = ({ action, current, entity }: {
       return (
         <Command
           name={action.name}
+          description={action.description}
           icon={prefabs[action.unitType]?.model ?? action.unitType}
           iconScale={prefabs[action.unitType]?.modelScale}
           binding={action.binding}
@@ -66,6 +68,7 @@ export const Action = ({ action, current, entity }: {
       return (
         <Command
           name={action.name}
+          description={action.description}
           icon={items[action.itemId]?.icon ?? action.itemId}
           binding={action.binding}
           current={current}
@@ -78,6 +81,7 @@ export const Action = ({ action, current, entity }: {
       return (
         <Command
           name={action.name}
+          description={action.description}
           icon="shop"
           binding={action.binding}
           current={current}

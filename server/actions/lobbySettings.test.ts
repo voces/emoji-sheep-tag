@@ -26,8 +26,8 @@ describe("lobbySettings action", () => {
   });
 
   afterEach(() => {
-    lobbyContext.context = undefined;
-    clientContext.context = undefined;
+    lobbyContext.current = undefined;
+    clientContext.current = undefined;
   });
 
   it("should update starting gold when host makes changes", () => {
@@ -41,8 +41,8 @@ describe("lobbySettings action", () => {
     // IMPORTANT: Set client's lobby reference
     hostClient.lobby = lobby;
 
-    lobbyContext.context = lobby;
-    clientContext.context = hostClient;
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
 
     // Host updates settings
     lobbySettings(hostClient, {
@@ -76,8 +76,8 @@ describe("lobbySettings action", () => {
     hostClient.lobby = lobby;
     nonHostClient.lobby = lobby;
 
-    lobbyContext.context = lobby;
-    clientContext.context = nonHostClient;
+    lobbyContext.current = lobby;
+    clientContext.current = nonHostClient;
 
     // Non-host tries to update settings
     lobbySettings(nonHostClient, {
@@ -102,8 +102,8 @@ describe("lobbySettings action", () => {
 
     hostClient.lobby = lobby;
 
-    lobbyContext.context = lobby;
-    clientContext.context = hostClient;
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
 
     // Host sends message without startingGold
     lobbySettings(hostClient, {
@@ -132,8 +132,8 @@ describe("lobbySettings action", () => {
 
     hostClient.lobby = lobby;
 
-    lobbyContext.context = lobby;
-    clientContext.context = hostClient;
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
 
     // Host updates only sheep gold
     lobbySettings(hostClient, {
@@ -155,8 +155,8 @@ describe("lobbySettings action", () => {
   it("should reject when client has no lobby", () => {
     const hostClient = createMockClient(true);
 
-    clientContext.context = hostClient;
-    lobbyContext.context = undefined;
+    clientContext.current = hostClient;
+    lobbyContext.current = undefined;
 
     // Try to update settings without a lobby
     lobbySettings(hostClient, {
@@ -188,8 +188,8 @@ describe("lobbySettings action", () => {
     player1.lobby = lobby;
     player2.lobby = lobby;
 
-    lobbyContext.context = lobby;
-    clientContext.context = hostClient;
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
 
     // Host updates settings
     lobbySettings(hostClient, {
@@ -220,8 +220,8 @@ describe("lobbySettings action", () => {
 
     hostClient.lobby = lobby;
 
-    lobbyContext.context = lobby;
-    clientContext.context = hostClient;
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
 
     // Test boundary values
     lobbySettings(hostClient, {

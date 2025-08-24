@@ -1,10 +1,20 @@
 import { setFirst } from "../../server/util/set.ts";
-import { isEnemy } from "../api/unit.ts";
-import { isAlly } from "../api/unit.ts";
+import { isAlly, isEnemy } from "@/shared/api/unit.ts";
 import { getActiveOrder, hasBlueprint } from "../controls.ts";
 import { Entity } from "../ecs.ts";
 import { mouse } from "../mouse.ts";
-import { getLocalPlayer } from "../ui/vars/players.ts";
+import { getLocalPlayer } from "@/vars/players.ts";
+import cursorSvg from "../assets/cursor.svg" with { type: "text" };
+import circleSvg from "../assets/circle.svg" with { type: "text" };
+
+const pointerSvg = new DOMParser().parseFromString(
+  cursorSvg,
+  "application/xml",
+);
+const aoeSvg = new DOMParser().parseFromString(
+  circleSvg.replace("#ffffff", "#31aaef"),
+  "application/xml",
+);
 
 const variants = {
   default: { css: "default", hue: 0 },
@@ -38,8 +48,8 @@ const getCursorVariant = (intersect: Entity | undefined) => {
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return "neutral";
   if (intersect.owner === localPlayer.id) return "control";
-  if (isAlly(intersect, localPlayer)) return "ally";
-  if (isEnemy(intersect, localPlayer)) return "enemy";
+  if (isAlly(intersect, localPlayer.id)) return "ally";
+  if (isEnemy(intersect, localPlayer.id)) return "enemy";
   return "neutral";
 };
 
@@ -50,6 +60,7 @@ export const updateCursor = (updatePosition = false) => {
   }
 
   const variant = getCursorVariant(setFirst(mouse.intersects));
+  const aoe = getActiveOrder()?.aoe;
 
   if (variant === "hidden") {
     document.body.style.cursor = "none";
@@ -62,6 +73,29 @@ export const updateCursor = (updatePosition = false) => {
     cursor.style.visibility = document.pointerLockElement
       ? "visible"
       : "hidden";
+
+    if (!aoe) {
+      if (cursor.dataset.mode !== "pointer") {
+        cursor.dataset.mode = "pointer";
+        cursor.style.transform = "scale(1)";
+        cursor.setAttribute(
+          "viewBox",
+          pointerSvg.documentElement.getAttribute("viewBox") ?? "",
+        );
+        cursor.innerHTML = pointerSvg.documentElement.innerHTML;
+      }
+    } else {
+      if (cursor.dataset.mode !== "aoe") {
+        cursor.dataset.mode = "aoe";
+        cursor.style.transform = `scale(${aoe * 6})`;
+        cursor.setAttribute(
+          "viewBox",
+          aoeSvg.documentElement.getAttribute("viewBox") ?? "",
+        );
+        cursor.innerHTML = aoeSvg.documentElement.innerHTML;
+      }
+    }
+
     cursor.style.filter = `hue-rotate(${variants[variant].hue}deg)`;
   }
 };

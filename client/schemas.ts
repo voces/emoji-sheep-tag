@@ -74,6 +74,7 @@ const zBaseAction = z.union([
   z.object({
     name: z.string(),
     type: z.literal("build"),
+    description: z.string().optional(),
     unitType: z.string(),
     binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
@@ -83,6 +84,7 @@ const zBaseAction = z.union([
   z.object({
     name: z.string(),
     type: z.literal("auto"),
+    description: z.string().optional(),
     order: z.string(),
     binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
@@ -96,15 +98,17 @@ const zBaseAction = z.union([
   z.object({
     name: z.string(),
     type: z.literal("purchase"),
+    description: z.string().optional(),
     itemId: z.string(),
-    binding: z.array(z.string()).readonly().optional(),
     goldCost: z.number(),
+    binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
     castDuration: z.number().optional(),
   }),
   z.object({
     name: z.string(),
     type: z.literal("target"),
+    description: z.string().optional(),
     order: z.string(),
     targeting: z.array(zClassification).readonly().optional(),
     aoe: z.number().optional(),
@@ -116,6 +120,7 @@ const zBaseAction = z.union([
     manaCost: z.number().optional(),
     castDuration: z.number().optional(),
     range: z.number().optional(),
+    damage: z.number().optional(),
   }),
 ]);
 
@@ -133,8 +138,9 @@ const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
     z.object({
       name: z.string(),
       type: z.literal("menu"),
-      binding: z.array(z.string()).readonly().optional(),
       actions: z.array(zAction).readonly(),
+      description: z.string().optional(),
+      binding: z.array(z.string()).readonly().optional(),
     }),
   ])
 );
@@ -177,6 +183,7 @@ const zUpdate = z.object({
 
   // Player data
   isPlayer: z.boolean().optional(),
+  team: z.union([z.literal("sheep"), z.literal("wolf")]).optional(),
   gold: z.number().optional(),
 
   position: zPoint.optional(),

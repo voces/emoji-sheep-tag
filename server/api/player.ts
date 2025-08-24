@@ -6,7 +6,7 @@ import { lobbyContext } from "../contexts.ts";
  * @returns The player entity or undefined if not found
  */
 export const getPlayer = (playerId: string) => {
-  const lobby = lobbyContext.context;
+  const lobby = lobbyContext.current;
   if (!lobby?.round) return undefined;
 
   return Array.from([...lobby.round.sheep, ...lobby.round.wolves])

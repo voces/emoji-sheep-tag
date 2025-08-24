@@ -1,13 +1,13 @@
+import { isAlly } from "@/shared/api/unit.ts";
 import { app, Entity, SystemEntity } from "../ecs.ts";
 import { getLocalPlayer } from "../ui/vars/players.ts";
-import { isAlly } from "../api/unit.ts";
 import { prefabs as blueprintData } from "@/shared/data.ts";
 import { nonNull } from "@/shared/types.ts";
 
 const blueprints = new Map<Entity, Entity[]>();
 
 const entitiesFromQueue = (e: SystemEntity<"owner">) => {
-  if (!isAlly(e, getLocalPlayer()!)) return;
+  if (!isAlly(e, getLocalPlayer()!.id)) return;
   const buildOrders = [
     e.order?.type === "build" ? e.order : undefined,
     ...e.queue?.filter((a) => a.type === "build") ?? [],

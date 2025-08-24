@@ -1,7 +1,7 @@
 import { Entity } from "@/shared/types.ts";
-import { addSystem } from "../ecs.ts";
+import { addSystem } from "@/shared/context.ts";
 
-addSystem((game) => ({
+addSystem((app) => ({
   props: ["buffs"],
   updateEntity: (entity, delta) => {
     if (!entity.buffs || entity.buffs.length === 0) return;
@@ -25,7 +25,7 @@ addSystem((game) => ({
     for (const buff of expiringBuffs) {
       if (buff.expiration === "Sound") {
         // Delete the entity when sound buff expires
-        game.removeEntity(entity);
+        app.removeEntity(entity);
         return; // Exit early since entity is deleted
       }
     }

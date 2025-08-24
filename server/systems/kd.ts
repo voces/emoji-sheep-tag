@@ -1,11 +1,11 @@
 import { Point } from "@/shared/pathing/math.ts";
-import { SystemEntity } from "@/shared/types.ts";
-import { currentApp } from "../contexts.ts";
-import { addSystem, Game } from "../ecs.ts";
+import { Entity, SystemEntity } from "@/shared/types.ts";
 import { KdTree } from "../util/KDTree.ts";
+import { addSystem, appContext } from "@/shared/context.ts";
+import { App } from "jsr:@verit/ecs";
 
 export const dataMap = new WeakMap<
-  Game,
+  App<Entity>,
   {
     entityToPointMap: Map<SystemEntity<"position">, Point>;
     pointToEntityMap: Map<Point, SystemEntity<"position">>;
@@ -14,7 +14,7 @@ export const dataMap = new WeakMap<
 >();
 
 export const getEntitiesInRange = (x: number, y: number, radius: number) => {
-  const data = dataMap.get(currentApp());
+  const data = dataMap.get(appContext.current);
   if (!data) throw new Error("Expected kd system to have initialized data");
   const points = data.kd.rangeSearchCircle(x, y, radius);
   return points.map((p) => {
@@ -29,11 +29,11 @@ export const getEntitiesInRange = (x: number, y: number, radius: number) => {
   }).filter(<T>(v: T | undefined): v is T => !!v);
 };
 
-addSystem((game) => {
+addSystem((app) => {
   const entityToPointMap = new Map<SystemEntity<"position">, Point>();
   const pointToEntityMap = new Map<Point, SystemEntity<"position">>();
   const kd = new KdTree();
-  dataMap.set(game, { entityToPointMap, pointToEntityMap, kd });
+  dataMap.set(app, { entityToPointMap, pointToEntityMap, kd });
 
   return {
     props: ["position"],

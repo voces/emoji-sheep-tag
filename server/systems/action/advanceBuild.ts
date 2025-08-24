@@ -1,9 +1,9 @@
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { build, computeBuildDistance } from "../../api/unit.ts";
-import { addSystem } from "../../ecs.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
+import { addSystem } from "@/shared/context.ts";
 
 export const advanceBuild = (e: Entity, delta: number): number => {
   if (e.order?.type !== "build") return delta;

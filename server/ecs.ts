@@ -1,6 +1,7 @@
-import { App, newApp, System } from "jsr:@verit/ecs";
+import { App, newApp } from "jsr:@verit/ecs";
 import { Entity } from "@/shared/types.ts";
 import { newEntity, remove, update } from "./updates.ts";
+import { initApp } from "@/shared/context.ts";
 
 // Alphanumeric, minus 0, O, l, and I
 const chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -33,24 +34,6 @@ const id = (type?: string) => {
 export type Game = App<Entity> & {
   tick: number;
 };
-
-const initHooks: ((game: Game) => void)[] = [];
-export const onInit = (fn: (game: Game) => void) => {
-  initHooks.push(fn);
-};
-
-export const addSystem = <K extends keyof Entity>(
-  systemConfig:
-    | Partial<System<Entity, K>>
-    | ((game: Game) => Partial<System<Entity, K>>),
-) =>
-  onInit((game) =>
-    game.addSystem(
-      typeof systemConfig === "function"
-        ? systemConfig(game)
-        : { ...systemConfig },
-    )
-  );
 
 export const newEcs = () => {
   const initializeEntity = (input: Partial<Entity>) => {
@@ -112,7 +95,7 @@ export const newEcs = () => {
     return originalRemoveEntity(entity);
   };
 
-  for (const hook of initHooks) hook(app);
+  initApp(app);
 
   return app;
 };

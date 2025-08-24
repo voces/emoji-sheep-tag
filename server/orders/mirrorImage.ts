@@ -4,8 +4,8 @@ import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { updatePathing } from "../systems/pathing.ts";
 import { lookup } from "../systems/lookup.ts";
-import { currentApp } from "../contexts.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
+import { removeEntity } from "@/shared/api/entity.ts";
 
 export const mirrorImageOrder = {
   id: "mirrorImage",
@@ -56,9 +56,7 @@ export const mirrorImageOrder = {
     if (unit.mirrors) {
       for (const mirrorId of unit.mirrors) {
         const mirror = lookup(mirrorId);
-        if (mirror) {
-          currentApp().removeEntity(mirror);
-        }
+        if (mirror) removeEntity(mirror);
       }
       delete unit.mirrors;
     }
@@ -86,7 +84,7 @@ export const mirrorImageOrder = {
         const mirror = newUnit(unit.owner, unit.prefab, pos.x, pos.y);
 
         // Whitelist only specific actions for mirrors
-        mirror.actions = mirror.actions.filter((a) =>
+        mirror.actions = mirror.actions?.filter((a) =>
           (a.type === "target" && ["move", "attack"].includes(a.order)) ||
           (a.type === "auto" && ["stop", "hold"].includes(a.order))
         );

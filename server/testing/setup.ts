@@ -5,6 +5,7 @@ import { clientContext, lobbyContext } from "../contexts.ts";
 import { newLobby } from "../lobby.ts";
 import { init } from "../st/data.ts";
 import { FakeTime } from "jsr:@std/testing/time";
+import { appContext } from "@/shared/context.ts";
 
 export type TestSetupOptions = {
   wolves?: string[];
@@ -61,7 +62,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   // Set up default client context (uses first client or creates test client)
   const firstClient = clients.values().next().value;
   if (firstClient) {
-    clientContext.context = firstClient;
+    clientContext.current = firstClient;
   } else {
     const testClient = new Client({
       readyState: WebSocket.OPEN,
@@ -70,7 +71,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
       addEventListener: () => {},
     });
     testClient.id = "test-client";
-    clientContext.context = testClient;
+    clientContext.current = testClient;
   }
 
   // Set up lobby
@@ -82,7 +83,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
       wolves: gold,
     },
   };
-  lobbyContext.context = lobby;
+  lobbyContext.current = lobby;
   lobby.round = {
     sheep: new Set(sheepClients.map((s) => s.client)),
     wolves: new Set(wolfClients.map((w) => w.client)),
@@ -90,6 +91,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     start: Date.now(),
     clearInterval: () => {},
   };
+  appContext.current = ecs;
 
   const time = new FakeTime();
 
@@ -137,10 +139,11 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
  */
 export const cleanupTest = () => {
   try {
-    lobbyContext.context?.round?.clearInterval();
+    lobbyContext.current?.round?.clearInterval();
   } catch { /* do nothing */ }
-  lobbyContext.context = undefined;
-  clientContext.context = undefined;
+  lobbyContext.current = undefined;
+  clientContext.current = undefined;
+  appContext.current = undefined;
 };
 
 // Generator-based test wrapper types and implementation

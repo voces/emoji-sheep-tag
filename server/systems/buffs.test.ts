@@ -22,7 +22,7 @@ describe("buffs system", () => {
       };
 
       const entity = ecs.addEntity(entityInput);
-      yield* yieldFor(2)();
+      yield* yieldFor(2);
 
       expect(entity.buffs).toBeDefined();
       expect(entity.buffs![0].remainingDuration).toBeCloseTo(8);
@@ -42,7 +42,7 @@ describe("buffs system", () => {
     };
 
     const entity = ecs.addEntity(entityInput);
-    yield* yieldFor(3)();
+    yield* yieldFor(3);
 
     expect(entity.buffs).toBeFalsy();
   });
@@ -68,7 +68,7 @@ describe("buffs system", () => {
       };
 
       const entity = ecs.addEntity(entityInput);
-      yield* yieldFor(6)(); // Advance 6 seconds
+      yield* yieldFor(6); // Advance 6 seconds
 
       // buff1 should be expired, buff2 should remain
       expect(entity.buffs).toBeDefined();
@@ -91,7 +91,7 @@ describe("buffs system", () => {
     };
 
     const entity = ecs.addEntity(entityInput);
-    yield* yieldFor(2)();
+    yield* yieldFor(2);
 
     // Original buff should be unchanged
     expect(originalBuff.remainingDuration).toBe(10);
@@ -122,7 +122,7 @@ describe("buffs system", () => {
       };
 
       const entity = ecs.addEntity(entityInput);
-      yield* yieldFor(4)(); // All buffs expire
+      yield* yieldFor(4); // All buffs expire
 
       expect(entity.buffs).toBeFalsy();
     },
@@ -144,7 +144,7 @@ describe("buffs system", () => {
       };
 
       const entity = ecs.addEntity(entityInput);
-      yield* yieldFor(3)(); // Advance 3 seconds
+      yield* yieldFor(3); // Advance 3 seconds
 
       expect(entity.buffs).toBeDefined();
       expect(entity.buffs![0].remainingDuration).toBeCloseTo(7);

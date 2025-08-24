@@ -8,8 +8,8 @@ import { handleAttack } from "./attack.ts";
 import { handleHold } from "./hold.ts";
 import { getOrder } from "../orders/index.ts";
 import { findActionAndItem, findActionByOrder } from "../util/actionLookup.ts";
-import { currentApp } from "../contexts.ts";
 import { consumeItem } from "../api/unit.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
@@ -61,8 +61,7 @@ export const unitOrder = (
           action && "soundOnCastStart" in action && action.soundOnCastStart &&
           unit.position && unit.owner
         ) {
-          const app = currentApp();
-          app.addEntity({
+          addEntity({
             id: `sound-${Date.now()}-${Math.random()}`,
             owner: unit.owner,
             position: { x: unit.position.x, y: unit.position.y },

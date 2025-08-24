@@ -1,6 +1,7 @@
 import { App, newApp, SystemEntity as ECSSystemEntity } from "jsr:@verit/ecs";
 import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "@/shared/types.ts";
+import { appContext, initApp } from "@/shared/context.ts";
 
 export type Entity = CommonEntity & {
   selected?: boolean;
@@ -73,6 +74,10 @@ export const app = newApp<Entity>({
 }) as App<Entity>;
 // deno-lint-ignore no-explicit-any
 (globalThis as any).app = app;
+
+appContext.current = app;
+
+queueMicrotask(() => initApp(app));
 
 onRender((delta, time) => app.update(delta, time));
 

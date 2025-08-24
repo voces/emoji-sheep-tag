@@ -6,7 +6,7 @@ import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 import { clearUpdatesCache } from "./updates.ts";
 
 export const endRound = (canceled = false) => {
-  const lobby = lobbyContext.context;
+  const lobby = lobbyContext.current;
   if (!lobby.round) return;
   console.log(new Date(), "Round ended in lobby", lobby.name);
   lobby.round.clearInterval();
@@ -39,7 +39,7 @@ export const endRound = (canceled = false) => {
 };
 
 export const send = (message: ServerToClientMessage) => {
-  const lobby = lobbyContext.context;
+  const lobby = lobbyContext.current;
   // console.log("S->Cs", message, lobby?.players.size, lobby?.name);
   try {
     const serialized = JSON.stringify(message);
@@ -52,9 +52,9 @@ export const send = (message: ServerToClientMessage) => {
 
 /** Causes the local player to leave their current lobby. */
 export const leave = (client?: Client) => {
-  client ??= clientContext.context;
+  client ??= clientContext.current;
   console.log(new Date(), "Client", client.id, "left");
-  const lobby = lobbyContext.context;
+  const lobby = lobbyContext.current;
 
   // Clean up player entity reference
   if (client.playerEntity && lobby.round?.ecs) {

@@ -1,6 +1,6 @@
 import { app, Entity, SystemEntity } from "../ecs.ts";
-import { isLocalPlayer } from "../ui/vars/players.ts";
-import { ExtendedSet } from "../util/ExtendedSet.ts";
+import { isLocalPlayer } from "@/vars/players.ts";
+import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
 

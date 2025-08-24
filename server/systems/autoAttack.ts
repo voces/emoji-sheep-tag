@@ -1,6 +1,6 @@
-import { addSystem } from "../ecs.ts";
 import { SystemEntity } from "@/shared/types.ts";
 import { acquireTarget, orderAttack } from "../api/unit.ts";
+import { addSystem } from "@/shared/context.ts";
 
 addSystem(() => {
   const idleCheck = (e: SystemEntity<"attack" | "position">) => {

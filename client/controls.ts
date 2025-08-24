@@ -352,6 +352,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
         action.order === "attack" || action.order === "meteor"
           ? "enemy"
           : "ally",
+        action.aoe ?? 0,
       );
       break;
     case "purchase":

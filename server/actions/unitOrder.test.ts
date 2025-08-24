@@ -4,6 +4,7 @@ import { addItem, newUnit } from "../api/unit.ts";
 import { unitOrder } from "./unitOrder.ts";
 import { advanceCast } from "../systems/action/advanceCast.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
+import { yieldUntil } from "@/server-testing/yieldUntil.ts";
 
 afterEach(cleanupTest);
 
@@ -35,12 +36,11 @@ describe("unitOrder fox item integration", () => {
       "fox",
     );
 
-    // Item should be consumed
-    expect(wolf.inventory).toHaveLength(0);
-
     // Wait for cast to complete and fox to be spawned
     while (wolf.order?.type === "cast") yield;
 
+    // Item should be consumed
+    expect(wolf.inventory).toHaveLength(0);
     const entities = Array.from(ecs.entities);
     const foxes = entities.filter((e) => e.prefab === "fox");
     expect(foxes.length).toBe(1);
@@ -94,12 +94,11 @@ describe("unitOrder fox item integration", () => {
       "fox",
     );
 
-    // Should have 1 charge remaining
-    expect(wolf.inventory).toHaveLength(1);
-    expect(wolf.inventory![0].charges).toBe(1);
-
     // Wait for cast to complete
-    while (wolf.order?.type === "cast") yield;
+    yield* yieldUntil(() => expect(wolf.order?.type).not.toBe("cast"));
+
+    // Should have 1 charge remaining
+    expect(wolf.inventory?.[0].charges).toBe(1);
 
     // Use fox ability again
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
@@ -112,7 +111,7 @@ describe("unitOrder fox item integration", () => {
     );
 
     // Should have no charges remaining - item removed
-    expect(wolf.inventory).toHaveLength(0);
+    yield* yieldUntil(() => expect(wolf.inventory).toHaveLength(0));
   });
 
   it("should not allow other clients to use unit's fox item", {
@@ -151,16 +150,16 @@ describe("unitOrder fox item integration", () => {
     // Add fox item
     addItem(wolf, "foxItem");
     yield;
+
     expect(wolf.inventory).toHaveLength(1);
     expect(wolf.inventory![0].charges).toBe(1);
 
     // Use the item action - charge consumption should happen automatically
     // after the action regardless of the specific action type
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
-    yield;
 
     // Item should be consumed due to generalized charge logic
-    expect(wolf.inventory).toHaveLength(0);
+    yield* yieldUntil(() => expect(wolf.inventory).toHaveLength(0));
   });
 });
 
@@ -596,6 +595,7 @@ describe("unitOrder generalized charge system", () => {
     // which we know works with the generalized charge system
     addItem(wolf, "foxItem");
     yield;
+
     expect(wolf.inventory).toHaveLength(2);
 
     // Use fox action - should consume one charge
@@ -603,8 +603,9 @@ describe("unitOrder generalized charge system", () => {
     yield;
 
     // Should have consumed fox item charge (it had 1 charge, should be removed)
-    const remainingItems = wolf.inventory!.filter((i) => i.id === "foxItem");
-    expect(remainingItems).toHaveLength(0);
+    yield* yieldUntil(() =>
+      expect(wolf.inventory!.filter((i) => i.id === "foxItem")).toHaveLength(0)
+    );
 
     // Lightning item should still be there unchanged
     const lightningItems = wolf.inventory!.filter((i) =>
@@ -658,14 +659,14 @@ describe("unitOrder generalized charge system", () => {
     // Add item with exactly 1 charge
     addItem(wolf, "foxItem");
     yield;
+
     expect(wolf.inventory![0].charges).toBe(1);
 
     // Use the action
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
-    yield;
 
     // Item should be completely removed when charges reach 0
-    expect(wolf.inventory).toHaveLength(0);
+    yield* yieldUntil(() => expect(wolf.inventory).toHaveLength(0));
   });
 
   it("should not consume charges for non-item actions", {

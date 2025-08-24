@@ -24,6 +24,7 @@
 - https://www.svgrepo.com/svg/245894/running-shoes-shoe
 - https://www.svgrepo.com/svg/191964/potion
 - https://www.svgrepo.com/svg/277687/meteor
+- https://www.svgrepo.com/svg/246372/cursor
 
 # Audio
 

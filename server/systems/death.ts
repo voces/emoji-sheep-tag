@@ -1,4 +1,3 @@
-import { addSystem } from "../ecs.ts";
 import { data } from "../st/data.ts";
 import { endRound } from "../lobbyApi.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
@@ -6,8 +5,9 @@ import { start } from "../actions/start.ts";
 import { timeout } from "../api/timing.ts";
 import { grantPlayerGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
+import { addSystem } from "@/shared/context.ts";
 
-addSystem((game) => ({
+addSystem((app) => ({
   props: ["health"],
   onChange: (unit) => {
     if (unit.health > 0) return;
@@ -26,7 +26,7 @@ addSystem((game) => ({
         endRound();
 
         // Auto start
-        const lobby = lobbyContext.context;
+        const lobby = lobbyContext.current;
         setTimeout(() => {
           if (lobby.host) {
             clientContext.with(
@@ -38,6 +38,6 @@ addSystem((game) => ({
       }, 0.05);
     }
 
-    game.removeEntity(unit);
+    app.removeEntity(unit);
   },
 }));
