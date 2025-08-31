@@ -42,6 +42,42 @@ export const listener = "AudioListener" in globalThis
 if (listener) {
   Object.assign(globalThis, { listener });
   camera.add(listener);
+
+  // Web Audio context behind the listener
+  const ctx = listener.context;
+
+  // 1) pre-gain (lets you drive how hard you hit the compressor)
+  const preGain = ctx.createGain();
+  preGain.gain.value = 1.0;
+
+  // 2) gentle bus compressor
+  const busComp = ctx.createDynamicsCompressor();
+  busComp.threshold.setValueAtTime(-18, ctx.currentTime); // starts compressing at -18 dB
+  busComp.knee.setValueAtTime(12, ctx.currentTime); // soft onset
+  busComp.ratio.setValueAtTime(4, ctx.currentTime); // moderate 4:1
+  busComp.attack.setValueAtTime(0.01, ctx.currentTime); // 10 ms attack
+  busComp.release.setValueAtTime(0.2, ctx.currentTime); // 200 ms release
+
+  // 3) make-up gain (optional, adjust by ear)
+  const makeUp = ctx.createGain();
+  makeUp.gain.value = 1.1;
+
+  // 4) safety limiter (only catches peaks)
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.setValueAtTime(-2, ctx.currentTime); // just under 0 dB
+  limiter.knee.setValueAtTime(0, ctx.currentTime); // hard knee
+  limiter.ratio.setValueAtTime(20, ctx.currentTime); // limiting
+  limiter.attack.setValueAtTime(0.002, ctx.currentTime); // very fast attack
+  limiter.release.setValueAtTime(0.1, ctx.currentTime); // short release
+
+  // Wire up the chain: all sounds go -> preGain -> busComp -> makeUp -> limiter -> destination
+  preGain.connect(busComp).connect(makeUp).connect(limiter).connect(
+    ctx.destination,
+  );
+
+  // Redirect listener’s output into the chain
+  listener.gain.disconnect();
+  listener.gain.connect(preGain);
 }
 
 const terrain = new Grid(tiles[0].length, tiles.length);
