@@ -109,12 +109,7 @@ const handleLeftClick = (e: MouseButtonEvent) => {
 
   if (blueprint) handleBlueprintClick(e);
   else if (getActiveOrder()) {
-    if (!handleTargetOrder(e)) {
-      // If no target order was handled and there's an intersection, select it
-      if (e.intersects.size) {
-        selectEntity(e.intersects.first()!);
-      }
-    }
+    if (!handleTargetOrder(e)) playSound(pick("error1"), { volume: 0.3 });
   } else if (e.intersects.size) selectEntity(e.intersects.first()!);
 };
 
@@ -135,7 +130,9 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
     (prefabs[prefab]?.tilemap?.height ?? 0) % 4 === 0,
   );
 
-  if (!canBuild(unit, prefab, x, y)) return;
+  if (!canBuild(unit, prefab, x, y)) {
+    return playSound(pick("error1"), { volume: 0.3 });
+  }
 
   cancelBlueprint();
 
@@ -312,7 +309,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
 
   if (units.length === 0 && unitsTotal) {
-    playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.3 });
+    playSound(pick("error1"), { volume: 0.3 });
     return;
   }
 
@@ -324,9 +321,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
       const playerGold = owningPlayer?.entity?.gold ?? 0;
 
       if (playerGold < goldCost) {
-        playSound(pick("click1", "click2", "click3", "click4"), {
-          volume: 0.3,
-        });
+        playSound(pick("error1"), { volume: 0.3 });
         return;
       }
     }

@@ -45,3 +45,19 @@
 - click4: https://freesound.org/people/EdgardEdition/sounds/113634/
 - ambientBirds: https://freesound.org/people/dedindi/sounds/522058/
 - jarOpen1: https://freesound.org/people/EminYILDIRIM/sounds/539171/
+- error1: https://freesound.org/people/Universfield/sounds/734446/
+- growl1: https://freesound.org/people/Universfield/sounds/734446/
+- growl2: https://freesound.org/people/tnorr6969/sounds/511185/
+- spirit1: https://freesound.org/people/ToastHatter/sounds/561188/
+- spirit2: https://freesound.org/people/ToastHatter/sounds/561543/
+- spirit3: https://freesound.org/people/ToastHatter/sounds/561544/
+- growl3: https://freesound.org/people/qubodup/sounds/442816/
+- growl4: https://freesound.org/people/Lerdavian/sounds/321982/
+
+## To consider
+
+- Bottles: https://freesound.org/people/somatik7/sounds/608709/
+- Bottles: https://freesound.org/people/somatik7/sounds/608711/
+- Bottles: https://freesound.org/people/somatik7/sounds/608708/
+- Bottles: https://freesound.org/people/somatik7/sounds/608707/
+- Bottles: https://freesound.org/people/somatik7/sounds/608710/

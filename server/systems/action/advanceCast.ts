@@ -5,10 +5,14 @@ import {
   findActionByOrder,
 } from "../../util/actionLookup.ts";
 import { tweenPath } from "./tweenPath.ts";
-import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
+import {
+  distanceBetweenEntities,
+  distanceBetweenPoints,
+} from "@/shared/pathing/math.ts";
 import { calcPath } from "../pathing.ts";
 import { consumeItem } from "../../api/unit.ts";
 import { addEntity } from "@/shared/api/entity.ts";
+import { lookup } from "../lookup.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {
   if (e.order?.type !== "cast") return delta;
@@ -17,16 +21,22 @@ export const advanceCast = (e: Entity, delta: number) => {
 
   // Handle movement for cast orders with target and range
   const range = action?.type === "target" ? action.range : undefined;
-  if (range !== undefined && e.order.target) {
+  const target = e.order.target ??
+    (e.order.targetId ? lookup(e.order.targetId) : undefined);
+  if (range !== undefined && target) {
     if (!e.position) {
       delete e.order;
       return delta;
     }
 
-    const dist = distanceBetweenPoints(e.position, e.order.target);
+    const dist = "x" in target
+      ? distanceBetweenPoints(e.position, target)
+      : distanceBetweenEntities(e, target);
     if (dist > range) {
       // Out of range - need to move closer
-      const path = calcPath(e, e.order.target, { distanceFromTarget: range });
+      const path = calcPath(e, "x" in target ? target : target.id, {
+        distanceFromTarget: range,
+      });
 
       if (!path.length) {
         // Can't reach target, fail the order
@@ -84,7 +94,7 @@ export const advanceCast = (e: Entity, delta: number) => {
 
   delta -= e.order.remaining;
 
-  getOrder(e.order.orderId)?.onCastComplete?.(e);
+  if (getOrder(e.order.orderId)?.onCastComplete?.(e) === false) return delta;
   if (item) consumeItem(e, item);
 
   delete e.order;

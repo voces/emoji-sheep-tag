@@ -7,17 +7,17 @@ export type OrderDefinition = {
   id: string;
 
   // Check if the unit can execute this order (mana, conditions, etc)
-  canExecute?: (unit: Entity) => boolean;
+  canExecute?: (unit: Entity, target: Point | string | undefined) => boolean;
 
   // Called when the order is issued (sets up the order on the unit)
   onIssue: (
     unit: Entity,
-    target?: Point | string,
+    target: Point | string | undefined,
   ) => "immediate" | "ordered" | "failed";
 
   // Called when the cast starts (side effects like mana consumption, clearing old state)
   onCastStart?: (unit: Entity) => void;
 
   // Called when the cast completes (spawn units, create effects, etc)
-  onCastComplete?: (unit: Entity) => void;
+  onCastComplete?: (unit: Entity) => boolean | void;
 };

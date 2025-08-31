@@ -17,6 +17,7 @@ export const tweenPath = (e: Entity, delta: number): number => {
   let remaining = distanceBetweenPoints(target, e.position);
   let p = movement / remaining;
   let last = e.position;
+  let newPath: typeof e.order.path | undefined;
 
   // End of segment
   while (p > 1) {
@@ -35,7 +36,8 @@ export const tweenPath = (e: Entity, delta: number): number => {
     // Not end of path, advance along it
     movement -= remaining;
     [last, target] = e.order.path ?? [];
-    e.order = { ...e.order, path: e.order.path?.slice(1) };
+    // Don't modify path yet - wait until we confirm the move is valid
+    newPath = e.order.path?.slice(1);
     remaining = distanceBetweenPoints(target, last);
     p = movement / remaining;
   }
@@ -54,6 +56,11 @@ export const tweenPath = (e: Entity, delta: number): number => {
 
   // If end position isn't pathable, do nothing
   if (!pathable(e, newPosition)) return delta;
+
+  // Only now that we've confirmed the move is valid, update the path if we advanced along it
+  if (typeof newPath !== "undefined") {
+    e.order = { ...e.order, path: newPath };
+  }
 
   e.position = newPosition;
   return delta;

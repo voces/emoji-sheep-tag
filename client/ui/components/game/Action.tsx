@@ -5,19 +5,6 @@ import { playersVar } from "@/vars/players.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { Command } from "./Command.tsx";
 
-const iconMap: Record<string, string> = {
-  destroyLastFarm: "collision",
-  hold: "suspend",
-  mirrorImage: "wolf",
-  move: "route",
-  stop: "stop",
-  attack: "claw",
-  selfDestruct: "collision",
-  back: "stop",
-  fox: "fox",
-  speedPot: "purplePotion",
-};
-
 export const Action = ({ action, current, entity }: {
   action: UnitDataAction;
   current: boolean;
@@ -43,7 +30,7 @@ export const Action = ({ action, current, entity }: {
         <Command
           name={action.name}
           description={action.description}
-          icon={iconMap[action.order] ?? action.order}
+          icon={action.icon ?? action.order}
           binding={action.binding}
           current={current}
           disabled={disabled}
@@ -55,7 +42,8 @@ export const Action = ({ action, current, entity }: {
         <Command
           name={action.name}
           description={action.description}
-          icon={prefabs[action.unitType]?.model ?? action.unitType}
+          icon={action.icon ?? prefabs[action.unitType]?.model ??
+            action.unitType}
           iconScale={prefabs[action.unitType]?.modelScale}
           binding={action.binding}
           current={current}
@@ -69,7 +57,7 @@ export const Action = ({ action, current, entity }: {
         <Command
           name={action.name}
           description={action.description}
-          icon={items[action.itemId]?.icon ?? action.itemId}
+          icon={action.icon ?? items[action.itemId]?.icon ?? action.itemId}
           binding={action.binding}
           current={current}
           disabled={disabled}
@@ -82,7 +70,7 @@ export const Action = ({ action, current, entity }: {
         <Command
           name={action.name}
           description={action.description}
-          icon="shop"
+          icon={action.icon ?? "shop"}
           binding={action.binding}
           current={current}
           disabled={disabled}

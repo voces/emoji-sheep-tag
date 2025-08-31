@@ -11,5 +11,5 @@
 - Units sometimes get stuck on corners still...
 - Drag select
 - Wolf sounds
-  - What
   - Birth
+- Pointer lock setting

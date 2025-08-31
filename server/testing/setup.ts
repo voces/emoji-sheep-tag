@@ -3,7 +3,6 @@ import { newEcs } from "../ecs.ts";
 import { Client } from "../client.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { newLobby } from "../lobby.ts";
-import { init } from "../st/data.ts";
 import { FakeTime } from "jsr:@std/testing/time";
 import { appContext } from "@/shared/context.ts";
 
@@ -90,16 +89,11 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     ecs,
     start: Date.now(),
     clearInterval: () => {},
+    practice: false,
   };
   appContext.current = ecs;
 
   const time = new FakeTime();
-
-  // Initialize game data
-  init({
-    sheep: sheepClients,
-    wolves: wolfClients,
-  });
 
   // Create player entities (similar to start action)
   for (const { client } of sheepClients) {

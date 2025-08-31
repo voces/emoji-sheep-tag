@@ -1,4 +1,4 @@
-import { isEnemy, tempUnit } from "@/shared/api/unit.ts";
+import { isEnemy, tempUnit, testClassification } from "@/shared/api/unit.ts";
 import {
   canSwing,
   distanceBetweenPoints,
@@ -123,7 +123,11 @@ export const acquireTarget = (e: Entity) => {
   const pos = e.position;
   if (!pos) return;
   return getEntitiesInRange(pos.x, pos.y, 10)
-    .filter((e2) => isEnemy(e, e2))
+    .filter((e2) =>
+      isEnemy(e, e2) &&
+      (!e2.targetedAs ||
+        testClassification(e, e2, ["enemy"]))
+    )
     .map((e2) => [e2, distanceBetweenPoints(pos, e2.position)] as const)
     .sort((a, b) => {
       if (a[0].prefab === "sheep") {
@@ -141,7 +145,10 @@ export const orderAttack = (
   if (!attacker.attack || !attacker.position) return false;
 
   if ("id" in target) {
-    if (!target.position) return false;
+    if (
+      !target.position ||
+      !testClassification(attacker, target, ["other"])
+    ) return false;
 
     // If within attack range..
     if (canSwing(attacker, target)) {

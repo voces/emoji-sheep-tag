@@ -31,7 +31,8 @@ app.addSystem({
   props: ["id", "prefab", "owner"],
   onAdd: (e) => {
     if (
-      isLocalPlayer(e.owner) && (e.prefab === "sheep" || e.prefab === "wolf")
+      isLocalPlayer(e.owner) &&
+      (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit")
     ) {
       if (selection.size === 0) selectEntity(e);
       primary = e;

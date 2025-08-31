@@ -17,13 +17,20 @@ app.addSystem({
     if (typeof e.health === "number" && typeof e.maxHealth === "number") {
       playEntitySound(e, ["death"], { volume: e.tilemap ? 0.3 : 0.6 });
     }
-    if (e.prefab === "sheep" && e.lastAttacker && e.owner) {
+    if (
+      (e.prefab === "sheep" || e.prefab === "spirit") && e.lastAttacker &&
+      e.owner
+    ) {
       const killingUnit = lookup[e.lastAttacker];
       if (!killingUnit || !killingUnit.owner) return;
       const killingPlayer = getPlayer(killingUnit.owner);
       const victim = getPlayer(e.owner);
       if (killingPlayer && victim) {
-        addChatMessage(`${format(killingPlayer)} killed ${format(victim)}`);
+        addChatMessage(
+          `${format(killingPlayer)} ${
+            e.prefab === "sheep" ? "killed" : "saved"
+          } ${format(victim)}`,
+        );
       }
     }
   },

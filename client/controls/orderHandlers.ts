@@ -3,22 +3,14 @@ import { Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { UnitDataActionTarget } from "@/shared/types.ts";
 import { hasAction } from "../util/actionLookup.ts";
-
-type Classification =
-  | "enemy"
-  | "ally"
-  | "neutral"
-  | "structure"
-  | "unit"
-  | "self"
-  | "other";
 import { CursorVariant, updateCursor } from "../graphics/cursor.ts";
 import { newIndicator } from "../systems/indicators.ts";
-import { playSound, playSoundAt } from "../api/sound.ts";
+import { playEntitySound, playSound, playSoundAt } from "../api/sound.ts";
 import { pick } from "../util/pick.ts";
 import { MouseButtonEvent } from "../mouse.ts";
 import { getLocalPlayer } from "@/vars/players.ts";
 import { isEnemy, testClassification } from "@/shared/api/unit.ts";
+import { Classification } from "@/shared/data.ts";
 
 let activeOrder:
   | { order: string; variant: CursorVariant; aoe: number }
@@ -146,6 +138,13 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
   );
 
   if (target && unitsWithTarget.size) {
+    if (orderToExecute === "attack") {
+      playEntitySound(
+        unitsWithTarget.find((e) => !!e.sounds?.ackAttack?.length) ??
+          { id: "unknown" },
+        "ackAttack",
+      );
+    }
     send({
       type: "unitOrder",
       units: Array.from(unitsWithTarget, (e) => e.id),
@@ -165,6 +164,13 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
   );
 
   if (unitsWithoutTarget.size) {
+    if (orderToExecute === "attack") {
+      playEntitySound(
+        unitsWithoutTarget.find((e) => !!e.sounds?.ackAttack?.length) ??
+          { id: "unknown" },
+        "ackAttack",
+      );
+    }
     send({
       type: "unitOrder",
       units: Array.from(unitsWithoutTarget, (e) => e.id),

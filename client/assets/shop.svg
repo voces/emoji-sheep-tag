@@ -6,34 +6,34 @@
 >
   <path
     d="M29 32H3a3 3 0 0 1-3-3V14h32v15a3 3 0 0 1-3 3z"
-    style="fill: #f2c99e"
+    fill="#f2c99e"
   />
   <path
     d="M27 32H3a3 3 0 0 1-3-3V14h30v15a3 3 0 0 1-3 3z"
-    style="fill: #f9e0bd"
+    fill="#f9e0bd"
   />
   <path
     d="M32 14H0V3a3 3 0 0 1 3-3h26a3 3 0 0 1 3 3v11z"
-    style="fill: #c9483a"
+    fill="#c9483a"
   />
   <path
     d="M30 14H0V3a3 3 0 0 1 3-3h24a3 3 0 0 1 3 3v11z"
-    style="fill: #d97360"
+    fill="#d97360"
   />
   <path
     d="M3 14H0V3a3 3 0 0 1 3-3v14zM9 0H6v14h3V0zm6 0h-3v14h3V0zm6 0h-3v14h3V0zm6 0h-3v14h3V0z"
-    style="fill: #c9483a"
+    fill="#c9483a"
   />
   <path
     d="M14 27H5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1z"
-    style="fill: #65c3ab"
+    fill="#65c3ab"
   />
   <path
     d="M25 32h-7V21a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v11z"
-    style="fill: #d97360"
+    fill="#d97360"
   />
   <path
     d="M19 21v11h-1V21a1 1 0 0 1 1-1h1a1 1 0 0 0-1 1zM5 26v-5a1 1 0 0 1 1-1H5a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h1a1 1 0 0 1-1-1z"
-    style="fill: #f2c99e"
+    fill="#f2c99e"
   />
 </svg>

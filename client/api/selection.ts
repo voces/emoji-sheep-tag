@@ -62,18 +62,19 @@ export const selectPrimaryUnit = () => {
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return;
 
-  let ownedUnit: Entity | undefined;
+  let primaryUnit: Entity | undefined;
   for (const entity of app.entities) {
     if (
       entity.owner === localPlayer.id &&
-      (entity.prefab === "sheep" || entity.prefab === "wolf")
+      (entity.prefab === "sheep" || entity.prefab === "wolf" ||
+        entity.prefab === "spirit")
     ) {
-      ownedUnit = entity;
-      break;
+      primaryUnit = entity;
+      if (!primaryUnit.selected || selection.size > 1) break;
     }
   }
 
-  if (ownedUnit) selectEntity(ownedUnit);
+  if (primaryUnit) selectEntity(primaryUnit);
 };
 
 /**

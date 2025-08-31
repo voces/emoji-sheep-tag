@@ -32,6 +32,7 @@ type Order = Readonly<
     readonly remaining: number;
     readonly positions?: ReadonlyArray<Point>;
     readonly target?: Readonly<Point>;
+    readonly targetId?: string;
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
     readonly started?: boolean;
   } | {
@@ -70,6 +71,7 @@ export type UnitDataActionTarget = {
   readonly type: "target";
   readonly order: string;
   readonly description?: string;
+  readonly icon?: string;
   /** By default, actions can target everything */
   readonly targeting?: ReadonlyArray<Classification>;
   /** `aoe` of `0` allows targeting the ground */
@@ -87,6 +89,7 @@ export type UnitDataAction = {
   readonly type: "build";
   readonly unitType: string;
   readonly description?: string;
+  readonly icon?: string;
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly goldCost?: number;
@@ -96,6 +99,7 @@ export type UnitDataAction = {
   readonly type: "auto";
   readonly order: string;
   readonly description?: string;
+  readonly icon?: string;
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly castDuration?: number;
@@ -110,12 +114,14 @@ export type UnitDataAction = {
   readonly itemId: string;
   readonly goldCost: number;
   readonly description?: string;
+  readonly icon?: string;
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly castDuration?: number;
 } | {
   readonly name: string;
   readonly type: "menu";
+  readonly icon?: string;
   readonly actions: ReadonlyArray<UnitDataAction>;
   readonly description?: string;
   readonly binding?: ReadonlyArray<string>;
@@ -130,6 +136,7 @@ export type Entity = {
   model?: string;
   modelScale?: number;
   sounds?: {
+    ackAttack?: ReadonlyArray<string>;
     birth?: ReadonlyArray<string>;
     death?: ReadonlyArray<string>;
     what?: ReadonlyArray<string>;
@@ -155,6 +162,12 @@ export type Entity = {
   /** Radians per second */
   turnSpeed?: number;
   actions?: ReadonlyArray<UnitDataAction>;
+  completionTime?: number;
+  progress?: number | null;
+  /** A doodad cannot be clicked */
+  isDoodad?: boolean | null;
+
+  // Attacking
   attack?: {
     readonly damage: number;
     readonly range: number;
@@ -167,12 +180,6 @@ export type Entity = {
     /** Seconds between an attack starting and damage occurring */
     readonly damagePoint: number;
   };
-  completionTime?: number;
-  progress?: number | null;
-  /** A doodad cannot be clicked */
-  isDoodad?: boolean | null;
-
-  // Attacking
   swing?: {
     readonly remaining: number;
     readonly source: { readonly x: number; readonly y: number };
@@ -180,12 +187,20 @@ export type Entity = {
   } | null;
   attackCooldownRemaining?: number | null;
   lastAttacker?: string | null;
+  /** By default, can be targeted by anything */
+  targetedAs?: ReadonlyArray<Classification>;
 
   isMirror?: boolean;
   mirrors?: ReadonlyArray<string> | null;
 
   // Pathing
   radius?: number;
+  /**
+   * 1 walkable
+   * 2 buildable
+   * 4 blight
+   * 8 spirit (non-0 required for distanceBetweenEntities)
+   */
   pathing?: Pathing;
   /** Override `pathing` for require checks. */
   requiresPathing?: Pathing;

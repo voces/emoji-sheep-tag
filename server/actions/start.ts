@@ -9,6 +9,7 @@ import { send } from "../lobbyApi.ts";
 import { center, initEntities } from "@/shared/map.ts";
 import { prefabs } from "@/shared/data.ts";
 import { appContext } from "@/shared/context.ts";
+import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -100,14 +101,9 @@ export const start = (
     timeout(() => {
       const lobby2 = lobbyContext.current;
       if (!lobby2.round) return;
-      const r = Math.random() * Math.PI * 2;
       for (const owner of sheep) {
-        newUnit(
-          owner.id,
-          "sheep",
-          center.x + 3 * Math.cos(r),
-          center.y + 3 * Math.sin(r),
-        );
+        newUnit(owner.id, "sheep", ...getSheepSpawn());
+        if (practice) newUnit(owner.id, "spirit", ...getSpiritSpawn());
       }
 
       timeout(() => {

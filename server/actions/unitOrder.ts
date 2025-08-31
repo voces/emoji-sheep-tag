@@ -54,7 +54,7 @@ export const unitOrder = (
       }
 
       // Order-specific validation
-      if (orderDef.canExecute && !orderDef.canExecute(unit)) continue;
+      if (orderDef.canExecute && !orderDef.canExecute(unit, target)) continue;
 
       if (orderDef.onIssue(unit, target) === "immediate") {
         if (

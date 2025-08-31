@@ -11,40 +11,7 @@ import { formatVar } from "@/vars/format.ts";
 import { format } from "./api/player.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import type { ServerToClientMessage } from "./schemas.ts";
-
-const checkNearPathing = (
-  x: number,
-  y: number,
-  near: number,
-  pathing: number,
-) => {
-  if (tiles[Math.floor(y)]?.[Math.floor(x)] ?? 255 & pathing) return true;
-  if (tiles[Math.floor(y + near)]?.[Math.floor(x)] ?? 255 & pathing) {
-    return true;
-  }
-  if (tiles[Math.floor(y - near)]?.[Math.floor(x)] ?? 255 & pathing) {
-    return true;
-  }
-  if (tiles[Math.floor(y)]?.[Math.floor(x + near)] ?? 255 & pathing) {
-    return true;
-  }
-  if (tiles[Math.floor(y + near)]?.[Math.floor(x + near)] ?? 255 & pathing) {
-    return true;
-  }
-  if (tiles[Math.floor(y - near)]?.[Math.floor(x + near)] ?? 255 & pathing) {
-    return true;
-  }
-  if (tiles[Math.floor(y)]?.[Math.floor(x - near)] ?? 255 & pathing) {
-    return true;
-  }
-  if (tiles[Math.floor(y + near)]?.[Math.floor(x - near)] ?? 255 & pathing) {
-    return true;
-  }
-  if (tiles[Math.floor(y - near)]?.[Math.floor(x - near)] ?? 255 & pathing) {
-    return true;
-  }
-  return false;
-};
+import { checkNearPathing } from "./systems/pathing.ts";
 
 export const handlers = {
   join: (data: Extract<ServerToClientMessage, { type: "join" }>) => {

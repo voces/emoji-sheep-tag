@@ -67,6 +67,8 @@ const zClassification = z.union([
   z.literal("neutral"),
   z.literal("self"),
   z.literal("other"),
+  z.literal("spirit"),
+  z.literal("notSpirit"),
 ]);
 
 // Define the base action types first (non-recursive)
@@ -75,6 +77,7 @@ const zBaseAction = z.union([
     name: z.string(),
     type: z.literal("build"),
     description: z.string().optional(),
+    icon: z.string().optional(),
     unitType: z.string(),
     binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
@@ -85,6 +88,7 @@ const zBaseAction = z.union([
     name: z.string(),
     type: z.literal("auto"),
     description: z.string().optional(),
+    icon: z.string().optional(),
     order: z.string(),
     binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
@@ -99,6 +103,7 @@ const zBaseAction = z.union([
     name: z.string(),
     type: z.literal("purchase"),
     description: z.string().optional(),
+    icon: z.string().optional(),
     itemId: z.string(),
     goldCost: z.number(),
     binding: z.array(z.string()).readonly().optional(),
@@ -109,6 +114,7 @@ const zBaseAction = z.union([
     name: z.string(),
     type: z.literal("target"),
     description: z.string().optional(),
+    icon: z.string().optional(),
     order: z.string(),
     targeting: z.array(zClassification).readonly().optional(),
     aoe: z.number().optional(),
@@ -138,6 +144,7 @@ const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
     z.object({
       name: z.string(),
       type: z.literal("menu"),
+      icon: z.string().optional(),
       actions: z.array(zAction).readonly(),
       description: z.string().optional(),
       binding: z.array(z.string()).readonly().optional(),
@@ -191,6 +198,10 @@ const zUpdate = z.object({
   facing: z.number().optional(),
   turnSpeed: z.number().optional(),
   actions: z.array(zAction).readonly().optional(),
+  completionTime: z.number().optional(),
+  progress: z.number().nullable().optional(),
+  isDoodad: z.boolean().nullable().optional(),
+
   attack: z.object({
     damage: z.number(),
     range: z.number(),
@@ -199,10 +210,6 @@ const zUpdate = z.object({
     damagePoint: z.number(),
     backswing: z.number(),
   }).optional(),
-  completionTime: z.number().optional(),
-  progress: z.number().nullable().optional(),
-  isDoodad: z.boolean().nullable().optional(),
-
   swing: z.object({
     remaining: z.number(),
     source: z.object({ x: z.number(), y: z.number() }),
@@ -210,6 +217,7 @@ const zUpdate = z.object({
   }).nullable().optional(),
   attackCooldownRemaining: z.number().nullable().optional(),
   lastAttacker: z.string().nullable().optional(),
+  targetedAs: z.array(zClassification).readonly().optional(),
 
   isMirror: z.boolean().optional(),
   mirrors: z.array(z.string()).readonly().nullable().optional(),
@@ -239,14 +247,15 @@ const zUpdate = z.object({
   // Art
   model: z.string().optional(),
   modelScale: z.number().optional(),
-  sounds: z.object({
-    birth: z.array(z.string()).readonly().optional(),
-    attack: z.array(z.string()).readonly().optional(),
-    death: z.array(z.string()).readonly().optional(),
-    ready: z.array(z.string()).readonly().optional(),
-    what: z.array(z.string()).readonly().optional(),
-    yes: z.array(z.string()).readonly().optional(),
-  }).optional(),
+  sounds: z.partialRecord(
+    z.union([
+      z.literal("birth"),
+      z.literal("death"),
+      z.literal("what"),
+      z.literal("ackAttack"),
+    ]),
+    z.array(z.string()).readonly(),
+  ).optional(),
 }).strict();
 
 // Events that come down from a loo

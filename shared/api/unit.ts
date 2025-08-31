@@ -2,6 +2,7 @@ import {
   Classification,
   ClassificationGroup,
   classificationGroups,
+  defaultClassifications,
   prefabs,
 } from "../data.ts";
 import { Entity } from "../types.ts";
@@ -70,7 +71,59 @@ for (const group in classificationGroups) {
   }
 }
 
+// const computeTargetClassifications = (
+//   source: Entity,
+//   target: Entity,
+// ) => {
+//   const classifications: Classification[] = [];
+
+//   if (isAlly(source, target)) classifications.push("ally");
+//   if (isEnemy(source, target)) classifications.push("enemy");
+//   if (isNeutral(source, target)) classifications.push("neutral");
+
+//   if (isOther(source, target)) classifications.push("other");
+//   if (isSelf(source, target)) classifications.push("self");
+
+//   if (isStructure(target)) classifications.push("structure");
+//   if (isUnit(target)) classifications.push("unit");
+
+//   if (isSpirit(target)) classifications.push("spirit");
+//   if (isNotSpirit(target)) classifications.push("notSpirit");
+
+//   return classifications;
+// };
+
+// const computeSourceClassifications = (
+//   source: Entity,
+//   target: Entity,
+//   overrides?: Classification[],
+// ) => {
+//   const classifications: Classification[] = [];
+
+//   if (isAlly(source, target)) classifications.push("ally");
+//   if (isEnemy(source, target)) classifications.push("enemy");
+//   if (isNeutral(source, target)) classifications.push("neutral");
+
+//   if (isOther(source, target)) classifications.push("other");
+//   if (isSelf(source, target)) classifications.push("self");
+
+//   if (isStructure(target)) classifications.push("structure");
+//   if (isUnit(target)) classifications.push("unit");
+
+//   if (isSpirit(target)) classifications.push("spirit");
+//   if (isNotSpirit(target)) classifications.push("notSpirit");
+
+//   return classifications;
+// };
+
 export const isAlly = (source: Entity | string, target: Entity | string) => {
+  if (typeof target !== "string") {
+    if (target.targetedAs?.includes("ally")) return true;
+    if (
+      target.targetedAs?.includes("enemy") ||
+      target.targetedAs?.includes("neutral")
+    ) return false;
+  }
   const sourcePlayer = typeof source === "string" ? source : source.owner;
   const sourceTeam = sourcePlayer ? getPlayerTeam(sourcePlayer) : "neutral";
   const targetPlayer = typeof target === "string" ? target : target.owner;
@@ -79,6 +132,13 @@ export const isAlly = (source: Entity | string, target: Entity | string) => {
 };
 
 export const isEnemy = (source: Entity | string, target: Entity | string) => {
+  if (typeof target !== "string") {
+    if (target.targetedAs?.includes("enemy")) return true;
+    if (
+      target.targetedAs?.includes("ally") ||
+      target.targetedAs?.includes("neutral")
+    ) return false;
+  }
   const sourcePlayer = typeof source === "string" ? source : source.owner;
   const sourceTeam = sourcePlayer ? getPlayerTeam(sourcePlayer) : "neutral";
   const targetPlayer = typeof target === "string" ? target : target.owner;
@@ -88,6 +148,13 @@ export const isEnemy = (source: Entity | string, target: Entity | string) => {
 };
 
 export const isNeutral = (source: Entity | string, target: Entity | string) => {
+  if (typeof target !== "string") {
+    if (target.targetedAs?.includes("neutral")) return true;
+    if (
+      target.targetedAs?.includes("ally") ||
+      target.targetedAs?.includes("enemy")
+    ) return false;
+  }
   const sourcePlayer = typeof source === "string" ? source : source.owner;
   const sourceTeam = sourcePlayer ? getPlayerTeam(sourcePlayer) : "neutral";
   if (sourceTeam === "neutral") return true;
@@ -96,12 +163,44 @@ export const isNeutral = (source: Entity | string, target: Entity | string) => {
   return targetTeam === "neutral";
 };
 
+const isOther = (source: Entity, target: Entity) => {
+  if (target.targetedAs?.includes("other")) return true;
+  if (target.targetedAs?.includes("self")) return false;
+  return source !== target;
+};
+
+const isSelf = (source: Entity, target: Entity) => {
+  if (target.targetedAs?.includes("self")) return true;
+  if (target.targetedAs?.includes("other")) return false;
+  return source === target;
+};
+
+const isStructure = (entity: Entity) => {
+  if (entity.targetedAs?.includes("structure")) return true;
+  if (entity.targetedAs?.includes("unit")) return false;
+  return !!entity.tilemap;
+};
+
+const isUnit = (entity: Entity) => {
+  if (entity.targetedAs?.includes("unit")) return true;
+  if (entity.targetedAs?.includes("structure")) return false;
+  return !entity.tilemap;
+};
+
+const isSpirit = (entity: Entity) => !!entity.targetedAs?.includes("spirit");
+
+const isNotSpirit = (entity: Entity) => {
+  if (entity.targetedAs?.includes("notSpirit")) return true;
+  if (entity.targetedAs?.includes("spirit")) return false;
+  return true;
+};
+
 export const testClassification = (
   source: Entity,
   target: Entity,
-  classifications: ReadonlyArray<Classification> | undefined,
-) => {
-  if (!classifications) return true;
+  classifications: ReadonlyArray<Classification> = [],
+): boolean => {
+  // if (!classifications?.length) return true;
   const groups = classifications.reduce(
     (groups, classification) => {
       const group = classificationToGroup[classification];
@@ -114,56 +213,79 @@ export const testClassification = (
     },
   );
 
-  for (const g in groups) {
+  for (const g in classificationGroups) {
     const group = g as ClassificationGroup;
     switch (group) {
       case "alliance":
         if (
-          !groups[group]!.some((classification) => {
-            switch (classification) {
-              case "ally":
-                return isAlly(source, target);
-              case "enemy":
-                return isEnemy(source, target);
-              case "neutral":
-                return isNeutral(source, target);
-              default:
-                throw absurd(classification);
-            }
-          })
+          !(groups[group] ?? defaultClassifications[group]).some(
+            (classification) => {
+              switch (classification) {
+                case "ally":
+                  return isAlly(source, target);
+                case "enemy":
+                  return isEnemy(source, target);
+                case "neutral":
+                  return isNeutral(source, target);
+                default:
+                  throw absurd(classification);
+              }
+            },
+          )
         ) return false;
         break;
       case "identity":
         if (
-          !groups[group].some((classification) => {
-            switch (classification) {
-              case "other":
-                return source !== target;
-              case "self":
-                return source === target;
-              default:
-                throw absurd(classification);
-            }
-          })
+          !(groups[group] ?? defaultClassifications[group]).some(
+            (classification) => {
+              switch (classification) {
+                case "other":
+                  return isOther(source, target);
+                case "self":
+                  return isSelf(source, target);
+                default:
+                  throw absurd(classification);
+              }
+            },
+          )
         ) return false;
         break;
       case "structureOrUnit":
         if (
-          !groups[group].some((classification) => {
-            switch (classification) {
-              case "structure":
-                return !!target.tilemap;
-              case "unit":
-                return !target.tilemap;
-              default:
-                throw absurd(classification);
-            }
-          })
+          !(groups[group] ?? defaultClassifications[group]).some(
+            (classification) => {
+              switch (classification) {
+                case "structure":
+                  return isStructure(target);
+                case "unit":
+                  return isUnit(target);
+                default:
+                  throw absurd(classification);
+              }
+            },
+          )
+        ) return false;
+        break;
+      case "spirit":
+        if (
+          !(groups[group] ?? defaultClassifications[group]).some(
+            (classification) => {
+              switch (classification) {
+                case "notSpirit":
+                  return isNotSpirit(target);
+                case "spirit":
+                  return isSpirit(target);
+                default:
+                  throw absurd(classification);
+              }
+            },
+          )
         ) return false;
         break;
       default:
         throw absurd(group);
     }
   }
+
   return true;
 };

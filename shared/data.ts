@@ -4,8 +4,20 @@ export const classificationGroups = {
   alliance: ["ally", "enemy", "neutral"],
   structureOrUnit: ["structure", "unit"],
   identity: ["self", "other"],
+  spirit: ["spirit", "notSpirit"],
 } as const;
+
 export type ClassificationGroup = keyof typeof classificationGroups;
+
+export const defaultClassifications = {
+  alliance: ["ally", "enemy", "neutral"],
+  structureOrUnit: ["structure", "unit"],
+  identity: ["self", "other"],
+  spirit: ["notSpirit"],
+} satisfies {
+  [K in ClassificationGroup]: typeof classificationGroups[K][number][];
+};
+
 export type Classification =
   typeof classificationGroups[ClassificationGroup][number];
 
@@ -24,10 +36,11 @@ const move: UnitDataAction = {
   name: "Move",
   type: "target",
   order: "move",
+  icon: "route",
   targeting: ["other"],
   aoe: 0,
   binding: ["KeyV"],
-  smart: { ground: 0, ally: 0 },
+  smart: { ground: 1, ally: 1 },
 };
 
 const stop: UnitDataAction = {
@@ -37,10 +50,19 @@ const stop: UnitDataAction = {
   binding: ["KeyZ"],
 };
 
+const hold: UnitDataAction = {
+  name: "Hold position",
+  type: "auto",
+  order: "hold",
+  icon: "suspend",
+  binding: ["KeyH"],
+};
+
 const back: UnitDataAction = {
   name: "Back",
   type: "auto",
   order: "back",
+  icon: "stop",
   binding: ["Backquote"],
 };
 
@@ -48,6 +70,7 @@ const selfDestruct: UnitDataAction = {
   name: "Self destruct",
   type: "auto",
   order: "selfDestruct",
+  icon: "collision",
   binding: ["KeyX"],
 };
 
@@ -106,6 +129,7 @@ export const items: Record<string, Item> = {
         "Increases attack speed by 10% and movement speed by 15% for 10 seconds.",
       type: "auto",
       order: "speedPot",
+      icon: "purplePotion",
       binding: ["KeyS"],
       buffDuration: 10,
       attackSpeedMultiplier: 1.1,
@@ -144,6 +168,7 @@ export const prefabs: Record<
     | "turnSpeed"
     | "radius"
     | "pathing"
+    | "requiresPathing"
     | "tilemap"
     | "requiresTilemap"
     | "attack"
@@ -160,6 +185,7 @@ export const prefabs: Record<
     | "completionTime"
     | "inventory"
     | "bounty"
+    | "targetedAs"
   >
 > = {
   sheep: {
@@ -212,7 +238,19 @@ export const prefabs: Record<
         name: "Destroy last farm",
         type: "auto",
         order: "destroyLastFarm",
+        icon: "collision",
         binding: ["KeyX"],
+      },
+      {
+        name: "Save",
+        type: "target",
+        icon: "sheep",
+        targeting: ["spirit"],
+        order: "save",
+        range: 0,
+        castDuration: 0.5,
+        smart: { spirit: 0 },
+        binding: ["KeyA"],
       },
     ],
     maxHealth: 20,
@@ -242,6 +280,7 @@ export const prefabs: Record<
         name: "Attack",
         type: "target",
         order: "attack",
+        icon: "claw",
         targeting: ["other"],
         aoe: 0,
         binding: ["KeyA"],
@@ -249,11 +288,12 @@ export const prefabs: Record<
       },
       move,
       stop,
-      { name: "Hold position", type: "auto", order: "hold", binding: ["KeyH"] },
+      hold,
       {
         name: "Mirror Image",
         type: "auto",
         order: "mirrorImage",
+        icon: "wolf",
         binding: ["KeyR"],
         manaCost: 20,
         castDuration: 0.5,
@@ -276,6 +316,19 @@ export const prefabs: Record<
         ],
       },
     ],
+    sounds: { what: ["growl1", "growl2", "growl4"], ackAttack: ["growl3"] },
+  },
+  spirit: {
+    name: "Spirit",
+    model: "sheep",
+    modelScale: 0.5,
+    movementSpeed: 1,
+    turnSpeed: 5,
+    radius: 0.125,
+    pathing: 8,
+    actions: [move, stop],
+    targetedAs: ["spirit"],
+    sounds: { what: ["spirit1", "spirit2", "spirit3"] },
   },
   fox: {
     name: "Fox",
@@ -296,6 +349,7 @@ export const prefabs: Record<
         name: "Attack",
         type: "target",
         order: "attack",
+        icon: "claw",
         targeting: ["other"],
         aoe: 0,
         binding: ["KeyA"],
@@ -303,7 +357,7 @@ export const prefabs: Record<
       },
       move,
       stop,
-      { name: "Hold position", type: "auto", order: "hold", binding: ["KeyH"] },
+      hold,
     ],
   },
   hut: {
@@ -382,7 +436,7 @@ export const prefabs: Record<
   },
   fence: {
     radius: 0.25,
-    tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
+    tilemap: { map: Array(4).fill(11), top: -1, left: -1, width: 2, height: 2 },
     isDoodad: true,
   },
   meteor: {

@@ -1,16 +1,16 @@
 # Convert from one format to another
 
-ffmpeg -i sheep1.wav -ac 1 -map 0:a -filter:a loudnorm sheep1.mp3
+ffmpeg -i sheep1.wav -ac 1 -map 0:a -filter:a loudnorm sheep1_format.mp3
 
 # Analyze peak/mean audio
 
-ffmpeg -i sheep1.mp3 -filter:a volumedetect -f null -
+ffmpeg -i sheep1_format.mp3 -filter:a volumedetect -f null -
 
 # Adjust loudness (target -10 to -15 db)
 
-ffmpeg -i sheep1.mp3 -filter:a "volume=-13dB" sheep1_balance.mp3
+ffmpeg -i sheep1_format.mp3 -filter:a "volume=-0dB" sheep1.mp3
 
 # Cut part
 
-ffmpeg -ss 00:00:00 -i sheep1_balance.mp3 -to 00:00:01 -c:a libmp3lame -q:a 2
+ffmpeg -ss 00:00:00 -i sheep1.mp3 -to 00:00:01 -c:a libmp3lame -q:a 2
 sheep1_cut.mp3

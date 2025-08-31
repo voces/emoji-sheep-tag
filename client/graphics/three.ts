@@ -52,7 +52,7 @@ terrain.position.z = -0.01;
 scene.add(terrain);
 for (let y = 0; y < tiles.length; y++) {
   for (let x = 0; x < tiles[y].length; x++) {
-    if (tiles[y][x]) {
+    if (tiles[y][x] === 6) {
       terrain.setColor(
         x,
         y,
