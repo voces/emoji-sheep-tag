@@ -37,16 +37,28 @@ jobs:
           path: |
             dist/.audio-cache.json
             dist/assets
-          key: audio-cache-v1-${{ hashFiles('client/assets/**/*', 'scripts/processSoundAssets.ts') }}
+          key: audio-cache-v2-${{ hashFiles('client/assets/**/*', 'scripts/processSoundAssets.ts') }}
           restore-keys: |
-            audio-cache-v1-${{ hashFiles('client/assets/**/*') }}-
-            audio-cache-v1-
+            audio-cache-v2-
 
       - name: Debug cache info
         run: |
           echo "Cache hit: ${{ steps.audio-cache.outputs.cache-hit }}"
+          echo "Cache primary key: ${{ steps.audio-cache.outputs.cache-primary-key }}"
+          echo "Cache matched key: ${{ steps.audio-cache.outputs.cache-matched-key }}"
           echo "Audio files hash: ${{ hashFiles('client/assets/**/*') }}"
           echo "Processing script hash: ${{ hashFiles('scripts/processSoundAssets.ts') }}"
+          if [ -f dist/.audio-cache.json ]; then
+            echo "Cache file exists"
+            echo "Number of cached entries: $(grep -c '"sourceHash"' dist/.audio-cache.json || echo 0)"
+          else
+            echo "Cache file does not exist"
+          fi
+          if [ -d dist/assets ]; then
+            echo "Assets directory exists with $(find dist/assets -type f | wc -l) files"
+          else
+            echo "Assets directory does not exist"
+          fi
 
       - name: Install FFmpeg
         if: steps.audio-cache.outputs.cache-hit != 'true'
@@ -54,6 +66,24 @@ jobs:
 
       - name: Run build
         run: deno run -A scripts/build.ts
+
+      - name: Post-build cache verification
+        if: always()
+        run: |
+          echo "=== Post-build cache verification ==="
+          if [ -f dist/.audio-cache.json ]; then
+            echo "Cache file exists with $(grep -c '"sourceHash"' dist/.audio-cache.json || echo 0) entries"
+            echo "Cache file size: $(du -h dist/.audio-cache.json | cut -f1)"
+          else
+            echo "WARNING: Cache file was not created!"
+          fi
+          if [ -d dist/assets ]; then
+            echo "Assets directory has $(find dist/assets -type f -name '*.opus' | wc -l) opus files"
+            echo "Assets directory has $(find dist/assets -type f -name '*.mp3' | wc -l) mp3 files"
+            echo "Total size: $(du -sh dist/assets | cut -f1)"
+          else
+            echo "WARNING: Assets directory was not created!"
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
