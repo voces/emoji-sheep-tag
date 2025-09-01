@@ -23,9 +23,7 @@ addSystem((app) => ({
 
     // Handle expiration effects after updating buffs
     for (const buff of expiringBuffs) {
-      if (buff.expiration) {
-        return queueMicrotask(() => app.removeEntity(entity));
-      }
+      if (buff.expiration) return app.enqueue(() => app.removeEntity(entity));
     }
   },
 }));

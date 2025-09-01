@@ -101,9 +101,14 @@ export const mirrorImageOrder = {
 
         // Get lifetime duration from the action definition
         const action = findActionByOrder(unit, "mirrorImage");
-        const lifetime = action?.type === "auto" ? action.buffDuration : undefined;
+        const lifetime = action?.type === "auto"
+          ? action.buffDuration
+          : undefined;
         if (lifetime) {
-          mirror.buffs = [{ remainingDuration: lifetime, expiration: "MirrorImage" }];
+          mirror.buffs = [{
+            remainingDuration: lifetime,
+            expiration: "MirrorImage",
+          }];
         }
 
         mirrors.push(mirror.id);

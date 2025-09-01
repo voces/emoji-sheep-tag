@@ -1,7 +1,6 @@
 import z from "npm:zod";
-import { Client } from "../client.ts";
+import { Client, getAllClients } from "../client.ts";
 import { send } from "../lobbyApi.ts";
-import { lobbyContext } from "../contexts.ts";
 import { generateUniqueName } from "../util/uniqueName.ts";
 
 export const zGenericEvent = z.object({
@@ -29,10 +28,9 @@ export const generic = (
     client.color = event.event.color;
     send({ type: "colorChange", id: client.id, color: event.event.color });
   } else if (event.event.type === "nameChange") {
-    const lobby = lobbyContext.current;
     const uniqueName = generateUniqueName(
       event.event.name,
-      lobby.players,
+      getAllClients(),
       client,
     );
     client.name = uniqueName;

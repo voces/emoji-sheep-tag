@@ -46,9 +46,14 @@ self.onconnect = (e) => {
     switch (data.type) {
       case "connect": {
         const id = data.id;
+        const name = data.name;
         const socket = createSocket(id, port);
         clients.set(id, { id, port, socket });
-        handleSocket(socket);
+        // Create a mock URL object with the name parameter for consistency
+        const mockUrl = name
+          ? new URL(`ws://local?name=${encodeURIComponent(name)}`)
+          : undefined;
+        handleSocket(socket, mockUrl);
         socket.dispatchEvent("open", undefined);
         break;
       }

@@ -19,6 +19,7 @@ import { purchase, zPurchase } from "./actions/purchase.ts";
 import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
 import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 import { appContext } from "@/shared/context.ts";
+import { generateUniqueName } from "./util/uniqueName.ts";
 
 export type SocketEventMap = {
   close: unknown;
@@ -60,6 +61,10 @@ const wrap = <T extends (...args: any[]) => unknown>(
 };
 
 let clientIndex = 0;
+
+const allClients = new Set<Client>();
+export const getAllClients = () => allClients;
+
 export class Client {
   id: string;
   name: string;
@@ -70,10 +75,16 @@ export class Client {
 
   sheepCount = 0;
 
-  constructor(readonly socket: Socket) {
+  constructor(readonly socket: Socket, providedName?: string) {
     this.color = colors[0];
     this.id = `player-${clientIndex++}`;
-    this.name = `Player ${clientIndex}`;
+    this.name = providedName || `Player ${clientIndex}`;
+
+    // Make name unique server-wide
+    this.name = generateUniqueName(this.name, allClients, this);
+
+    // Add to global client tracking
+    allClients.add(this);
   }
 
   send(message: ServerToClientMessage) {
@@ -125,8 +136,8 @@ const actions = {
   lobbySettings,
 };
 
-export const handleSocket = (socket: Socket) => {
-  const client = new Client(socket);
+export const handleSocket = (socket: Socket, url?: URL) => {
+  const client = new Client(socket, url?.searchParams.get("name") || undefined);
   console.log(new Date(), "Client", client.id, "connected");
 
   clientContext.with(client, () => {
@@ -236,5 +247,11 @@ export const handleSocket = (socket: Socket) => {
     }),
   );
 
-  socket.addEventListener("close", wrap(client, () => leave()));
+  socket.addEventListener(
+    "close",
+    wrap(client, () => {
+      leave();
+      allClients.delete(client);
+    }),
+  );
 };

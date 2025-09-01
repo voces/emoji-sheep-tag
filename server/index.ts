@@ -29,7 +29,7 @@ Deno.serve({
 
   if (req.headers.get("upgrade") === "websocket") {
     const { socket, response } = Deno.upgradeWebSocket(req);
-    handleSocket(socket);
+    handleSocket(socket, url);
     return response;
   }
 

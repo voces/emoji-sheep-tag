@@ -154,6 +154,8 @@ describe("join", () => {
   });
 
   it("clears entities when switching to lobby status", () => {
+    const defaultCount = app.entities.size;
+
     // First get into playing state with entities
     handlers.join({
       type: "join",
@@ -178,7 +180,7 @@ describe("join", () => {
       updates: [],
     });
 
-    expect(app.entities.size).toBe(0);
+    expect(app.entities.size).toBe(defaultCount);
     expect(Object.keys(map)).toHaveLength(0);
   });
 });
@@ -363,6 +365,8 @@ describe("start", () => {
 
 describe("stop", () => {
   it("returns to lobby and clears entities", () => {
+    const defaultCount = app.entities.size;
+
     // Setup game state first
     handlers.join({
       type: "join",
@@ -383,7 +387,7 @@ describe("stop", () => {
     });
 
     expect(stateVar()).toBe("lobby");
-    expect(app.entities.size).toBe(0);
+    expect(app.entities.size).toBe(defaultCount);
     expect(Object.keys(map)).toHaveLength(0);
   });
 

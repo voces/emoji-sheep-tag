@@ -4,7 +4,6 @@ import { addItem, newUnit } from "../api/unit.ts";
 import { unitOrder } from "./unitOrder.ts";
 import { advanceCast } from "../systems/action/advanceCast.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
-import { yieldUntil } from "@/server-testing/yieldUntil.ts";
 import { yieldFor } from "@/server-testing/yieldFor.ts";
 
 afterEach(cleanupTest);
@@ -96,7 +95,7 @@ describe("unitOrder fox item integration", () => {
     );
 
     // Wait for cast to complete
-    yield* yieldUntil(() => expect(wolf.order?.type).not.toBe("cast"));
+    yield* yieldFor(() => expect(wolf.order?.type).not.toBe("cast"));
 
     // Should have 1 charge remaining
     expect(wolf.inventory?.[0].charges).toBe(1);
@@ -112,7 +111,7 @@ describe("unitOrder fox item integration", () => {
     );
 
     // Should have no charges remaining - item removed
-    yield* yieldUntil(() => expect(wolf.inventory).toHaveLength(0));
+    yield* yieldFor(() => expect(wolf.inventory).toHaveLength(0));
   });
 
   it("should not allow other clients to use unit's fox item", {
@@ -160,7 +159,7 @@ describe("unitOrder fox item integration", () => {
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
 
     // Item should be consumed due to generalized charge logic
-    yield* yieldUntil(() => expect(wolf.inventory).toHaveLength(0));
+    yield* yieldFor(() => expect(wolf.inventory).toHaveLength(0));
   });
 });
 
@@ -581,11 +580,10 @@ describe("unitOrder timed entities", () => {
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
 
     // Wait for cast to complete and fox to be spawned
-    yield* yieldUntil(() => {
+    yield* yieldFor(() => {
       const entities = Array.from(ecs.entities);
       const foxes = entities.filter((e) => e.prefab === "fox");
       expect(foxes.length).toBe(1);
-      return foxes.length === 1;
     });
 
     // Check that fox has the correct buff duration (150 seconds from action definition)
@@ -610,19 +608,21 @@ describe("unitOrder timed entities", () => {
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
 
     // Wait for cast to complete first
-    yield* yieldUntil(() => wolf.order?.type !== "cast");
-
-    // Wait for fox to be created and verify it exists
-    yield* yieldUntil(() => {
-      const entities = Array.from(ecs.entities);
-      const foxes = entities.filter((e) => e.prefab === "fox");
-      return foxes.length === 1 && foxes[0].buffs && foxes[0].buffs.length > 0;
+    yield* yieldFor(() => {
+      if (wolf.order?.type === "cast") throw new Error("Still casting");
     });
 
-    // Get the fox
-    let entities = Array.from(ecs.entities);
-    const fox = entities.find((e) => e.prefab === "fox")!;
-    const foxId = fox.id;
+    // Wait for fox to be created and verify it exists
+    const fox = yield* yieldFor(() => {
+      const entities = Array.from(ecs.entities);
+      const foxes = entities.filter((e) => e.prefab === "fox");
+      if (
+        !(foxes.length === 1 && foxes[0].buffs && foxes[0].buffs.length > 0)
+      ) {
+        throw new Error("Fox not yet created with buffs");
+      }
+      return foxes[0];
+    });
 
     // Verify fox has timed life buff
     expect(fox.buffs).toBeDefined();
@@ -636,8 +636,8 @@ describe("unitOrder timed entities", () => {
     yield* yieldFor(0.2);
 
     // Verify fox was removed
-    entities = Array.from(ecs.entities);
-    expect(entities.find((e) => e.id === foxId)).toBeUndefined();
+    expect(Array.from(ecs.entities).find((e) => e.id === fox.id))
+      .toBeUndefined();
   });
 
   it("should create mirror images with buff duration from action definition", {
@@ -656,20 +656,19 @@ describe("unitOrder timed entities", () => {
     });
 
     // Wait for cast to complete first
-    yield* yieldUntil(() => wolf.order?.type !== "cast");
+    yield* yieldFor(() => {
+      if (wolf.order?.type === "cast") throw new Error("Still casting");
+    });
 
     // Wait for mirrors to be created
-    yield* yieldUntil(() => {
+    const mirrors = yield* yieldFor(() => {
       const entities = Array.from(ecs.entities);
       const mirrors = entities.filter((e) => e.isMirror === true);
       expect(mirrors.length).toBe(1);
-      return mirrors.length === 1;
+      return mirrors;
     });
 
     // Check that mirror has the correct buff duration (45 seconds from action definition)
-    const entities = Array.from(ecs.entities);
-    const mirrors = entities.filter((e) => e.isMirror === true);
-
     for (const mirror of mirrors) {
       expect(mirror.buffs).toBeDefined();
       expect(mirror.buffs!.length).toBe(1);
@@ -694,19 +693,24 @@ describe("unitOrder timed entities", () => {
     });
 
     // Wait for cast to complete first
-    yield* yieldUntil(() => wolf.order?.type !== "cast");
+    yield* yieldFor(() => {
+      if (wolf.order?.type === "cast") throw new Error("Still casting");
+    });
 
     // Wait for mirrors to be created and verify they have buffs
-    yield* yieldUntil(() => {
+    const mirrors = yield* yieldFor(() => {
       const entities = Array.from(ecs.entities);
       const mirrors = entities.filter((e) => e.isMirror === true);
-      return mirrors.length === 1 && mirrors[0].buffs &&
-        mirrors[0].buffs.length > 0;
+      if (
+        !(mirrors.length === 1 && mirrors[0].buffs &&
+          mirrors[0].buffs.length > 0)
+      ) {
+        throw new Error("Mirror not yet created with buffs");
+      }
+      return mirrors;
     });
 
     // Get the mirror
-    let entities = Array.from(ecs.entities);
-    const mirrors = entities.filter((e) => e.isMirror === true);
     const mirror = mirrors[0];
     const mirrorId = mirror.id;
 
@@ -722,7 +726,7 @@ describe("unitOrder timed entities", () => {
     yield* yieldFor(0.2);
 
     // Verify mirror was removed
-    entities = Array.from(ecs.entities);
+    const entities = Array.from(ecs.entities);
     expect(entities.find((e) => e.id === mirrorId)).toBeUndefined();
     expect(entities.filter((e) => e.isMirror === true)).toHaveLength(0);
   });
@@ -766,7 +770,7 @@ describe("unitOrder generalized charge system", () => {
     yield;
 
     // Should have consumed fox item charge (it had 1 charge, should be removed)
-    yield* yieldUntil(() =>
+    yield* yieldFor(() =>
       expect(wolf.inventory!.filter((i) => i.id === "foxItem")).toHaveLength(0)
     );
 
@@ -829,7 +833,7 @@ describe("unitOrder generalized charge system", () => {
     unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
 
     // Item should be completely removed when charges reach 0
-    yield* yieldUntil(() => expect(wolf.inventory).toHaveLength(0));
+    yield* yieldFor(() => expect(wolf.inventory).toHaveLength(0));
   });
 
   it("should not consume charges for non-item actions", {

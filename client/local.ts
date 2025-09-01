@@ -54,8 +54,10 @@ export class LocalWebSocket {
   private id: number;
   private openTimeout: number | undefined;
   private initTimeout: number | undefined;
+  private name: string | undefined;
 
-  constructor() {
+  constructor(name?: string) {
+    this.name = name;
     initChannel();
     this.id = Math.random();
 
@@ -77,7 +79,7 @@ export class LocalWebSocket {
   private initializePort() {
     this.port = worker!.port;
     this.port.addEventListener("message", (e) => this.onMessage(e));
-    this.port.postMessage({ type: "connect", id: this.id });
+    this.port.postMessage({ type: "connect", id: this.id, name: this.name });
 
     this.openTimeout = setTimeout(() => {
       this.openTimeout = undefined;

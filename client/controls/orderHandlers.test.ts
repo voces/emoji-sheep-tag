@@ -1,14 +1,21 @@
-import "npm:global-jsdom/register";
+import "@/client-testing/integration-setup.ts";
+import { setCurrentTestFile } from "@/client-testing/integration-setup.ts";
+
+// Set the current test file name for deterministic port assignment
+setCurrentTestFile("orderHandlers.test.ts");
 import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
+import { waitFor } from "npm:@testing-library/react";
 import { app, Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { playersVar } from "@/vars/players.ts";
 import { connect, setServer } from "../connection.ts";
+import { connectionStatusVar } from "../ui/vars/state.ts";
 import {
   clearTestServerMessages,
   getTestServerMessages,
-} from "@/client-testing/setup.ts";
+  getTestServerPort,
+} from "@/client-testing/integration-setup.ts";
 import { MouseButtonEvent } from "../mouse.ts";
 import { Vector2 } from "three";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
@@ -110,11 +117,15 @@ describe("order handlers", () => {
       }]);
 
       clearTestServerMessages();
-      setServer("localhost:8888");
+      setServer(`localhost:${getTestServerPort()}`);
       connect();
 
       // Wait for connection to establish
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => {
+        if (connectionStatusVar() !== "connected") {
+          throw new Error("Not connected yet");
+        }
+      }, { timeout: 3000, interval: 10 });
     });
 
     it("should issue move order when right-clicking on ground with wolf", async () => {
@@ -163,7 +174,12 @@ describe("order handlers", () => {
       expect(result).toBe(true);
 
       // Wait for message to arrive at test server
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+      }, { interval: 10 });
 
       const messages = getTestServerMessages();
       expect(messages).toHaveLength(1);
@@ -224,7 +240,12 @@ describe("order handlers", () => {
       expect(result).toBe(true);
 
       // Wait for message to arrive at test server
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+      }, { interval: 10 });
 
       const messages = getTestServerMessages();
       expect(messages).toHaveLength(1);
@@ -284,7 +305,12 @@ describe("order handlers", () => {
       expect(result).toBe(true);
 
       // Wait for message to arrive at test server
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+      }, { interval: 10 });
 
       const messages = getTestServerMessages();
       expect(messages).toHaveLength(1);

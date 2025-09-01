@@ -4,7 +4,7 @@ import { LocalWebSocket } from "./local.ts";
 import { getStoredPlayerName } from "./util/playerPrefs.ts";
 import { handlers } from "./messageHandlers.ts";
 import { type ServerToClientMessage, zMessage } from "./schemas.ts";
-import { send } from "./messaging.ts";
+import { send as _send } from "./messaging.ts";
 
 let ws: WebSocket | LocalWebSocket | undefined;
 let reconnectTimeout: number | undefined;
@@ -35,10 +35,16 @@ export const connect = () => {
   // Reset user stop flag when manually connecting
   userStoppedReconnecting = false;
 
+  // Get stored name for initial connection
+  const storedName = getStoredPlayerName();
+  const nameParam = storedName ? `?name=${encodeURIComponent(storedName)}` : "";
+
   // Use LocalWebSocket for offline mode, regular WebSocket otherwise
-  ws = server === "local" ? new LocalWebSocket() : new WebSocket(
-    `ws${location?.protocol === "https:" ? "s" : ""}://${server}`,
-  );
+  ws = server === "local"
+    ? new LocalWebSocket(storedName || undefined)
+    : new WebSocket(
+      `ws${location?.protocol === "https:" ? "s" : ""}://${server}${nameParam}`,
+    );
 
   ws.addEventListener("close", () => {
     ws = undefined;
@@ -55,14 +61,6 @@ export const connect = () => {
 
   ws.addEventListener("open", () => {
     connectionStatusVar("connected");
-    // Send stored name if available
-    const storedName = getStoredPlayerName();
-    if (storedName) {
-      send({
-        type: "generic",
-        event: { type: "nameChange", name: storedName },
-      });
-    }
   });
 
   ws.addEventListener("message", (e) => {

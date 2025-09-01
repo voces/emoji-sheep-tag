@@ -1,4 +1,4 @@
-import "npm:global-jsdom/register";
+import "@/client-testing/setup.ts";
 import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
 import { app, Entity, SystemEntity } from "../ecs.ts";
@@ -28,9 +28,6 @@ describe("selection handlers", () => {
       sheepCount: 0,
       entity: { id: "player-entity-1", gold: 100 },
     }]);
-
-    // Clear existing entities from app
-    for (const entity of app.entities) app.removeEntity(entity);
 
     // Clear selection
     for (const entity of selection) delete (entity as Entity).selected;

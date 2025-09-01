@@ -1,22 +1,33 @@
-import "@/client-testing/setup.ts";
+import "@/client-testing/integration-setup.ts";
+import { setCurrentTestFile } from "@/client-testing/integration-setup.ts";
+
+// Set the current test file name for deterministic port assignment
+setCurrentTestFile("messaging.test.ts");
 import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
+import { waitFor } from "npm:@testing-library/react";
 import { send } from "./messaging.ts";
 import { connect, setServer } from "./connection.ts";
 import {
   clearTestServerMessages,
   getTestServerMessages,
-} from "@/client-testing/setup.ts";
+  getTestServerPort,
+} from "@/client-testing/integration-setup.ts";
 import type { ClientToServerMessage } from "../server/client.ts";
+import { connectionStatusVar } from "./ui/vars/state.ts";
 
 describe("messaging.ts", () => {
   beforeEach(async () => {
     clearTestServerMessages();
-    setServer("localhost:8888");
+    setServer(`localhost:${getTestServerPort()}`);
     connect();
 
     // Wait for connection to establish
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await waitFor(() => {
+      if (connectionStatusVar() !== "connected") {
+        throw new Error(`Not connected yet, status: ${connectionStatusVar()}`);
+      }
+    }, { timeout: 3000, interval: 10 });
   });
 
   describe("send function with WebSocket", () => {
@@ -29,11 +40,14 @@ describe("messaging.ts", () => {
       send(message);
 
       // Wait for message to arrive at server
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      const messages = getTestServerMessages();
-      expect(messages).toHaveLength(1);
-      expect(messages[0]).toEqual(message);
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toEqual(message);
+      }, { interval: 10 });
     });
 
     it("should handle complex message types", async () => {
@@ -45,10 +59,13 @@ describe("messaging.ts", () => {
       send(complexMessage);
 
       // Wait for message to arrive at server
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      const messages = getTestServerMessages();
-      expect(messages[0]).toEqual(complexMessage);
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+        expect(messages[0]).toEqual(complexMessage);
+      }, { interval: 10 });
     });
   });
 
