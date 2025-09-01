@@ -194,10 +194,7 @@ export const handleSocket = (socket: Socket) => {
           }),
         ),
         format: computeDesiredFormat(client.lobby),
-        updates: Array.from(
-          client.lobby.round?.ecs.entities ?? [],
-          (e) => ({ type: "unit", ...e }),
-        ),
+        updates: Array.from(client.lobby.round?.ecs.entities ?? []),
         rounds: client.lobby.rounds,
         lobbySettings: {
           startingGold: client.lobby.settings.startingGold,

@@ -2,6 +2,7 @@ import { App, newApp, SystemEntity as ECSSystemEntity } from "jsr:@verit/ecs";
 import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "@/shared/types.ts";
 import { appContext, initApp } from "@/shared/context.ts";
+import { generateDoodads } from "@/shared/map.ts";
 
 export type Entity = CommonEntity & {
   selected?: boolean;
@@ -86,4 +87,7 @@ export const map: Record<string, Entity> = {};
 export const unloadEcs = () => {
   for (const entity of app.entities) app.removeEntity(entity);
   for (const key in map) delete map[key];
+  generateDoodads(app);
 };
+
+generateDoodads(app);

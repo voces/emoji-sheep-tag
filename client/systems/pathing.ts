@@ -22,23 +22,3 @@ app.addSystem({
   onChange: (e) => !e.blueprint && pathingMap.updateEntity(e),
   onRemove: (e) => pathingMap.removeEntity(e),
 });
-
-const floor = Math.floor;
-
-export const checkNearPathing = (
-  x: number,
-  y: number,
-  near: number,
-  pathing: number,
-) => {
-  if (tiles[floor(y)]?.[floor(x)] ?? 6 & pathing) return true;
-  if (tiles[floor(y + near)]?.[floor(x)] ?? 6 & pathing) return true;
-  if (tiles[floor(y - near)]?.[floor(x)] ?? 6 & pathing) return true;
-  if (tiles[floor(y)]?.[floor(x + near)] ?? 6 & pathing) return true;
-  if (tiles[floor(y + near)]?.[floor(x + near)] ?? 6 & pathing) return true;
-  if (tiles[floor(y - near)]?.[floor(x + near)] ?? 6 & pathing) return true;
-  if (tiles[floor(y)]?.[floor(x - near)] ?? 6 & pathing) return true;
-  if (tiles[floor(y + near)]?.[floor(x - near)] ?? 6 & pathing) return true;
-  if (tiles[floor(y - near)]?.[floor(x - near)] ?? 6 & pathing) return true;
-  return false;
-};

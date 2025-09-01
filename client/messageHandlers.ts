@@ -2,7 +2,7 @@ import { playersVar } from "@/vars/players.ts";
 import { stateVar } from "@/vars/state.ts";
 import { app, map, unloadEcs } from "./ecs.ts";
 import { camera } from "./graphics/three.ts";
-import { center, tiles } from "@/shared/map.ts";
+import { center } from "@/shared/map.ts";
 import { stats } from "./util/Stats.ts";
 import { data } from "./data.ts";
 import { addChatMessage } from "@/vars/chat.ts";
@@ -11,7 +11,6 @@ import { formatVar } from "@/vars/format.ts";
 import { format } from "./api/player.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import type { ServerToClientMessage } from "./schemas.ts";
-import { checkNearPathing } from "./systems/pathing.ts";
 
 export const handlers = {
   join: (data: Extract<ServerToClientMessage, { type: "join" }>) => {
@@ -38,10 +37,7 @@ export const handlers = {
       } ${newPlayers.length > 1 ? "have" : "has"} joined the game!`);
     }
     stateVar(data.status);
-    if (data.status === "lobby") {
-      for (const entity of app.entities) app.removeEntity(entity);
-      for (const key in map) delete map[key];
-    }
+    if (data.status === "lobby") unloadEcs();
     for (const update of data.updates) {
       if (update.id in map) Object.assign(map[update.id], update);
       else map[update.id] = app.addEntity(update);
@@ -75,38 +71,6 @@ export const handlers = {
     stateVar("playing");
     camera.position.x = center.x;
     camera.position.y = center.y;
-    for (let i = 0; i < tiles[0].length * tiles.length / 3; i++) {
-      const x = Math.random() * tiles[0].length;
-      const y = Math.random() * tiles.length;
-      const r = Math.round(37 + (Math.random() - 0.5) * 30);
-      const g = Math.round(102 + (Math.random() - 0.5) * 45);
-      if (checkNearPathing(x, y, 0.25, 255)) continue;
-      app.addEntity({
-        id: `grass-${crypto.randomUUID()}`,
-        prefab: "grass",
-        position: { x, y },
-        playerColor: `#${r.toString(16)}${g.toString(16)}00`,
-        facing: Math.round(Math.random()) * Math.PI,
-      });
-    }
-    for (let i = 0; i < tiles[0].length * tiles.length / 20; i++) {
-      const x = Math.random() * tiles[0].length;
-      const y = Math.random() * tiles.length;
-      if (checkNearPathing(x, y, 0.25, 255)) continue;
-      const r = Math.random();
-      const g = Math.random();
-      const b = Math.random();
-      const scale = Math.min(1 / r, 1 / g, 1 / b) * 255;
-      app.addEntity({
-        id: `flowers-${crypto.randomUUID()}`,
-        prefab: "flowers",
-        position: { x, y },
-        playerColor: `#${Math.floor(r * scale).toString(16).padStart(2, "0")}${
-          Math.floor(g * scale).toString(16).padStart(2, "0")
-        }${Math.floor(b * scale).toString(16).padStart(2, "0")}`,
-        facing: Math.round(Math.random()) * Math.PI,
-      });
-    }
   },
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");

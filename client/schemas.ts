@@ -1,5 +1,6 @@
 import z from "npm:zod";
 import { zTeam } from "@/shared/zod.ts";
+import { Entity } from "@/shared/types.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() }).readonly();
 
@@ -40,6 +41,7 @@ const zOrder = z.union([
     remaining: z.number(),
     positions: z.array(zPoint).readonly().optional(),
     target: zPoint.optional(),
+    targetId: z.string().optional(),
     path: zPoint.array().readonly().optional(),
     started: z.boolean().optional(),
   }),
@@ -256,7 +258,7 @@ const zUpdate = z.object({
     ]),
     z.array(z.string()).readonly(),
   ).optional(),
-}).strict();
+}).strict() satisfies z.ZodType<Entity>;
 
 // Events that come down from a loo
 const zUpdates = z.object({

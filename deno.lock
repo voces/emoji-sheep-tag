@@ -35,6 +35,7 @@
     "npm:@types/react@*": "19.1.9",
     "npm:esbuild@*": "0.25.8",
     "npm:global-jsdom@*": "26.0.0_jsdom@26.1.0",
+    "npm:pure-rand@*": "7.0.1",
     "npm:react-dom@*": "19.1.1_react@19.1.1",
     "npm:react@*": "19.1.1",
     "npm:styled-components@*": "6.1.19_react@19.1.1_react-dom@19.1.1__react@19.1.1",
@@ -592,6 +593,9 @@
     },
     "punycode@2.3.1": {
       "integrity": "sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg=="
+    },
+    "pure-rand@7.0.1": {
+      "integrity": "sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ=="
     },
     "react-dom@19.1.1_react@19.1.1": {
       "integrity": "sha512-Dlq/5LAZgF0Gaz6yiqZCf6VCcZs1ghAJyrsu84Q/GT0gV+mCxbfmKNoGRKBYMJ8IEdGPqu49YWXD02GCknEDkw==",

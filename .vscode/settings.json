@@ -10,6 +10,8 @@
     "Backquote",
     "pathable",
     "pathing",
+    "prand",
+    "regen",
     "svgs",
     "tilemap",
     "tweening"

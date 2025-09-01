@@ -1,4 +1,6 @@
+import { App } from "jsr:@verit/ecs";
 import { Entity } from "./types.ts";
+import { prand } from "./util/prand.ts";
 
 export const tiles = `
                            
@@ -60,4 +62,60 @@ export const initEntities: Record<string, Partial<Entity>[]> = {
     { position: { x: 11.25, y: 14.25 } },
     { position: { x: 11.25, y: 13.75 } },
   ],
+};
+
+const floor = Math.floor;
+
+const checkNearPathing = (
+  x: number,
+  y: number,
+  near: number,
+  pathing: number,
+) => {
+  if (tiles[floor(y)]?.[floor(x)] ?? 6 & pathing) return true;
+  if (tiles[floor(y + near)]?.[floor(x)] ?? 6 & pathing) return true;
+  if (tiles[floor(y - near)]?.[floor(x)] ?? 6 & pathing) return true;
+  if (tiles[floor(y)]?.[floor(x + near)] ?? 6 & pathing) return true;
+  if (tiles[floor(y + near)]?.[floor(x + near)] ?? 6 & pathing) return true;
+  if (tiles[floor(y - near)]?.[floor(x + near)] ?? 6 & pathing) return true;
+  if (tiles[floor(y)]?.[floor(x - near)] ?? 6 & pathing) return true;
+  if (tiles[floor(y + near)]?.[floor(x - near)] ?? 6 & pathing) return true;
+  if (tiles[floor(y - near)]?.[floor(x - near)] ?? 6 & pathing) return true;
+  return false;
+};
+
+export const generateDoodads = (app: App<Entity>) => {
+  const rng = prand(13784838577);
+  for (let i = 0; i < tiles[0].length * tiles.length / 3; i++) {
+    const x = rng() * tiles[0].length;
+    const y = rng() * tiles.length;
+    const r = Math.round(37 + (rng() - 0.5) * 30);
+    const g = Math.round(102 + (rng() - 0.5) * 45);
+    if (checkNearPathing(x, y, 0.25, 255)) continue;
+    app.addEntity({
+      id: `grass-${crypto.randomUUID()}`,
+      prefab: "grass",
+      position: { x, y },
+      playerColor: `#${r.toString(16)}${g.toString(16)}00`,
+      facing: Math.round(rng()) * Math.PI,
+    });
+  }
+  for (let i = 0; i < tiles[0].length * tiles.length / 20; i++) {
+    const x = rng() * tiles[0].length;
+    const y = rng() * tiles.length;
+    if (checkNearPathing(x, y, 0.25, 255)) continue;
+    const r = rng();
+    const g = rng();
+    const b = rng();
+    const scale = Math.min(1 / r, 1 / g, 1 / b) * 255;
+    app.addEntity({
+      id: `flowers-${crypto.randomUUID()}`,
+      prefab: "flowers",
+      position: { x, y },
+      playerColor: `#${Math.floor(r * scale).toString(16).padStart(2, "0")}${
+        Math.floor(g * scale).toString(16).padStart(2, "0")
+      }${Math.floor(b * scale).toString(16).padStart(2, "0")}`,
+      facing: Math.round(rng()) * Math.PI,
+    });
+  }
 };
