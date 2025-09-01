@@ -8,10 +8,10 @@ export type AudioSettings = {
 };
 
 const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
-  master: 0.7,
-  sfx: 0.8,
-  ui: 0.6,
-  ambience: 0.4,
+  master: 1,
+  sfx: 1,
+  ui: 1,
+  ambience: 1,
 };
 
 const AUDIO_SETTINGS_KEY = "emoji-sheep-tag-audio-settings";
