@@ -2,8 +2,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { styled } from "npm:styled-components";
 import { send } from "../../client.ts";
-import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
+import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
 import { useMemoWithPrevious } from "@/hooks/useMemoWithPrevious.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { stateVar } from "@/vars/state.ts";
@@ -53,10 +54,6 @@ const Highlight = styled.span`
     ${({ theme }) => theme.colors.primary}
   );
 `;
-
-export const showCommandPaletteVar = makeVar<
-  "closed" | "open" | "sent" | "dismissed"
->("closed");
 
 type Command = {
   name: string;
@@ -254,7 +251,10 @@ export const CommandPalette = () => {
   }, [showCommandPalette]);
 
   return (
-    <PaletteContainer $state={showCommandPalette}>
+    <PaletteContainer
+      $state={showCommandPalette}
+      aria-hidden={showCommandPalette !== "open"}
+    >
       <Input
         placeholder={prompt}
         value={input}

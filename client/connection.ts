@@ -10,6 +10,7 @@ let ws: WebSocket | LocalWebSocket | undefined;
 let reconnectTimeout: number | undefined;
 const delayTimeouts: Set<number> = new Set();
 let testCleanupMode = false;
+let userStoppedReconnecting = false;
 
 const delay = (fn: () => void) => {
   if (typeof latency !== "number" && typeof noise !== "number") {
@@ -31,12 +32,19 @@ export const setServer = (value: string) => server = value;
 export const connect = () => {
   if (ws) return;
 
+  // Reset user stop flag when manually connecting
+  userStoppedReconnecting = false;
+
   // Use LocalWebSocket for offline mode, regular WebSocket otherwise
   ws = server === "local" ? new LocalWebSocket() : new WebSocket(
     `ws${location?.protocol === "https:" ? "s" : ""}://${server}`,
   );
 
   ws.addEventListener("close", () => {
+    ws = undefined;
+
+    if (userStoppedReconnecting) return;
+
     connectionStatusVar("disconnected");
     ws = undefined;
     // Auto-reconnect unless in test environment or during test cleanup
@@ -76,6 +84,14 @@ export const connect = () => {
 
 export const getWebSocket = () =>
   ws as { readyState: number; send: (data: string) => void } | undefined;
+
+export const stopReconnecting = () => {
+  userStoppedReconnecting = true;
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = undefined;
+  }
+};
 
 // Test utility to reset connection state
 export const resetConnection = () => {

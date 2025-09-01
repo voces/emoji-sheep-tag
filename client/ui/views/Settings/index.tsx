@@ -72,8 +72,9 @@ const Header = styled.h1`
 `;
 
 const CloseButton = styled(Button)`
-  padding: 0 ${({ theme }) => theme.spacing.xl};
+  padding: 0 ${({ theme }) => theme.spacing.md};
   margin-right: ${({ theme }) => theme.spacing.lg};
+  font-weight: 800;
 `;
 
 export const Settings = () => {
@@ -92,8 +93,9 @@ export const Settings = () => {
           <CloseButton
             type="button"
             onClick={() => showSettingsVar(false)}
+            title="Close settings"
           >
-            Close
+            ✕
           </CloseButton>
         </SettingsHeader>
         <SettingsContent>

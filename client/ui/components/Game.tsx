@@ -70,40 +70,6 @@ export const ChatOverlay = styled.div`
       }
     `;
 
-    export const CommandPalette = styled.div`
-      position: absolute;
-      top: 20px;
-      width: 400px;
-      left: calc(50% - 200px);
-      opacity: 0;
-      transition: all 100ms ease-in-out;
-      pointer-events: none;
-
-      &.open {
-        opacity: 1;
-        pointer-events: initial;
-      }
-
-      > div.hover,
-      > div:has(.hover) {
-        background-color: ${({ theme }) => theme.colors.shadow};
-        margin: 0 - ${({ theme }) => theme.spacing.lg};
-        padding: 0 ${({ theme }) => theme.spacing.lg};
-      }
-
-      > div > div:nth-of-type(2) {
-        font-size: 70%;
-        color: color-mix(in oklab, ${({ theme }) =>
-          theme.colors.body} 70%, transparent);
-      }
-
-      .focused {
-        background-color: ${({ theme }) => theme.colors.shadow};
-        margin: 0 - ${({ theme }) => theme.spacing.lg};
-        padding: 0 ${({ theme }) => theme.spacing.lg};
-      }
-    `;
-
     export const Highlight = styled.span`
       color: color-mix(
         in oklab,

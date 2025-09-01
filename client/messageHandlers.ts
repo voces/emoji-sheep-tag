@@ -1,6 +1,6 @@
 import { playersVar } from "@/vars/players.ts";
 import { stateVar } from "@/vars/state.ts";
-import { app, map } from "./ecs.ts";
+import { app, map, unloadEcs } from "./ecs.ts";
 import { camera } from "./graphics/three.ts";
 import { center, tiles } from "@/shared/map.ts";
 import { stats } from "./util/Stats.ts";
@@ -110,8 +110,7 @@ export const handlers = {
   },
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");
-    for (const entity of app.entities) app.removeEntity(entity);
-    for (const key in map) delete map[key];
+    unloadEcs();
     if (d.players) {
       playersVar((players) =>
         players.map((p) => {

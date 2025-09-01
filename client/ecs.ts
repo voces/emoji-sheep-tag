@@ -82,3 +82,8 @@ queueMicrotask(() => initApp(app));
 onRender((delta, time) => app.update(delta, time));
 
 export const map: Record<string, Entity> = {};
+
+export const unloadEcs = () => {
+  for (const entity of app.entities) app.removeEntity(entity);
+  for (const key in map) delete map[key];
+};

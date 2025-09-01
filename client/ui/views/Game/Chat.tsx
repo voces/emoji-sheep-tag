@@ -1,14 +1,11 @@
 //@deno-types="npm:@types/react"
 import { useEffect, useRef } from "react";
 import { styled } from "npm:styled-components";
-import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { send } from "../../../client.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";
 import { chatLogVar, chatValueVar } from "@/vars/chat.ts";
-
-export const showChatBoxVar = makeVar<"closed" | "open" | "sent" | "dismissed">(
-  "closed",
-);
+import { showChatBoxVar } from "@/vars/showChatBox.ts";
 
 const ChatContainer = styled.div`
   position: absolute;

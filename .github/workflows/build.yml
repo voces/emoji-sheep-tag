@@ -37,10 +37,16 @@ jobs:
           path: |
             dist/.audio-cache.json
             dist/assets
-          key: audio-cache-${{ hashFiles('client/assets/**/*') }}-${{ hashFiles('scripts/processSoundAssets.ts') }}
+          key: audio-cache-v1-${{ hashFiles('client/assets/**/*', 'scripts/processSoundAssets.ts') }}
           restore-keys: |
-            audio-cache-${{ hashFiles('client/assets/**/*') }}-
-            audio-cache-
+            audio-cache-v1-${{ hashFiles('client/assets/**/*') }}-
+            audio-cache-v1-
+
+      - name: Debug cache info
+        run: |
+          echo "Cache hit: ${{ steps.audio-cache.outputs.cache-hit }}"
+          echo "Audio files hash: ${{ hashFiles('client/assets/**/*') }}"
+          echo "Processing script hash: ${{ hashFiles('scripts/processSoundAssets.ts') }}"
 
       - name: Install FFmpeg
         if: steps.audio-cache.outputs.cache-hit != 'true'
