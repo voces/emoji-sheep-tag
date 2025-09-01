@@ -64,10 +64,6 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
   const cachePath = join(cfg.outputDir, cfg.cacheFileName);
   const cache = await loadCache(cachePath);
 
-  // Find FFmpeg executable
-  const { ffmpegPath, haveFfprobe } = await findFFmpeg(cfg);
-  const runner = makeCliRunner(ffmpegPath);
-
   const files: string[] = [];
   for await (
     const entry of walk(cfg.inputDir, {
@@ -78,11 +74,10 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
     const ext = extname(entry.path).toLowerCase();
     if (AUDIO_EXTS.has(ext)) files.push(entry.path);
   }
-  if (cfg.verbose) {
-    console.log(`Audio: ${files.length} file(s). Using native ffmpeg`);
-  }
 
   let encoded = 0, skipped = 0;
+  let ffmpegPath: string | null = null;
+  let runner: Runner | null = null;
 
   // Get number of CPU cores for concurrency limit (Deno doesn't have a direct API for this)
   // Use a reasonable default based on typical systems
@@ -96,13 +91,6 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
 
     // classify
     let category = guessCategoryByPath(rel);
-    let durationSec: number | null = null;
-    if (haveFfprobe) {
-      durationSec = await probeDuration(abs).catch(() => null);
-    }
-    if (!category && durationSec != null) {
-      category = durationSec >= cfg.longThresholdSec ? "music" : "sfx";
-    }
     if (!category) category = "sfx";
 
     const optionsHash = await sha256String(JSON.stringify({
@@ -131,6 +119,18 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
       skipped++;
       if (cfg.verbose) console.log(`SKIP ${rel}`);
       return;
+    }
+
+    // Lazy initialize ffmpeg only when we need to encode a file
+    if (!runner) {
+      const ffmpegInfo = await findFFmpeg(cfg);
+      ffmpegPath = ffmpegInfo.ffmpegPath;
+      runner = makeCliRunner(ffmpegPath);
+      if (cfg.verbose) {
+        console.log(
+          `Audio: ${files.length} file(s). Using ffmpeg at ${ffmpegPath}`,
+        );
+      }
     }
 
     // ensure output dir
@@ -399,28 +399,6 @@ async function encodeOne(
   ];
   if (verbose) console.log(`ffmpeg ${args.join(" ")}`);
   await runner.runOnDisk(args);
-}
-
-async function probeDuration(file: string): Promise<number> {
-  const cmd = new Deno.Command("ffprobe", {
-    args: [
-      "-v",
-      "error",
-      "-show_entries",
-      "format=duration",
-      "-of",
-      "default=nk=1:nw=1",
-      file,
-    ],
-    stdout: "piped",
-    stderr: "null",
-  });
-  const { code, stdout } = await cmd.output();
-  if (code !== 0) throw new Error("ffprobe failed");
-  const txt = new TextDecoder().decode(stdout).trim();
-  const num = Number(txt);
-  if (!isFinite(num)) throw new Error("invalid duration");
-  return num;
 }
 
 async function isCmdAvailable(cmd: string): Promise<boolean> {
