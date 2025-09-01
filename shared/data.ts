@@ -96,6 +96,7 @@ export const items: Record<string, Item> = {
       order: "fox",
       binding: ["KeyF"],
       castDuration: 0.1,
+      buffDuration: 150,
     }],
   },
   swiftness: {
@@ -297,6 +298,7 @@ export const prefabs: Record<
         binding: ["KeyR"],
         manaCost: 20,
         castDuration: 0.5,
+        buffDuration: 45,
       },
       {
         name: "Shop",

@@ -235,11 +235,19 @@ app.addSystem({
   onRemove: updateAlpha,
 });
 
+const wasCastingMirror = new Map<Entity, number>();
+
 app.addSystem({
   props: ["order", "position"],
+  onChange: (e) => {
+    if (e.order.type === "cast" && e.order.orderId === "mirrorImage") {
+      wasCastingMirror.set(e, e.order.remaining + 0.1);
+    }
+  },
   updateEntity: (e) => {
     const model = e.model ?? e.prefab;
     if (!model || e.order.type !== "cast" || "path" in e.order) return;
+
     const r = Math.random() * Math.PI * 2;
     collections[model]?.setPositionAt(
       e.id,
@@ -248,5 +256,23 @@ app.addSystem({
       e.facing,
       e.zIndex,
     );
+  },
+  update: (delta) => {
+    for (const [e, remaining] of wasCastingMirror) {
+      const model = e.model ?? e.prefab;
+      if (!model || !e.position) return wasCastingMirror.delete(e);
+
+      if ((remaining ?? 0) < delta) wasCastingMirror.delete(e);
+      else wasCastingMirror.set(e, remaining - delta);
+
+      const r = Math.random() * Math.PI * 2;
+      collections[model]?.setPositionAt(
+        e.id,
+        e.position.x + 0.05 * Math.cos(r),
+        e.position.y + 0.05 * Math.sin(r),
+        e.facing,
+        e.zIndex,
+      );
+    }
   },
 });

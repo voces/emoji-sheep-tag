@@ -97,8 +97,13 @@ export const mirrorImageOrder = {
         if (unit.mana !== undefined) mirror.mana = unit.mana;
 
         // Copy inventory from original unit
-        if (unit.inventory) {
-          mirror.inventory = [...unit.inventory];
+        if (unit.inventory) mirror.inventory = [...unit.inventory];
+
+        // Get lifetime duration from the action definition
+        const action = findActionByOrder(unit, "mirrorImage");
+        const lifetime = action?.type === "auto" ? action.buffDuration : undefined;
+        if (lifetime) {
+          mirror.buffs = [{ remainingDuration: lifetime, expiration: "MirrorImage" }];
         }
 
         mirrors.push(mirror.id);

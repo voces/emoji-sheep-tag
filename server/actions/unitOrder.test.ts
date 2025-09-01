@@ -5,6 +5,7 @@ import { unitOrder } from "./unitOrder.ts";
 import { advanceCast } from "../systems/action/advanceCast.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 import { yieldUntil } from "@/server-testing/yieldUntil.ts";
+import { yieldFor } from "@/server-testing/yieldFor.ts";
 
 afterEach(cleanupTest);
 
@@ -563,6 +564,168 @@ describe("unitOrder self destruct", () => {
       expect(tinyHut.health).toBe(0);
     },
   );
+});
+
+describe("unitOrder timed entities", () => {
+  it("should create fox with buff duration from action definition", {
+    wolves: ["test-client"],
+  }, function* ({ ecs, clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+
+    // Add fox item to inventory
+    addItem(wolf, "foxItem");
+    yield;
+
+    // Use fox ability from item
+    unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+
+    // Wait for cast to complete and fox to be spawned
+    yield* yieldUntil(() => {
+      const entities = Array.from(ecs.entities);
+      const foxes = entities.filter((e) => e.prefab === "fox");
+      expect(foxes.length).toBe(1);
+      return foxes.length === 1;
+    });
+
+    // Check that fox has the correct buff duration (150 seconds from action definition)
+    const entities = Array.from(ecs.entities);
+    const fox = entities.find((e) => e.prefab === "fox")!;
+    expect(fox.buffs).toBeDefined();
+    expect(fox.buffs!.length).toBe(1);
+    expect(fox.buffs![0].remainingDuration).toBe(150);
+    expect(fox.buffs![0].expiration).toBe("Fox");
+  });
+
+  it("should remove fox after buff duration expires", {
+    wolves: ["test-client"],
+  }, function* ({ ecs, clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+
+    addItem(wolf, "foxItem");
+    yield;
+
+    // Use fox ability
+    unitOrder(client, { type: "unitOrder", units: [wolf.id], order: "fox" });
+
+    // Wait for cast to complete first
+    yield* yieldUntil(() => wolf.order?.type !== "cast");
+
+    // Wait for fox to be created and verify it exists
+    yield* yieldUntil(() => {
+      const entities = Array.from(ecs.entities);
+      const foxes = entities.filter((e) => e.prefab === "fox");
+      return foxes.length === 1 && foxes[0].buffs && foxes[0].buffs.length > 0;
+    });
+
+    // Get the fox
+    let entities = Array.from(ecs.entities);
+    const fox = entities.find((e) => e.prefab === "fox")!;
+    const foxId = fox.id;
+
+    // Verify fox has timed life buff
+    expect(fox.buffs).toBeDefined();
+    expect(fox.buffs![0].expiration).toBe("Fox");
+
+    // Manually set a very short expiration time
+    fox.buffs = [{ remainingDuration: 0.1, expiration: "Fox" }];
+    yield;
+
+    // Advance time to trigger expiration
+    yield* yieldFor(0.2);
+
+    // Verify fox was removed
+    entities = Array.from(ecs.entities);
+    expect(entities.find((e) => e.id === foxId)).toBeUndefined();
+  });
+
+  it("should create mirror images with buff duration from action definition", {
+    wolves: ["test-client"],
+  }, function* ({ ecs, clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    wolf.mana = 100;
+    yield;
+
+    // Execute mirror image action
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "mirrorImage",
+    });
+
+    // Wait for cast to complete first
+    yield* yieldUntil(() => wolf.order?.type !== "cast");
+
+    // Wait for mirrors to be created
+    yield* yieldUntil(() => {
+      const entities = Array.from(ecs.entities);
+      const mirrors = entities.filter((e) => e.isMirror === true);
+      expect(mirrors.length).toBe(1);
+      return mirrors.length === 1;
+    });
+
+    // Check that mirror has the correct buff duration (45 seconds from action definition)
+    const entities = Array.from(ecs.entities);
+    const mirrors = entities.filter((e) => e.isMirror === true);
+
+    for (const mirror of mirrors) {
+      expect(mirror.buffs).toBeDefined();
+      expect(mirror.buffs!.length).toBe(1);
+      expect(mirror.buffs![0].remainingDuration).toBe(45);
+      expect(mirror.buffs![0].expiration).toBe("MirrorImage");
+    }
+  });
+
+  it("should remove mirror images after buff duration expires", {
+    wolves: ["test-client"],
+  }, function* ({ ecs, clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    wolf.mana = 100;
+    yield;
+
+    // Execute mirror image action
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "mirrorImage",
+    });
+
+    // Wait for cast to complete first
+    yield* yieldUntil(() => wolf.order?.type !== "cast");
+
+    // Wait for mirrors to be created and verify they have buffs
+    yield* yieldUntil(() => {
+      const entities = Array.from(ecs.entities);
+      const mirrors = entities.filter((e) => e.isMirror === true);
+      return mirrors.length === 1 && mirrors[0].buffs &&
+        mirrors[0].buffs.length > 0;
+    });
+
+    // Get the mirror
+    let entities = Array.from(ecs.entities);
+    const mirrors = entities.filter((e) => e.isMirror === true);
+    const mirror = mirrors[0];
+    const mirrorId = mirror.id;
+
+    // Verify mirror has timed life buff
+    expect(mirror.buffs).toBeDefined();
+    expect(mirror.buffs![0].expiration).toBe("MirrorImage");
+
+    // Manually set a very short expiration time
+    mirror.buffs = [{ remainingDuration: 0.1, expiration: "MirrorImage" }];
+    yield;
+
+    // Advance time to trigger expiration
+    yield* yieldFor(0.2);
+
+    // Verify mirror was removed
+    entities = Array.from(ecs.entities);
+    expect(entities.find((e) => e.id === mirrorId)).toBeUndefined();
+    expect(entities.filter((e) => e.isMirror === true)).toHaveLength(0);
+  });
 });
 
 describe("unitOrder generalized charge system", () => {

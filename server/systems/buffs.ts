@@ -23,10 +23,8 @@ addSystem((app) => ({
 
     // Handle expiration effects after updating buffs
     for (const buff of expiringBuffs) {
-      if (buff.expiration === "Sound") {
-        // Delete the entity when sound buff expires
-        app.removeEntity(entity);
-        return; // Exit early since entity is deleted
+      if (buff.expiration) {
+        return queueMicrotask(() => app.removeEntity(entity));
       }
     }
   },
