@@ -44,9 +44,7 @@ jobs:
 
       - name: Install FFmpeg
         if: steps.audio-cache.outputs.cache-hit != 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
       - name: Run build
         run: deno run -A scripts/build.ts
