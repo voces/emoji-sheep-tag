@@ -6,7 +6,9 @@ export const chatLogVar = makeVar<
 export const addChatMessage = (message: string) => {
   // Not sure why I can't use playSound directly, but esbuild gets mad about the import
   globalThis.dispatchEvent(
-    new CustomEvent("sound", { detail: { path: "thud2", volume: 0.1 } }),
+    new CustomEvent("sound", {
+      detail: { path: "thud2", volume: 0.1, channel: "ui" },
+    }),
   );
   chatLogVar(
     (log) => [...log.slice(0, 99), {

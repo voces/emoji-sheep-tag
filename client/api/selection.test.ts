@@ -275,15 +275,74 @@ describe("selection handlers", () => {
         owner: "player-2",
         position: { x: 4, y: 4 },
       });
+      app.addEntity({
+        id: "spirit-1",
+        prefab: "spirit",
+        owner: "player-1",
+        position: { x: 5, y: 5 },
+      });
     });
 
-    it("should select first sheep owned by local player", () => {
+    it("should cycle between primary units", () => {
+      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
+
       selectPrimaryUnit();
 
-      const selectedEntities = Array.from(selection);
-      expect(selectedEntities).toHaveLength(1);
-      expect(selectedEntities[0].prefab).toBe("sheep");
-      expect(selectedEntities[0].owner).toBe("player-1");
+      expect(Array.from(selection, (e) => e.id)).toEqual(["wolf-1"]);
+
+      selectPrimaryUnit();
+
+      expect(Array.from(selection, (e) => e.id)).toEqual(["spirit-1"]);
+
+      selectPrimaryUnit();
+
+      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
+    });
+
+    it("should work with multiple selections", () => {
+      // Select sheep and a hut
+      const sheep = Array.from(app.entities).find((e) => e.id === "sheep-1");
+      const hut = Array.from(app.entities).find((e) => e.id === "hut-1");
+      if (sheep) selectEntity(sheep, false);
+      if (hut) selectEntity(hut, false);
+
+      expect(selection.size).toBe(2);
+
+      selectPrimaryUnit();
+
+      // Should select the next primary unit (wolf) after sheep
+      expect(Array.from(selection, (e) => e.id)).toEqual(["wolf-1"]);
+    });
+
+    it("should handle when all primary units are selected", () => {
+      // Select all primary units
+      const sheep = Array.from(app.entities).find((e) => e.id === "sheep-1");
+      const wolf = Array.from(app.entities).find((e) => e.id === "wolf-1");
+      const spirit = Array.from(app.entities).find((e) => e.id === "spirit-1");
+
+      if (sheep) selectEntity(sheep, false);
+      if (wolf) selectEntity(wolf, false);
+      if (spirit) selectEntity(spirit, false);
+
+      expect(selection.size).toBe(3);
+
+      selectPrimaryUnit();
+
+      // Should select just the first primary unit
+      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
+    });
+
+    it("should handle when no primary units are selected", () => {
+      // Select only a hut
+      const hut = Array.from(app.entities).find((e) => e.id === "hut-1");
+      if (hut) selectEntity(hut);
+
+      expect(Array.from(selection, (e) => e.id)).toEqual(["hut-1"]);
+
+      selectPrimaryUnit();
+
+      // Should select the first primary unit
+      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
     });
 
     it("should select wolf if no sheep exists", () => {
@@ -304,13 +363,16 @@ describe("selection handlers", () => {
     it("should not select units owned by other players", () => {
       // Remove local player's sheep and wolf
       const playerUnits = Array.from(app.entities).filter((e) =>
-        e.owner === "player-1" && (e.prefab === "sheep" || e.prefab === "wolf")
+        e.owner === "player-1" &&
+        (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit")
       );
       for (const unit of playerUnits) app.removeEntity(unit);
 
+      expect(Array.from(selection, (e) => e.id)).toEqual([]);
+
       selectPrimaryUnit();
 
-      expect(selection.size).toBe(0);
+      expect(Array.from(selection, (e) => e.id)).toEqual([]);
       const enemySheep = Array.from(app.entities).find((e) =>
         e.id === "enemy-sheep"
       );
@@ -320,7 +382,8 @@ describe("selection handlers", () => {
     it("should not select non-primary units like huts", () => {
       // Remove sheep and wolf, leaving only hut
       const primaryUnits = Array.from(app.entities).filter((e) =>
-        e.owner === "player-1" && (e.prefab === "sheep" || e.prefab === "wolf")
+        e.owner === "player-1" &&
+        (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit")
       );
       for (const unit of primaryUnits) {
         app.removeEntity(unit);

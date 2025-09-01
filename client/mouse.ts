@@ -140,6 +140,15 @@ globalThis.addEventListener("pointerdown", (event) =>
     ),
   ));
 
+globalThis.addEventListener("pointerup", (event) =>
+  mouse.dispatchTypedEvent(
+    "mouseButtonUp",
+    new MouseButtonEvent(
+      "up",
+      event.button === 0 ? "left" : event.button === 1 ? "middle" : "right",
+    ),
+  ));
+
 globalThis.addEventListener("contextmenu", (e) => e.preventDefault());
 
 app.addSystem({

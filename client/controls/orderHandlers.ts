@@ -201,5 +201,5 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
 export const playOrderSound = (x?: number, y?: number, volume = 0.1) => {
   const sound = pick("click1", "click2", "click3", "click4");
   if (x !== undefined && y !== undefined) playSoundAt(sound, x, y, volume);
-  else playSound(sound, { volume });
+  else playSound("ui", sound, { volume });
 };

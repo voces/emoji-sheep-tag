@@ -35,7 +35,7 @@ app.addSystem({
       (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit")
     ) {
       if (selection.size === 0) selectEntity(e);
-      primary = e;
+      if (!primary) primary = e;
     }
   },
   onRemove: (e) => {

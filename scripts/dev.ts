@@ -24,9 +24,9 @@ const debounce = <T extends (...args: any[]) => Promise<any>>(
 const debouncedBuild = debounce(() => build("dev").catch(console.error), 25);
 
 await debouncedBuild();
-console.log("Waiting for changes...");
+console.log("[Build] Waiting for changes...");
 
 const watcher = Deno.watchFs("client");
 for await (const _ of watcher) {
-  debouncedBuild().then(() => console.log("Waiting for changes..."));
+  debouncedBuild().then(() => console.log("[Build] Waiting for changes..."));
 }

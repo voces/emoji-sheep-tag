@@ -1,9 +1,9 @@
 import jsdom from "jsdom";
-import { copy, ensureDir } from "jsr:@std/fs";
+import { ensureDir } from "jsr:@std/fs";
 import esbuild, { type Plugin } from "npm:esbuild";
 import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
-import { basename, join, relative } from "jsr:@std/path";
-import { expandGlob } from "jsr:@std/fs";
+import { join, relative } from "jsr:@std/path";
+import { processSoundAssets } from "./processSoundAssets.ts";
 
 const assetInlinePlugin = {
   name: "asset-inline",
@@ -24,26 +24,6 @@ const assetInlinePlugin = {
     );
   },
 } satisfies Plugin;
-
-// Copy sound assets from client/assets to dist/assets
-const copySoundAssets = async () => {
-  const assetsDir = "dist/assets";
-  await ensureDir(assetsDir);
-
-  // Collect all mp3 files first
-  const soundFiles = [];
-  for await (const entry of expandGlob("client/assets/*.mp3")) {
-    if (entry.isFile) soundFiles.push(entry.path);
-  }
-
-  // Copy all files in parallel
-  await Promise.all(
-    soundFiles.map((filePath) => {
-      const fileName = basename(filePath);
-      return copy(filePath, join(assetsDir, fileName), { overwrite: true });
-    }),
-  );
-};
 
 const decoder = new TextDecoder();
 
@@ -105,10 +85,10 @@ export const build = async (env: "dev" | "prod") => {
   // Run HTML/JS building and sound asset copying in true parallel
   await Promise.all([
     buildHtml(env),
-    copySoundAssets(),
+    processSoundAssets(),
   ]);
 
-  console.log("Built in", Math.round(performance.now() - start), "ms!");
+  console.log("[Build] Built in", Math.round(performance.now() - start), "ms!");
 };
 
 if (import.meta.main) await build(Deno.args.includes("--dev") ? "dev" : "prod");

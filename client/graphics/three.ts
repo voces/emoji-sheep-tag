@@ -39,6 +39,10 @@ camera.layers.enableAll();
 export const listener = "AudioListener" in globalThis
   ? new AudioListener()
   : undefined;
+
+export type Channel = "master" | "sfx" | "ui" | "ambience";
+export const channels: { [K in Channel]?: GainNode } = {};
+
 if (listener) {
   Object.assign(globalThis, { listener });
   camera.add(listener);
@@ -78,6 +82,24 @@ if (listener) {
   // Redirect listener’s output into the chain
   listener.gain.disconnect();
   listener.gain.connect(preGain);
+
+  // Setup channels
+  channels.master = ctx.createGain();
+
+  channels.sfx = ctx.createGain();
+  channels.sfx.connect(channels.master);
+
+  channels.ui = ctx.createGain();
+  channels.ui.connect(channels.master);
+
+  channels.ambience = ctx.createGain();
+  channels.ambience.connect(channels.master);
+
+  channels.master.connect(preGain);
+
+  // Initialize audio settings after channels are set up
+  // This import must be done after channels are created
+  import("@/vars/audioSettings.ts");
 }
 
 const terrain = new Grid(tiles[0].length, tiles.length);

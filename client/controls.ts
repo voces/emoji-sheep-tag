@@ -109,7 +109,7 @@ const handleLeftClick = (e: MouseButtonEvent) => {
 
   if (blueprint) handleBlueprintClick(e);
   else if (getActiveOrder()) {
-    if (!handleTargetOrder(e)) playSound(pick("error1"), { volume: 0.3 });
+    if (!handleTargetOrder(e)) playSound("ui", pick("error1"), { volume: 0.3 });
   } else if (e.intersects.size) selectEntity(e.intersects.first()!);
 };
 
@@ -131,7 +131,7 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   );
 
   if (!canBuild(unit, prefab, x, y)) {
-    return playSound(pick("error1"), { volume: 0.3 });
+    return playSound("ui", pick("error1"), { volume: 0.3 });
   }
 
   cancelBlueprint();
@@ -309,7 +309,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
 
   if (units.length === 0 && unitsTotal) {
-    playSound(pick("error1"), { volume: 0.3 });
+    playSound("ui", pick("error1"), { volume: 0.3 });
     return;
   }
 
@@ -321,7 +321,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
       const playerGold = owningPlayer?.entity?.gold ?? 0;
 
       if (playerGold < goldCost) {
-        playSound(pick("error1"), { volume: 0.3 });
+        playSound("ui", pick("error1"), { volume: 0.3 });
         return;
       }
     }
@@ -344,7 +344,9 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
       );
       break;
     case "purchase":
-      playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.3 });
+      playSound("ui", pick("click1", "click2", "click3", "click4"), {
+        volume: 0.3,
+      });
       send({
         type: "purchase",
         unit: units[0].id,
@@ -353,7 +355,9 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
       closeAllMenus();
       break;
     case "menu":
-      playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.1 });
+      playSound("ui", pick("click1", "click2", "click3", "click4"), {
+        volume: 0.1,
+      });
       openMenu(action, units[0].id);
       break;
     default:
@@ -364,7 +368,9 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
 const handleAutoAction = (action: { order: string }, units: Entity[]) => {
   // Handle special "back" order for closing menus
   if (action.order === "back" && getCurrentMenu()) {
-    playSound(pick("click1", "click2", "click3", "click4"), { volume: 0.1 });
+    playSound("ui", pick("click1", "click2", "click3", "click4"), {
+      volume: 0.1,
+    });
     closeMenu();
     return;
   }
@@ -455,6 +461,12 @@ for (const event of ["pointerdown", "keydown", "contextmenu"]) {
   globalThis.document.body.addEventListener(event, async () => {
     if (!document.pointerLockElement) {
       try {
+        // Ensure body has focus before requesting pointer lock
+        // This fixes scrolling issues when entering via keyboard
+        if (event === "keydown" && document.activeElement !== document.body) {
+          document.body.focus();
+        }
+
         await globalThis.document.body.requestPointerLock({
           unadjustedMovement: true,
         });

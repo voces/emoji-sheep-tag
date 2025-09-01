@@ -1,21 +1,13 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 //@deno-types="npm:@types/react"
-import { useEffect } from "react";
+import { useState } from "react";
 import { styled } from "npm:styled-components";
 import { showSettingsVar } from "@/vars/showSettings.ts";
-import { shortcutsVar } from "@/vars/shortcuts.ts";
-import { SettingsSection } from "./SettingsSection.tsx";
-import { type Shortcuts } from "@/util/shortcutUtils.ts";
 import { HStack, Overlay, VStack } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
 import { Button } from "@/components/forms/Button.tsx";
-
-const ShortcutsContainer = styled(VStack)`
-  flex: 2.5;
-  gap: ${({ theme }) => theme.spacing.lg};
-  max-height: calc(100vh - 200px);
-  overflow: auto;
-`;
+import { Shortcuts } from "./Shortcuts.tsx";
+import { Audio } from "./Audio.tsx";
 
 const SettingsDialog = styled(Card)`
   position: absolute;
@@ -24,70 +16,106 @@ const SettingsDialog = styled(Card)`
   transform: translate(-50%, -50%);
   width: 700px;
   max-width: calc(100% - 16px);
+  height: 80vh;
+  max-height: 800px;
   gap: ${({ theme }) => theme.spacing.xl};
   display: flex;
   flex-direction: column;
+  padding-bottom: 0;
+  padding-right: 0;
+  padding-left: 0;
 `;
 
 const SettingsContent = styled(HStack)`
-  align-items: flex-start;
+  flex: 1;
+  overflow: hidden;
+  align-items: stretch;
+  gap: 0;
 `;
 
-const ShortcutsLabel = styled(VStack)`
+const TabsContainer = styled(VStack)`
+  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  padding-right: ${({ theme }) => theme.spacing.lg};
+  margin-left: ${({ theme }) => theme.spacing.lg};
+  min-width: 120px;
+`;
+
+const Tab = styled(Button)<{ $active: boolean }>`
+  background: ${({ $active, theme }) =>
+    $active ? theme.colors.primary : "transparent"};
+  color: ${({ theme }) => theme.colors.body};
+  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) =>
+    theme.spacing.lg};
+  width: 100%;
+  text-align: left;
+  outline: none;
+
+  &.hover:not([disabled]) {
+    background: ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+const TabContent = styled.div`
   flex: 1;
+  overflow: hidden;
+  padding-left: ${({ theme }) => theme.spacing.lg};
+`;
+
+const SettingsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const Header = styled.h1`
+  margin-left: ${({ theme }) => theme.spacing.lg};
 `;
 
 const CloseButton = styled(Button)`
-  margin-left: auto;
-  padding: 0 ${({ theme }) => theme.spacing.xxl};
+  padding: 0 ${({ theme }) => theme.spacing.xl};
+  margin-right: ${({ theme }) => theme.spacing.lg};
 `;
-
-const Shortcuts = () => {
-  const sections = useReactiveVar(shortcutsVar);
-
-  useEffect(() => {
-    localStorage.setItem("shortcuts", JSON.stringify(sections));
-  }, [sections]);
-
-  return (
-    <ShortcutsContainer>
-      {Object.entries(sections).map(([section, shortcuts]) => (
-        <SettingsSection
-          key={section}
-          section={section}
-          shortcuts={shortcuts}
-          setBinding={(shortcut, binding) =>
-            shortcutsVar({
-              ...sections,
-              [section]: { ...shortcuts, [shortcut]: binding },
-            })}
-        />
-      ))}
-    </ShortcutsContainer>
-  );
-};
 
 export const Settings = () => {
   const showSettings = useReactiveVar(showSettingsVar);
+  const [activeTab, setActiveTab] = useState<"shortcuts" | "audio">(
+    "shortcuts",
+  );
 
   if (!showSettings) return null;
 
   return (
     <Overlay>
       <SettingsDialog>
-        <h1>Settings</h1>
+        <SettingsHeader>
+          <Header>Settings</Header>
+          <CloseButton
+            type="button"
+            onClick={() => showSettingsVar(false)}
+          >
+            Close
+          </CloseButton>
+        </SettingsHeader>
         <SettingsContent>
-          <ShortcutsLabel>
-            <p>Shortcuts</p>
-          </ShortcutsLabel>
-          <Shortcuts />
+          <TabsContainer>
+            <Tab
+              $active={activeTab === "shortcuts"}
+              onClick={() => setActiveTab("shortcuts")}
+            >
+              Shortcuts
+            </Tab>
+            <Tab
+              $active={activeTab === "audio"}
+              onClick={() => setActiveTab("audio")}
+            >
+              Audio
+            </Tab>
+          </TabsContainer>
+          <TabContent>
+            {activeTab === "shortcuts" && <Shortcuts />}
+            {activeTab === "audio" && <Audio />}
+          </TabContent>
         </SettingsContent>
-        <CloseButton
-          type="button"
-          onClick={() => showSettingsVar(false)}
-        >
-          Close
-        </CloseButton>
       </SettingsDialog>
     </Overlay>
   );

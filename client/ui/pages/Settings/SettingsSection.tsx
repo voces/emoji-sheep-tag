@@ -11,6 +11,8 @@ import {
   type Shortcuts,
 } from "@/util/shortcutUtils.ts";
 import { HoverHighlight, HStack, VStack } from "@/components/layout/Layout.tsx";
+import { Input } from "@/components/forms/Input.tsx";
+import { Button } from "@/components/forms/Button.tsx";
 
 const ShortcutRowContainer = styled(HStack)<{ $isNested?: boolean }>`
   padding-left: ${({ $isNested }) => $isNested ? "16px" : "0"};
@@ -22,34 +24,15 @@ const ShortcutLabel = styled.p`
 `;
 
 const ShortcutInputContainer = styled(HStack)`
+  align-items: center;
 `;
 
-const ShortcutInput = styled.input`
+const ShortcutInput = styled(Input)`
   width: 100%;
   max-width: 150px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.body};
-  color: ${({ theme }) => theme.colors.background};
-  padding: ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
 `;
 
-const ResetButton = styled.button`
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.body};
-  color: ${({ theme }) => theme.colors.background};
-  padding: ${({ theme }) => theme.spacing.sm};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  cursor: pointer;
-
-  &:hover,
-  &.hover {
-    box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) =>
-      theme.shadows.sm};
-  }
-`;
-
-const SectionHeader = styled.h2`
+const SectionHeader = styled.h3`
   cursor: pointer;
 `;
 
@@ -91,14 +74,14 @@ const ShortcutRow = ({
           e.preventDefault();
         }}
       />
-      <ResetButton
+      <Button
         type="button"
         onClick={() =>
           onSetBinding(fullKey, defaultBindings[section]?.[fullKey] ?? [])}
         aria-label="Reset hotkey"
       >
         ↺
-      </ResetButton>
+      </Button>
     </ShortcutInputContainer>
   </ShortcutRowContainer>
 );
@@ -186,7 +169,9 @@ export const SettingsSection = (
         {section === "misc" ? "Misc" : prefabs[section].name ?? section}
       </HoverHighlight>
       <Collapse isOpen={isOpen}>
-        {renderShortcuts()}
+        <VStack>
+          {renderShortcuts()}
+        </VStack>
       </Collapse>
     </VStack>
   );

@@ -62,19 +62,45 @@ export const selectPrimaryUnit = () => {
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return;
 
-  let primaryUnit: Entity | undefined;
+  const primaryUnits: Entity[] = [];
   for (const entity of app.entities) {
     if (
       entity.owner === localPlayer.id &&
       (entity.prefab === "sheep" || entity.prefab === "wolf" ||
         entity.prefab === "spirit")
     ) {
-      primaryUnit = entity;
-      if (!primaryUnit.selected || selection.size > 1) break;
+      primaryUnits.push(entity);
     }
   }
 
-  if (primaryUnit) selectEntity(primaryUnit);
+  if (primaryUnits.length === 0) return;
+
+  // Find the first selected primary unit
+  let currentIndex = -1;
+  for (const selectedEntity of selection) {
+    const index = primaryUnits.findIndex((unit) =>
+      unit.id === selectedEntity.id
+    );
+    if (index !== -1) {
+      currentIndex = index;
+      break;
+    }
+  }
+
+  // Find the next unselected primary unit after the current one
+  if (currentIndex !== -1) {
+    for (let i = 1; i < primaryUnits.length; i++) {
+      const nextIndex = (currentIndex + i) % primaryUnits.length;
+      const nextUnit = primaryUnits[nextIndex];
+      if (!nextUnit.selected) {
+        selectEntity(nextUnit);
+        return;
+      }
+    }
+  }
+
+  // If all primary units are selected or no primary unit is selected, select the first one
+  selectEntity(primaryUnits[0]);
 };
 
 /**

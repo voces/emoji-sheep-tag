@@ -21,7 +21,7 @@ Deno.serve({
   onListen: async (path) => {
     await startWatchdog();
     console.log(
-      `Server ready on port ${path.transport}://${path.hostname}:${path.port}`,
+      `[Server] Server ready on port ${path.transport}://${path.hostname}:${path.port}`,
     );
   },
 }, async (req) => {
