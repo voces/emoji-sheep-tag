@@ -13,38 +13,38 @@ jobs:
   lint-and-format:
     name: Lint & Format
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Setup repo
         uses: actions/checkout@v4
-        
+
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-          
+
       - name: Check TypeScript types
         run: deno check
-        
+
       - name: Check code formatting
         run: deno fmt --check
-        
+
       - name: Run linter
         run: deno lint
 
   tests:
     name: Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Setup repo
         uses: actions/checkout@v4
-        
+
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-          
+
       - name: Run all tests (parallel)
         run: |
           # Run all tests in parallel - integration tests use unique ports via registry
@@ -55,13 +55,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint-and-format, tests]
     if: always()
-    
+
     steps:
       - name: Check test results
         run: |
           echo "Lint & Format: ${{ needs.lint-and-format.result }}"
           echo "Tests: ${{ needs.tests.result }}"
-          
+
           if [ "${{ needs.lint-and-format.result }}" != "success" ] || \
              [ "${{ needs.tests.result }}" != "success" ]; then
             echo "❌ Some tests failed"
