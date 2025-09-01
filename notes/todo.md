@@ -1,7 +1,6 @@
 - Login system
 - Invis Farm?
 - Fog of war?
-- Sound settings
 - Items
   - Splash
   - Cloak

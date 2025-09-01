@@ -30,6 +30,22 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Cache audio processing
+        uses: actions/cache@v4
+        with:
+          path: |
+            dist/.audio-cache.json
+            dist/assets
+          key: audio-cache-${{ hashFiles('client/assets/**/*') }}-${{ hashFiles('scripts/processSoundAssets.ts') }}
+          restore-keys: |
+            audio-cache-${{ hashFiles('client/assets/**/*') }}-
+            audio-cache-
+
       - name: Run build
         run: deno run -A scripts/build.ts
 
