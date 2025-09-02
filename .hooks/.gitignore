@@ -1,0 +1,7 @@
+# Ignore copied system hooks, but keep our custom ones
+post-*
+pre-push
+*.sample
+
+# Keep our custom hooks
+!pre-commit

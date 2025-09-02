@@ -1,0 +1,17 @@
+#!/bin/sh
+# Pre-commit hook that runs deno formatting and linting
+
+# Run deno formatting and linting if available
+if command -v deno >/dev/null 2>&1; then
+    echo "Running deno fmt and lint..."
+    deno task pre-commit
+    if [ $? -ne 0 ]; then
+        echo "❌ Formatting or linting failed"
+        exit 1
+    fi
+    echo "✅ Code formatted and linted successfully"
+else
+    echo "Warning: deno not found, skipping pre-commit formatting"
+fi
+
+exit 0
