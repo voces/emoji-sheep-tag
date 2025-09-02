@@ -142,7 +142,6 @@ const unitToTilemap = (unit: Unit) => {
   }
   return pm.pointToTilemap(unit.position.x, unit.position.y, unit.radius, {
     type: unit.pathing,
-    includeOutOfBounds: true,
   });
 };
 

@@ -407,7 +407,6 @@ export class PathingMap {
             yWorld,
             entity.radius,
             {
-              includeOutOfBounds: true,
               type: entity.requiresPathing === undefined
                 ? entity.pathing
                 : entity.requiresPathing,
@@ -535,7 +534,7 @@ export class PathingMap {
     xWorld: number,
     yWorld: number,
     radius = 0,
-    { type = PATHING_TYPES.WALKABLE, includeOutOfBounds = false } = {},
+    { type = PATHING_TYPES.WALKABLE } = {},
   ): Footprint {
     radius -= EPSILON * radius * this.widthWorld;
 
@@ -547,22 +546,10 @@ export class PathingMap {
     const xMiss = xTile / this.resolution - xWorld;
     const yMiss = yTile / this.resolution - yWorld;
 
-    const minX = Math.max(
-      this.xWorldToTile(xWorld - radius) - xTile,
-      includeOutOfBounds ? -Infinity : -xTile,
-    );
-    const maxX = Math.min(
-      this.xWorldToTile(xWorld + radius) - xTile,
-      includeOutOfBounds ? Infinity : this.widthMap - xTile - 1,
-    );
-    const minY = Math.max(
-      this.yWorldToTile(yWorld - radius) - yTile,
-      includeOutOfBounds ? -Infinity : -yTile,
-    );
-    const maxY = Math.min(
-      this.yWorldToTile(yWorld + radius) - yTile,
-      includeOutOfBounds ? Infinity : this.heightMap - yTile - 1,
-    );
+    const minX = this.xWorldToTile(xWorld - radius) - xTile;
+    const maxX = this.xWorldToTile(xWorld + radius) - xTile;
+    const minY = this.yWorldToTile(yWorld - radius) - yTile;
+    const maxY = this.yWorldToTile(yWorld + radius) - yTile;
 
     const radiusSquared = radius ** 2;
 
