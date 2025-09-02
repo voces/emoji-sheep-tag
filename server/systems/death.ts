@@ -12,6 +12,8 @@ import { getPlayerUnits } from "./playerEntities.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { isPractice } from "../api/st.ts";
 import { getTeams } from "@/shared/systems/teams.ts";
+import { addEntity } from "@/shared/api/entity.ts";
+import { newSfx } from "../api/sfx.ts";
 
 const onLose = () =>
   timeout(() => {
@@ -73,6 +75,44 @@ addSystem((app) => ({
     }
 
     if (unit.prefab === "sheep") onSheepDeath(unit);
+
+    // Spawn tree stump when tree dies
+    if (unit.prefab === "tree" && unit.position) {
+      addEntity({
+        prefab: "treeStump",
+        position: unit.position,
+        facing: unit.facing,
+        maxHealth: 45,
+        healthRegen: -1,
+      });
+      for (
+        const { x, y, scale } of [
+          { x: 0.35, y: 0.25, scale: 0.8 },
+          { x: -0.35, y: 0.1, scale: 0.8 },
+          { x: 0, y: 0.65, scale: 2 },
+        ]
+      ) {
+        const sfx = newSfx(
+          { x: unit.position.x + x, y: unit.position.y + y },
+          "fire",
+          undefined,
+          1,
+          "ease-out",
+        );
+        sfx.modelScale = scale;
+      }
+    }
+
+    // Spawn tree when tree stump dies
+    if (unit.prefab === "treeStump" && unit.position) {
+      addEntity({
+        prefab: "tree",
+        position: unit.position,
+        facing: unit.facing,
+        progress: 0.11,
+        completionTime: 1.5,
+      });
+    }
 
     app.removeEntity(unit);
   },

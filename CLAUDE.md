@@ -33,3 +33,4 @@
 
 - Create tests, format, typecheck, lint, and run tests when done making code
   changes
+- When updating shared types, remember to update corresponding zod schemas

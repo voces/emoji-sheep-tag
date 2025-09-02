@@ -64,6 +64,7 @@ const zTilemap = z.object({
 const zClassification = z.union([
   z.literal("unit"),
   z.literal("structure"),
+  z.literal("tree"),
   z.literal("ally"),
   z.literal("enemy"),
   z.literal("neutral"),

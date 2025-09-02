@@ -26,6 +26,7 @@
 - https://www.svgrepo.com/svg/277687/meteor
 - https://www.svgrepo.com/svg/246372/cursor
 - https://www.svgrepo.com/svg/400155/dash
+- https://www.svgrepo.com/svg/500085/tree
 
 # Audio
 
@@ -57,6 +58,7 @@
 - howl1: https://freesound.org/people/PhonosUPF/sounds/499699/
 - howl2: https://freesound.org/people/Robinhood76/sounds/66538/
 - poof1: https://freesound.org/people/AuDRoger/sounds/471204/
+- treefall1: https://freesound.org/people/newlocknew/sounds/626734/
 
 ## To consider
 

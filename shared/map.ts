@@ -62,6 +62,13 @@ export const initEntities: Record<string, Partial<Entity>[]> = {
     { position: { x: 11.25, y: 14.25 } },
     { position: { x: 11.25, y: 13.75 } },
   ],
+  tree: [
+    { position: { x: 20, y: 20 } },
+    { position: { x: 25.5, y: 0.5 } },
+    { position: { x: 26.5, y: 0.5 } },
+    { position: { x: 26.5, y: 1.5 } },
+    { position: { x: 6.5, y: 6.5 } },
+  ],
 };
 
 const floor = Math.floor;

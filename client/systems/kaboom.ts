@@ -1,9 +1,10 @@
+import { isStructure } from "@/shared/api/unit.ts";
 import { app } from "../ecs.ts";
 
 app.addSystem({
   props: ["health", "tilemap", "position"],
   onRemove: (e) => {
-    if (!e.position) return;
+    if (!e.position || !isStructure(e)) return;
 
     app.addEntity({
       id: `kaboom-${crypto.randomUUID()}`,

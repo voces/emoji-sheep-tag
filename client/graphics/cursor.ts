@@ -6,6 +6,8 @@ import { mouse } from "../mouse.ts";
 import { getLocalPlayer } from "@/vars/players.ts";
 import cursorSvg from "../assets/cursor.svg" with { type: "text" };
 import circleSvg from "../assets/circle.svg" with { type: "text" };
+import { camera, renderer } from "./three.ts";
+import { MathUtils } from "three";
 
 const pointerSvg = new DOMParser().parseFromString(
   cursorSvg,
@@ -53,6 +55,22 @@ const getCursorVariant = (intersect: Entity | undefined) => {
   return "neutral";
 };
 
+/** world units per CSS pixel at the camera's current height/FOV */
+const worldUnitsPerPixel = () => {
+  if (!renderer) return 0.011657691453874968;
+  const vFov = MathUtils.degToRad(camera.fov); // vertical FOV in radians
+  const z = camera.position.z; // camera height above the plane
+  const viewportH = renderer.domElement.clientHeight; // CSS pixels
+  return (2 * z * Math.tan(vFov / 2)) / viewportH; // world units per pixel
+};
+
+/** pixels per world unit (inverse of the above) */
+const pixelsPerWorldUnit = () => 1 / worldUnitsPerPixel();
+
+/** AOE circle size in pixels for a given world-space radius */
+const aoeDiameterPx = (radiusWorld: number) =>
+  2 * radiusWorld * pixelsPerWorldUnit();
+
 export const updateCursor = (updatePosition = false) => {
   if (updatePosition && cursor) {
     cursor.style.top = `${mouse.pixels.y}px`;
@@ -77,7 +95,9 @@ export const updateCursor = (updatePosition = false) => {
     if (!aoe) {
       if (cursor.dataset.mode !== "pointer") {
         cursor.dataset.mode = "pointer";
-        cursor.style.transform = "scale(1)";
+        cursor.style.width = "24px";
+        cursor.style.height = "24px";
+        cursor.style.transform = "";
         cursor.setAttribute(
           "viewBox",
           pointerSvg.documentElement.getAttribute("viewBox") ?? "",
@@ -85,15 +105,19 @@ export const updateCursor = (updatePosition = false) => {
         cursor.innerHTML = pointerSvg.documentElement.innerHTML;
       }
     } else {
+      const diameter = aoeDiameterPx(aoe);
       if (cursor.dataset.mode !== "aoe") {
         cursor.dataset.mode = "aoe";
-        cursor.style.transform = `scale(${aoe * 6})`;
         cursor.setAttribute(
           "viewBox",
           aoeSvg.documentElement.getAttribute("viewBox") ?? "",
         );
         cursor.innerHTML = aoeSvg.documentElement.innerHTML;
       }
+      // Always update transform for zoom changes
+      cursor.style.width = `${diameter}px`;
+      cursor.style.height = `${diameter}px`;
+      cursor.style.transform = "translate(-50%, -50%)";
     }
 
     cursor.style.filter = `hue-rotate(${variants[variant].hue}deg)`;

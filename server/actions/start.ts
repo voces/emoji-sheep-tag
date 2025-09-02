@@ -8,9 +8,9 @@ import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
 import { center, initEntities } from "@/shared/map.ts";
-import { prefabs } from "@/shared/data.ts";
 import { appContext } from "@/shared/context.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -74,9 +74,9 @@ export const start = (
     });
 
     for (const prefab in initEntities) {
-      for (
-        const partial of initEntities[prefab as keyof typeof initEntities]
-      ) ecs.addEntity({ prefab, ...prefabs[prefab], ...partial });
+      for (const partial of initEntities[prefab as keyof typeof initEntities]) {
+        addEntity({ prefab, ...partial });
+      }
     }
 
     for (const player of sheep) {

@@ -2,7 +2,7 @@ import { Entity, Item, UnitDataAction } from "./types.ts";
 
 export const classificationGroups = {
   alliance: ["ally", "enemy", "neutral"],
-  structureOrUnit: ["structure", "unit"],
+  destructibles: ["structure", "unit", "tree"],
   identity: ["self", "other"],
   spirit: ["spirit", "notSpirit"],
 } as const;
@@ -11,7 +11,7 @@ export type ClassificationGroup = keyof typeof classificationGroups;
 
 export const defaultClassifications = {
   alliance: ["ally", "enemy", "neutral"],
-  structureOrUnit: ["structure", "unit"],
+  destructibles: ["structure", "unit"],
   identity: ["self", "other"],
   spirit: ["notSpirit"],
 } satisfies {
@@ -141,18 +141,19 @@ export const items: Record<string, Item> = {
   bomber: {
     id: "bomber",
     name: "Bomber",
-    description: "Bombs an area, damaging structures but not units.",
+    description: "Bombs an area, damaging structures and trees but not units.",
     icon: "meteor",
     gold: 35,
     binding: ["KeyE"],
     charges: 1,
     actions: [{
       name: "Summon Meteor",
-      description: "Bombs an area, damaging structures but not units.",
+      description:
+        "Bombs an area, damaging structures and trees but not units.",
       type: "target",
       order: "meteor",
       aoe: 1.5,
-      targeting: ["structure"],
+      targeting: ["structure", "tree"],
       binding: ["KeyE"],
       range: 5,
       damage: 50,
@@ -449,6 +450,19 @@ export const prefabs: Record<
     pathing: 0,
     movementSpeed: 5,
     sounds: { birth: ["explosion1"] },
+  },
+  tree: {
+    name: "Tree",
+    radius: 0.5,
+    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    isDoodad: true,
+    maxHealth: 25,
+    targetedAs: ["tree"],
+    sounds: { death: ["treefall1"] },
+  },
+  treeStump: {
+    name: "Tree Stump",
+    isDoodad: true,
   },
 };
 

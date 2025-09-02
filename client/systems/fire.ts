@@ -1,3 +1,4 @@
+import { isStructure } from "@/shared/api/unit.ts";
 import { app, Entity } from "../ecs.ts";
 
 const fires = new WeakMap<Entity, Entity[]>();
@@ -18,6 +19,7 @@ const fireOffsets = [
 ];
 
 const updateFires = (e: Entity, remove = false) => {
+  if (!isStructure(e)) return;
   const fireCount = remove ? 0 : getFires(e);
   let existing = fires.get(e);
   if (!existing) {
@@ -47,7 +49,7 @@ const updateFires = (e: Entity, remove = false) => {
 };
 
 app.addSystem({
-  props: ["health", "maxHealth", "tilemap"],
+  props: ["health", "maxHealth"],
   onAdd: updateFires,
   onChange: updateFires,
   onRemove: (e) => updateFires(e, true),

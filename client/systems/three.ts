@@ -32,6 +32,8 @@ import runningShoes from "../assets/running-shoes.svg" with { type: "text" };
 import purplePotion from "../assets/purple-potion.svg" with { type: "text" };
 import meteor from "../assets/meteor.svg" with { type: "text" };
 import dash from "../assets/dash.svg" with { type: "text" };
+import tree from "../assets/tree.svg" with { type: "text" };
+import treeStump from "../assets/treeStump.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -59,26 +61,43 @@ export const svgs: Record<string, string> = {
   purplePotion,
   meteor,
   dash,
+  tree,
+  treeStump,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
+  // Background elements (lowest z-order)
+  flowers: loadSvg(flowers, 0.25, { layer: 2 }),
+  grass: loadSvg(grass, 0.75, { layer: 2 }),
+  treeStump: loadSvg(treeStump, 0.11, {
+    layer: 2,
+    yOffset: -0.36,
+    xOffset: -0.01,
+  }),
+
+  // Basic units and structures
   sheep: loadSvg(sheep, 1),
   wolf: loadSvg(wolf, 2),
   hut: loadSvg(hut, 2),
   fence: loadSvg(fence, 0.07, { layer: 2 }),
-  fire: loadSvg(fire, 1, { layer: 2 }),
-  claw: loadSvg(claw, 0.05, { layer: 2 }),
-  collision: loadSvg(collision, 2, { layer: 2 }),
-  flowers: loadSvg(flowers, 0.25, { layer: 2 }),
-  grass: loadSvg(grass, 0.75, { layer: 2 }),
-  circle: loadSvg(circle, 0.08, { layer: 2 }),
-  gravity: loadSvg(gravity, 2, { layer: 2 }),
-  hinduTemple: loadSvg(hinduTemple, 1.75),
   divinity: loadSvg(divinity, 1),
   shop: loadSvg(shop, 1),
   fox: loadSvg(fox, 1.8),
+
+  // Trees (should render in front of structures)
+  tree: loadSvg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
+
+  // Temple stacks on things, we want it visible, always
+  hinduTemple: loadSvg(hinduTemple, 1.75),
+
+  // SFX elements (highest z-order, always on top)
   meteor: loadSvg(meteor, 0.5),
-  dash: loadSvg(dash, 0.1),
+  fire: loadSvg(fire, 1, { layer: 2 }),
+  claw: loadSvg(claw, 0.05, { layer: 2 }),
+  collision: loadSvg(collision, 2, { layer: 2 }),
+  dash: loadSvg(dash, 0.1, { layer: 2 }),
+  circle: loadSvg(circle, 0.08, { layer: 2 }),
+  gravity: loadSvg(gravity, 2, { layer: 2 }),
 };
 Object.assign(globalThis, { collections });
 
@@ -239,13 +258,15 @@ app.addSystem({
   onChange: updateColor,
 });
 
-const updateScale = (e: SystemEntity<"prefab" | "modelScale">) => {
-  const collection = collections[e.model ?? e.prefab];
-  if (!collection) return;
+const updateScale = (e: SystemEntity<"modelScale">) => {
+  const model = e.model ?? e.prefab;
+  if (!model) return;
+  const collection = collections[model];
+  if (!collection) return console.warn(`No ${e.model} SVG on ${e.id}`);
   collection.setScaleAt(e.id, e.modelScale);
 };
 app.addSystem({
-  props: ["prefab", "modelScale"],
+  props: ["modelScale"],
   onAdd: updateScale,
   onChange: updateScale,
 });

@@ -16,13 +16,16 @@ import { scene } from "./three.ts";
 import { svgs } from "../systems/three.ts";
 
 const loader = new SVGLoader();
+let zOrderCounter = 0;
 
 export const loadSvg = (
   svg: string,
   scale: number,
-  { count = 0, layer }: {
+  { count = 0, layer, yOffset = 0, xOffset = 0 }: {
     count?: number;
     layer?: number;
+    yOffset?: number;
+    xOffset?: number;
   } = {},
 ) => {
   const name = Object.entries(svgs).find((e) => e[1] === svg)?.[0];
@@ -105,12 +108,17 @@ export const loadSvg = (
     }
   }
 
-  // Center geometry
+  // Center geometry with optional X and Y offsets
   const offset = new Vector3();
   new Box3().setFromObject(group)
     .clone()
     .getCenter(offset)
     .multiplyScalar(-1);
+
+  // Apply yOffset and xOffset to shift the geometry
+  offset.y += yOffset;
+  offset.x += xOffset;
+
   group.children.forEach((c) =>
     c instanceof Mesh && c.geometry instanceof BufferGeometry
       ? c.geometry.translate(offset.x, offset.y, 0)
@@ -120,6 +128,13 @@ export const loadSvg = (
   // Make instanced
   const igroup = new InstancedGroup(group, count, name);
   if (typeof layer === "number") igroup.traverse((o) => o.layers.set(layer));
+
+  // Apply auto-incrementing render order
+  const currentZOrder = zOrderCounter++;
+  igroup.traverse((o) => {
+    if ("renderOrder" in o) o.renderOrder = currentZOrder;
+  });
+
   scene.add(igroup);
   return igroup;
 };

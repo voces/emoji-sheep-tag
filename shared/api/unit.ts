@@ -3,11 +3,11 @@ import {
   ClassificationGroup,
   classificationGroups,
   defaultClassifications,
-  prefabs,
 } from "../data.ts";
 import { Entity } from "../types.ts";
 import { absurd } from "../util/absurd.ts";
 import { getPlayerTeam } from "./player.ts";
+import { mergeEntityWithPrefab } from "./entity.ts";
 
 export const tempUnit = (
   owner: string,
@@ -15,18 +15,15 @@ export const tempUnit = (
   x: number,
   y: number,
   extra?: Partial<Entity>,
-): Entity => ({
-  id: "",
-  prefab: type,
-  owner,
-  position: { x, y },
-  facing: Math.PI,
-  ...(typeof prefabs[type]?.maxHealth === "number"
-    ? { health: prefabs[type]?.maxHealth }
-    : undefined),
-  ...prefabs[type],
-  ...extra,
-});
+): Entity =>
+  mergeEntityWithPrefab({
+    id: "",
+    prefab: type,
+    owner,
+    position: { x, y },
+    facing: Math.PI,
+    ...extra,
+  }) as Entity;
 
 export const computeUnitMovementSpeed = (unit: Entity): number => {
   const baseSpeed = unit.movementSpeed ?? 0;
@@ -175,17 +172,24 @@ const isSelf = (source: Entity, target: Entity) => {
   return source === target;
 };
 
-const isStructure = (entity: Entity) => {
+export const isStructure = (entity: Entity) => {
   if (entity.targetedAs?.includes("structure")) return true;
-  if (entity.targetedAs?.includes("unit")) return false;
+  if (
+    entity.targetedAs?.includes("unit") || entity.targetedAs?.includes("tree")
+  ) return false;
   return !!entity.tilemap;
 };
 
 const isUnit = (entity: Entity) => {
   if (entity.targetedAs?.includes("unit")) return true;
-  if (entity.targetedAs?.includes("structure")) return false;
+  if (
+    entity.targetedAs?.includes("structure") ||
+    entity.targetedAs?.includes("tree")
+  ) return false;
   return !entity.tilemap;
 };
+
+const isTree = (entity: Entity) => !!entity.targetedAs?.includes("tree");
 
 const isSpirit = (entity: Entity) => !!entity.targetedAs?.includes("spirit");
 
@@ -250,7 +254,7 @@ export const testClassification = (
           )
         ) return false;
         break;
-      case "structureOrUnit":
+      case "destructibles":
         if (
           !(groups[group] ?? defaultClassifications[group]).some(
             (classification) => {
@@ -259,6 +263,8 @@ export const testClassification = (
                   return isStructure(target);
                 case "unit":
                   return isUnit(target);
+                case "tree":
+                  return isTree(target);
                 default:
                   throw absurd(classification);
               }

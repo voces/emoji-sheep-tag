@@ -22,7 +22,7 @@ export const camera = new PerspectiveCamera(
 Object.assign(globalThis, { camera });
 
 // undefined in tests
-let renderer: WebGLRenderer | undefined;
+export let renderer: WebGLRenderer | undefined;
 if (!("Deno" in globalThis)) {
   renderer = new WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(globalThis.devicePixelRatio);
