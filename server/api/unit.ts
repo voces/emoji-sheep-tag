@@ -78,10 +78,7 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
     );
 
     // Create dash SFX at start position
-    console.log(newSfx(builder.position, "dash", dashFacing, 0.3, {
-      type: "ease-out",
-      duration: 0.3,
-    }));
+    newSfx(builder.position, "dash", dashFacing, 0.3, "ease-out");
 
     // Move the builder to the new position
     builder.position = { x: newX, y: newY };
@@ -101,10 +98,7 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
           startPos.y - builder.position.y,
           startPos.x - builder.position.x,
         );
-        newSfx(builder.position, "dash", dashFacing, 0.3, {
-          type: "ease-out",
-          duration: 0.3,
-        });
+        newSfx(builder.position, "dash", dashFacing, 0.3, "ease-out");
       }
     }
   });

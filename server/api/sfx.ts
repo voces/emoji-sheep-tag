@@ -6,10 +6,8 @@ export const newSfx = (
   modelName: string,
   facing = 0,
   duration = 1,
-  easing?: {
-    type: "ease-in" | "ease-out" | "ease-in-out";
-    duration: number;
-  },
+  easing?: "ease-in" | "ease-out" | "ease-in-out",
+  easingDuration = duration,
 ) => {
   const entity = {
     id: `sfx-${Date.now()}-${Math.random()}`,
@@ -21,14 +19,14 @@ export const newSfx = (
       expiration: "SFX",
       ...(easing && {
         progressEasing: {
-          type: easing.type,
-          duration: easing.duration,
+          type: easing,
+          duration: easingDuration,
         },
       }),
     }],
     // Set initial progress based on easing type
     ...(easing && {
-      progress: easing.type === "ease-out" ? 1 : 0,
+      progress: easing === "ease-out" ? 1 : 0,
     }),
   };
 

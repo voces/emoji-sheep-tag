@@ -2,6 +2,7 @@ import { z } from "npm:zod";
 
 import { interval, timeout } from "../api/timing.ts";
 import { newUnit } from "../api/unit.ts";
+import { playSoundAt } from "../api/sound.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
@@ -109,8 +110,9 @@ export const start = (
       timeout(() => {
         const lobby = lobbyContext.current;
         if (!lobby.round) return;
-        for (const owner of wolves.size ? wolves : sheep) {
+        for (const owner of practice ? sheep : wolves) {
           newUnit(owner.id, "wolf", center.x, center.y);
+          playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
         }
       }, 1.8);
     }, 0.3);
