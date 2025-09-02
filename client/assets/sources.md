@@ -25,6 +25,7 @@
 - https://www.svgrepo.com/svg/191964/potion
 - https://www.svgrepo.com/svg/277687/meteor
 - https://www.svgrepo.com/svg/246372/cursor
+- https://www.svgrepo.com/svg/400155/dash
 
 # Audio
 
@@ -53,6 +54,9 @@
 - spirit3: https://freesound.org/people/ToastHatter/sounds/561544/
 - growl3: https://freesound.org/people/qubodup/sounds/442816/
 - growl4: https://freesound.org/people/Lerdavian/sounds/321982/
+- howl1: https://freesound.org/people/PhonosUPF/sounds/499699/
+- howl2: https://freesound.org/people/Robinhood76/sounds/66538/
+- poof1: https://freesound.org/people/AuDRoger/sounds/471204/
 
 ## To consider
 

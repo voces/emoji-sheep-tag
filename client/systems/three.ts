@@ -31,6 +31,7 @@ import sapphire from "../assets/sapphire.svg" with { type: "text" };
 import runningShoes from "../assets/running-shoes.svg" with { type: "text" };
 import purplePotion from "../assets/purple-potion.svg" with { type: "text" };
 import meteor from "../assets/meteor.svg" with { type: "text" };
+import dash from "../assets/dash.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -57,6 +58,7 @@ export const svgs: Record<string, string> = {
   runningShoes,
   purplePotion,
   meteor,
+  dash,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -76,6 +78,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   shop: loadSvg(shop, 1),
   fox: loadSvg(fox, 1.8),
   meteor: loadSvg(meteor, 0.5),
+  dash: loadSvg(dash, 0.1),
 };
 Object.assign(globalThis, { collections });
 
@@ -90,22 +93,31 @@ const updateColor = (e: Entity) => {
   if (!collection) return;
   const hex = e.playerColor ??
     playersVar().find((p) => p.id === e.owner)?.color;
-  if (!hex) return;
-  color.set(hex);
-  if (e.owner || e.playerColor) {
-    if (typeof e.blueprint === "number") {
-      temp.setHex(e.blueprint);
-      color2.set(color);
-      color2.lerp(white, 0.8);
-      color2.lerp(temp, 0.6);
-      collection.setVertexColorAt(e.id, color2, { alpha: 0.75 });
-      collection.setPlayerColorAt(e.id, color, { overrideVertex: false });
-    } else {
-      collection.setPlayerColorAt(e.id, color, {
-        alpha: typeof e.progress === "number" ? e.progress : undefined,
-        progressiveAlpha: typeof e.progress === "number",
-      });
+
+  if (hex) {
+    color.set(hex);
+    if (e.owner || e.playerColor) {
+      if (typeof e.blueprint === "number") {
+        temp.setHex(e.blueprint);
+        color2.set(color);
+        color2.lerp(white, 0.8);
+        color2.lerp(temp, 0.6);
+        collection.setVertexColorAt(e.id, color2, { alpha: 0.75 });
+        collection.setPlayerColorAt(e.id, color, { overrideVertex: false });
+      } else {
+        collection.setPlayerColorAt(e.id, color, {
+          alpha: typeof e.progress === "number" ? e.progress : undefined,
+          progressiveAlpha: typeof e.progress === "number",
+        });
+      }
     }
+  } else if (typeof e.progress === "number") {
+    // For entities without player colors, use vertex color with alpha based on progress
+    color.set(0xffffff); // Default white color
+    collection.setVertexColorAt(e.id, color, {
+      alpha: e.progress,
+      progressiveAlpha: true,
+    });
   }
 };
 
@@ -124,12 +136,12 @@ app.addSystem({
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
 
 const onPositionOrRotationChange = (
-  e: SystemEntity<"prefab"> & {
-    readonly position: { x: number; y: number };
+  e: SystemEntity<"position"> & {
     readonly facing?: number;
   },
 ) => {
   const model = e.model ?? e.prefab;
+  if (!model) return;
   if (e.order && "path" in e.order) {
     const prev = prevPositions.get(e);
     if (prev) {
@@ -167,7 +179,11 @@ app.addSystem({
   props: ["prefab", "position"],
   onAdd: (e: SystemEntity<"prefab" | "position">) => {
     prevPositions.set(e, e.position);
-    collections[e.model ?? e.prefab]?.setPositionAt(
+    const model = e.model ?? e.prefab;
+    if (!collections[model]) {
+      return console.warn(`No ${e.model} SVG on ${e.id}`);
+    }
+    collections[model]?.setPositionAt(
       e.id,
       e.position.x,
       e.position.y,
@@ -177,6 +193,32 @@ app.addSystem({
   },
   onChange: onPositionOrRotationChange,
   onRemove: (e) => collections[e.model ?? e.prefab!]?.delete(e.id),
+});
+
+app.addSystem({
+  props: ["model", "position"],
+  onAdd: (e: SystemEntity<"model" | "position">) => {
+    if (e.prefab) return;
+    prevPositions.set(e, e.position);
+    if (!collections[e.model]) {
+      return console.warn(`No ${e.model} SVG on ${e.id}`);
+    }
+    collections[e.model]?.setPositionAt(
+      e.id,
+      e.position.x,
+      e.position.y,
+      e.facing,
+      e.zIndex,
+    );
+  },
+  onChange: (e) => {
+    if (e.prefab) return;
+    onPositionOrRotationChange;
+  },
+  onRemove: (e) => {
+    if (e.prefab) return;
+    collections[e.model!]?.delete(e.id);
+  },
 });
 
 app.addSystem({

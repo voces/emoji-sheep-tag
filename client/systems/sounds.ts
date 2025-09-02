@@ -1,18 +1,29 @@
 import { playEntitySound, playSoundAt } from "../api/sound.ts";
-import { app } from "../ecs.ts";
+import { app, Entity } from "../ecs.ts";
 import { getPlayer } from "@/vars/players.ts";
 import { stateVar } from "../ui/vars/state.ts";
 import { selection } from "./autoSelect.ts";
 import { lookup } from "./lookup.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { format } from "../api/player.ts";
+import { center } from "@/shared/map.ts";
+import { pick } from "../util/pick.ts";
+
+const wolves = new Set<Entity>();
 
 app.addSystem({
   props: ["id"],
   onAdd: (e) => {
     if (e.sounds?.birth) playEntitySound(e, "birth", { volume: 0.5 });
+    if (e.prefab === "wolf") {
+      if (wolves.size === 0) {
+        playSoundAt(pick("howl1", "howl2"), center.x, center.y, 0.15);
+      }
+      wolves.add(e);
+    }
   },
   onRemove: (e) => {
+    if (e.prefab === "wolf") wolves.delete(e);
     if (stateVar() !== "playing") return;
     if (typeof e.health === "number" && typeof e.maxHealth === "number") {
       playEntitySound(e, ["death"], { volume: e.tilemap ? 0.3 : 0.6 });

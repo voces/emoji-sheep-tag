@@ -84,7 +84,7 @@ export const start = (
         owner: player.id,
         isPlayer: true,
         team: "sheep",
-        gold: lobby.settings.startingGold.sheep,
+        gold: practice ? 100_000 : lobby.settings.startingGold.sheep,
       });
     }
 

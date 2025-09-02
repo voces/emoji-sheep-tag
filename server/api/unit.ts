@@ -18,8 +18,10 @@ import { findAction } from "../util/actionLookup.ts";
 import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 import { deductPlayerGold } from "./player.ts";
-import { appContext } from "@/shared/context.ts";
 import { addEntity } from "@/shared/api/entity.ts";
+import { appContext } from "@/shared/context.ts";
+import { playSoundAt } from "./sound.ts";
+import { newSfx } from "./sfx.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -54,6 +56,9 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
 
   // Handle translocation for Translocation Hut
   if (type === "translocationHut" && builder.position && temp.position) {
+    // Play poof sound at sheep's start position
+    playSoundAt(builder.position, "poof1");
+
     // Calculate the vector from structure center to builder
     const dx = builder.position.x - temp.position.x;
     const dy = builder.position.y - temp.position.y;
@@ -66,12 +71,43 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
     const newX = temp.position.x + distance * Math.cos(angle);
     const newY = temp.position.y + distance * Math.sin(angle);
 
+    // Calculate facing for dash SFX (movement direction)
+    const dashFacing = Math.atan2(
+      newY - builder.position.y,
+      newX - builder.position.x,
+    );
+
+    // Create dash SFX at start position
+    console.log(newSfx(builder.position, "dash", dashFacing, 0.3, {
+      type: "ease-out",
+      duration: 0.3,
+    }));
+
     // Move the builder to the new position
     builder.position = { x: newX, y: newY };
   }
 
   // Relocate entity if position not valid
-  app.enqueue(() => updatePathing(builder));
+  app.enqueue(() => {
+    updatePathing(builder);
+
+    if (type === "translocationHut" && builder.position) {
+      playSoundAt(builder.position, "poof1");
+
+      // Create dash SFX at end position (facing is same as movement direction)
+      const startPos = temp.position;
+      if (startPos) {
+        const dashFacing = Math.atan2(
+          startPos.y - builder.position.y,
+          startPos.x - builder.position.x,
+        );
+        newSfx(builder.position, "dash", dashFacing, 0.3, {
+          type: "ease-out",
+          duration: 0.3,
+        });
+      }
+    }
+  });
 
   return temp;
 };

@@ -11,8 +11,8 @@ import {
 } from "@/shared/pathing/math.ts";
 import { calcPath } from "../pathing.ts";
 import { consumeItem } from "../../api/unit.ts";
-import { addEntity } from "@/shared/api/entity.ts";
 import { lookup } from "../lookup.ts";
+import { playSoundAt } from "../../api/sound.ts";
 
 export const advanceCast = (e: Entity, delta: number) => {
   if (e.order?.type !== "cast") return delta;
@@ -70,15 +70,9 @@ export const advanceCast = (e: Entity, delta: number) => {
 
     if (
       action && "soundOnCastStart" in action && action.soundOnCastStart &&
-      e.position && e.owner
+      e.position
     ) {
-      addEntity({
-        id: `sound-${Date.now()}-${Math.random()}`,
-        owner: e.owner,
-        position: { x: e.position.x, y: e.position.y },
-        sounds: { birth: [action.soundOnCastStart] },
-        buffs: [{ remainingDuration: 0.1, expiration: "Sound" }],
-      });
+      playSoundAt(e.position, action.soundOnCastStart);
     }
 
     orderDef?.onCastStart?.(e);

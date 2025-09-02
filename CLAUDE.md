@@ -13,8 +13,9 @@
   with single statements
 - Prefer types over interfaces
 - Avoid casting, especially to `any`. If casting is required, cast to the
-  correct type
-- Prefer self-documenting code over commenting
+  correct and minimal type
+- Prefer self-documenting code over commenting. Do not leave comments regarding
+  changes, only have comments about the functionality of the code, if required
 - Remove unused variables instead of adding leading underscores, unless they are
   used for destructuring or skipping in a list
 
@@ -30,4 +31,5 @@
 
 # Workflow
 
-- Format, typecheck, lint, and run tests when done making code changes
+- Create tests, format, typecheck, lint, and run tests when done making code
+  changes

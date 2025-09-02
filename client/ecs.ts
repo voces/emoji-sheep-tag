@@ -14,6 +14,8 @@ export type Entity = CommonEntity & {
   selectable?: boolean;
   /** Server position for restoring after failed interpolation */
   serverPosition?: { readonly x: number; readonly y: number };
+  /** Client-side elapsed time for easing calculations */
+  clientElapsedTime?: number;
 };
 
 export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;

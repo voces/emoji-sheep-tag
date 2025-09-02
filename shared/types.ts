@@ -64,6 +64,10 @@ export type Buff = {
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
   readonly expiration?: string;
+  readonly progressEasing?: {
+    readonly type: "ease-in" | "ease-out" | "ease-in-out";
+    readonly duration: number;
+  };
 };
 
 export type UnitDataActionTarget = {

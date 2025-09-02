@@ -173,6 +173,10 @@ const zBuff = z.object({
   movementSpeedBonus: z.number().optional(),
   movementSpeedMultiplier: z.number().optional(),
   expiration: z.string().optional(),
+  progressEasing: z.object({
+    type: z.enum(["ease-in", "ease-out", "ease-in-out"]),
+    duration: z.number(),
+  }).optional(),
 });
 
 const zUpdate = z.object({

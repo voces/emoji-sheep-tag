@@ -11,6 +11,7 @@ import "./systems/blueprints.ts";
 import "./systems/fire.ts";
 import "./systems/swing.ts";
 import "./systems/kaboom.ts";
+import "./systems/easing.ts";
 import "./systems/indicators.ts";
 import "./systems/mirrors.ts";
 import "./systems/playerEntityReferences.ts";
