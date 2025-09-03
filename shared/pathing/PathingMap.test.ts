@@ -96,6 +96,40 @@ describe("PathingMap", () => {
     ]);
   });
 
+  it("should handle entity updates near map boundaries", () => {
+    const solver = new PathingMap({
+      pathing: [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+      ],
+      resolution: 2,
+    });
+
+    const entity = {
+      id: "entity-test",
+      radius: 0.5,
+      position: { x: 1.5, y: 1.5 },
+      pathing: 1,
+    };
+
+    // Add entity initially
+    solver.addEntity(entity);
+
+    // Move entity to edge positions that would cause out-of-bounds access
+    // This simulates what happens with translocation hut teleporting units
+    entity.position = { x: 2.9, y: 2.9 };
+    expect(() => solver.updateEntity(entity)).not.toThrow();
+
+    // Move to negative coordinates
+    entity.position = { x: -0.5, y: 1.5 };
+    expect(() => solver.updateEntity(entity)).not.toThrow();
+
+    // Move to far out of bounds
+    entity.position = { x: 10, y: 10 };
+    expect(() => solver.updateEntity(entity)).not.toThrow();
+  });
+
   it("should handle distance to target corner", () => {
     const sheep = {
       id: "sheep-0",

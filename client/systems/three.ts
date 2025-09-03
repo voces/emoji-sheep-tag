@@ -91,13 +91,13 @@ const collections: Record<string, InstancedGroup | undefined> = {
   hinduTemple: loadSvg(hinduTemple, 1.75),
 
   // SFX elements (highest z-order, always on top)
-  meteor: loadSvg(meteor, 0.5),
   fire: loadSvg(fire, 1, { layer: 2 }),
   claw: loadSvg(claw, 0.05, { layer: 2 }),
-  collision: loadSvg(collision, 2, { layer: 2 }),
   dash: loadSvg(dash, 0.1, { layer: 2 }),
   circle: loadSvg(circle, 0.08, { layer: 2 }),
   gravity: loadSvg(gravity, 2, { layer: 2 }),
+  collision: loadSvg(collision, 2, { layer: 2 }),
+  meteor: loadSvg(meteor, 0.5),
 };
 Object.assign(globalThis, { collections });
 

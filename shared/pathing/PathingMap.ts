@@ -1689,6 +1689,7 @@ export class PathingMap {
     if (!this.entities.has(entity)) return;
     const oldTiles: Tile[] = this.entities.get(entity) ?? [];
     const newTiles: Tile[] = [];
+    const newTileMapValues: number[] = [];
     const position = entity.position;
     const { map, top, left, width, height } = entity.tilemap ??
       this.pointToTilemap(position.x, position.y, entity.radius, {
@@ -1698,7 +1699,16 @@ export class PathingMap {
     const tileY = this.yWorldToTile(position.y);
     for (let y = top; y < top + height; y++) {
       for (let x = left; x < left + width; x++) {
-        newTiles.push(this.grid[tileY + y][tileX + x]);
+        const gridY = tileY + y;
+        const gridX = tileX + x;
+        // Check bounds before accessing grid
+        if (
+          gridY >= 0 && gridY < this.grid.length &&
+          gridX >= 0 && gridX < this.grid[gridY].length
+        ) {
+          newTiles.push(this.grid[gridY][gridX]);
+          newTileMapValues.push(map[(y - top) * width + (x - left)]);
+        }
       }
     }
 
@@ -1709,9 +1719,10 @@ export class PathingMap {
 
     newTiles.forEach((tile, index) => {
       // Tiles the entity continues to occupy
-      if (oldTiles.includes(tile)) tile.updateEntity(entity, map[index]);
-      // Tiles the entity now occupies
-      else tile.addEntity(entity, map[index]);
+      if (oldTiles.includes(tile)) {
+        tile.updateEntity(entity, newTileMapValues[index]);
+      } // Tiles the entity now occupies
+      else tile.addEntity(entity, newTileMapValues[index]);
     });
 
     this.entities.set(entity, newTiles);
