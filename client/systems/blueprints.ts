@@ -1,8 +1,9 @@
 import { isAlly } from "@/shared/api/unit.ts";
 import { app, Entity, SystemEntity } from "../ecs.ts";
-import { getLocalPlayer } from "../ui/vars/players.ts";
+import { getLocalPlayer, getPlayer } from "../ui/vars/players.ts";
 import { prefabs as blueprintData } from "@/shared/data.ts";
 import { nonNull } from "@/shared/types.ts";
+import { computeBlueprintColor } from "../util/colorHelpers.ts";
 
 const blueprints = new Map<Entity, Entity[]>();
 
@@ -14,7 +15,9 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
   ].filter(nonNull);
 
   if (!buildOrders.length) blueprints.delete(e);
-  else {blueprints.set(
+  else {
+    const playerColor = getPlayer(e.owner)?.color;
+    blueprints.set(
       e,
       buildOrders.map((a) =>
         app.addEntity({
@@ -24,11 +27,15 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
           modelScale: blueprintData[a.unitType]?.modelScale,
           owner: e.owner,
           position: { x: a.x, y: a.y },
-          blueprint: 0x00ff,
+          vertexColor: playerColor
+            ? computeBlueprintColor(playerColor, 0x00ff)
+            : 0x00ff,
+          alpha: 0.75,
           selectable: false,
         })
       ),
-    );}
+    );
+  }
 };
 
 app.addSystem({

@@ -45,20 +45,24 @@ export const Command = ({
   icon,
   binding,
   iconScale,
-  current,
+  pressed,
   disabled,
   goldCost,
   manaCost,
+  hideTooltip,
+  iconProps,
 }: {
   name: string;
   description?: string;
   icon?: string;
   binding?: ReadonlyArray<string>;
   iconScale?: number;
-  current?: boolean;
+  pressed?: boolean;
   disabled?: boolean;
   goldCost?: number;
   manaCost?: number;
+  hideTooltip?: boolean;
+  iconProps?: Partial<React.ComponentProps<typeof SvgIcon>>;
 }) => {
   const localPlayer = useLocalPlayer();
 
@@ -130,7 +134,7 @@ export const Command = ({
       role="button"
       aria-label={name}
       aria-disabled={disabled}
-      aria-pressed={current}
+      aria-pressed={pressed}
       onClick={handleClick}
       style={{
         filter: disabled ? "saturate(0.3) brightness(0.7)" : undefined,
@@ -139,12 +143,17 @@ export const Command = ({
       {...tooltipContainerProps}
     >
       {icon && (
-        <SvgIcon icon={icon} color={localPlayer?.color} scale={iconScale} />
+        <SvgIcon
+          icon={icon}
+          color={localPlayer?.color}
+          scale={iconScale}
+          {...iconProps}
+        />
       )}
       {binding?.length && (
         <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>
       )}
-      {tooltip}
+      {!hideTooltip && tooltip}
     </CommandButton>
   );
 };

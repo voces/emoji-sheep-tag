@@ -35,6 +35,7 @@ export const theme: DefaultTheme = {
   },
 
   shadows: {
+    xs: "0 0 1px 1px",
     sm: "1px 1px 1px 2px",
     md: "1px 1px 3px",
     lg: "2px 2px 8px",

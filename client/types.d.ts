@@ -22,12 +22,12 @@ declare module "npm:styled-components" {
     };
 
     spacing: {
-      xs: string;
-      sm: string;
-      md: string;
-      lg: string;
-      xl: string;
-      xxl: string;
+      xs: "2px";
+      sm: "4px";
+      md: "8px";
+      lg: "16px";
+      xl: "24px";
+      xxl: "32px";
     };
 
     borderRadius: {
@@ -37,6 +37,7 @@ declare module "npm:styled-components" {
     };
 
     shadows: {
+      xs: string;
       sm: string;
       md: string;
       lg: string;

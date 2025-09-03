@@ -398,6 +398,8 @@ globalThis.addEventListener("wheel", (e) => {
   ) {
     return false;
   }
+  if (e.ctrlKey) return;
+  console.log("zoom");
   camera.position.z += e.deltaY > 0 ? 1 : -1;
 });
 

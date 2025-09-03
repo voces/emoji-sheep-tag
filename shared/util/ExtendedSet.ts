@@ -119,6 +119,11 @@ export class ExtendedSet<T> extends Set<T> {
       this.eventListeners[type] = [];
     }
     this.eventListeners[type].push(listener);
+
+    return () => {
+      const idx = this.eventListeners![type].indexOf(listener);
+      if (idx >= 0) this.eventListeners![type].splice(idx, 1);
+    };
   }
 
   private dispatchEvent<K extends keyof ExtendedSetEventMap<T>>(

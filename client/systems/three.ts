@@ -74,15 +74,15 @@ const collections: Record<string, InstancedGroup | undefined> = {
     yOffset: -0.36,
     xOffset: -0.01,
   }),
+  fence: loadSvg(fence, 0.07, { layer: 2 }),
 
   // Basic units and structures
   sheep: loadSvg(sheep, 1),
-  wolf: loadSvg(wolf, 2),
   hut: loadSvg(hut, 2),
-  fence: loadSvg(fence, 0.07, { layer: 2 }),
   divinity: loadSvg(divinity, 1),
   shop: loadSvg(shop, 1),
   fox: loadSvg(fox, 1.8),
+  wolf: loadSvg(wolf, 2),
 
   // Trees (should render in front of structures)
   tree: loadSvg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
@@ -102,42 +102,31 @@ const collections: Record<string, InstancedGroup | undefined> = {
 Object.assign(globalThis, { collections });
 
 const color = new Color();
-const color2 = new Color();
-const white = new Color("white");
-const temp = new Color(0x0000ff);
 
 const updateColor = (e: Entity) => {
   if (!e.prefab) return;
   const collection = collections[e.model ?? e.prefab];
   if (!collection) return;
-  const hex = e.playerColor ??
+
+  if (typeof e.vertexColor === "number") {
+    color.setHex(e.vertexColor);
+    collection.setVertexColorAt(e.id, color);
+  }
+
+  const accentColor = e.playerColor ??
     playersVar().find((p) => p.id === e.owner)?.color;
 
-  if (hex) {
-    color.set(hex);
-    if (e.owner || e.playerColor) {
-      if (typeof e.blueprint === "number") {
-        temp.setHex(e.blueprint);
-        color2.set(color);
-        color2.lerp(white, 0.8);
-        color2.lerp(temp, 0.6);
-        collection.setVertexColorAt(e.id, color2, { alpha: 0.75 });
-        collection.setPlayerColorAt(e.id, color, { overrideVertex: false });
-      } else {
-        collection.setPlayerColorAt(e.id, color, {
-          alpha: typeof e.progress === "number" ? e.progress : undefined,
-          progressiveAlpha: typeof e.progress === "number",
-        });
-      }
-    }
-  } else if (typeof e.progress === "number") {
-    // For entities without player colors, use vertex color with alpha based on progress
-    color.set(0xffffff); // Default white color
-    collection.setVertexColorAt(e.id, color, {
-      alpha: e.progress,
-      progressiveAlpha: true,
+  color.set(accentColor ?? 0xffffff);
+
+  if (accentColor) {
+    collection.setPlayerColorAt(e.id, color, {
+      overrideVertex: typeof e.vertexColor !== "number",
     });
   }
+
+  if (e.progress) collection.setAlphaAt(e.id, e.progress, true);
+
+  if (e.alpha) collection.setAlphaAt(e.id, e.alpha, false);
 };
 
 app.addSystem({
@@ -147,7 +136,13 @@ app.addSystem({
 });
 
 app.addSystem({
-  props: ["blueprint"],
+  props: ["vertexColor"],
+  onAdd: updateColor,
+  onChange: updateColor,
+});
+
+app.addSystem({
+  props: ["alpha"],
   onAdd: updateColor,
   onChange: updateColor,
 });

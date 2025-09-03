@@ -2,16 +2,20 @@
 import { useEffect, useRef } from "react";
 import { Color } from "three";
 import { svgs } from "../../systems/three.ts";
+import { computeBlueprintColor } from "../../util/colorHelpers.ts";
+import { getPlayer } from "@/vars/players.ts";
 
 export const SvgIcon = ({
   icon,
   color,
   scale,
+  overlayStyle,
   ...rest
 }: {
   icon: string;
   color?: string;
   scale?: number;
+  overlayStyle?: React.CSSProperties;
 } & React.HTMLAttributes<HTMLDivElement>) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -32,17 +36,39 @@ export const SvgIcon = ({
   if (!(icon in svgs)) return null;
 
   return (
-    <div
-      ref={ref}
-      {...rest}
-      style={{
-        color,
-        transform: scale ? `scale(${scale})` : undefined,
-        filter: icon === "wolf"
-          ? "brightness(1.5) brightness(0.6) sepia(1) hue-rotate(160deg) saturate(5)"
-          : undefined,
-        ...rest.style,
-      }}
-    />
+    <div>
+      <div
+        ref={ref}
+        {...rest}
+        style={{
+          color,
+          transform: scale ? `scale(${scale})` : undefined,
+          ...rest.style,
+        }}
+      />
+      {overlayStyle && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            mixBlendMode: "multiply",
+            ...overlayStyle,
+          }}
+        />
+      )}
+    </div>
   );
+};
+
+export const iconEffects = {
+  mirror: (player: string | undefined) => ({
+    overlayStyle: {
+      backgroundColor: `#${
+        computeBlueprintColor(
+          player ? getPlayer(player)?.color ?? 0xffffff : 0xffffff,
+          0x0000ff,
+        ).toString(16).padStart(6, "0")
+      }`,
+    },
+  }),
 };

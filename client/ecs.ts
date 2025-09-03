@@ -7,7 +7,7 @@ import { generateDoodads } from "@/shared/map.ts";
 export type Entity = CommonEntity & {
   selected?: boolean;
   /** Blueprint color */
-  blueprint?: number;
+  vertexColor?: number;
   zIndex?: number;
   playerColor?: string;
   isKaboom?: boolean;

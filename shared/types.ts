@@ -70,12 +70,15 @@ export type Buff = {
   };
 };
 
+type IconEffect = "mirror";
+
 export type UnitDataActionTarget = {
   readonly name: string;
   readonly type: "target";
   readonly order: string;
   readonly description?: string;
   readonly icon?: string;
+  readonly iconEffect?: IconEffect;
   /** By default, actions can target everything */
   readonly targeting?: ReadonlyArray<Classification>;
   /** `aoe` of `0` allows targeting the ground */
@@ -104,6 +107,7 @@ export type UnitDataAction = {
   readonly order: string;
   readonly description?: string;
   readonly icon?: string;
+  readonly iconEffect?: IconEffect;
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly castDuration?: number;
@@ -139,6 +143,9 @@ export type Entity = {
 
   model?: string;
   modelScale?: number;
+  alpha?: number;
+  icon?: string;
+  iconEffect?: IconEffect;
   sounds?: {
     ackAttack?: ReadonlyArray<string>;
     birth?: ReadonlyArray<string>;

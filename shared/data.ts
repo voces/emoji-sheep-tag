@@ -166,28 +166,36 @@ export const prefabs: Record<
   Pick<
     Entity,
     | "name"
-    | "movementSpeed"
-    | "turnSpeed"
-    | "radius"
-    | "pathing"
-    | "requiresPathing"
-    | "tilemap"
-    | "requiresTilemap"
-    | "attack"
+    //
+    | "model"
+    | "modelScale"
+    | "alpha"
+    | "sounds"
+    //
     | "maxHealth"
     | "healthRegen"
     | "mana"
     | "maxMana"
     | "manaRegen"
+    //
+    | "movementSpeed"
+    | "turnSpeed"
     | "actions"
-    | "isDoodad"
-    | "model"
-    | "modelScale"
-    | "sounds"
     | "completionTime"
-    | "inventory"
-    | "bounty"
+    | "isDoodad"
+    //
+    | "attack"
     | "targetedAs"
+    //
+    | "radius"
+    | "pathing"
+    | "requiresPathing"
+    | "tilemap"
+    | "requiresTilemap"
+    //
+    | "inventory"
+    //
+    | "bounty"
   >
 > = {
   sheep: {
@@ -296,6 +304,7 @@ export const prefabs: Record<
         type: "auto",
         order: "mirrorImage",
         icon: "wolf",
+        iconEffect: "mirror",
         binding: ["KeyR"],
         manaCost: 20,
         castDuration: 0.5,
@@ -325,6 +334,7 @@ export const prefabs: Record<
     name: "Spirit",
     model: "sheep",
     modelScale: 0.5,
+    alpha: 0.7,
     movementSpeed: 1,
     turnSpeed: 5,
     radius: 0.125,

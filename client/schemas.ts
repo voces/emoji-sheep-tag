@@ -74,6 +74,8 @@ const zClassification = z.union([
   z.literal("notSpirit"),
 ]);
 
+const zIconEffect = z.union([z.literal("mirror")]);
+
 // Define the base action types first (non-recursive)
 const zBaseAction = z.union([
   z.object({
@@ -92,6 +94,7 @@ const zBaseAction = z.union([
     type: z.literal("auto"),
     description: z.string().optional(),
     icon: z.string().optional(),
+    iconEffect: zIconEffect.optional(),
     order: z.string(),
     binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
@@ -118,6 +121,7 @@ const zBaseAction = z.union([
     type: z.literal("target"),
     description: z.string().optional(),
     icon: z.string().optional(),
+    iconEffect: zIconEffect.optional(),
     order: z.string(),
     targeting: z.array(zClassification).readonly().optional(),
     aoe: z.number().optional(),
@@ -254,6 +258,9 @@ const zUpdate = z.object({
   // Art
   model: z.string().optional(),
   modelScale: z.number().optional(),
+  alpha: z.number().optional(),
+  icon: z.string().optional(),
+  iconEffect: zIconEffect.optional(),
   sounds: z.partialRecord(
     z.union([
       z.literal("birth"),

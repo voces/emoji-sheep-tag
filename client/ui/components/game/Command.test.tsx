@@ -43,14 +43,14 @@ describe("Command", () => {
   });
 
   it("should show pressed state when current", () => {
-    render(<Command name="Hold" current />, { wrapper: Wrapper });
+    render(<Command name="Hold" pressed />, { wrapper: Wrapper });
 
     const button = screen.getByRole("button");
     expect(button.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("should show unpressed state when not current", () => {
-    render(<Command name="Stop" current={false} />, { wrapper: Wrapper });
+    render(<Command name="Stop" pressed={false} />, { wrapper: Wrapper });
 
     const button = screen.getByRole("button");
     expect(button.getAttribute("aria-pressed")).toBe("false");

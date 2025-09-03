@@ -18,7 +18,7 @@ export const pathable = (
 
 app.addSystem({
   props: ["position", "radius"],
-  onAdd: (e) => !e.blueprint && pathingMap.addEntity(e),
-  onChange: (e) => !e.blueprint && pathingMap.updateEntity(e),
+  onAdd: (e) => !e.vertexColor && pathingMap.addEntity(e),
+  onChange: (e) => !e.vertexColor && pathingMap.updateEntity(e),
   onRemove: (e) => pathingMap.removeEntity(e),
 });

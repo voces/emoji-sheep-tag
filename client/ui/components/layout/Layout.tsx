@@ -1,4 +1,5 @@
 import { styled } from "npm:styled-components";
+import { DefaultTheme } from "npm:styled-components";
 
 export const VStack = styled.div`
   display: flex;
@@ -6,9 +7,9 @@ export const VStack = styled.div`
   gap: ${({ theme }) => theme.spacing.md};
 `;
 
-export const HStack = styled.div`
+export const HStack = styled.div<{ $gap?: keyof DefaultTheme["spacing"] }>`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme, $gap }) => theme.spacing[$gap ?? "md"]};
 `;
 
 export const HoverHighlight = styled.div`

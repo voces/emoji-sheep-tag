@@ -13,3 +13,28 @@ export const useListenToEntityProp = <P extends keyof Entity>(
 
   return value;
 };
+
+export const useListenToEntityProps = <P extends keyof Entity>(
+  entity: Entity | undefined,
+  props: P[],
+) => {
+  const [value, setValue] = useState(
+    Object.fromEntries(props.map((prop) => [prop, entity?.[prop]])),
+  );
+  useEffect(
+    () =>
+      entity
+        ? listen(
+          entity,
+          props,
+          (e) =>
+            setValue(
+              Object.fromEntries(props.map((prop) => [prop, e?.[prop]])),
+            ),
+        )
+        : undefined,
+    [entity, props.join(" | ")],
+  );
+
+  return value;
+};

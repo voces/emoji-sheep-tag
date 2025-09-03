@@ -12,7 +12,7 @@ import {
   menuStateVar,
 } from "@/vars/menuState.ts";
 import { useMemo } from "react";
-import { Action } from "./Action.tsx";
+import { Action } from "@/components/game/Action.tsx";
 import { applyShortcutOverride } from "../../../util/applyShortcutOverrides.ts";
 import { Card } from "@/components/layout/Card.tsx";
 

@@ -5,6 +5,7 @@ import { selection } from "../systems/autoSelect.ts";
 import { canBuild } from "../api/unit.ts";
 import { updateCursor } from "../graphics/cursor.ts";
 import { setFind } from "../../server/util/set.ts";
+import { computeBlueprintColor } from "../util/colorHelpers.ts";
 
 let blueprintIndex = 0;
 let blueprint: SystemEntity<"prefab"> | undefined;
@@ -41,16 +42,23 @@ export const createBlueprint = (unitType: string, x: number, y: number) => {
     (prefabs[unitType]?.tilemap?.height ?? 0) % 4 === 0,
   );
 
+  const localPlayer = getLocalPlayer();
+  const playerColor = localPlayer?.color;
+  const targetColor = canBuild(builder, unitType, normalizedX, normalizedY)
+    ? 0x0000ff
+    : 0xff0000;
+
   blueprint = app.addEntity({
     id: `blueprint-${blueprintIndex++}`,
     prefab: unitType,
     position: { x: normalizedX, y: normalizedY },
-    owner: getLocalPlayer()?.id,
+    owner: localPlayer?.id,
     model: prefabs[unitType]?.model,
     modelScale: prefabs[unitType]?.modelScale,
-    blueprint: canBuild(builder, unitType, normalizedX, normalizedY)
-      ? 0x0000ff
-      : 0xff0000,
+    vertexColor: playerColor
+      ? computeBlueprintColor(playerColor, targetColor)
+      : targetColor,
+    alpha: 0.75,
   });
   updateCursor();
 };
@@ -71,10 +79,17 @@ export const updateBlueprint = (x: number, y: number) => {
   );
 
   blueprint.position = { x: normalizedX, y: normalizedY };
-  blueprint.blueprint =
+
+  const localPlayer = getLocalPlayer();
+  const playerColor = localPlayer?.color;
+  const targetColor =
     canBuild(builder, blueprint.prefab, normalizedX, normalizedY)
       ? 0x0000ff
       : 0xff0000;
+
+  blueprint.vertexColor = playerColor
+    ? computeBlueprintColor(playerColor, targetColor)
+    : targetColor;
 };
 
 export const cancelBlueprint = () => {
