@@ -13,7 +13,7 @@ export type WalkOrder =
     | { readonly target: { x: number; y: number } }
   );
 
-type Order = Readonly<
+export type Order = Readonly<
   WalkOrder | {
     readonly type: "build";
     readonly unitType: string;
@@ -30,7 +30,6 @@ type Order = Readonly<
     readonly type: "cast";
     readonly orderId: string;
     readonly remaining: number;
-    readonly positions?: ReadonlyArray<Point>;
     readonly target?: Readonly<Point>;
     readonly targetId?: string;
     readonly path?: ReadonlyArray<{ x: number; y: number }>;

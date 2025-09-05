@@ -1,4 +1,4 @@
-import { Buff, Entity } from "@/shared/types.ts";
+import { Buff, Entity, Order } from "@/shared/types.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { OrderDefinition } from "./types.ts";
 import { addEntity } from "@/shared/api/entity.ts";
@@ -6,10 +6,27 @@ import { addEntity } from "@/shared/api/entity.ts";
 export const speedPotOrder: OrderDefinition = {
   id: "speedPot",
 
-  onIssue: (unit: Entity) => {
+  onIssue: (unit: Entity, _, queue) => {
     const action = findActionByOrder(unit, "speedPot");
     if (!action || action.type !== "auto" || !action.buffDuration) {
       return "failed";
+    }
+
+    const order: Order = { type: "cast", orderId: "speedPot", remaining: 0 };
+
+    if (queue) unit.queue = [...unit.queue ?? [], order];
+    else {
+      delete unit.queue;
+      unit.order = order;
+    }
+
+    return "complete";
+  },
+
+  onCastComplete: (unit) => {
+    const action = findActionByOrder(unit, "speedPot");
+    if (!action || action.type !== "auto" || !action.buffDuration) {
+      return false;
     }
 
     const buffs: Buff[] = [];
@@ -46,7 +63,5 @@ export const speedPotOrder: OrderDefinition = {
         buffs: [{ remainingDuration: 0.1, expiration: "Sound" }],
       });
     }
-
-    return "immediate";
   },
 };

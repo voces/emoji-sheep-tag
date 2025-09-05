@@ -11,6 +11,7 @@ export const zPurchase = z.object({
   type: z.literal("purchase"),
   unit: z.string(),
   itemId: z.string(),
+  queue: z.boolean(), // Not yet implemented
 });
 
 export const purchase = (

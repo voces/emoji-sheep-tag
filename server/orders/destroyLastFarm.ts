@@ -7,20 +7,26 @@ export const destroyLastFarmOrder = {
 
   // Check if the unit can execute this order
   canExecute: (unit: Entity) => {
-    // Must have owner
     if (!unit.owner) return false;
-
-    // Must have at least one farm to destroy
-    const lastFarm = findLastPlayerUnit(
-      unit.owner,
-      (entity) => !!entity.tilemap,
-    );
-    return !!lastFarm;
+    return true;
   },
 
   // Called when the order is initiated (immediately destroy the farm without interrupting current orders)
-  onIssue: (unit: Entity) => {
+  onIssue: (unit: Entity, _, queue) => {
     if (!unit.owner) return "failed";
+    if (queue) {
+      unit.queue = [...unit.queue ?? [], {
+        type: "cast",
+        orderId: "destroyLastFarm",
+        remaining: 0,
+      }];
+      return "incomplete";
+    }
+    return "done";
+  },
+
+  onCastComplete: (unit: Entity) => {
+    if (!unit.owner) return false;
     const lastFarm = findLastPlayerUnit(
       unit.owner,
       (entity) => !!entity.tilemap,
@@ -29,6 +35,6 @@ export const destroyLastFarmOrder = {
       lastFarm.lastAttacker = null;
       lastFarm.health = 0;
     }
-    return "immediate";
+    return true;
   },
 } satisfies OrderDefinition;

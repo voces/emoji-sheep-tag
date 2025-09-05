@@ -5,7 +5,7 @@ import {
   Point,
 } from "@/shared/pathing/math.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
-import { Entity, Item, SystemEntity } from "@/shared/types.ts";
+import { Entity, Item, Order, SystemEntity } from "@/shared/types.ts";
 import {
   calcPath,
   pathable,
@@ -17,7 +17,7 @@ import { items, prefabs } from "@/shared/data.ts";
 import { findAction } from "../util/actionLookup.ts";
 import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
-import { deductPlayerGold } from "./player.ts";
+import { deductPlayerGold, getPlayerGold } from "./player.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
@@ -27,7 +27,11 @@ const INITIAL_BUILDING_PROGRESS = 0.1;
 
 export const build = (builder: Entity, type: string, x: number, y: number) => {
   const app = appContext.current;
-  if (!isPathingEntity(builder)) return;
+  if (
+    !isPathingEntity(builder) ||
+    (builder.owner &&
+      getBuildGoldCost(builder, type) > getPlayerGold(builder.owner))
+  ) return;
 
   const p = pathingMap();
 
@@ -109,7 +113,19 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
 export const newUnit = (owner: string, type: string, x: number, y: number) =>
   addEntity(tempUnit(owner, type, x, y));
 
-export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
+const processOrder = (entity: Entity, order: Order, queue: boolean) => {
+  if (queue) entity.queue = [...entity.queue ?? [], order];
+  else {
+    delete entity.queue;
+    entity.order = order;
+  }
+};
+
+export const orderMove = (
+  mover: Entity,
+  target: Entity | Point,
+  queue = false,
+): boolean => {
   updatePathing(mover, 1);
 
   if (!mover.movementSpeed || !mover.radius) return false;
@@ -117,11 +133,23 @@ export const orderMove = (mover: Entity, target: Entity | Point): boolean => {
   const targetPos = "x" in target ? target : target.position;
   if (!targetPos) return false;
 
+  if (queue) {
+    mover.queue = [
+      ...mover.queue ?? [],
+      {
+        type: "walk",
+        ...("x" in target ? { target } : { targetId: target.id }),
+      },
+    ];
+    return true;
+  }
+
   const path = calcPath(mover, "x" in target ? target : target.id, {
     distanceFromTarget: "x" in target ? undefined : FOLLOW_DISTANCE,
   });
   if (!path.length && "x" in target) return false;
 
+  delete mover.queue;
   mover.order = {
     type: "walk",
     ...("x" in target ? { target } : { targetId: target.id }),
@@ -170,6 +198,7 @@ export const acquireTarget = (e: Entity) => {
 export const orderAttack = (
   attacker: Entity,
   target: Entity | Point,
+  queue = false,
 ): boolean => {
   updatePathing(attacker, 1);
   if (!attacker.attack || !attacker.position) return false;
@@ -182,25 +211,21 @@ export const orderAttack = (
 
     // If within attack range..
     if (canSwing(attacker, target)) {
-      // Otherwise attack immediately
-      delete attacker.queue;
-      attacker.order = { type: "attack", targetId: target.id };
+      processOrder(attacker, { type: "attack", targetId: target.id }, queue);
       return true;
     }
 
     // If not in range and no movement, abort
     if (!attacker.movementSpeed) return false;
 
-    delete attacker.queue;
-    attacker.order = { type: "attack", targetId: target.id };
+    processOrder(attacker, { type: "attack", targetId: target.id }, queue);
     return true;
   }
 
   // TODO: check if nearby target in range
   if (!attacker.movementSpeed) return false;
 
-  delete attacker.queue;
-  attacker.order = { type: "attackMove", target };
+  processOrder(attacker, { type: "attackMove", target }, queue);
   return true;
 };
 
@@ -226,6 +251,7 @@ export const orderBuild = (
   type: string,
   x: number,
   y: number,
+  queue = false,
 ): boolean => {
   updatePathing(builder, 1);
 
@@ -247,8 +273,7 @@ export const orderBuild = (
     )
   ) return false;
 
-  delete builder.queue;
-  builder.order = { type: "build", x, y, unitType: type };
+  processOrder(builder, { type: "build", x, y, unitType: type }, queue);
   return true;
 };
 
@@ -259,7 +284,10 @@ export const isAlive = (unit: Entity) => {
 
 export const addItem = (unit: Entity, itemId: string): boolean => {
   const item = items[itemId];
-  if (!item) return false;
+  if (!item) {
+    console.warn(`Attempted to add unknown item '${itemId}'`);
+    return false;
+  }
 
   if (!unit.inventory) unit.inventory = [];
 
@@ -293,17 +321,19 @@ export const consumeItem = (unit: Entity, item: Item): boolean => {
   return found;
 };
 
-const deductBuildGold = (builder: Entity, type: string) => {
-  if (!builder.owner) return;
-
+const getBuildGoldCost = (builder: Entity, type: string) => {
   const buildAction = findAction(
     builder,
     (a) => a.type === "build" && a.unitType === type,
   );
-  const goldCost =
-    (buildAction?.type === "build" ? buildAction.goldCost : undefined) ?? 0;
+  return (buildAction?.type === "build" ? buildAction.goldCost : undefined) ??
+    0;
+};
 
-  deductPlayerGold(builder.owner, goldCost);
+const deductBuildGold = (builder: Entity, type: string) => {
+  if (!builder.owner) return;
+
+  deductPlayerGold(builder.owner, getBuildGoldCost(builder, type));
 };
 
 /**

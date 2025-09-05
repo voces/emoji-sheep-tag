@@ -83,8 +83,8 @@ export const items: Record<string, Item> = {
     binding: ["KeyC"],
     damage: 20,
   },
-  foxItem: {
-    id: "foxItem",
+  foxToken: {
+    id: "foxToken",
     name: "Fox Token",
     icon: "fox",
     gold: 100,

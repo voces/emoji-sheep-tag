@@ -34,6 +34,7 @@ import meteor from "../assets/meteor.svg" with { type: "text" };
 import dash from "../assets/dash.svg" with { type: "text" };
 import tree from "../assets/tree.svg" with { type: "text" };
 import treeStump from "../assets/treeStump.svg" with { type: "text" };
+import flag from "../assets/flag.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -63,6 +64,7 @@ export const svgs: Record<string, string> = {
   dash,
   tree,
   treeStump,
+  flag,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -94,43 +96,44 @@ const collections: Record<string, InstancedGroup | undefined> = {
   fire: loadSvg(fire, 1, { layer: 2 }),
   claw: loadSvg(claw, 0.05, { layer: 2 }),
   dash: loadSvg(dash, 0.1, { layer: 2 }),
+  flag: loadSvg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),
   circle: loadSvg(circle, 0.08, { layer: 2 }),
   gravity: loadSvg(gravity, 2, { layer: 2 }),
   collision: loadSvg(collision, 2, { layer: 2 }),
-  meteor: loadSvg(meteor, 0.5),
+  meteor: loadSvg(meteor, 0.5, { layer: 2 }),
 };
 Object.assign(globalThis, { collections });
 
 const color = new Color();
 
 const updateColor = (e: Entity) => {
-  if (!e.prefab) return;
-  const collection = collections[e.model ?? e.prefab];
+  const model = e.model ?? e.prefab;
+  if (!model) return;
+  const collection = collections[model];
   if (!collection) return;
 
   if (typeof e.vertexColor === "number") {
     color.setHex(e.vertexColor);
+    collection.setVertexColorAt(e.id, color);
+  } else {
+    color.setHex(0xffffff);
     collection.setVertexColorAt(e.id, color);
   }
 
   const accentColor = e.playerColor ??
     playersVar().find((p) => p.id === e.owner)?.color;
 
-  color.set(accentColor ?? 0xffffff);
-
   if (accentColor) {
-    collection.setPlayerColorAt(e.id, color, {
-      overrideVertex: typeof e.vertexColor !== "number",
-    });
+    collection.setPlayerColorAt(e.id, color.set(accentColor ?? 0xffffff));
   }
 
+  // TODO: merge these
   if (e.progress) collection.setAlphaAt(e.id, e.progress, true);
-
   if (e.alpha) collection.setAlphaAt(e.id, e.alpha, false);
 };
 
 app.addSystem({
-  props: ["id", "prefab", "owner"],
+  props: ["id", "owner"],
   onAdd: updateColor,
   onChange: updateColor,
 });
@@ -190,10 +193,11 @@ const onPositionOrRotationChange = (
 
 // Reflect logical position to render position
 app.addSystem({
-  props: ["prefab", "position"],
-  onAdd: (e: SystemEntity<"prefab" | "position">) => {
+  props: ["position"],
+  onAdd: (e) => {
     prevPositions.set(e, e.position);
     const model = e.model ?? e.prefab;
+    if (!model) return;
     if (!collections[model]) {
       return console.warn(`No ${e.model} SVG on ${e.id}`);
     }
@@ -236,11 +240,11 @@ app.addSystem({
 });
 
 app.addSystem({
-  props: ["prefab", "facing"],
+  props: ["facing"],
   onChange: (e) => {
     if (e.position) {
       onPositionOrRotationChange(
-        e as SystemEntity<"prefab" | "position" | "facing">,
+        e as SystemEntity<"position" | "facing">,
       );
     }
   },
@@ -248,7 +252,7 @@ app.addSystem({
 
 // Apply playerColor override
 app.addSystem({
-  props: ["prefab", "playerColor"],
+  props: ["playerColor"],
   onAdd: updateColor,
   onChange: updateColor,
 });
@@ -304,7 +308,10 @@ app.addSystem({
   },
   updateEntity: (e) => {
     const model = e.model ?? e.prefab;
-    if (!model || e.order.type !== "cast" || "path" in e.order) return;
+    if (
+      !model || e.order.type !== "cast" || "path" in e.order ||
+      e.order.remaining === 0
+    ) return;
 
     const r = Math.random() * Math.PI * 2;
     collections[model]?.setPositionAt(

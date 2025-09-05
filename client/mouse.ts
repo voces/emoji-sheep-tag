@@ -5,6 +5,8 @@ import { InstancedGroup } from "./graphics/InstancedGroup.ts";
 import { app, Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
+import { checkShortcut } from "./controls/keyboardHandlers.ts";
+import { shortcutsVar } from "@/vars/shortcuts.ts";
 
 export class MouseEvent extends Event {
   readonly pixels: Vector2;
@@ -14,6 +16,7 @@ export class MouseEvent extends Event {
   readonly intersects: ExtendedSet<Entity>;
   readonly element: Element | null;
   readonly elements: Element[];
+  readonly queue: boolean;
 
   constructor(name: string) {
     super(name);
@@ -25,6 +28,7 @@ export class MouseEvent extends Event {
     this.intersects = new ExtendedSet(mouse.intersects);
     this.element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
     this.elements = document.elementsFromPoint(mouse.pixels.x, mouse.pixels.y);
+    this.queue = checkShortcut(shortcutsVar().misc.queueModifier);
   }
 }
 

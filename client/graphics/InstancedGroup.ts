@@ -20,8 +20,6 @@ import { BVH } from "./BVH.ts";
 const dummy = new Object3D();
 const dummyColor = new Color();
 
-const white = new Color("white");
-
 const hasPlayerColor = (material: Material | Material[]) =>
   Array.isArray(material)
     ? material.some((m: Material) => m.userData.player)
@@ -129,12 +127,19 @@ export class InstancedGroup extends Group {
 
       this.setPositionAt(swapId, Infinity, Infinity, undefined, Infinity);
 
-      const colorInstancedMesh = this.children.find((c): c is InstancedMesh =>
-        c instanceof InstancedMesh && hasPlayerColor(c.material)
-      );
-      if (colorInstancedMesh && colorInstancedMesh.instanceColor?.array) {
-        colorInstancedMesh.getColorAt(swapIndex, dummyColor);
-        this.setPlayerColorAt(id, dummyColor);
+      for (const child of this.children) {
+        if (!(child instanceof InstancedMesh)) continue;
+
+        if (child.instanceColor?.array) {
+          child.getColorAt(swapIndex, dummyColor);
+          child.setColorAt(index, dummyColor);
+          if (child.instanceColor) child.instanceColor.needsUpdate = true;
+        }
+
+        const instanceAlphaAttr = (child.geometry as ShapeGeometry)
+          .getAttribute("instanceAlpha");
+        instanceAlphaAttr.setX(index, instanceAlphaAttr.getX(swapIndex));
+        instanceAlphaAttr.needsUpdate = true;
       }
 
       this.map[swapId] = index;
@@ -242,58 +247,28 @@ export class InstancedGroup extends Group {
     }
   }
 
-  setPlayerColorAt(
-    index: number | string,
-    color: Color,
-    { overrideVertex = true, alpha = 1, progressiveAlpha = false }: {
-      overrideVertex?: boolean;
-      alpha?: number;
-      /** Apply alpha element by element. */
-      progressiveAlpha?: boolean;
-    } = {},
-  ) {
+  setPlayerColorAt(index: number | string, color: Color) {
     if (typeof index === "string") index = this.getIndex(index);
-    const step = progressiveAlpha ? 1 / this.children.length : 1;
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
         if (hasPlayerColor(child.material)) {
           child.setColorAt(index, color);
           if (child.instanceColor) child.instanceColor.needsUpdate = true;
-        } else if (overrideVertex) {
-          child.setColorAt(index, white);
-          if (child.instanceColor) child.instanceColor.needsUpdate = true;
-        }
-        if (overrideVertex) {
-          const instanceAlphaAttr = (child.geometry as ShapeGeometry)
-            .getAttribute("instanceAlpha");
-          instanceAlphaAttr.setX(index, alpha > step ? 1 : alpha / step);
-          if (progressiveAlpha) alpha = Math.max(0, alpha - step);
-          instanceAlphaAttr.needsUpdate = true;
         }
       }
     }
   }
 
-  setVertexColorAt(
-    index: number | string,
-    color: Color,
-    { alpha = 1, progressiveAlpha = false }: {
-      alpha?: number;
-      /** Apply alpha element by element. */
-      progressiveAlpha?: boolean;
-    } = {},
-  ) {
+  /**
+   * Overrides the color of all children. Call setPlayerColorAt to restore
+   * player colors.
+   */
+  setVertexColorAt(index: number | string, color: Color) {
     if (typeof index === "string") index = this.getIndex(index);
-    const step = progressiveAlpha ? 1 / this.children.length : 1;
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
         child.setColorAt(index, color);
         if (child.instanceColor) child.instanceColor.needsUpdate = true;
-        const instanceAlphaAttr = (child.geometry as ShapeGeometry)
-          .getAttribute("instanceAlpha");
-        instanceAlphaAttr.setX(index, alpha > step ? 1 : alpha / step);
-        if (progressiveAlpha) alpha = Math.max(0, alpha - step);
-        instanceAlphaAttr.needsUpdate = true;
       }
     }
   }
@@ -301,6 +276,12 @@ export class InstancedGroup extends Group {
   setAlphaAt(
     index: number | string,
     alpha: number,
+    /**
+     * Progressive alpha will fade in individual children one at a time. If one
+     * child, a 0.5 alpha means that one child will be 50% transparent. If two
+     * children, a 0.5 alpha means one child will be 100% transparent and the
+     * other 100% opaque. If three, one will be 50% transparent, one opaque,
+     * and on transparent. */
     progressiveAlpha = false,
   ) {
     if (typeof index === "string") index = this.getIndex(index);

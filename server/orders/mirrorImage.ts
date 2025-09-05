@@ -1,11 +1,12 @@
 import { DEFAULT_FACING, MIRROR_SEPARATION } from "@/shared/constants.ts";
-import { Entity } from "@/shared/types.ts";
+import { Entity, Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { updatePathing } from "../systems/pathing.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
+import { appContext } from "@/shared/context.ts";
 
 export const mirrorImageOrder = {
   id: "mirrorImage",
@@ -17,37 +18,28 @@ export const mirrorImageOrder = {
   },
 
   // Called when the order is initiated (sets up the order on the unit)
-  onIssue: (unit: Entity) => {
+  onIssue: (unit: Entity, _, queue) => {
     if (!unit.position) return "failed";
 
-    // Calculate mirror positions
-    const angle1 = (unit.facing ?? DEFAULT_FACING) + Math.PI / 2;
-    const angle2 = (unit.facing ?? DEFAULT_FACING) - Math.PI / 2;
-    let pos1 = {
-      x: unit.position.x + Math.cos(angle1) * MIRROR_SEPARATION,
-      y: unit.position.y + Math.sin(angle1) * MIRROR_SEPARATION,
-    };
-    let pos2 = {
-      x: unit.position.x + Math.cos(angle2) * MIRROR_SEPARATION,
-      y: unit.position.y + Math.sin(angle2) * MIRROR_SEPARATION,
-    };
-
-    // Randomize positions
-    if (Math.random() < 0.5) [pos1, pos2] = [pos2, pos1];
-
-    // Set the cast order
     const action = findActionByOrder(unit, "mirrorImage");
     const castDuration =
       (action?.type === "auto" ? action.castDuration : undefined) ?? 1;
-    unit.order = {
+
+    const order: Order = {
       type: "cast",
       orderId: "mirrorImage",
       remaining: castDuration,
-      positions: [pos1, pos2],
     };
-    delete unit.queue;
 
-    return "ordered";
+    if (queue) {
+      unit.queue = [...unit.queue ?? [], order];
+      return "incomplete";
+    }
+
+    delete unit.queue;
+    unit.order = order;
+
+    return "incomplete";
   },
 
   // Called when the cast starts (order-specific side effects like clearing old state)
@@ -64,56 +56,76 @@ export const mirrorImageOrder = {
 
   // Called when the cast completes (spawn units, create effects, etc)
   onCastComplete: (unit: Entity) => {
-    if (unit.order?.type !== "cast" || unit.order.orderId !== "mirrorImage") {
-      return;
-    }
-
-    // Always relocate the caster to first position (or stay in place if no positions)
-    if (unit.order.positions && unit.order.positions.length > 0) {
-      unit.position = unit.order.positions[0];
-      updatePathing(unit);
-    }
-
-    // Create mirrors only if positions are provided (skip first position as that's the caster)
     if (
-      unit.prefab && unit.owner && unit.order.positions &&
-      unit.order.positions.length > 1
-    ) {
-      const mirrors: string[] = [];
-      for (const pos of unit.order.positions.slice(1)) {
-        const mirror = newUnit(unit.owner, unit.prefab, pos.x, pos.y);
+      unit.order?.type !== "cast" || unit.order.orderId !== "mirrorImage" ||
+      !unit.position || !unit.prefab || !unit.owner
+    ) return;
 
-        // Whitelist only specific actions for mirrors
-        mirror.actions = mirror.actions?.filter((a) =>
-          (a.type === "target" && ["move", "attack"].includes(a.order)) ||
-          (a.type === "auto" && ["stop", "hold"].includes(a.order))
-        );
+    // Calculate mirror positions
+    const angle1 = (unit.facing ?? DEFAULT_FACING) + Math.PI / 2;
+    const angle2 = (unit.facing ?? DEFAULT_FACING) - Math.PI / 2;
+    const pos1 = {
+      x: unit.position.x + Math.cos(angle1) * MIRROR_SEPARATION,
+      y: unit.position.y + Math.sin(angle1) * MIRROR_SEPARATION,
+    };
+    const pos2 = {
+      x: unit.position.x + Math.cos(angle2) * MIRROR_SEPARATION,
+      y: unit.position.y + Math.sin(angle2) * MIRROR_SEPARATION,
+    };
 
-        updatePathing(mirror);
-        mirror.isMirror = true;
+    // Always relocate the caster to first position
+    unit.position = pos1;
+    updatePathing(unit);
 
-        // Copy health and mana from original unit
-        if (unit.health !== undefined) mirror.health = unit.health;
-        if (unit.mana !== undefined) mirror.mana = unit.mana;
+    // Ensure real is updated
+    appContext.current.enqueue(() => {
+      if (!unit.owner || !unit.prefab) return;
 
-        // Copy inventory from original unit
-        if (unit.inventory) mirror.inventory = [...unit.inventory];
+      const mirror = newUnit(unit.owner, unit.prefab, pos2.x, pos2.y);
 
-        // Get lifetime duration from the action definition
-        const action = findActionByOrder(unit, "mirrorImage");
-        const lifetime = action?.type === "auto"
-          ? action.buffDuration
-          : undefined;
-        if (lifetime) {
-          mirror.buffs = [{
-            remainingDuration: lifetime,
-            expiration: "MirrorImage",
-          }];
-        }
+      // Whitelist only specific actions for mirrors
+      mirror.actions = mirror.actions?.filter((a) =>
+        (a.type === "target" && ["move", "attack"].includes(a.order)) ||
+        (a.type === "auto" && ["stop", "hold"].includes(a.order))
+      );
+      mirror.isMirror = true;
+      // Copy health and mana from original unit
+      if (unit.health !== undefined) mirror.health = unit.health;
+      if (unit.mana !== undefined) mirror.mana = unit.mana;
+      // Copy inventory from original unit
+      if (unit.inventory) mirror.inventory = [...unit.inventory];
 
-        mirrors.push(mirror.id);
+      // Randomize positions
+      if (Math.random() < 0.5) {
+        // Place them in outer space so they don't block each other
+        const swap1 = unit.position;
+        unit.position = { x: -Infinity, y: -Infinity };
+        const swap2 = mirror.position;
+        mirror.position = { x: -Infinity, y: -Infinity };
+
+        // Make sure pathing map is clear
+        appContext.current.enqueue(() => {
+          // Swap them
+          unit.position = swap2;
+          updatePathing(unit);
+          mirror.position = swap1;
+          updatePathing(mirror);
+        });
       }
-      unit.mirrors = mirrors;
-    }
+
+      // Get lifetime duration from the action definition
+      const action = findActionByOrder(unit, "mirrorImage");
+      const lifetime = action?.type === "auto"
+        ? action.buffDuration
+        : undefined;
+      if (lifetime) {
+        mirror.buffs = [{
+          remainingDuration: lifetime,
+          expiration: "MirrorImage",
+        }];
+      }
+
+      unit.mirrors = [mirror.id];
+    });
   },
 } satisfies OrderDefinition;

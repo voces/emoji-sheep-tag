@@ -57,17 +57,6 @@ describe("player API", () => {
       expect(getPlayerGold("test-player")).toBeCloseTo(10, 0);
     });
 
-    it("should not grant negative or zero gold", {
-      wolves: ["test-player"],
-      gold: 50,
-    }, function* () {
-      grantPlayerGold("test-player", 0);
-      grantPlayerGold("test-player", -5);
-      yield;
-
-      expect(getPlayerGold("test-player")).toBeCloseTo(50, 0);
-    });
-
     it("should handle unknown player gracefully", function* () {
       grantPlayerGold("unknown-player", 10);
       yield;

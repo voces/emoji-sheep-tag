@@ -12,7 +12,7 @@ describe("shortcutUtils", () => {
     it("should include item actions from shop menu", () => {
       const wolfShortcuts = defaultBindings["wolf"];
 
-      // Should have fox action from foxItem
+      // Should have fox action from foxToken
       expect(wolfShortcuts["fox"]).toEqual(["KeyF"]);
 
       // Should have speedPot action from speedPot item
@@ -25,7 +25,7 @@ describe("shortcutUtils", () => {
       const shortcuts = createInitialShortcuts();
       const wolfShortcuts = shortcuts["wolf"];
 
-      // Should have fox action from foxItem
+      // Should have fox action from foxToken
       expect(wolfShortcuts["fox"]).toEqual(["KeyF"]);
 
       // Should have speedPot action from speedPot item
@@ -40,7 +40,7 @@ describe("shortcutUtils", () => {
       expect(getActionDisplayName("speedPot", "wolf")).toBe("Use Speed Potion");
 
       // Test purchase action display names
-      expect(getActionDisplayName("purchase-foxItem", "wolf")).toBe(
+      expect(getActionDisplayName("purchase-foxToken", "wolf")).toBe(
         "Purchase Fox Token",
       );
       expect(getActionDisplayName("purchase-speedPot", "wolf")).toBe(
@@ -60,7 +60,7 @@ describe("shortcutUtils", () => {
             if (itemAction.type === "auto" || itemAction.type === "target") {
               const expectedKey = itemAction.order;
               // Check if this item action was collected
-              if (itemId === "foxItem" || itemId === "speedPot") {
+              if (itemId === "foxToken" || itemId === "speedPot") {
                 // These items are in the wolf's shop menu
                 expect(wolfShortcuts[expectedKey]).toEqual(itemAction.binding);
               }

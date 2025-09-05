@@ -5,22 +5,22 @@ import { UnknownEntity } from "../errors/UnknownEntity.ts";
 import { zPoint } from "@/shared/zod.ts";
 import { handleMove } from "./move.ts";
 import { handleAttack } from "./attack.ts";
-import { handleHold } from "./hold.ts";
 import { getOrder } from "../orders/index.ts";
 import { findActionAndItem, findActionByOrder } from "../util/actionLookup.ts";
-import { consumeItem } from "../api/unit.ts";
-import { addEntity } from "@/shared/api/entity.ts";
+import { precast } from "../orders/precast.ts";
+import { postCast } from "../orders/postCast.ts";
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
   units: z.string().array(),
   order: z.string(),
   target: z.union([zPoint, z.string()]).optional(),
+  queue: z.boolean().optional(),
 });
 
 export const unitOrder = (
   client: Client,
-  { units, order, target }: z.TypeOf<typeof zOrderEvent>,
+  { units, order, target, queue = false }: z.TypeOf<typeof zOrderEvent>,
 ) => {
   for (const uId of units) {
     const unit = lookup(uId);
@@ -56,44 +56,47 @@ export const unitOrder = (
       // Order-specific validation
       if (orderDef.canExecute && !orderDef.canExecute(unit, target)) continue;
 
-      if (orderDef.onIssue(unit, target) === "immediate") {
-        if (
-          action && "soundOnCastStart" in action && action.soundOnCastStart &&
-          unit.position && unit.owner
-        ) {
-          addEntity({
-            id: `sound-${Date.now()}-${Math.random()}`,
-            owner: unit.owner,
-            position: { x: unit.position.x, y: unit.position.y },
-            sounds: {
-              birth: [action.soundOnCastStart],
-            },
-            buffs: [{
-              remainingDuration: 0.1,
-              expiration: "Sound",
-            }],
-          });
-        }
+      const issueResult = orderDef.onIssue(unit, target, queue);
 
-        if (itemWithAction) consumeItem(unit, itemWithAction);
+      if (issueResult === "done" || issueResult === "complete") {
+        if (!precast(unit, issueResult === "complete")) continue;
+
+        orderDef?.onCastStart?.(unit);
+
+        // NOTE: remaining is ignored, so cast completes immediately after it starts
+        const finalResult = orderDef.onCastComplete?.(unit);
+
+        if (
+          issueResult === "done" ||
+          (issueResult === "complete" && finalResult !== false)
+        ) postCast(unit, itemWithAction);
       }
     } else {
       // Fall back to legacy handlers
       switch (order) {
         case "move":
-          handleMove(unit, target);
+          handleMove(unit, target, queue);
           break;
         case "attack":
-          handleAttack(unit, target);
+          handleAttack(unit, target, queue);
           break;
         case "stop":
-          delete unit.queue;
-          delete unit.order;
+          if (!queue) {
+            delete unit.queue;
+            delete unit.order;
+          }
+          // Do nothing if stop is queued
           break;
         case "hold":
-          handleHold(unit);
+          if (queue) unit.queue = [...unit.queue ?? [], { type: "hold" }];
+          else {
+            delete unit.queue;
+            unit.order = { type: "hold" };
+          }
           break;
         case "selfDestruct":
+          // TODO: queue, but right now things that support self destruct can't
+          // do anything else, so queueing does nothing
           unit.lastAttacker = null;
           unit.health = 0;
           break;

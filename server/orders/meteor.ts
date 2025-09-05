@@ -1,7 +1,6 @@
-import { Entity } from "@/shared/types.ts";
+import { Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { damageEntity, newUnit } from "../api/unit.ts";
-import { Point } from "@/shared/pathing/math.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
@@ -10,25 +9,31 @@ import { testClassification } from "@/shared/api/unit.ts";
 export const meteorOrder = {
   id: "meteor",
 
-  canExecute: (unit: Entity) => {
+  canExecute: (unit) => {
     return !!(unit.owner && unit.position);
   },
 
-  onIssue: (unit: Entity, target?: Point | string) => {
+  onIssue: (unit, target, queue) => {
     if (typeof target === "string") target = lookup(target)?.position;
     if (!target) return "failed";
 
-    unit.order = {
+    const order: Order = {
       type: "cast",
       orderId: "meteor",
       remaining: 0,
       target,
     };
-    delete unit.queue;
-    return "ordered";
+
+    if (queue) unit.queue = [...unit.queue ?? [], order];
+    else {
+      delete unit.queue;
+      unit.order = order;
+    }
+
+    return "incomplete";
   },
 
-  onCastComplete: (unit: Entity) => {
+  onCastComplete: (unit) => {
     // This is called when we reach the target location
     if (unit.order?.type !== "cast" || unit.order.orderId !== "meteor") return;
 

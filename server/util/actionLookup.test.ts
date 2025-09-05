@@ -46,7 +46,7 @@ describe("actionLookup", () => {
     ],
     inventory: [
       {
-        id: "foxItem",
+        id: "foxToken",
         name: "Summon Fox",
         gold: 50,
         binding: ["KeyF"],
@@ -349,7 +349,7 @@ describe("actionLookup", () => {
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Summon Fox");
       expect(result!.item).toBeDefined();
-      expect(result!.item!.id).toBe("foxItem");
+      expect(result!.item!.id).toBe("foxToken");
       expect(result!.item!.charges).toBe(2);
     });
 

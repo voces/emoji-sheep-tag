@@ -28,6 +28,7 @@ export const miscNames = {
   selectOwnUnit: "Select primary unit",
   selectMirrors: "Select mirror images",
   selectFoxes: "Select foxes",
+  queueModifier: "Queue actions modifier",
 };
 
 export const defaultBindings: Shortcuts = {
@@ -38,6 +39,7 @@ export const defaultBindings: Shortcuts = {
     selectOwnUnit: ["Digit1"],
     selectMirrors: ["Digit2"],
     selectFoxes: ["Digit3"],
+    queueModifier: ["ShiftLeft"],
   },
   ...Object.fromEntries(
     Object.entries(prefabs).filter(([, d]) => d.actions?.length).map((
@@ -89,6 +91,7 @@ export const createInitialShortcuts = (): Shortcuts => ({
     selectOwnUnit: pluckShortcut("misc.selectOwnUnit") ?? ["Digit1"],
     selectMirrors: pluckShortcut("misc.selectMirrors") ?? ["Digit2"],
     selectFoxes: pluckShortcut("misc.selectFoxes") ?? ["Digit3"],
+    queueModifier: pluckShortcut("misc.queueModifier") ?? ["ShiftLeft"],
   },
   ...Object.fromEntries(
     Object.entries(prefabs).filter(([, d]) => d.actions?.length)

@@ -16,6 +16,8 @@ let activeOrder:
   | { order: string; variant: CursorVariant; aoe: number }
   | undefined;
 
+export const queued = { state: false };
+
 export const getActiveOrder = () => activeOrder;
 
 export const setActiveOrder = (
@@ -30,6 +32,7 @@ export const setActiveOrder = (
 export const cancelOrder = (
   check?: (order: string | undefined, blueprint: string | undefined) => boolean,
 ) => {
+  queued.state = false;
   if (check && !check(activeOrder?.order, undefined)) return;
   if (activeOrder) {
     activeOrder = undefined;
@@ -102,9 +105,15 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
     send({
       type: "unitOrder",
       units: Array.from(groupedOrders[order], (e) => e.id),
-      order: order,
+      order,
       target: againstTarget ? target.id : e.world,
+      queue: e.queue,
     });
+
+    if (order === "attack") {
+      const e = groupedOrders[order].find((e) => e.sounds?.ackAttack);
+      if (e) playEntitySound(e, "ackAttack");
+    }
   }
 
   newIndicator({
@@ -150,6 +159,7 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
       units: Array.from(unitsWithTarget, (e) => e.id),
       order: orderToExecute,
       target: target.id,
+      queue: e.queue,
     });
   }
 
@@ -176,6 +186,7 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
       units: Array.from(unitsWithoutTarget, (e) => e.id),
       order: orderToExecute,
       target: e.world,
+      queue: e.queue,
     });
   }
 
@@ -191,7 +202,9 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
       scale: unitsWithTarget.size && target?.radius ? target.radius * 4 : 1,
     });
 
-    cancelOrder();
+    if (!e.queue) cancelOrder();
+    else queued.state = true;
+
     return true;
   }
 

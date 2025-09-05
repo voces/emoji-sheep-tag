@@ -1,4 +1,4 @@
-import { Entity } from "@/shared/types.ts";
+import { Entity, Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { lookup } from "../systems/lookup.ts";
@@ -13,21 +13,26 @@ export const saveOrder = {
   id: "save",
 
   // Called when the order is initiated (sets up the order on the unit)
-  onIssue: (unit, target) => {
+  onIssue: (unit, target, queue) => {
     if (typeof target !== "string") return "failed";
 
     const action = findActionByOrder(unit, "save");
-    unit.order = {
+    if (!action) return "failed";
+
+    const order: Order = {
       type: "cast",
       orderId: "save",
-      remaining: action && "castDuration" in action
-        ? action.castDuration ?? 0
-        : 0,
+      remaining: "castDuration" in action ? action.castDuration ?? 0 : 0,
       targetId: target,
     };
-    delete unit.queue;
 
-    return "ordered";
+    if (queue) unit.queue = [...unit.queue ?? [], order];
+    else {
+      delete unit.queue;
+      unit.order = order;
+    }
+
+    return "incomplete";
   },
 
   // Called when the cast completes (spawn units, create effects, etc)

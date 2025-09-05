@@ -4,6 +4,7 @@ import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
 import { pathable } from "../pathing.ts";
 
 export const tweenPath = (e: Entity, delta: number): number => {
+  const originalDelta = delta;
   if (
     !e.order || !("path" in e.order) || !e.order.path?.length ||
     !e.position || !e.movementSpeed
@@ -55,7 +56,7 @@ export const tweenPath = (e: Entity, delta: number): number => {
     };
 
   // If end position isn't pathable, do nothing
-  if (!pathable(e, newPosition)) return delta;
+  if (!pathable(e, newPosition)) return originalDelta;
 
   // Only now that we've confirmed the move is valid, update the path if we advanced along it
   if (typeof newPath !== "undefined") {

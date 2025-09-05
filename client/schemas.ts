@@ -39,7 +39,6 @@ const zOrder = z.union([
     type: z.literal("cast"),
     orderId: z.string(),
     remaining: z.number(),
-    positions: z.array(zPoint).readonly().optional(),
     target: zPoint.optional(),
     targetId: z.string().optional(),
     path: zPoint.array().readonly().optional(),

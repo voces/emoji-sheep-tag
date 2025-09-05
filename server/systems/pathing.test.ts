@@ -40,26 +40,20 @@ it(
       yield;
     }
 
-    // Check for oscillation pattern (alternating between two states)
-    const uniquePaths = [...new Set(pathHistory)];
-    let hasOscillation = false;
+    // When no path exists, the order gets cleared
+    // This means we should see the order become null after attempting to path
+    // to an unreachable location
+    const hasNullOrder = pathHistory.includes("null");
 
-    if (uniquePaths.length === 2) {
-      // Check if alternating between two paths (classic oscillation)
-      for (let i = 2; i < pathHistory.length; i++) {
-        if (
-          pathHistory[i] === pathHistory[i - 2] &&
-          pathHistory[i] !== pathHistory[i - 1]
-        ) {
-          hasOscillation = true;
-          break;
-        }
-      }
-    }
+    // The order should be cleared (null) since the wolf can't reach the target
+    expect(hasNullOrder).toBe(true);
 
-    // Should not oscillate - either stable (1 path) or progressing (multiple paths)
-    expect(hasOscillation).toBe(false);
-    expect(uniquePaths.length).not.toBe(2); // 2 unique paths usually indicates oscillation
+    // After the order is cleared, the wolf should stop trying to move
+    // Check that the last few entries are consistently null (no oscillation)
+    const lastEntries = pathHistory.slice(-3);
+    const allNull = lastEntries.every((p) => p === "null");
+    expect(allNull).toBe(true);
+
     expect(wolf.position).toBeDefined();
   },
 );

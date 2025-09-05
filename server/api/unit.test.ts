@@ -20,12 +20,12 @@ describe("addItem", () => {
       inventory: [],
     };
 
-    const result = addItem(unit, "foxItem");
+    const result = addItem(unit, "foxToken");
     yield;
 
     expect(result).toBe(true);
     expect(unit.inventory).toHaveLength(1);
-    expect(unit.inventory![0].id).toBe("foxItem");
+    expect(unit.inventory![0].id).toBe("foxToken");
     expect(unit.inventory![0].name).toBe("Fox Token");
   });
 
@@ -34,7 +34,7 @@ describe("addItem", () => {
       id: "test-unit",
     };
 
-    const result = addItem(unit, "foxItem");
+    const result = addItem(unit, "foxToken");
     yield;
 
     expect(result).toBe(true);
@@ -46,7 +46,7 @@ describe("addItem", () => {
     const unit: Entity = {
       id: "test-unit",
       inventory: [{
-        id: "foxItem",
+        id: "foxToken",
         name: "Fox Token",
         icon: "fox",
         gold: 5,
@@ -62,7 +62,7 @@ describe("addItem", () => {
       }],
     };
 
-    const result = addItem(unit, "foxItem");
+    const result = addItem(unit, "foxToken");
     yield;
 
     expect(result).toBe(true);
@@ -89,12 +89,12 @@ describe("addItem", () => {
       inventory: [],
     };
 
-    addItem(unit, "foxItem");
-    // Note: we can only test with foxItem since other items may not exist in prefabs
+    addItem(unit, "foxToken");
+    // Note: we can only test with foxToken since other items may not exist in prefabs
     yield;
 
     expect(unit.inventory).toHaveLength(1);
-    expect(unit.inventory![0].id).toBe("foxItem");
+    expect(unit.inventory![0].id).toBe("foxToken");
   });
 });
 
@@ -130,7 +130,7 @@ describe("computeUnitDamage", () => {
 
   it("should ignore items without damage property", function* () {
     const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [items.foxItem]; // foxItem has no damage property
+    unit.inventory = [items.foxToken]; // foxToken has no damage property
     yield;
     expect(computeUnitDamage(unit)).toBe(70); // Only wolf base damage
   });
@@ -147,7 +147,7 @@ describe("computeUnitAttackSpeed", () => {
     "should return 1.0 for unit with items that have no attack speed multiplier",
     function* () {
       const unit = newUnit("test-owner", "wolf", 10, 10);
-      unit.inventory = [items.claw, items.foxItem]; // Neither has attackSpeedMultiplier
+      unit.inventory = [items.claw, items.foxToken]; // Neither has attackSpeedMultiplier
       yield;
       expect(computeUnitAttackSpeed(unit)).toBe(1.0);
     },
@@ -178,7 +178,7 @@ describe("computeUnitAttackSpeed", () => {
     unit.inventory = [
       items.swiftness, // 1.15x
       items.claw, // No attack speed multiplier
-      items.foxItem, // No attack speed multiplier
+      items.foxToken, // No attack speed multiplier
     ];
     yield;
     expect(computeUnitAttackSpeed(unit)).toBe(1.15);

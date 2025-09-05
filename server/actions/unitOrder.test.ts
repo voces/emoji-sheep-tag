@@ -18,7 +18,7 @@ describe("unitOrder fox item integration", () => {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add fox item to inventory
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     yield;
 
     expect(wolf.inventory).toHaveLength(1);
@@ -54,7 +54,7 @@ describe("unitOrder fox item integration", () => {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add fox item with 0 charges
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     // Modify the inventory item to have 0 charges
     wolf.inventory = wolf.inventory!.map((item) => ({ ...item, charges: 0 }));
     yield;
@@ -77,8 +77,8 @@ describe("unitOrder fox item integration", () => {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add fox item twice (should stack charges)
-    addItem(wolf, "foxItem");
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
+    addItem(wolf, "foxToken");
     yield;
 
     expect(wolf.inventory).toHaveLength(1);
@@ -118,7 +118,7 @@ describe("unitOrder fox item integration", () => {
     wolves: ["test-client", "other-client"],
   }, function* ({ clients }) {
     const wolf = newUnit("test-client", "wolf", 5, 5);
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     yield;
 
     // Get different client
@@ -148,7 +148,7 @@ describe("unitOrder fox item integration", () => {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add fox item
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     yield;
 
     expect(wolf.inventory).toHaveLength(1);
@@ -400,15 +400,12 @@ describe("unitOrder special abilities", () => {
     yield;
 
     // Should have cast order for mirror image
-    expect(wolf.order).toBeDefined();
-    expect(wolf.order!.type).toBe("cast");
-    const castOrder = wolf.order as {
-      type: string;
-      orderId: string;
-      positions?: unknown;
-    };
-    expect(castOrder.orderId).toBe("mirrorImage");
-    expect(castOrder.positions).toBeDefined();
+    expect(wolf.order).toEqual({
+      type: "cast",
+      orderId: "mirrorImage",
+      remaining: 0.45, // 0.5 - 0.05 yield
+      started: true,
+    });
   });
 
   it("should execute destroy last farm action", {
@@ -573,7 +570,7 @@ describe("unitOrder timed entities", () => {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add fox item to inventory
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     yield;
 
     // Use fox ability from item
@@ -601,7 +598,7 @@ describe("unitOrder timed entities", () => {
     const client = clients.get("test-client")!;
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     yield;
 
     // Use fox ability
@@ -732,6 +729,450 @@ describe("unitOrder timed entities", () => {
   });
 });
 
+describe("unitOrder queuing system", () => {
+  it("should queue move orders", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const sheep = newUnit("test-client", "sheep", 5, 5);
+    yield;
+
+    // Issue initial move order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "move",
+      target: { x: 10, y: 10 },
+    });
+    yield;
+
+    // Verify order was set
+    expect(sheep.order).toBeDefined();
+    expect(sheep.order!.type).toBe("walk");
+    expect((sheep.order as { target: { x: number; y: number } }).target)
+      .toEqual({ x: 10, y: 10 });
+
+    // Queue a second move order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "move",
+      target: { x: 20, y: 20 },
+      queue: true,
+    });
+    yield;
+
+    // Current order should remain unchanged
+    expect(sheep.order!.type).toBe("walk");
+    expect((sheep.order as { target: { x: number; y: number } }).target)
+      .toEqual({ x: 10, y: 10 });
+
+    // Should have queue with one entry
+    expect(sheep.queue).toBeDefined();
+    expect(sheep.queue).toHaveLength(1);
+    expect(sheep.queue![0].type).toBe("walk");
+    expect((sheep.queue![0] as { target: { x: number; y: number } }).target)
+      .toEqual({ x: 20, y: 20 });
+  });
+
+  it("should queue multiple orders", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
+
+    // Issue initial attack order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "attack",
+      target: { x: 10, y: 10 },
+    });
+    yield;
+
+    // Queue move, then another attack
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "move",
+      target: { x: 15, y: 15 },
+      queue: true,
+    });
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "attack",
+      target: { x: 20, y: 20 },
+      queue: true,
+    });
+    yield;
+
+    // Verify current order is unchanged
+    expect(wolf.order!.type).toBe("attackMove");
+
+    // Verify queue has both orders
+    expect(wolf.queue).toHaveLength(2);
+    expect(wolf.queue![0].type).toBe("walk");
+    expect(wolf.queue![1].type).toBe("attackMove");
+  });
+
+  it("should queue hold order", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
+
+    // Set initial move order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "move",
+      target: { x: 10, y: 10 },
+    });
+    yield;
+
+    // Queue hold order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "hold",
+      queue: true,
+    });
+    yield;
+
+    // Current order should be move
+    expect(wolf.order!.type).toBe("walk");
+
+    // Queue should contain hold
+    expect(wolf.queue).toHaveLength(1);
+    expect(wolf.queue![0].type).toBe("hold");
+  });
+
+  it("should replace order and clear queue when queue is false", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const sheep = newUnit("test-client", "sheep", 5, 5);
+    yield;
+
+    // Set up initial order and queue
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "move",
+      target: { x: 10, y: 10 },
+    });
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "move",
+      target: { x: 15, y: 15 },
+      queue: true,
+    });
+    yield;
+
+    // Verify initial state
+    expect(sheep.queue).toHaveLength(1);
+
+    // Issue non-queued order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "move",
+      target: { x: 20, y: 20 },
+      queue: false,
+    });
+    yield;
+
+    // Should replace current order and clear queue
+    expect(sheep.order!.type).toBe("walk");
+    expect((sheep.order as { target: { x: number; y: number } }).target)
+      .toEqual({ x: 20, y: 20 });
+    expect(sheep.queue).toBeFalsy();
+  });
+
+  it("should queue orders from new registry system", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    wolf.mana = 100;
+    wolf.maxMana = 100;
+    yield;
+
+    // Issue initial move order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "move",
+      target: { x: 10, y: 10 },
+    });
+    yield;
+
+    // Queue mirror image (uses new order registry)
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "mirrorImage",
+      queue: true,
+    });
+    yield;
+
+    // Current order should be move
+    expect(wolf.order!.type).toBe("walk");
+
+    // Queue should contain mirror image cast
+    expect(wolf.queue).toHaveLength(1);
+    expect(wolf.queue![0].type).toBe("cast");
+    expect((wolf.queue![0] as { orderId: string }).orderId).toBe("mirrorImage");
+  });
+
+  it("should queue fox order from item", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    addItem(wolf, "foxToken");
+    yield;
+
+    // Issue initial move order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "move",
+      target: { x: 10, y: 10 },
+    });
+    yield;
+
+    // Queue fox ability
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "fox",
+      queue: true,
+    });
+    yield;
+
+    // Current order should be move
+    expect(wolf.order!.type).toBe("walk");
+
+    // Queue should contain fox cast
+    expect(wolf.queue).toHaveLength(1);
+    expect(wolf.queue![0].type).toBe("cast");
+    expect((wolf.queue![0] as { orderId: string }).orderId).toBe("fox");
+
+    // Item charges should not be consumed yet
+    expect(wolf.inventory).toHaveLength(1);
+    expect(wolf.inventory![0].charges).toBe(1);
+  });
+
+  it("should queue multiple attack orders", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const enemy1 = newUnit("other-client", "sheep", 10, 10);
+    const enemy2 = newUnit("other-client", "sheep", 15, 15);
+    yield;
+
+    // Issue initial attack order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "attack",
+      target: enemy1.id,
+    });
+    yield;
+
+    // Queue another attack order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "attack",
+      target: enemy2.id,
+      queue: true,
+    });
+    yield;
+
+    // Current order should be attack on first enemy
+    expect(wolf.order!.type).toBe("attack");
+    expect((wolf.order as { targetId: string }).targetId).toBe(enemy1.id);
+
+    // Queue should contain attack on second enemy
+    expect(wolf.queue).toBeDefined();
+    expect(wolf.queue).toHaveLength(1);
+    expect(wolf.queue![0].type).toBe("attack");
+    expect((wolf.queue![0] as { targetId: string }).targetId).toBe(enemy2.id);
+  });
+
+  it("should queue attack move orders", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    yield;
+
+    // Issue initial move order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "move",
+      target: { x: 10, y: 10 },
+    });
+    yield;
+
+    // Queue attack move (attack ground) order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "attack",
+      target: { x: 20, y: 20 },
+      queue: true,
+    });
+    yield;
+
+    // Current order should be move
+    expect(wolf.order!.type).toBe("walk");
+
+    // Queue should contain attack move
+    expect(wolf.queue).toBeDefined();
+    expect(wolf.queue).toHaveLength(1);
+    expect(wolf.queue![0].type).toBe("attackMove");
+    expect((wolf.queue![0] as { target: { x: number; y: number } }).target)
+      .toEqual({ x: 20, y: 20 });
+  });
+
+  it("should queue speed pot order", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const wolf = newUnit("test-client", "wolf", 5, 5);
+    addItem(wolf, "speedPot");
+    yield;
+
+    // Issue initial move order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "move",
+      target: { x: 10, y: 10 },
+    });
+    yield;
+
+    // Queue speed pot
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "speedPot",
+      queue: true,
+    });
+    yield;
+
+    // Current order should be move
+    expect(wolf.order!.type).toBe("walk");
+
+    // Queue should contain speed pot cast
+    expect(wolf.queue).toHaveLength(1);
+    expect(wolf.queue![0].type).toBe("cast");
+    expect((wolf.queue![0] as { orderId: string }).orderId).toBe("speedPot");
+  });
+
+  it("should not queue stop order when queue is true", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const sheep = newUnit("test-client", "sheep", 5, 5);
+    yield;
+
+    // Set up initial order
+    sheep.order = { type: "walk", target: { x: 10, y: 10 } };
+    sheep.queue = [{ type: "walk", target: { x: 20, y: 20 } }];
+    yield;
+
+    const initialQueue = [...sheep.queue];
+
+    // Try to queue stop (should do nothing)
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "stop",
+      queue: true,
+    });
+    yield;
+
+    // Nothing should change - order might have path added but core fields same
+    expect(sheep.order!.type).toBe("walk");
+    expect((sheep.order as { target: { x: number; y: number } }).target)
+      .toEqual({ x: 10, y: 10 });
+    expect(sheep.queue).toEqual(initialQueue);
+  });
+
+  it("should queue destroy last farm order", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const sheep = newUnit("test-client", "sheep", 5, 5);
+    const hut = newUnit("test-client", "hut", 10, 10);
+    yield;
+
+    // Issue initial move order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "move",
+      target: { x: 15, y: 15 },
+    });
+    yield;
+
+    // Queue destroy last farm
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "destroyLastFarm",
+      queue: true,
+    });
+    yield;
+
+    // Current order should be move
+    expect(sheep.order!.type).toBe("walk");
+
+    // Queue should contain destroy last farm
+    expect(sheep.queue).toHaveLength(1);
+    expect(sheep.queue![0].type).toBe("cast");
+    expect((sheep.queue![0] as { orderId: string }).orderId).toBe(
+      "destroyLastFarm",
+    );
+
+    // Hut should still be alive (order is queued)
+    expect(hut.health).toBe(120);
+  });
+
+  it("should handle queuing when unit has no current order", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+    const sheep = newUnit("test-client", "sheep", 5, 5);
+    yield;
+
+    // Queue move order with no current order
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [sheep.id],
+      order: "move",
+      target: { x: 10, y: 10 },
+      queue: true,
+    });
+    yield;
+
+    // Should set as current order (no queue)
+    expect(sheep.order).toBeDefined();
+    expect(sheep.order!.type).toBe("walk");
+    expect(sheep.queue).toBeFalsy();
+  });
+});
+
 describe("unitOrder generalized charge system", () => {
   it("should consume charges for any item-based action", {
     wolves: ["test-client"],
@@ -760,7 +1201,7 @@ describe("unitOrder generalized charge system", () => {
     // Mock a lightning action handler by temporarily adding to unitOrder switch
     // Since we can't modify the switch at runtime, we'll test with fox action
     // which we know works with the generalized charge system
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     yield;
 
     expect(wolf.inventory).toHaveLength(2);
@@ -771,7 +1212,7 @@ describe("unitOrder generalized charge system", () => {
 
     // Should have consumed fox item charge (it had 1 charge, should be removed)
     yield* yieldFor(() =>
-      expect(wolf.inventory!.filter((i) => i.id === "foxItem")).toHaveLength(0)
+      expect(wolf.inventory!.filter((i) => i.id === "foxToken")).toHaveLength(0)
     );
 
     // Lightning item should still be there unchanged
@@ -824,7 +1265,7 @@ describe("unitOrder generalized charge system", () => {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add item with exactly 1 charge
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     yield;
 
     expect(wolf.inventory![0].charges).toBe(1);
@@ -844,7 +1285,7 @@ describe("unitOrder generalized charge system", () => {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Add fox item to inventory
-    addItem(wolf, "foxItem");
+    addItem(wolf, "foxToken");
     yield;
 
     // Use a non-item action (stop)

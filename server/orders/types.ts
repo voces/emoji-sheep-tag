@@ -13,7 +13,8 @@ export type OrderDefinition = {
   onIssue: (
     unit: Entity,
     target: Point | string | undefined,
-  ) => "immediate" | "ordered" | "failed";
+    queue: boolean,
+  ) => "done" | "complete" | "incomplete" | "failed";
 
   // Called when the cast starts (side effects like mana consumption, clearing old state)
   onCastStart?: (unit: Entity) => void;

@@ -12,20 +12,23 @@ export const zBuild = z.object({
   buildType: z.string(), // literal
   x: z.number(),
   y: z.number(),
+  queue: z.boolean().optional(),
 });
 
 export const build = (
   client: Client,
-  { unit, buildType, x, y }: z.TypeOf<typeof zBuild>,
+  { unit, buildType, x, y, queue }: z.TypeOf<typeof zBuild>,
 ): Entity | void => {
   const round = lobbyContext.current.round;
   if (!round) return;
   const u = lookup(unit);
   if (u?.owner !== client.id) return;
 
-  // Interrupt
-  delete u.order;
-  delete u.queue;
+  // Interrupt if not queuing
+  if (!queue) {
+    delete u.order;
+    delete u.queue;
+  }
 
-  orderBuild(u, buildType, x, y);
+  orderBuild(u, buildType, x, y, queue);
 };

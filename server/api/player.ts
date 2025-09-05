@@ -29,10 +29,10 @@ export const getPlayerGold = (playerId: string): number => {
  * @param amount The amount of gold to deduct
  */
 export const deductPlayerGold = (playerId: string, amount: number) => {
-  if (amount <= 0) return;
-
   const player = getPlayer(playerId);
-  if (player?.gold !== undefined) player.gold -= amount;
+  if (player?.gold !== undefined) {
+    player.gold = Math.max(player.gold - amount, 0);
+  }
 };
 
 /**
@@ -41,10 +41,8 @@ export const deductPlayerGold = (playerId: string, amount: number) => {
  * @param amount The amount of gold to grant
  */
 export const grantPlayerGold = (playerId: string, amount: number) => {
-  if (amount <= 0) return;
-
   const player = getPlayer(playerId);
   if (!player) return;
 
-  player.gold = (player.gold ?? 0) + amount;
+  player.gold = Math.max((player.gold ?? 0) + amount, 0);
 };

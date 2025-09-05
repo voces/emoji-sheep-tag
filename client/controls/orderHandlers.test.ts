@@ -390,4 +390,279 @@ describe("order handlers", () => {
       expect(getActiveOrder()?.variant).toBe("ally");
     });
   });
+
+  describe("order queuing", () => {
+    beforeEach(async () => {
+      // Set up local player
+      playersVar([{
+        id: "player-1",
+        name: "Test Player",
+        color: "blue",
+        local: true,
+        sheepCount: 0,
+        entity: { id: "player-entity-1", gold: 100 },
+      }]);
+
+      clearTestServerMessages();
+      setServer(`localhost:${getTestServerPort()}`);
+      connect();
+
+      // Wait for connection to establish
+      await waitFor(() => {
+        if (connectionStatusVar() !== "connected") {
+          throw new Error("Not connected yet");
+        }
+      }, { timeout: 3000, interval: 10 });
+    });
+
+    it("should send queue flag when shift is held for smart target", async () => {
+      // Create a wolf
+      const wolf = app.addEntity({
+        id: "wolf-queue-1",
+        prefab: "wolf",
+        owner: "player-1",
+        position: { x: 10, y: 10 },
+        actions: [
+          {
+            type: "target" as const,
+            name: "Move",
+            order: "move",
+            targeting: ["other"],
+            aoe: 0,
+            smart: { ground: 0, ally: 0 },
+          },
+        ],
+      });
+
+      (wolf as Entity).selected = true;
+
+      // Mock mouse event with queue flag
+      const mockMouseEvent = {
+        intersects: new ExtendedSet(),
+        world: new Vector2(20, 20),
+        button: "right",
+        pixels: new Vector2(0, 0),
+        percent: new Vector2(0, 0),
+        angle: 0,
+        element: null,
+        elements: [],
+        queue: true, // Simulate shift held
+      } as unknown as MouseButtonEvent;
+
+      const result = handleSmartTarget(mockMouseEvent);
+      expect(result).toBe(true);
+
+      // Wait for message
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+      }, { interval: 10 });
+
+      const messages = getTestServerMessages();
+      expect(messages).toHaveLength(1);
+      const message = messages[0];
+      expect(message.type).toBe("unitOrder");
+      if (message.type === "unitOrder") {
+        expect(message.queue).toBe(true);
+        expect(message.order).toBe("move");
+      }
+    });
+
+    it("should not send queue flag when shift is not held", async () => {
+      // Create a wolf
+      const wolf = app.addEntity({
+        id: "wolf-queue-2",
+        prefab: "wolf",
+        owner: "player-1",
+        position: { x: 10, y: 10 },
+        actions: [
+          {
+            type: "target" as const,
+            name: "Move",
+            order: "move",
+            targeting: ["other"],
+            aoe: 0,
+            smart: { ground: 0, ally: 0 },
+          },
+        ],
+      });
+
+      (wolf as Entity).selected = true;
+
+      // Mock mouse event without queue flag
+      const mockMouseEvent = {
+        intersects: new ExtendedSet(),
+        world: new Vector2(20, 20),
+        button: "right",
+        pixels: new Vector2(0, 0),
+        percent: new Vector2(0, 0),
+        angle: 0,
+        element: null,
+        elements: [],
+        queue: false, // No shift
+      } as unknown as MouseButtonEvent;
+
+      const result = handleSmartTarget(mockMouseEvent);
+      expect(result).toBe(true);
+
+      // Wait for message
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+      }, { interval: 10 });
+
+      const messages = getTestServerMessages();
+      expect(messages).toHaveLength(1);
+      const message = messages[0];
+      expect(message.type).toBe("unitOrder");
+      if (message.type === "unitOrder") {
+        expect(message.queue).toBeFalsy();
+      }
+    });
+
+    it("should handle queued attack orders", async () => {
+      // Create a wolf
+      const wolf = app.addEntity({
+        id: "wolf-queue-3",
+        prefab: "wolf",
+        owner: "player-1",
+        position: { x: 10, y: 10 },
+        actions: [
+          {
+            type: "target" as const,
+            name: "Attack",
+            order: "attack",
+            targeting: ["other"],
+            aoe: 0,
+            smart: { enemy: 0 },
+          },
+        ],
+      });
+
+      // Create an enemy
+      const enemySheep = app.addEntity({
+        id: "enemy-sheep-queue",
+        prefab: "sheep",
+        owner: "player-2",
+        position: { x: 15, y: 15 },
+      });
+
+      (wolf as Entity).selected = true;
+
+      // Mock mouse event with queue flag
+      const mockIntersects = new ExtendedSet([enemySheep]);
+      const mockMouseEvent = {
+        intersects: mockIntersects,
+        world: new Vector2(15, 15),
+        button: "right",
+        pixels: new Vector2(0, 0),
+        percent: new Vector2(0, 0),
+        angle: 0,
+        element: null,
+        elements: [],
+        queue: true, // Queue the attack
+      } as unknown as MouseButtonEvent;
+
+      const result = handleSmartTarget(mockMouseEvent);
+      expect(result).toBe(true);
+
+      // Wait for message
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+      }, { interval: 10 });
+
+      const messages = getTestServerMessages();
+      expect(messages).toHaveLength(1);
+      const message = messages[0];
+      expect(message.type).toBe("unitOrder");
+      if (message.type === "unitOrder") {
+        expect(message.queue).toBe(true);
+        expect(message.order).toBe("attack");
+        expect(message.target).toBe("enemy-sheep-queue");
+      }
+    });
+
+    it("should handle queued orders with multiple units", async () => {
+      // Create two wolves
+      const wolf1 = app.addEntity({
+        id: "wolf-multi-1",
+        prefab: "wolf",
+        owner: "player-1",
+        position: { x: 10, y: 10 },
+        actions: [
+          {
+            type: "target" as const,
+            name: "Move",
+            order: "move",
+            targeting: ["other"],
+            aoe: 0,
+            smart: { ground: 0 },
+          },
+        ],
+      });
+
+      const wolf2 = app.addEntity({
+        id: "wolf-multi-2",
+        prefab: "wolf",
+        owner: "player-1",
+        position: { x: 12, y: 12 },
+        actions: [
+          {
+            type: "target" as const,
+            name: "Move",
+            order: "move",
+            targeting: ["other"],
+            aoe: 0,
+            smart: { ground: 0 },
+          },
+        ],
+      });
+
+      (wolf1 as Entity).selected = true;
+      (wolf2 as Entity).selected = true;
+
+      // Mock mouse event with queue flag
+      const mockMouseEvent = {
+        intersects: new ExtendedSet(),
+        world: new Vector2(25, 25),
+        button: "right",
+        pixels: new Vector2(0, 0),
+        percent: new Vector2(0, 0),
+        angle: 0,
+        element: null,
+        elements: [],
+        queue: true,
+      } as unknown as MouseButtonEvent;
+
+      const result = handleSmartTarget(mockMouseEvent);
+      expect(result).toBe(true);
+
+      // Wait for message
+      await waitFor(() => {
+        const messages = getTestServerMessages();
+        if (messages.length === 0) {
+          throw new Error("Message not received yet");
+        }
+      }, { interval: 10 });
+
+      const messages = getTestServerMessages();
+      expect(messages).toHaveLength(1);
+      const message = messages[0];
+      expect(message.type).toBe("unitOrder");
+      if (message.type === "unitOrder") {
+        expect(message.queue).toBe(true);
+        expect(message.order).toBe("move");
+        expect(message.units).toContain("wolf-multi-1");
+        expect(message.units).toContain("wolf-multi-2");
+        expect(message.units).toHaveLength(2);
+      }
+    });
+  });
 });

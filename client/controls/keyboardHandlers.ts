@@ -30,11 +30,11 @@ export const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
 
 export const checkShortcut = (
   shortcut: readonly string[],
-  currentKey: string,
+  currentKey?: string,
 ) => {
   const normalizedShortcut = normalizeKeys(shortcut);
-  const normalizedCurrentKey = normalizeKey(currentKey);
-  return normalizedShortcut.includes(normalizedCurrentKey) &&
+  return (!currentKey ||
+    normalizedShortcut.includes(normalizeKey(currentKey))) &&
     normalizedShortcut.every((s) => normalizedKeyboard[s]);
 };
 

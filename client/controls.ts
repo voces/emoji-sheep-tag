@@ -46,6 +46,7 @@ import {
   handleSmartTarget,
   handleTargetOrder,
   playOrderSound,
+  queued,
   setActiveOrder,
 } from "./controls/orderHandlers.ts";
 import {
@@ -134,7 +135,8 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
     return playSound("ui", pick("error1"), { volume: 0.3 });
   }
 
-  cancelBlueprint();
+  if (!e.queue) cancelBlueprint();
+  else queued.state = true;
 
   if (selection.size) {
     const source = selection.first()?.position;
@@ -143,7 +145,14 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
     }
   }
 
-  send({ type: "build", unit: unit.id, buildType: prefab, x, y });
+  send({
+    type: "build",
+    unit: unit.id,
+    buildType: prefab,
+    x,
+    y,
+    queue: e.queue,
+  });
 };
 
 // Mouse move handler
@@ -301,7 +310,10 @@ const shouldSkipGameShortcuts = (e: KeyboardEvent): boolean => {
 };
 
 const handleAction = (action: UnitDataAction, units: Entity[]) => {
-  cancelOrder();
+  const queue = checkShortcut(shortcutsVar().misc.queueModifier);
+
+  if (!queue) cancelOrder();
+  else queued.state = true;
 
   // Filter units by mana
   const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
@@ -329,7 +341,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
 
   switch (action.type) {
     case "auto":
-      handleAutoAction(action, units);
+      handleAutoAction(action, units, queue);
       break;
     case "build":
       createBlueprint(action.unitType, mouse.world.x, mouse.world.y);
@@ -351,6 +363,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
         type: "purchase",
         unit: units[0].id,
         itemId: action.itemId,
+        queue,
       });
       closeAllMenus();
       break;
@@ -365,7 +378,11 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   }
 };
 
-const handleAutoAction = (action: { order: string }, units: Entity[]) => {
+const handleAutoAction = (
+  action: { order: string },
+  units: Entity[],
+  queue?: boolean,
+) => {
   // Handle special "back" order for closing menus
   if (action.order === "back" && getCurrentMenu()) {
     playSound("ui", pick("click1", "click2", "click3", "click4"), {
@@ -385,10 +402,18 @@ const handleAutoAction = (action: { order: string }, units: Entity[]) => {
     type: "unitOrder",
     order: action.order,
     units: units.map((u) => u.id),
+    queue,
   });
 };
 
-globalThis.addEventListener("keyup", (e) => handleKeyUp(e.code));
+globalThis.addEventListener("keyup", (e) => {
+  handleKeyUp(e.code);
+  if (
+    queued.state &&
+    !checkShortcut(shortcutsVar().misc.queueModifier)
+  ) cancelOrder();
+});
+
 globalThis.addEventListener("blur", clearKeyboard);
 
 // Camera controls

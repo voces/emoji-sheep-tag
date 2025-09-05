@@ -6,6 +6,7 @@ import { canBuild } from "../api/unit.ts";
 import { updateCursor } from "../graphics/cursor.ts";
 import { setFind } from "../../server/util/set.ts";
 import { computeBlueprintColor } from "../util/colorHelpers.ts";
+import { queued } from "./orderHandlers.ts";
 
 let blueprintIndex = 0;
 let blueprint: SystemEntity<"prefab"> | undefined;
@@ -47,6 +48,8 @@ export const createBlueprint = (unitType: string, x: number, y: number) => {
   const targetColor = canBuild(builder, unitType, normalizedX, normalizedY)
     ? 0x0000ff
     : 0xff0000;
+
+  if (blueprint) app.removeEntity(blueprint);
 
   blueprint = app.addEntity({
     id: `blueprint-${blueprintIndex++}`,
@@ -93,6 +96,7 @@ export const updateBlueprint = (x: number, y: number) => {
 };
 
 export const cancelBlueprint = () => {
+  queued.state = false;
   if (blueprint) {
     app.removeEntity(blueprint);
     blueprint = undefined;

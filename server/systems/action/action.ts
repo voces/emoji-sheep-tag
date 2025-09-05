@@ -20,21 +20,10 @@ addSystem({
     let attackCooldownAvailable = delta;
 
     let loops = 10;
-    while ((e.order || e.queue?.length) && delta > 0) {
+    while (e.order && delta > 0) {
       if (!loops--) {
         console.warn("Over 10 order loops!", e.id, e.order);
         break;
-      }
-
-      // Advance queue
-      if (!e.order) {
-        if (e.queue && e.queue.length > 0) {
-          if (e.queue.length > 1) [e.order, ...e.queue] = e.queue;
-          else {
-            e.order = e.queue[0];
-            delete e.queue;
-          }
-        } else break;
       }
 
       // Reduce attack cooldown, which does not consume delta
@@ -82,7 +71,6 @@ addSystem({
       }
 
       switch (e.order.type) {
-        // TODO: consolidate turning
         case "attack":
           delta = advanceAttack(e, delta);
           break;
@@ -100,7 +88,6 @@ addSystem({
           break;
         case "attackMove":
           delta = advanceAttackMove(e, delta);
-          // orderAttack(e, e.action.target);
           break;
         default:
           absurd(e.order);

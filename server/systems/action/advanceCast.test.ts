@@ -1,9 +1,10 @@
 import { afterEach, describe } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import { newUnit } from "../../api/unit.ts";
+import { addItem, newUnit } from "../../api/unit.ts";
 import { advanceCast } from "./advanceCast.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 import { mirrorImageOrder } from "../../orders/mirrorImage.ts";
+import { nonNull } from "@/shared/types.ts";
 
 afterEach(cleanupTest);
 
@@ -16,7 +17,7 @@ describe("advanceCast mirror image", () => {
     yield;
 
     // First cast - create initial mirror using new order system
-    mirrorImageOrder.onIssue(wolf);
+    mirrorImageOrder.onIssue(wolf, undefined, false);
     advanceCast(wolf, 1.0); // Complete the cast
     yield;
 
@@ -28,7 +29,7 @@ describe("advanceCast mirror image", () => {
     const firstMirrorIds = firstMirrors.map((m) => m.id);
 
     // Second cast - should clear existing mirror and create new ones
-    mirrorImageOrder.onIssue(wolf); // This initiates the cast order
+    mirrorImageOrder.onIssue(wolf, undefined, false); // This initiates the cast order
     yield;
 
     // Advance cast slightly to trigger cast start (which clears old mirror)
@@ -67,7 +68,7 @@ describe("advanceCast mirror image", () => {
     expect(allEntitiesWithOldIds).toHaveLength(0);
   });
 
-  it.only("should consume mana when mirror image cast starts", {
+  it("should consume mana when mirror image cast starts", {
     wolves: ["test-client"],
   }, function* () {
     const wolf = newUnit("test-client", "wolf", 5, 5);
@@ -75,12 +76,7 @@ describe("advanceCast mirror image", () => {
     wolf.maxMana = 100;
 
     // Set a mirror image cast order
-    wolf.order = {
-      type: "cast",
-      orderId: "mirrorImage",
-      remaining: 1.0,
-      positions: [{ x: 5, y: 5 }],
-    };
+    wolf.order = { type: "cast", orderId: "mirrorImage", remaining: 1.0 };
     yield;
 
     // Call advanceCast which should consume mana when the cast starts
@@ -108,12 +104,7 @@ describe("advanceCast mirror image", () => {
     const wolf = newUnit("test-client", "wolf", 5, 5);
 
     // Set a mirror image cast order
-    wolf.order = {
-      type: "cast",
-      orderId: "mirrorImage",
-      remaining: 1.0,
-      positions: [{ x: 5, y: 5 }],
-    };
+    wolf.order = { type: "cast", orderId: "mirrorImage", remaining: 1.0 };
     yield;
 
     // Advance cast by 0.3 seconds
@@ -127,7 +118,7 @@ describe("advanceCast mirror image", () => {
     expect(
       (wolf.order as { type: string; orderId: string; remaining: number })
         ?.remaining,
-    ).toBeCloseTo(0.7, 1);
+    ).toBeCloseTo(0.6, 1);
   });
 
   it("should create new mirrors after cast completes", {
@@ -137,79 +128,34 @@ describe("advanceCast mirror image", () => {
     wolf.mana = 50;
 
     // Set a mirror image cast order with short duration
-    wolf.order = {
-      type: "cast",
-      orderId: "mirrorImage",
-      remaining: 0.5,
-      positions: [
-        { x: 10, y: 10 }, // Caster position
-        { x: 12, y: 10 }, // Mirror 1
-        { x: 8, y: 10 }, // Mirror 2
-      ],
-    };
+    wolf.order = { type: "cast", orderId: "mirrorImage", remaining: 0.5 };
     yield;
 
     // Complete the cast
     advanceCast(wolf, 0.5);
     yield;
-
-    // Wolf should be relocated to first position
-    expect(wolf.position).toEqual({ x: 10, y: 10 });
 
     // Order should be cleared
     expect(wolf.order).toBeFalsy();
 
     // New mirrors should be created
-    expect(wolf.mirrors).toBeDefined();
-    expect(wolf.mirrors).toHaveLength(2);
+    expect(wolf.mirrors).toHaveLength(1);
 
     // Verify mirror entities exist
     const mirrors = Array.from(ecs.entities).filter((e) => e.isMirror);
-    expect(mirrors).toHaveLength(2);
+    expect(mirrors).toHaveLength(1);
+
+    const positions = [wolf.position, ...mirrors.map((m) => m.position)].filter(
+      nonNull,
+    ).sort((a, b) => a.y - b.y);
+    expect(positions).toEqual([{ x: 5, y: 3.75 }, { x: 5, y: 6.25 }]);
 
     // Mirrors should copy health and mana from original (after mana cost deduction)
     // Wolf had 50 mana, mirrorImage costs 20, so 30 mana remains
     mirrors.forEach((mirror) => {
       expect(mirror.health).toBe(wolf.health);
-      expect(mirror.mana).toBeCloseTo(30, 1);
+      expect(mirror.mana).toBeCloseTo(30.1, 1);
     });
-  });
-
-  it("should handle mirror image with no positions (no mirrors created)", {
-    wolves: ["test-client"],
-  }, function* ({ ecs }) {
-    const wolf = newUnit("test-client", "wolf", 5, 5);
-    wolf.prefab = "wolf";
-    wolf.owner = "test-client";
-    yield;
-
-    const initialPosition = { ...wolf.position! };
-
-    // Set a mirror image cast order with no positions
-    wolf.order = {
-      type: "cast",
-      orderId: "mirrorImage",
-      remaining: 0.5,
-      // positions is undefined
-    };
-    yield;
-
-    // Complete the cast
-    advanceCast(wolf, 0.5);
-    yield;
-
-    // Wolf should stay in the same position
-    expect(wolf.position).toEqual(initialPosition);
-
-    // Order should be cleared
-    expect(wolf.order).toBeFalsy();
-
-    // No mirrors should be created
-    expect(wolf.mirrors).toBeUndefined();
-
-    // Verify no mirror entities exist
-    const mirrors = Array.from(ecs.entities).filter((e) => e.isMirror);
-    expect(mirrors).toHaveLength(0);
   });
 });
 
@@ -218,7 +164,7 @@ describe("advanceCast other abilities", () => {
     wolves: ["test-client"],
   }, function* ({ ecs }) {
     const wolf = newUnit("test-client", "wolf", 5, 5);
-    wolf.owner = "test-client";
+    addItem(wolf, "foxToken");
     wolf.facing = 0; // Facing right
 
     // Set a fox cast order
@@ -273,13 +219,10 @@ describe("advanceCast other abilities", () => {
     wolves: ["test-client"],
   }, function* () {
     const wolf = newUnit("test-client", "wolf", 5, 5);
+    addItem(wolf, "foxToken");
 
     // Set a cast order with 1 second duration
-    wolf.order = {
-      type: "cast",
-      orderId: "fox",
-      remaining: 1.0,
-    };
+    wolf.order = { type: "cast", orderId: "fox", remaining: 1.0 };
     yield;
 
     // Advance by 0.3 seconds
@@ -293,14 +236,14 @@ describe("advanceCast other abilities", () => {
     expect(
       (wolf.order as { type: string; orderId: string; remaining: number })
         ?.remaining,
-    ).toBeCloseTo(0.7, 1);
+    ).toBeCloseTo(0.6, 1); // 0.1 from two yields and 0.3 from manual advanceCast
 
     // Advance by 0.8 seconds (more than remaining)
     const leftover2 = advanceCast(wolf, 0.8);
     yield;
 
     // Should return leftover time
-    expect(leftover2).toBeCloseTo(0.1, 1);
+    expect(leftover2).toBeCloseTo(0.2, 1);
 
     // Order should be completed and cleared
     expect(wolf.order).toBeFalsy();
