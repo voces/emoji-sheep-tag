@@ -177,6 +177,7 @@ export type Entity = {
   // Maybe replace with selectable?
   /** A doodad cannot be clicked */
   isDoodad?: boolean | null;
+  isTimer?: boolean;
 
   // Attacking
   attack?: {

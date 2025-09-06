@@ -2,8 +2,8 @@ import { ServerToClientMessage } from "../client/client.ts";
 import { Client } from "./client.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { deleteLobby } from "./lobby.ts";
-import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 import { clearUpdatesCache } from "./updates.ts";
+import { serializeLobbySettings } from "./actions/lobbySettings.ts";
 
 export const endRound = (canceled = false) => {
   const lobby = lobbyContext.current;
@@ -78,7 +78,7 @@ export const leave = (client?: Client) => {
     type: "leave",
     player: client.id,
     host: lobby.host?.id,
-    format: computeDesiredFormat(lobby),
+    lobbySettings: serializeLobbySettings(lobby),
   });
 
   // Make player leave lobby

@@ -14,6 +14,9 @@ describe("Lobby Settings UI", () => {
   beforeEach(() => {
     // Set up initial lobby settings
     lobbySettingsVar({
+      sheep: 2,
+      time: 300,
+      autoTime: false,
       startingGold: { sheep: 100, wolves: 150 },
     });
   });
@@ -22,6 +25,9 @@ describe("Lobby Settings UI", () => {
     // Clean up players state
     playersVar([]);
     lobbySettingsVar({
+      sheep: 0,
+      time: 0,
+      autoTime: true,
       startingGold: { sheep: 0, wolves: 0 },
     });
   });
@@ -187,6 +193,9 @@ describe("Lobby Settings UI", () => {
 
     // Update lobby settings (simulating server message)
     lobbySettingsVar({
+      sheep: 2,
+      time: 300,
+      autoTime: false,
       startingGold: { sheep: 500, wolves: 750 },
     });
 

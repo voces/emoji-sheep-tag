@@ -3,10 +3,12 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useLocalPlayer } from "@/vars/players.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { send } from "../../../client.ts";
-import { VStack } from "@/components/layout/Layout.tsx";
+import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
 import { Input } from "@/components/forms/Input.tsx";
+import { TimeInput } from "@/components/forms/TimeInput.tsx";
 import { Button } from "@/components/forms/Button.tsx";
+import { Checkbox } from "@/components/forms/Checkbox.tsx";
 
 const SettingsCard = styled(Card)`
   width: 40%;
@@ -53,6 +55,34 @@ export const LobbySettings = () => {
         <SettingsHeader>
           Game Settings
         </SettingsHeader>
+
+        <SettingsRow>
+          <SettingsLabel htmlFor="time">
+            Round Duration
+          </SettingsLabel>
+          <HStack $align="center">
+            <TimeInput
+              id="time"
+              min={1}
+              max={3599}
+              value={lobbySettings.time}
+              onChange={(value) => send({ type: "lobbySettings", time: value })}
+              disabled={!localPlayer?.host || lobbySettings.autoTime}
+              style={{ flex: 1 }}
+            />
+            <SettingsLabel htmlFor="autoTime">Auto</SettingsLabel>
+            <Checkbox
+              id="autoTime"
+              checked={lobbySettings.autoTime}
+              onChange={(e) =>
+                send({
+                  type: "lobbySettings",
+                  time: e.currentTarget.checked ? "auto" : lobbySettings.time,
+                })}
+              disabled={!localPlayer?.host}
+            />
+          </HStack>
+        </SettingsRow>
 
         <SettingsRow>
           <SettingsLabel htmlFor="sheep-gold">

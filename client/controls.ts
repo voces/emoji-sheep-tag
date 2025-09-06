@@ -533,7 +533,9 @@ let startPan: number | undefined;
 
 app.addSystem({
   update: (delta, time) => {
-    if (showSettingsVar()) return false;
+    if (showSettingsVar() || document.activeElement !== document.body) {
+      return false;
+    }
 
     const skipKeyboard = showCommandPaletteVar() === "open";
 

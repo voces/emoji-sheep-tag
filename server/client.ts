@@ -17,9 +17,10 @@ import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
 import { purchase, zPurchase } from "./actions/purchase.ts";
 import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
-import { computeDesiredFormat } from "./util/computeDesiredFormat.ts";
 import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
+import { getIdealSheep, getIdealTime } from "./st/roundHelpers.ts";
+import { LobbySettings } from "../client/schemas.ts";
 
 export type SocketEventMap = {
   close: unknown;
@@ -136,6 +137,22 @@ const actions = {
   lobbySettings,
 };
 
+const serializeLobbySettings = (
+  lobby: Lobby,
+  playerOffset = 0,
+): LobbySettings => {
+  const players = lobby.players.size + playerOffset;
+  const sheep = getIdealSheep(players);
+  return {
+    sheep,
+    time: lobby.settings.time === "auto"
+      ? getIdealTime(players, sheep)
+      : lobby.settings.time,
+    autoTime: lobby.settings.time === "auto",
+    startingGold: lobby.settings.startingGold,
+  };
+};
+
 export const handleSocket = (socket: Socket, url?: URL) => {
   const client = new Client(socket, url?.searchParams.get("name") || undefined);
   console.log(new Date(), "Client", client.id, "connected");
@@ -165,14 +182,8 @@ export const handleSocket = (socket: Socket, url?: URL) => {
           host: false,
           sheepCount: client.sheepCount,
         }],
-        format: computeDesiredFormat({
-          ...lobby,
-          players: new Set([...lobby.players, client]),
-        }),
         updates: [],
-        lobbySettings: {
-          startingGold: lobby.settings.startingGold,
-        },
+        lobbySettings: serializeLobbySettings(lobby, 1),
       });
       lobby.players.add(client);
       console.log(
@@ -201,15 +212,12 @@ export const handleSocket = (socket: Socket, url?: URL) => {
             team: client.lobby!.settings.teams.get(client)! ?? "pending",
             local: p === client ? true : undefined,
             host: client.lobby?.host === p,
-            sheepCount: client.sheepCount,
+            sheepCount: p.sheepCount,
           }),
         ),
-        format: computeDesiredFormat(client.lobby),
         updates: Array.from(client.lobby.round?.ecs.entities ?? []),
         rounds: client.lobby.rounds,
-        lobbySettings: {
-          startingGold: client.lobby.settings.startingGold,
-        },
+        lobbySettings: serializeLobbySettings(client.lobby),
       });
     }),
   );

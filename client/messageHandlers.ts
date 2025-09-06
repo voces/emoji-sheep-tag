@@ -7,7 +7,6 @@ import { stats } from "./util/Stats.ts";
 import { data } from "./data.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { roundsVar } from "@/vars/rounds.ts";
-import { formatVar } from "@/vars/format.ts";
 import { format } from "./api/player.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import type { ServerToClientMessage } from "./schemas.ts";
@@ -28,7 +27,6 @@ export const handlers = {
         // Otherwise append the one new player
         : [...prev, data.players[0]]
     );
-    formatVar(data.format);
     if (newPlayers.length) {
       addChatMessage(`${
         new Intl.ListFormat().format(
@@ -43,7 +41,7 @@ export const handlers = {
       else map[update.id] = app.addEntity(update);
     }
     if (data.rounds) roundsVar(data.rounds);
-    if (data.lobbySettings) lobbySettingsVar(data.lobbySettings);
+    lobbySettingsVar(data.lobbySettings);
   },
   colorChange: (
     data: Extract<ServerToClientMessage, { type: "colorChange" }>,
@@ -105,7 +103,7 @@ export const handlers = {
       )
     );
     if (p) addChatMessage(`${format(p)} has left the game!`);
-    formatVar(data.format);
+    lobbySettingsVar(data.lobbySettings);
   },
   pong: ({ data }: Extract<ServerToClientMessage, { type: "pong" }>) => {
     if (typeof data === "number") {
@@ -119,8 +117,9 @@ export const handlers = {
     addChatMessage(p ? `|c${p.color}|${p.name}|: ${message}` : message);
   },
   lobbySettings: (
-    { startingGold }: Extract<ServerToClientMessage, { type: "lobbySettings" }>,
-  ) => {
-    lobbySettingsVar({ startingGold });
-  },
+    { type: _type, ...lobbySettings }: Extract<
+      ServerToClientMessage,
+      { type: "lobbySettings" }
+    >,
+  ) => lobbySettingsVar(lobbySettings),
 };

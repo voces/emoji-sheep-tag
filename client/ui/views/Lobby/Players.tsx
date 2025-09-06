@@ -8,9 +8,9 @@ import { NameInput } from "@/components/forms/NameInput.tsx";
 import { send } from "../../../client.ts";
 import { roundsVar } from "@/vars/rounds.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
-import { formatVar } from "@/vars/format.ts";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 
 const PlayerRowContainer = styled(HStack)`
   align-items: center;
@@ -57,7 +57,7 @@ const PlayerRow = ({ name, color, id }: Player) => {
 export const Players = () => {
   const players = useReactiveVar(playersVar);
   const rounds = useReactiveVar(roundsVar);
-  const format = useReactiveVar(formatVar);
+  const { sheep } = useReactiveVar(lobbySettingsVar);
 
   return (
     <PlayersCard>
@@ -67,8 +67,8 @@ export const Players = () => {
         <GridHeader $align="right">Average time</GridHeader>
         {players.map((p) => {
           const playerRounds = rounds.filter((r) =>
-            r.sheep.includes(p.id) && r.sheep.length === format.sheep &&
-            r.wolves.length === format.wolves
+            r.sheep.includes(p.id) && r.sheep.length === sheep &&
+            r.wolves.length === players.length - sheep
           );
 
           return (

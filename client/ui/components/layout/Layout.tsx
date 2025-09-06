@@ -7,9 +7,12 @@ export const VStack = styled.div`
   gap: ${({ theme }) => theme.spacing.md};
 `;
 
-export const HStack = styled.div<{ $gap?: keyof DefaultTheme["spacing"] }>`
+export const HStack = styled.div<
+  { $gap?: keyof DefaultTheme["spacing"]; $align?: "center" }
+>`
   display: flex;
   gap: ${({ theme, $gap }) => theme.spacing[$gap ?? "md"]};
+  align-items: ${({ $align }) => $align};
 `;
 
 export const HoverHighlight = styled.div`

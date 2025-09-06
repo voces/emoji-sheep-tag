@@ -211,6 +211,7 @@ const zUpdate = z.object({
   completionTime: z.number().optional(),
   progress: z.number().nullable().optional(),
   isDoodad: z.boolean().nullable().optional(),
+  isTimer: z.boolean().optional(),
 
   attack: z.object({
     damage: z.number(),
@@ -297,7 +298,17 @@ const zRound = z.object({
   duration: z.number(),
 });
 
-export const zFormat = z.object({ sheep: z.number(), wolves: z.number() });
+const zLobbySettings = z.object({
+  sheep: z.number(),
+  time: z.number(),
+  autoTime: z.boolean(),
+  startingGold: z.object({
+    sheep: z.number(),
+    wolves: z.number(),
+  }),
+});
+
+export type LobbySettings = z.input<typeof zLobbySettings>;
 
 const zJoin = z.object({
   type: z.literal("join"),
@@ -311,22 +322,16 @@ const zJoin = z.object({
     host: z.boolean().optional().default(false),
     sheepCount: z.number(),
   }).array().readonly(),
-  format: zFormat,
   updates: zUpdate.array().readonly(),
   rounds: zRound.array().readonly().optional(),
-  lobbySettings: z.object({
-    startingGold: z.object({
-      sheep: z.number(),
-      wolves: z.number(),
-    }),
-  }).optional(),
+  lobbySettings: zLobbySettings,
 });
 
 const zLeave = z.object({
   type: z.literal("leave"),
   player: z.string(),
   host: z.string().optional(),
-  format: zFormat,
+  lobbySettings: zLobbySettings,
 });
 
 const zStop = z.object({
@@ -351,12 +356,8 @@ const zChat = z.object({
   message: z.string(),
 });
 
-const zLobbySettings = z.object({
+const zLobbySettingsMessage = zLobbySettings.extend({
   type: z.literal("lobbySettings"),
-  startingGold: z.object({
-    sheep: z.number(),
-    wolves: z.number(),
-  }),
 });
 
 export const zMessage = z.union([
@@ -369,7 +370,7 @@ export const zMessage = z.union([
   zStop,
   zPong,
   zChat,
-  zLobbySettings,
+  zLobbySettingsMessage,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;

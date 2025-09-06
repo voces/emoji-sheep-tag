@@ -1,29 +1,32 @@
 export const formatDuration = (
   /** Duration in milliseconds */
-  r: number,
+  milliseconds: number,
   includeMilliseconds = false,
 ): string => {
-  r /= 1000;
+  // Convert to seconds and use Math.floor to avoid rounding issues
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const ms = milliseconds % 1000;
 
-  let s = "";
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
-  if (r >= 3600) {
-    s = Math.floor(r / 3600).toString();
-    r = r % 3600;
+  let result = "";
+
+  // Add hours if present
+  if (hours > 0) {
+    result += hours.toString() + ":";
+    // Minutes need padding when hours are present
+    result += minutes.toString().padStart(2, "0") + ":";
+  } else {
+    // No hours, just show minutes (no padding needed)
+    result += minutes.toString() + ":";
   }
-  if (s !== "") s += ":";
 
-  if (r >= 600) {
-    s += Math.floor(r / 60).toString();
-    r = r % 60;
-  } else if (r >= 60) {
-    s += (s.length > 0 ? "0" : "") + Math.floor(r / 60).toString();
-    r = r % 60;
-  } else s += s.length === 0 ? "0" : "00";
-  s += ":";
+  // Seconds always need 2-digit padding
+  result += seconds.toString().padStart(2, "0");
 
-  if (r >= 10) s += r.toFixed(includeMilliseconds ? 3 : 0);
-  else s += (s.length > 0 ? "0" : "") + r.toFixed(includeMilliseconds ? 3 : 0);
+  if (includeMilliseconds) result += "." + ms.toString().padStart(3, "0");
 
-  return s;
+  return result;
 };

@@ -6,11 +6,7 @@ import { Entity } from "../../../ecs.ts";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
 
 const Container = styled.div(({ theme }) => ({
-  position: "fixed",
-  top: 8,
-  right: 0,
   width: 120,
-  pointerEvents: "none",
   display: "flex",
   gap: 4,
   alignItems: "center",

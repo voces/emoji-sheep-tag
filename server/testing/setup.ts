@@ -77,6 +77,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   const lobby = newLobby();
   lobby.settings = {
     teams: new Map(),
+    time: "auto",
     startingGold: {
       sheep: gold,
       wolves: gold,

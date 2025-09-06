@@ -8,8 +8,5 @@
     - Like team items, but don't like them being required...
   - Scythe?
 - Units sometimes get stuck on corners still...
-- Drag select
-- Wolf sounds
-  - Birth
 - Pointer lock setting
 - Allow allies to destroy each other's farms

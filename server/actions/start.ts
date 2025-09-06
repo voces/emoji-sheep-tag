@@ -11,6 +11,8 @@ import { center, initEntities } from "@/shared/map.ts";
 import { appContext } from "@/shared/context.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { addEntity } from "@/shared/api/entity.ts";
+import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
+import { endRound } from "../lobbyApi.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -33,7 +35,7 @@ export const start = (
   const sheep = new Set<Client>();
   const wolves = new Set<Client>();
   const pool = new Set(lobby.players);
-  const desiredSize = Math.max(Math.floor((pool.size - 1) / 2), 1);
+  const desiredSize = getIdealSheep(pool.size);
   while (pool.size > 0 && (sheep.size < desiredSize || practice)) {
     const scLowest = Math.min(...Array.from(pool, (p) => p.sheepCount));
     const scPool = Array.from(pool).filter((p) => p.sheepCount === scLowest);
@@ -107,12 +109,39 @@ export const start = (
         if (practice) newUnit(owner.id, "spirit", ...getSpiritSpawn());
       }
 
+      addEntity({
+        isTimer: true,
+        buffs: [{
+          expiration: "Time until wolves spawn:",
+          remainingDuration: 1.8,
+        }],
+      });
+
       timeout(() => {
         const lobby = lobbyContext.current;
         if (!lobby.round) return;
         for (const owner of practice ? sheep : wolves) {
           newUnit(owner.id, "wolf", center.x, center.y);
           playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
+        }
+
+        if (!practice) {
+          const timeToWin = lobby.settings.time === "auto"
+            ? getIdealTime(lobby.players.size, sheep.size)
+            : lobby.settings.time;
+
+          addEntity({
+            isTimer: true,
+            buffs: [{
+              expiration: "Time until sheep win:",
+              remainingDuration: timeToWin,
+            }],
+          });
+
+          timeout(() => {
+            send({ type: "chat", message: "Sheep win!" });
+            endRound();
+          }, timeToWin);
         }
       }, 1.8);
     }, 0.3);

@@ -1,6 +1,5 @@
 // Re-export types and schemas
 export type { ServerToClientMessage, Update } from "./schemas.ts";
-export { zFormat } from "./schemas.ts";
 
 // Re-export connection functions
 export { connect, setServer } from "./connection.ts";

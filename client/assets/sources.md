@@ -28,6 +28,8 @@
 - https://www.svgrepo.com/svg/400155/dash
 - https://www.svgrepo.com/svg/500085/tree
 - https://www.svgrepo.com/svg/527707/flag-2
+- https://www.svgrepo.com/svg/500806/checkbox
+- https://www.svgrepo.com/svg/500810/checkboxempty
 
 # Audio
 

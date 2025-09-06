@@ -29,7 +29,7 @@ type LobbySettings = {
   //  * - A number indicates the max number of seconds of each round
   //  * - `"auto"` factors in sheep and wolves to determine an appropiate time
   //  */
-  // time: "auto" | number;
+  time: "auto" | number;
   startingGold: { sheep: number; wolves: number };
   // income: { sheep: number; wolves: number };
   // view: boolean;
@@ -72,7 +72,11 @@ export const newLobby = (host?: Client) => {
     players: new Set(host ? [host] : []),
     host: host,
     name: `lobby-${lobbyIndex++}`,
-    settings: { teams: new Map(), startingGold: { sheep: 0, wolves: 0 } },
+    settings: {
+      teams: new Map(),
+      time: "auto",
+      startingGold: { sheep: 0, wolves: 0 },
+    },
     status: "lobby",
     rounds: [],
   };

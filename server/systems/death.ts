@@ -1,4 +1,4 @@
-import { endRound } from "../lobbyApi.ts";
+import { endRound, send } from "../lobbyApi.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { start } from "../actions/start.ts";
 import { timeout } from "../api/timing.ts";
@@ -17,6 +17,7 @@ import { newSfx } from "../api/sfx.ts";
 
 const onLose = () =>
   timeout(() => {
+    send({ type: "chat", message: "Wolves win!" });
     endRound();
 
     // Auto start
