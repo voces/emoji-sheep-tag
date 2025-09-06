@@ -16,6 +16,7 @@ export type Entity = CommonEntity & {
   serverPosition?: { readonly x: number; readonly y: number };
   /** Client-side elapsed time for easing calculations */
   clientElapsedTime?: number;
+  aspectRatio?: number;
 };
 
 export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;

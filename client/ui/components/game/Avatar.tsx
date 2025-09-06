@@ -3,7 +3,7 @@ import { Command } from "@/components/game/Command.tsx";
 import { VerticalBar } from "@/components/game/VerticalBar.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
 import { isAlly } from "@/shared/api/unit.ts";
-import { useLocalPlayer } from "@/vars/players.ts";
+import { getPlayer, useLocalPlayer } from "@/vars/players.ts";
 import type { Entity, Item } from "@/shared/types.ts";
 import { useTheme } from "npm:styled-components";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
@@ -56,9 +56,11 @@ export const Avatar = ({ entity }: { entity: Entity }) => {
       ? "mirror"
       : undefined);
 
-  const iconProps = iconEffect
+  const iconEffectProps = iconEffect
     ? iconEffects[iconEffect](entity.owner)
     : (entity.alpha ? { style: { opacity: entity.alpha } } : undefined);
+  const color = entity.owner ? getPlayer(entity.owner)?.color : undefined;
+  const iconProps = { ...iconEffectProps, color };
 
   return (
     <HStack $gap="sm">

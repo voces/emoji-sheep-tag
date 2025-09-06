@@ -4,6 +4,7 @@ import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
 
+// X'd farms not removed from selection
 export const selection = new ExtendedSet<SystemEntity<"selected">>();
 
 let primary: Entity | undefined;

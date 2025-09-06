@@ -297,7 +297,7 @@ export class InstancedGroup extends Group {
     }
   }
 
-  setScaleAt(index: number | string, scale: number) {
+  setScaleAt(index: number | string, scale: number, aspectRatio?: number) {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
@@ -308,6 +308,9 @@ export class InstancedGroup extends Group {
           dummy.scale,
         );
         dummy.scale.setScalar(scale);
+        if (typeof aspectRatio === "number") {
+          dummy.scale.setY(dummy.scale.y * aspectRatio);
+        }
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);
         child.instanceMatrix.needsUpdate = true;

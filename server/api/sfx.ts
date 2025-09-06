@@ -8,8 +8,8 @@ export const newSfx = (
   duration = 1,
   easing?: "ease-in" | "ease-out" | "ease-in-out",
   easingDuration = duration,
-) => {
-  const entity = {
+) =>
+  addEntity({
     id: `sfx-${Date.now()}-${Math.random()}`,
     position: { x: position.x, y: position.y },
     model: modelName,
@@ -28,7 +28,5 @@ export const newSfx = (
     ...(easing && {
       progress: easing === "ease-out" ? 1 : 0,
     }),
-  };
-
-  return addEntity(entity);
-};
+    isDoodad: true,
+  });

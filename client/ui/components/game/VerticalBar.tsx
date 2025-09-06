@@ -10,12 +10,14 @@ const BarContainer = styled.div<{ width?: number; height?: number }>`
   overflow: hidden;
 `;
 
-const BarFill = styled.div<{ $fillPercent: number; color: string }>`
+const BarFill = styled.div.attrs<{ $fillPercent: number; color: string }>(
+  (props) => ({
+    style: { height: `${Math.max(0, Math.min(100, props.$fillPercent))}%` },
+  }),
+)`
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: ${({ $fillPercent }) =>
-    `${Math.max(0, Math.min(100, $fillPercent))}%`};
   background-color: ${({ color }) => color};
   transition: height 0.2s ease-in-out;
 `;

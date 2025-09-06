@@ -19,6 +19,7 @@ const updateSwing = (e: SystemEntity<"swing">) => {
       y: e.swing.source.y + 0.75 * Math.sin(direction),
     },
     facing: direction + Math.PI,
+    isDoodad: true,
   });
   swings.set(e, swing);
 };

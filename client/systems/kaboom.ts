@@ -15,6 +15,7 @@ app.addSystem({
         0.25,
       isKaboom: true,
       progress: 1,
+      isDoodad: true,
     });
   },
 });

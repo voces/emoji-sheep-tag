@@ -39,6 +39,7 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
         owner: e.owner,
         position: { x: o.target.x, y: o.target.y },
         selectable: false,
+        isDoodad: true,
       });
     }
     if ("targetId" in o && o.targetId) {
@@ -50,6 +51,7 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
           owner: e.owner,
           position: { x: target.position.x, y: target.position.y },
           selectable: false,
+          isDoodad: true,
         });
       }
     }

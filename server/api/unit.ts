@@ -182,11 +182,12 @@ export const acquireTarget = (e: Entity) => {
   if (!pos) return;
   return getEntitiesInRange(pos.x, pos.y, 10)
     .filter((e2) =>
+      e2.position &&
       isEnemy(e, e2) &&
       (!e2.targetedAs ||
         testClassification(e, e2, ["enemy"]))
     )
-    .map((e2) => [e2, distanceBetweenPoints(pos, e2.position)] as const)
+    .map((e2) => [e2, distanceBetweenPoints(pos, e2.position!)] as const)
     .sort((a, b) => {
       if (a[0].prefab === "sheep") {
         if (b[0].prefab !== "sheep") return -1;

@@ -174,6 +174,7 @@ export type Entity = {
   actions?: ReadonlyArray<UnitDataAction>;
   completionTime?: number;
   progress?: number | null;
+  // Maybe replace with selectable?
   /** A doodad cannot be clicked */
   isDoodad?: boolean | null;
 

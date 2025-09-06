@@ -94,6 +94,7 @@ export const updateDebugCircles = (e: Entity) => {
           : e.order.type === "build"
           ? "#0000FF"
           : "#FFFFFF",
+        isDoodad: true,
       });
       keyToId.set(key, e2);
     }

@@ -22,7 +22,7 @@ export const Avatars = () => {
 
     const clearDelete = selection.addEventListener(
       "delete",
-      () => () => next((p) => p + 1),
+      () => next((p) => p + 1),
     );
 
     return () => {

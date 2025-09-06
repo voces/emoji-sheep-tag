@@ -15,6 +15,7 @@ import "./systems/easing.ts";
 import "./systems/indicators.ts";
 import "./systems/mirrors.ts";
 import "./systems/playerEntityReferences.ts";
+import "@/shared/systems/kd.ts";
 import "./graphics/cursor.ts";
 
 // Start the ping system

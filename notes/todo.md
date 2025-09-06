@@ -13,4 +13,3 @@
   - Birth
 - Pointer lock setting
 - Allow allies to destroy each other's farms
-- Command queuing

@@ -35,6 +35,7 @@ import dash from "../assets/dash.svg" with { type: "text" };
 import tree from "../assets/tree.svg" with { type: "text" };
 import treeStump from "../assets/treeStump.svg" with { type: "text" };
 import flag from "../assets/flag.svg" with { type: "text" };
+import square from "../assets/square.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -65,6 +66,7 @@ export const svgs: Record<string, string> = {
   tree,
   treeStump,
   flag,
+  square,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -101,6 +103,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   gravity: loadSvg(gravity, 2, { layer: 2 }),
   collision: loadSvg(collision, 2, { layer: 2 }),
   meteor: loadSvg(meteor, 0.5, { layer: 2 }),
+  square: loadSvg(square, 1, { layer: 2 }),
 };
 Object.assign(globalThis, { collections });
 
@@ -128,8 +131,9 @@ const updateColor = (e: Entity) => {
   }
 
   // TODO: merge these
-  if (e.progress) collection.setAlphaAt(e.id, e.progress, true);
   if (e.alpha) collection.setAlphaAt(e.id, e.alpha, false);
+  else if (e.progress) collection.setAlphaAt(e.id, e.progress, true);
+  else collection.setAlphaAt(e.id, 1);
 };
 
 app.addSystem({
@@ -257,15 +261,20 @@ app.addSystem({
   onChange: updateColor,
 });
 
-const updateScale = (e: SystemEntity<"modelScale">) => {
+const updateScale = (e: Entity) => {
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
   if (!collection) return console.warn(`No ${e.model} SVG on ${e.id}`);
-  collection.setScaleAt(e.id, e.modelScale);
+  collection.setScaleAt(e.id, e.modelScale ?? 1, e.aspectRatio);
 };
 app.addSystem({
   props: ["modelScale"],
+  onAdd: updateScale,
+  onChange: updateScale,
+});
+app.addSystem({
+  props: ["aspectRatio"],
   onAdd: updateScale,
   onChange: updateScale,
 });

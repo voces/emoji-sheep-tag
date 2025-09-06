@@ -44,5 +44,6 @@ export const newIndicator = (
     playerColor: color,
     position,
     modelScale: scale,
+    isDoodad: true,
   });
 };

@@ -105,6 +105,7 @@ export const generateDoodads = (app: App<Entity>) => {
       position: { x, y },
       playerColor: `#${r.toString(16)}${g.toString(16)}00`,
       facing: Math.round(rng()) * Math.PI,
+      isDoodad: true,
     });
   }
   for (let i = 0; i < tiles[0].length * tiles.length / 20; i++) {
@@ -123,6 +124,7 @@ export const generateDoodads = (app: App<Entity>) => {
         Math.floor(g * scale).toString(16).padStart(2, "0")
       }${Math.floor(b * scale).toString(16).padStart(2, "0")}`,
       facing: Math.round(rng()) * Math.PI,
+      isDoodad: true,
     });
   }
 };
