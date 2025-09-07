@@ -25,16 +25,16 @@ export const endRound = (canceled = false) => {
     wolves: Array.from(lobby.round.wolves, (p) => p.id),
     duration: Date.now() - lobby.round.start,
   };
-  if (!canceled) lobby.rounds.push(round);
+  if (!canceled && !lobby.round.practice) lobby.rounds.push(round);
   send({
     type: "stop",
-    players: canceled
+    players: canceled && !lobby.round.practice
       ? Array.from(
         lobby.players,
         (p) => ({ id: p.id, sheepCount: p.sheepCount }),
       )
       : undefined,
-    round: canceled ? undefined : round,
+    round: canceled || lobby.round.practice ? undefined : round,
   });
 };
 

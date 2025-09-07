@@ -11,7 +11,7 @@ import { center, initEntities } from "@/shared/map.ts";
 import { appContext } from "@/shared/context.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { addEntity } from "@/shared/api/entity.ts";
-import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
+import { draftTeams, getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
 import { endRound } from "../lobbyApi.ts";
 
 export const zStart = z.object({
@@ -32,22 +32,9 @@ export const start = (
   console.log(new Date(), "Round started in lobby", lobby.name);
 
   lobby.status = "playing";
-  const sheep = new Set<Client>();
-  const wolves = new Set<Client>();
-  const pool = new Set(lobby.players);
-  const desiredSize = getIdealSheep(pool.size);
-  while (pool.size > 0 && (sheep.size < desiredSize || practice)) {
-    const scLowest = Math.min(...Array.from(pool, (p) => p.sheepCount));
-    const scPool = Array.from(pool).filter((p) => p.sheepCount === scLowest);
-    while (scPool.length && (sheep.size < desiredSize || practice)) {
-      const i = Math.floor(Math.random() * scPool.length);
-      sheep.add(scPool[i]);
-      scPool[i].sheepCount++;
-      pool.delete(scPool[i]);
-      scPool.splice(i, 1);
-    }
-  }
-  for (const p of pool) wolves.add(p);
+  const { sheep, wolves } = practice
+    ? { sheep: new Set(lobby.players), wolves: new Set<Client>() }
+    : draftTeams(lobby, getIdealSheep(lobby.players.size));
 
   const ecs = newEcs();
   lobby.round = {

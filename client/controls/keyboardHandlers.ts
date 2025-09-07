@@ -7,6 +7,7 @@ import { getCurrentMenu } from "../ui/vars/menuState.ts";
 import { actionToShortcutKey } from "../util/actionToShortcutKey.ts";
 import { normalizeKey, normalizeKeys } from "../util/normalizeKey.ts";
 import { getLocalPlayer } from "@/vars/players.ts";
+import { canPlayerExecuteAction } from "../util/allyPermissions.ts";
 
 export const keyboard: Record<string, boolean> = {};
 export const normalizedKeyboard: Record<string, boolean> = {};
@@ -63,14 +64,19 @@ export const findActionForShortcut = (
     // Check selection actions
     for (const entity of selection) {
       // Check unit's base actions
-      if (entity.actions && entity.owner === getLocalPlayer()?.id) {
+      if (entity.actions) {
         for (const a of entity.actions) {
           if (
             a.binding && checkShortcut(a.binding, e.code) &&
             (!action || isSameAction(action, a))
           ) {
-            action = a;
-            units.push(entity);
+            const localPlayer = getLocalPlayer();
+            if (
+              localPlayer && canPlayerExecuteAction(localPlayer.id, entity, a)
+            ) {
+              action = a;
+              units.push(entity);
+            }
           }
         }
       }

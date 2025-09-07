@@ -72,6 +72,7 @@ const selfDestruct: UnitDataAction = {
   order: "selfDestruct",
   icon: "collision",
   binding: ["KeyX"],
+  allowAllies: true,
 };
 
 export const items: Record<string, Item> = {

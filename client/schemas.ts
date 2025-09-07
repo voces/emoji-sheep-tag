@@ -87,6 +87,7 @@ const zBaseAction = z.union([
     manaCost: z.number().optional(),
     goldCost: z.number().optional(),
     castDuration: z.number().optional(),
+    allowAllies: z.boolean().optional(),
   }),
   z.object({
     name: z.string(),
@@ -103,6 +104,7 @@ const zBaseAction = z.union([
     movementSpeedBonus: z.number().optional(),
     movementSpeedMultiplier: z.number().optional(),
     soundOnCastStart: z.string().optional(),
+    allowAllies: z.boolean().optional(),
   }),
   z.object({
     name: z.string(),
@@ -114,6 +116,7 @@ const zBaseAction = z.union([
     binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
     castDuration: z.number().optional(),
+    allowAllies: z.boolean().optional(),
   }),
   z.object({
     name: z.string(),
@@ -133,6 +136,7 @@ const zBaseAction = z.union([
     castDuration: z.number().optional(),
     range: z.number().optional(),
     damage: z.number().optional(),
+    allowAllies: z.boolean().optional(),
   }),
 ]);
 
@@ -154,6 +158,7 @@ const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
       actions: z.array(zAction).readonly(),
       description: z.string().optional(),
       binding: z.array(z.string()).readonly().optional(),
+      allowAllies: z.boolean().optional(),
     }),
   ])
 );

@@ -88,6 +88,7 @@ export type UnitDataActionTarget = {
   readonly castDuration?: number;
   readonly range?: number;
   readonly damage?: number;
+  readonly allowAllies?: boolean;
 };
 
 export type UnitDataAction = {
@@ -100,6 +101,7 @@ export type UnitDataAction = {
   readonly manaCost?: number;
   readonly goldCost?: number;
   readonly castDuration?: number;
+  readonly allowAllies?: boolean;
 } | {
   readonly name: string;
   readonly type: "auto";
@@ -115,6 +117,7 @@ export type UnitDataAction = {
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
   readonly soundOnCastStart?: string;
+  readonly allowAllies?: boolean;
 } | {
   readonly name: string;
   readonly type: "purchase";
@@ -125,6 +128,7 @@ export type UnitDataAction = {
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
   readonly castDuration?: number;
+  readonly allowAllies?: boolean;
 } | {
   readonly name: string;
   readonly type: "menu";
@@ -132,6 +136,7 @@ export type UnitDataAction = {
   readonly actions: ReadonlyArray<UnitDataAction>;
   readonly description?: string;
   readonly binding?: ReadonlyArray<string>;
+  readonly allowAllies?: boolean;
 } | UnitDataActionTarget;
 
 export type Entity = {

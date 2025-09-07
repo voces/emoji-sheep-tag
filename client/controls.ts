@@ -42,6 +42,7 @@ import {
   normalize,
   updateBlueprint,
 } from "./controls/blueprintHandlers.ts";
+import { hasAllyActions } from "./util/allyPermissions.ts";
 import {
   cancelOrder as cancelOrderHandler,
   getActiveOrder,
@@ -177,7 +178,7 @@ mouse.addEventListener("mouseButtonUp", (e) => {
     // Find all units within the selection rectangle using KDTree
     const entitiesInRect = getEntitiesInRect(minX, minY, maxX, maxY);
     const ownUnits: Entity[] = [];
-    const ownStructures: Entity[] = [];
+    const controllableEntities: Entity[] = []; // Own structures + ally entities with actions
     const otherEntities: Entity[] = [];
     const localPlayerId = getLocalPlayer()?.id;
 
@@ -185,22 +186,28 @@ mouse.addEventListener("mouseButtonUp", (e) => {
       // Cast to client Entity type to access client-specific properties
       const clientEntity = entity as Entity;
       if (clientEntity.selectable === false || clientEntity.isDoodad) continue;
+
       if (clientEntity.owner === localPlayerId) {
-        if (isStructure(clientEntity)) ownStructures.push(clientEntity);
+        if (isStructure(clientEntity)) controllableEntities.push(clientEntity);
         else ownUnits.push(clientEntity);
-      } else otherEntities.push(clientEntity);
+      } else if (localPlayerId && hasAllyActions(clientEntity)) {
+        controllableEntities.push(clientEntity);
+      } else {
+        otherEntities.push(clientEntity);
+      }
     }
 
     const toSelect = ownUnits.length && ownUnits.some((e) => !e.selected)
       ? ownUnits
-      : ownStructures.length && ownStructures.some((e) => !e.selected)
-      ? ownStructures
+      : controllableEntities.length &&
+          controllableEntities.some((e) => !e.selected)
+      ? controllableEntities
       : otherEntities.length && otherEntities.some((e) => !e.selected)
       ? otherEntities
       : ownUnits.length
       ? ownUnits
-      : ownStructures.length
-      ? ownStructures
+      : controllableEntities.length
+      ? controllableEntities
       : otherEntities;
 
     // Select all units within the rectangle

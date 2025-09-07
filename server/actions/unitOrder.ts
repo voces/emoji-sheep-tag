@@ -9,6 +9,7 @@ import { getOrder } from "../orders/index.ts";
 import { findActionAndItem, findActionByOrder } from "../util/actionLookup.ts";
 import { precast } from "../orders/precast.ts";
 import { postCast } from "../orders/postCast.ts";
+import { canExecuteActionOnUnit } from "../util/allyPermissions.ts";
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
@@ -25,7 +26,6 @@ export const unitOrder = (
   for (const uId of units) {
     const unit = lookup(uId);
     if (!unit) throw new UnknownEntity(uId);
-    if (client.id !== unit.owner) continue;
 
     // Find action from all possible sources
     const result = findActionAndItem(unit, order);
@@ -35,6 +35,16 @@ export const unitOrder = (
     }
 
     const { action: _action, item: itemWithAction } = result;
+
+    // Check if client can execute this action on this unit
+    if (!canExecuteActionOnUnit(client, unit, _action)) {
+      console.warn("Client lacks permission to execute action", {
+        clientId: client.id,
+        unitOwner: unit.owner,
+        order,
+      });
+      continue;
+    }
 
     // Handle the action based on order type
 

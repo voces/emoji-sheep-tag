@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import { Action } from "@/components/game/Action.tsx";
 import { applyShortcutOverride } from "../../../util/applyShortcutOverrides.ts";
 import { Card } from "@/components/layout/Card.tsx";
+import { getExecutableActions } from "../../../util/allyPermissions.ts";
 
 const ActionBarContainer = styled(Card)`
   position: fixed;
@@ -125,11 +126,20 @@ export const ActionBar = () => {
     [selection, currentMenu],
   );
 
-  if (!selection || selection.owner !== localPlayer?.id) return null;
+  if (!selection || !localPlayer) return null;
+
+  // Filter actions based on ownership and ally permissions
+  const executableActions = getExecutableActions(
+    localPlayer.id,
+    selection,
+    displayActions,
+  );
+
+  if (executableActions.length === 0) return null;
 
   return (
     <ActionBarContainer role="toolbar">
-      {displayActions.map((action) => (
+      {executableActions.map((action) => (
         <Action
           key={`${selection.id}-${action.type}-${action.name}`}
           action={action}

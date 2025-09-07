@@ -1,3 +1,6 @@
+import { Client } from "../client.ts";
+import { Lobby } from "../lobby.ts";
+
 export const getIdealSheep = (players: number) =>
   Math.max(Math.floor((players - 1) / 2), 1);
 
@@ -32,4 +35,24 @@ export const getIdealTime = (players: number, sheep: number) => {
     Math.log(Math.exp(-floored / sCap) + Math.exp(-cap / sCap)); // softmin
 
   return Math.round(capped / 30) * 30;
+};
+
+export const draftTeams = (lobby: Lobby, desiredSheep: number) => {
+  const sheep = new Set<Client>();
+  const wolves = new Set<Client>();
+  const pool = new Set(lobby.players);
+  while (pool.size > 0 && (sheep.size < desiredSheep)) {
+    const scLowest = Math.min(...Array.from(pool, (p) => p.sheepCount));
+    const scPool = Array.from(pool).filter((p) => p.sheepCount === scLowest);
+    while (scPool.length && (sheep.size < desiredSheep)) {
+      const i = Math.floor(Math.random() * scPool.length);
+      sheep.add(scPool[i]);
+      scPool[i].sheepCount++;
+      pool.delete(scPool[i]);
+      scPool.splice(i, 1);
+    }
+  }
+  for (const p of pool) wolves.add(p);
+
+  return { sheep, wolves };
 };
