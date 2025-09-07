@@ -37,6 +37,7 @@ import treeStump from "../assets/treeStump.svg" with { type: "text" };
 import flag from "../assets/flag.svg" with { type: "text" };
 import square from "../assets/square.svg" with { type: "text" };
 import pinkPotion from "../assets/pinkPotion.svg" with { type: "text" };
+import rock from "../assets/rock.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -80,6 +81,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
     yOffset: -0.36,
     xOffset: -0.01,
   }),
+  rock: loadSvg(rock, 0.6, { layer: 2 }),
   fence: loadSvg(fence, 0.07, { layer: 2 }),
 
   // Basic units and structures

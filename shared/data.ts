@@ -495,6 +495,12 @@ export const prefabs: Record<
     name: "Tree Stump",
     isDoodad: true,
   },
+  rock: {
+    name: "Rock",
+    radius: 0.5,
+    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    isDoodad: true,
+  },
 };
 
 export const colors: string[] = [

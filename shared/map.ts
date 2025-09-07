@@ -69,6 +69,9 @@ export const initEntities: Record<string, Partial<Entity>[]> = {
     { position: { x: 26.5, y: 1.5 }, modelScale: 1.02 },
     { position: { x: 6.5, y: 6.5 }, modelScale: 1.11 },
   ],
+  rock: [
+    { position: { x: 0.5, y: 19 }, modelScale: 1.11 },
+  ],
 };
 
 const floor = Math.floor;
@@ -102,6 +105,7 @@ export const generateDoodads = (app: App<Entity>) => {
     app.addEntity({
       id: `grass-${crypto.randomUUID()}`,
       prefab: "grass",
+      modelScale: 1 + (rng() - 0.5),
       position: { x, y },
       playerColor: `#${r.toString(16)}${g.toString(16)}00`,
       facing: Math.round(rng()) * Math.PI,
@@ -119,6 +123,7 @@ export const generateDoodads = (app: App<Entity>) => {
     app.addEntity({
       id: `flowers-${crypto.randomUUID()}`,
       prefab: "flowers",
+      modelScale: 1 + (rng() - 0.5),
       position: { x, y },
       playerColor: `#${Math.floor(r * scale).toString(16).padStart(2, "0")}${
         Math.floor(g * scale).toString(16).padStart(2, "0")
