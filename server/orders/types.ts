@@ -14,7 +14,12 @@ export type OrderDefinition = {
     unit: Entity,
     target: Point | string | undefined,
     queue: boolean,
-  ) => "done" | "complete" | "incomplete" | "failed";
+    /**
+     * immediate (non-interrupt): immediately call precast and onCastComplete; `order` and `queue` should not be touched
+     * ordered (interrupt): `order` or `queue` may be touched; goes through advance action system
+     * failed: precheck validation failed
+     */
+  ) => "immediate" | "ordered" | "failed";
 
   // Called when the cast starts (side effects like mana consumption, clearing old state)
   onCastStart?: (unit: Entity) => void;

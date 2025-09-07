@@ -7,7 +7,7 @@ import { Command } from "./Command.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
 
 export const Action = ({ action, current, entity }: {
-  action: UnitDataAction;
+  action: UnitDataAction & { count?: number };
   current: boolean;
   entity: Entity;
 }) => {
@@ -40,6 +40,7 @@ export const Action = ({ action, current, entity }: {
           iconProps={action.iconEffect
             ? iconEffects[action.iconEffect](owningPlayer?.id)
             : undefined}
+          count={action.count}
         />
       );
     case "build":
@@ -55,6 +56,7 @@ export const Action = ({ action, current, entity }: {
           disabled={disabled}
           goldCost={action.goldCost}
           manaCost={manaCost}
+          count={action.count}
         />
       );
     case "purchase":
@@ -68,6 +70,7 @@ export const Action = ({ action, current, entity }: {
           disabled={disabled}
           goldCost={action.goldCost}
           manaCost={manaCost}
+          count={action.count}
         />
       );
     case "menu":
@@ -80,6 +83,7 @@ export const Action = ({ action, current, entity }: {
           pressed={current}
           disabled={disabled}
           manaCost={manaCost}
+          count={action.count}
         />
       );
     default:

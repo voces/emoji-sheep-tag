@@ -46,7 +46,7 @@ describe("actionLookup", () => {
     ],
     inventory: [
       {
-        prefab: "foxToken",
+        id: "foxToken",
         name: "Summon Fox",
         gold: 50,
         binding: ["KeyF"],
@@ -60,7 +60,7 @@ describe("actionLookup", () => {
         }],
       },
       {
-        prefab: "potionItem",
+        id: "potionItem",
         name: "Healing Potion",
         gold: 20,
         binding: ["KeyP"],
@@ -74,7 +74,7 @@ describe("actionLookup", () => {
         }],
       },
       {
-        prefab: "scrollItem",
+        id: "scrollItem",
         name: "Scroll of Lightning",
         gold: 30,
         binding: ["KeyL"],
@@ -180,7 +180,7 @@ describe("actionLookup", () => {
         ],
         inventory: [
           {
-            prefab: "testItem",
+            id: "testItem",
             name: "Test Item",
             gold: 10,
             binding: ["KeyT"],
@@ -349,7 +349,7 @@ describe("actionLookup", () => {
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Summon Fox");
       expect(result!.item).toBeDefined();
-      expect(result!.item!.prefab).toBe("foxToken");
+      expect(result!.item!.id).toBe("foxToken");
       expect(result!.item!.charges).toBe(2);
     });
 
@@ -361,7 +361,7 @@ describe("actionLookup", () => {
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Lightning");
       expect(result!.item).toBeDefined();
-      expect(result!.item!.prefab).toBe("scrollItem");
+      expect(result!.item!.id).toBe("scrollItem");
       expect(result!.item!.charges).toBeUndefined();
     });
 
@@ -399,7 +399,7 @@ describe("actionLookup", () => {
         ],
         inventory: [
           {
-            prefab: "priorityItem",
+            id: "priorityItem",
             name: "Item Priority",
             gold: 10,
             binding: ["KeyP"],
@@ -441,7 +441,7 @@ describe("actionLookup", () => {
         ],
         inventory: [
           {
-            prefab: "fallbackItem",
+            id: "fallbackItem",
             name: "Item Fallback",
             gold: 10,
             binding: ["KeyF"],
@@ -468,7 +468,7 @@ describe("actionLookup", () => {
         id: "item-fallback",
         inventory: [
           {
-            prefab: "onlyItem",
+            id: "onlyItem",
             name: "Only Item",
             gold: 10,
             binding: ["KeyO"],
@@ -488,7 +488,7 @@ describe("actionLookup", () => {
       expect(result).toBeDefined();
       expect(result!.action.name).toBe("Only Item Action");
       expect(result!.item).toBeDefined();
-      expect(result!.item!.prefab).toBe("onlyItem");
+      expect(result!.item!.id).toBe("onlyItem");
     });
 
     it("should return undefined when action not found anywhere", () => {

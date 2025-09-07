@@ -63,22 +63,20 @@ export const ActionBar = () => {
   useListenToEntityProp(owningPlayer?.entity, "gold");
 
   // Show menu actions if menu is active
-  let displayActions = currentMenu
-    ? currentMenu.action.actions
-    : selection?.actions ?? [];
+  let displayActions: ReadonlyArray<
+    React.ComponentProps<typeof Action>["action"]
+  > = currentMenu ? currentMenu.action.actions : selection?.actions ?? [];
 
   // Add item actions from inventory and apply shortcut overrides
   if (!currentMenu && selection?.inventory && !selection.isMirror) {
-    const itemActions: UnitDataAction[] = [];
+    const itemActions: (typeof displayActions)[number][] = [];
     for (const item of selection.inventory) {
       if (item.actions && (item.charges == null || item.charges > 0)) {
         for (const itemAction of item.actions) {
           // Create an action with the charge count in the name if applicable
           let actionWithCharges = {
             ...itemAction,
-            name: item.charges
-              ? `${itemAction.name} (${item.charges})`
-              : itemAction.name,
+            count: item.charges,
           };
 
           // Apply shortcut overrides if the selection has a prefab

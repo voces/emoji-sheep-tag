@@ -5,11 +5,11 @@ import { Shortcuts } from "../ui/util/shortcutUtils.ts";
 /**
  * Apply shortcut overrides to an action based on user preferences
  */
-export const applyShortcutOverride = (
-  action: UnitDataAction,
+export const applyShortcutOverride = <T extends UnitDataAction>(
+  action: T,
   shortcuts: Shortcuts,
   prefab: string,
-): UnitDataAction => {
+): T => {
   const sectionShortcuts = shortcuts[prefab];
   if (!sectionShortcuts) return action;
 

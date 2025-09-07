@@ -25,7 +25,7 @@ describe("addItem", () => {
 
     expect(result).toBe(true);
     expect(unit.inventory).toHaveLength(1);
-    expect(unit.inventory![0].prefab).toBe("foxToken");
+    expect(unit.inventory![0].id).toBe("foxToken");
     expect(unit.inventory![0].name).toBe("Fox Token");
   });
 
@@ -46,7 +46,7 @@ describe("addItem", () => {
     const unit: Entity = {
       id: "test-unit",
       inventory: [{
-        prefab: "foxToken",
+        id: "foxToken",
         name: "Fox Token",
         icon: "fox",
         gold: 5,
@@ -94,7 +94,7 @@ describe("addItem", () => {
     yield;
 
     expect(unit.inventory).toHaveLength(1);
-    expect(unit.inventory![0].prefab).toBe("foxToken");
+    expect(unit.inventory![0].id).toBe("foxToken");
   });
 });
 
@@ -122,7 +122,7 @@ describe("computeUnitDamage", () => {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     unit.inventory = [
       items.claw,
-      { ...items.claw, prefab: "claw2", damage: 15 }, // Second claw with different damage
+      { ...items.claw, id: "claw2", damage: 15 }, // Second claw with different damage
     ];
     yield;
     expect(computeUnitDamage(unit)).toBe(105); // 70 + 20 + 15
@@ -168,7 +168,7 @@ describe("computeUnitAttackSpeed", () => {
         items.swiftness, // 1.15x
         {
           ...items.swiftness,
-          prefab: "swiftness2",
+          id: "swiftness2",
           attackSpeedMultiplier: 1.2,
         }, // 1.2x
       ];

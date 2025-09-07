@@ -35,6 +35,7 @@ export const Avatars = () => {
 
   return (
     <AvatarContainer>
+      {/* TODO: Group by? */}
       {Array.from(selection, (e) => <Avatar key={e.id} entity={e} />)}
     </AvatarContainer>
   );

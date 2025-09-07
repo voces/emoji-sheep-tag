@@ -45,7 +45,6 @@ export type Order = Readonly<
 
 export type Item = {
   readonly id: string;
-  readonly prefab: string;
   readonly name: string;
   readonly description?: string;
   readonly icon?: string;

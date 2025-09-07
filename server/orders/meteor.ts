@@ -30,7 +30,7 @@ export const meteorOrder = {
       unit.order = order;
     }
 
-    return "incomplete";
+    return "ordered";
   },
 
   onCastComplete: (unit) => {

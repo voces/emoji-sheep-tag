@@ -20,9 +20,9 @@ export const destroyLastFarmOrder = {
         orderId: "destroyLastFarm",
         remaining: 0,
       }];
-      return "incomplete";
+      return "ordered";
     }
-    return "done";
+    return "immediate";
   },
 
   onCastComplete: (unit: Entity) => {

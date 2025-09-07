@@ -33,13 +33,13 @@ export const mirrorImageOrder = {
 
     if (queue) {
       unit.queue = [...unit.queue ?? [], order];
-      return "incomplete";
+      return "ordered";
     }
 
     delete unit.queue;
     unit.order = order;
 
-    return "incomplete";
+    return "ordered";
   },
 
   // Called when the cast starts (order-specific side effects like clearing old state)

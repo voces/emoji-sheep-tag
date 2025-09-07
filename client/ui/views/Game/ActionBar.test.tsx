@@ -143,7 +143,7 @@ describe("ActionBar", () => {
       actions: [{ type: "auto", name: "Stop", order: "stop" }],
       inventory: [
         {
-          prefab: "potion-1",
+          id: "potion-1",
           name: "Health Potion",
           gold: 50,
           binding: [],
@@ -175,7 +175,7 @@ describe("ActionBar", () => {
       actions: [{ type: "auto", name: "Stop", order: "stop" }],
       inventory: [
         {
-          prefab: "potion-1",
+          id: "potion-1",
           name: "Health Potion",
           gold: 50,
           binding: [],
@@ -210,7 +210,7 @@ describe("ActionBar", () => {
       ],
       inventory: [
         {
-          prefab: "scroll-1",
+          id: "scroll-1",
           name: "Scroll",
           gold: 25,
           binding: [],

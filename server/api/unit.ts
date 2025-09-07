@@ -22,7 +22,6 @@ import { addEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
 import { newSfx } from "./sfx.ts";
-import { id } from "@/shared/util/id.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -294,17 +293,17 @@ export const addItem = (unit: Entity, itemId: string): boolean => {
   if (!unit.inventory) unit.inventory = [];
 
   // Check if item already exists and has charges
-  const existingItem = unit.inventory.find((i) => i.prefab === itemId);
+  const existingItem = unit.inventory.find((i) => i.id === itemId);
   if (existingItem && item.charges) {
     // If item has charges and already exists, increase charges
     unit.inventory = unit.inventory.map((i) =>
-      i.prefab === itemId
+      i.id === itemId
         ? { ...i, charges: (i.charges || 0) + (item.charges || 1) }
         : i
     );
   } else {
     // Add new item to inventory
-    unit.inventory = [...unit.inventory, { ...item, id: id(itemId) }];
+    unit.inventory = [...unit.inventory, item];
   }
 
   return true;

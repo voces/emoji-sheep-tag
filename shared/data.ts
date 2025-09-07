@@ -75,9 +75,9 @@ const selfDestruct: UnitDataAction = {
   allowAllies: true,
 };
 
-export const items: Record<string, Omit<Item, "id">> = {
+export const items: Record<string, Item> = {
   claw: {
-    prefab: "claw",
+    id: "claw",
     name: "Claws +20",
     icon: "claw2",
     gold: 180,
@@ -85,7 +85,7 @@ export const items: Record<string, Omit<Item, "id">> = {
     damage: 20,
   },
   foxToken: {
-    prefab: "foxToken",
+    id: "foxToken",
     name: "Fox Token",
     icon: "fox",
     gold: 140,
@@ -101,7 +101,7 @@ export const items: Record<string, Omit<Item, "id">> = {
     }],
   },
   strengthPotion: {
-    prefab: "strengthPotion",
+    id: "strengthPotion",
     name: "Potion of Strength",
     description: "Next attack deals 1000% damage (10x)",
     icon: "pinkPotion",
@@ -121,7 +121,7 @@ export const items: Record<string, Omit<Item, "id">> = {
     }],
   },
   swiftness: {
-    prefab: "swiftness",
+    id: "swiftness",
     name: "Swift Claws +15%",
     icon: "claw",
     gold: 110,
@@ -129,7 +129,7 @@ export const items: Record<string, Omit<Item, "id">> = {
     attackSpeedMultiplier: 1.15,
   },
   boots: {
-    prefab: "boots",
+    id: "boots",
     name: "Boots +30",
     icon: "runningShoes",
     gold: 110,
@@ -137,7 +137,7 @@ export const items: Record<string, Omit<Item, "id">> = {
     movementSpeedBonus: 0.3,
   },
   speedPot: {
-    prefab: "speedPot",
+    id: "speedPot",
     name: "Potion of Speed",
     description:
       "Increases attack speed by 10% and movement speed by 15% for 10 seconds.",
@@ -160,7 +160,7 @@ export const items: Record<string, Omit<Item, "id">> = {
     }],
   },
   bomber: {
-    prefab: "bomber",
+    id: "bomber",
     name: "Bomber",
     description: "Bombs an area, damaging structures and trees but not units.",
     icon: "meteor",
@@ -342,7 +342,7 @@ export const prefabs: Record<
             name: `Purchase ${item.name}`,
             description: item.description,
             type: "purchase",
-            itemId: item.prefab,
+            itemId: item.id,
             binding: item.binding,
             goldCost: item.gold,
           })),

@@ -22,14 +22,24 @@ const InventoryWrapper = styled.div`
   }
 `;
 
+const itemMap = new WeakMap<Item, string>();
+const getItemKey = (item: Item) => {
+  const existing = itemMap.get(item);
+  if (existing) return existing;
+  const key = crypto.randomUUID();
+  itemMap.set(item, key);
+  return key;
+};
+
 const Inventory = ({ items }: { items: ReadonlyArray<Item> }) => (
   <InventoryWrapper>
     {items.map((item) => (
       <Command
-        key={item.id}
+        key={getItemKey(item)}
         name={item.name}
-        icon={item.icon ?? item.prefab}
+        icon={item.icon ?? item.id}
         hideTooltip
+        count={item.charges}
       />
     ))}
   </InventoryWrapper>

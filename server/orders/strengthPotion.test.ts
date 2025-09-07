@@ -23,7 +23,7 @@ describe("strengthPotion integration", () => {
       const success = addItem(wolf, "strengthPotion");
       expect(success).toBe(true);
       expect(wolf.inventory).toHaveLength(1);
-      expect(wolf.inventory![0].prefab).toBe("strengthPotion");
+      expect(wolf.inventory![0].id).toBe("strengthPotion");
       expect(wolf.inventory![0].name).toBe("Potion of Strength");
       expect(wolf.inventory![0].charges).toBe(1);
     });

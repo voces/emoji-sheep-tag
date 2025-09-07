@@ -166,7 +166,6 @@ const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
 
 const zItem = z.object({
   id: z.string(),
-  prefab: z.string(),
   name: z.string(),
   icon: z.string().optional(),
   gold: z.number(),

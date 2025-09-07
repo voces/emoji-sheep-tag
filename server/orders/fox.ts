@@ -30,7 +30,7 @@ export const foxOrder = {
       unit.order = order;
     }
 
-    return "incomplete";
+    return "ordered";
   },
 
   // Called when the cast completes (spawn fox)

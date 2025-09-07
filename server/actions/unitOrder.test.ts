@@ -1183,7 +1183,7 @@ describe("unitOrder generalized charge system", () => {
 
     // Add a hypothetical lightning item that would work with any action
     wolf.inventory = [{
-      prefab: "lightningItem",
+      id: "lightningItem",
       name: "Lightning Scroll",
       gold: 50,
       binding: ["KeyL"],
@@ -1212,13 +1212,13 @@ describe("unitOrder generalized charge system", () => {
 
     // Should have consumed fox item charge (it had 1 charge, should be removed)
     yield* yieldFor(() =>
-      expect(wolf.inventory!.filter((i) => i.prefab === "foxToken"))
+      expect(wolf.inventory!.filter((i) => i.id === "foxToken"))
         .toHaveLength(0)
     );
 
     // Lightning item should still be there unchanged
     const lightningItems = wolf.inventory!.filter((i) =>
-      i.prefab === "lightningItem"
+      i.id === "lightningItem"
     );
     expect(lightningItems).toHaveLength(1);
     expect(lightningItems[0].charges).toBe(3);
@@ -1234,7 +1234,7 @@ describe("unitOrder generalized charge system", () => {
 
     // Add item without charges property
     wolf.inventory = [{
-      prefab: "unlimitedItem",
+      id: "unlimitedItem",
       name: "Unlimited Spell",
       gold: 100,
       binding: ["KeyU"],
@@ -1255,7 +1255,7 @@ describe("unitOrder generalized charge system", () => {
 
     // Item should still be there since it has no charges to consume
     expect(wolf.inventory).toHaveLength(1);
-    expect(wolf.inventory![0].prefab).toBe("unlimitedItem");
+    expect(wolf.inventory![0].id).toBe("unlimitedItem");
   });
 
   it("should remove items when charges reach zero", {

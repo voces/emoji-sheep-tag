@@ -17,13 +17,12 @@ export const strengthPotionOrder: OrderDefinition = {
       remaining: 0,
     };
 
-    if (queue) unit.queue = [...unit.queue ?? [], order];
-    else {
-      delete unit.queue;
-      unit.order = order;
+    if (queue) {
+      unit.queue = [...unit.queue ?? [], order];
+      return "ordered";
     }
 
-    return "complete";
+    return "immediate";
   },
 
   onCastComplete: (unit) => {

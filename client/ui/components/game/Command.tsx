@@ -4,7 +4,11 @@ import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { useLocalPlayer } from "@/vars/players.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";
-import { CommandButton, CommandShortcut } from "@/components/Command.tsx";
+import {
+  CommandButton,
+  CommandCount,
+  CommandShortcut,
+} from "@/components/Command.tsx";
 
 const ShortcutStyle = styled.span`
   color: ${({ theme }) => theme.colors.gold};
@@ -51,6 +55,7 @@ export const Command = ({
   manaCost,
   hideTooltip,
   iconProps,
+  count,
 }: {
   name: string;
   description?: string;
@@ -63,6 +68,7 @@ export const Command = ({
   manaCost?: number;
   hideTooltip?: boolean;
   iconProps?: Partial<React.ComponentProps<typeof SvgIcon>>;
+  count?: number;
 }) => {
   const localPlayer = useLocalPlayer();
 
@@ -153,6 +159,7 @@ export const Command = ({
       {binding?.length && (
         <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>
       )}
+      {typeof count === "number" && <CommandCount>{count}</CommandCount>}
       {!hideTooltip && tooltip}
     </CommandButton>
   );

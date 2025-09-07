@@ -68,18 +68,15 @@ export const unitOrder = (
 
       const issueResult = orderDef.onIssue(unit, target, queue);
 
-      if (issueResult === "done" || issueResult === "complete") {
-        if (!precast(unit, issueResult === "complete")) continue;
+      if (issueResult === "immediate") {
+        if (!precast(unit, false)) continue;
 
         orderDef?.onCastStart?.(unit);
 
         // NOTE: remaining is ignored, so cast completes immediately after it starts
-        const finalResult = orderDef.onCastComplete?.(unit);
+        orderDef.onCastComplete?.(unit);
 
-        if (
-          issueResult === "done" ||
-          (issueResult === "complete" && finalResult !== false)
-        ) postCast(unit, itemWithAction);
+        postCast(unit, itemWithAction);
       }
     } else {
       // Fall back to legacy handlers

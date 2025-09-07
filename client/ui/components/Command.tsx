@@ -29,3 +29,11 @@ export const CommandShortcut = styled.kbd`
   line-height: 1;
   font-size: 80%;
 `;
+
+export const CommandCount = styled.span`
+  position: absolute;
+  bottom: 0;
+  right: 2px;
+  line-height: 1;
+  font-size: 80%;
+`;
