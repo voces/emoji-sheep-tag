@@ -26,7 +26,7 @@ describe("computeUnitMovementSpeed", () => {
       id: "test-unit",
       movementSpeed: 3.0,
       inventory: [{
-        id: "boots",
+        prefab: "boots",
         name: "Boots +30",
         gold: 50,
         binding: ["KeyB"],
@@ -42,13 +42,13 @@ describe("computeUnitMovementSpeed", () => {
       id: "test-unit",
       movementSpeed: 3.0,
       inventory: [{
-        id: "boots1",
+        prefab: "boots1",
         name: "Boots +30",
         gold: 50,
         binding: ["KeyB"],
         movementSpeedBonus: 0.3,
       }, {
-        id: "boots2",
+        prefab: "boots2",
         name: "Fast Boots +20",
         gold: 40,
         binding: ["KeyF"],
@@ -64,13 +64,13 @@ describe("computeUnitMovementSpeed", () => {
       id: "test-unit",
       movementSpeed: 3.0,
       inventory: [{
-        id: "claw",
+        prefab: "claw",
         name: "Claws +20",
         gold: 60,
         binding: ["KeyC"],
         damage: 20,
       }, {
-        id: "boots",
+        prefab: "boots",
         name: "Boots +30",
         gold: 50,
         binding: ["KeyB"],
@@ -104,7 +104,7 @@ describe("computeUnitMovementSpeed", () => {
       id: "test-unit",
       movementSpeed: 3.1,
       inventory: [{
-        id: "boots",
+        prefab: "boots",
         name: "Boots +25",
         gold: 45,
         binding: ["KeyB"],
@@ -133,7 +133,7 @@ describe("computeUnitMovementSpeed", () => {
       id: "test-unit",
       movementSpeed: 2.0,
       inventory: [{
-        id: "boots",
+        prefab: "boots",
         name: "Boots",
         gold: 50,
         binding: ["KeyB"],

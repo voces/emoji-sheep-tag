@@ -30,6 +30,7 @@
 - https://www.svgrepo.com/svg/527707/flag-2
 - https://www.svgrepo.com/svg/500806/checkbox
 - https://www.svgrepo.com/svg/500810/checkboxempty
+- https://www.svgrepo.com/svg/247157/potion
 
 # Audio
 

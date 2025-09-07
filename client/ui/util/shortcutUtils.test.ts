@@ -37,14 +37,16 @@ describe("shortcutUtils", () => {
     it("should handle item actions", () => {
       // Test item action display names
       expect(getActionDisplayName("fox", "wolf")).toBe("Summon Fox");
-      expect(getActionDisplayName("speedPot", "wolf")).toBe("Use Speed Potion");
+      expect(getActionDisplayName("speedPot", "wolf")).toBe(
+        "Drink Potion of Speed",
+      );
 
       // Test purchase action display names
       expect(getActionDisplayName("purchase-foxToken", "wolf")).toBe(
         "Purchase Fox Token",
       );
       expect(getActionDisplayName("purchase-speedPot", "wolf")).toBe(
-        "Purchase Speed Potion",
+        "Purchase Potion of Speed",
       );
     });
   });

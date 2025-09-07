@@ -28,7 +28,7 @@ const Inventory = ({ items }: { items: ReadonlyArray<Item> }) => (
       <Command
         key={item.id}
         name={item.name}
-        icon={item.icon ?? item.id}
+        icon={item.icon ?? item.prefab}
         hideTooltip
       />
     ))}

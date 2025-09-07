@@ -1,7 +1,6 @@
 import { Buff, Entity, Order } from "@/shared/types.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { OrderDefinition } from "./types.ts";
-import { addEntity } from "@/shared/api/entity.ts";
 
 export const speedPotOrder: OrderDefinition = {
   id: "speedPot",
@@ -54,14 +53,5 @@ export const speedPotOrder: OrderDefinition = {
 
     // Add buffs to entity
     if (buffs.length > 0) unit.buffs = [...(unit.buffs || []), ...buffs];
-
-    if (action.soundOnCastStart && unit.position && unit.owner) {
-      addEntity({
-        owner: unit.owner,
-        position: { x: unit.position.x, y: unit.position.y },
-        sounds: { birth: [action.soundOnCastStart] },
-        buffs: [{ remainingDuration: 0.1, expiration: "Sound" }],
-      });
-    }
   },
 };

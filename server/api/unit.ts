@@ -22,6 +22,7 @@ import { addEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
 import { newSfx } from "./sfx.ts";
+import { id } from "@/shared/util/id.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -293,17 +294,17 @@ export const addItem = (unit: Entity, itemId: string): boolean => {
   if (!unit.inventory) unit.inventory = [];
 
   // Check if item already exists and has charges
-  const existingItem = unit.inventory.find((i) => i.id === itemId);
+  const existingItem = unit.inventory.find((i) => i.prefab === itemId);
   if (existingItem && item.charges) {
     // If item has charges and already exists, increase charges
     unit.inventory = unit.inventory.map((i) =>
-      i.id === itemId
+      i.prefab === itemId
         ? { ...i, charges: (i.charges || 0) + (item.charges || 1) }
         : i
     );
   } else {
     // Add new item to inventory
-    unit.inventory = [...unit.inventory, item];
+    unit.inventory = [...unit.inventory, { ...item, id: id(itemId) }];
   }
 
   return true;
@@ -338,7 +339,7 @@ const deductBuildGold = (builder: Entity, type: string) => {
 };
 
 /**
- * Computes the total damage a unit can deal, including base damage plus bonuses from items
+ * Computes the total damage a unit can deal, including base damage plus bonuses from items and buffs
  */
 export const computeUnitDamage = (unit: Entity): number => {
   if (!unit.attack) return 0;
@@ -349,6 +350,15 @@ export const computeUnitDamage = (unit: Entity): number => {
   if (unit.inventory) {
     for (const item of unit.inventory) {
       if (item.damage) totalDamage += item.damage;
+    }
+  }
+
+  // Apply damage multipliers from buffs
+  if (unit.buffs) {
+    for (const buff of unit.buffs) {
+      if (buff.damageMultiplier) {
+        totalDamage *= buff.damageMultiplier;
+      }
     }
   }
 
@@ -417,4 +427,9 @@ export const damageEntity = (
 
   target.lastAttacker = attacker.id;
   target.health = Math.max(0, target.health - finalDamage);
+
+  // Consume buffs that are marked as consumeOnAttack
+  if (attacker.buffs) {
+    attacker.buffs = attacker.buffs.filter((buff) => !buff.consumeOnAttack);
+  }
 };

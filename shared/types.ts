@@ -45,6 +45,7 @@ export type Order = Readonly<
 
 export type Item = {
   readonly id: string;
+  readonly prefab: string;
   readonly name: string;
   readonly description?: string;
   readonly icon?: string;
@@ -62,6 +63,8 @@ export type Buff = {
   readonly attackSpeedMultiplier?: number;
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
+  readonly damageMultiplier?: number;
+  readonly consumeOnAttack?: boolean;
   readonly expiration?: string;
   readonly progressEasing?: {
     readonly type: "ease-in" | "ease-out" | "ease-in-out";
@@ -116,6 +119,7 @@ export type UnitDataAction = {
   readonly attackSpeedMultiplier?: number;
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
+  readonly damageMultiplier?: number;
   readonly soundOnCastStart?: string;
   readonly allowAllies?: boolean;
 } | {

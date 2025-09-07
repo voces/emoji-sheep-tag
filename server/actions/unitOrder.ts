@@ -34,10 +34,10 @@ export const unitOrder = (
       continue;
     }
 
-    const { action: _action, item: itemWithAction } = result;
+    const { action, item: itemWithAction } = result;
 
     // Check if client can execute this action on this unit
-    if (!canExecuteActionOnUnit(client, unit, _action)) {
+    if (!canExecuteActionOnUnit(client, unit, action)) {
       console.warn("Client lacks permission to execute action", {
         clientId: client.id,
         unitOwner: unit.owner,

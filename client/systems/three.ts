@@ -36,6 +36,7 @@ import tree from "../assets/tree.svg" with { type: "text" };
 import treeStump from "../assets/treeStump.svg" with { type: "text" };
 import flag from "../assets/flag.svg" with { type: "text" };
 import square from "../assets/square.svg" with { type: "text" };
+import pinkPotion from "../assets/pinkPotion.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -67,6 +68,7 @@ export const svgs: Record<string, string> = {
   treeStump,
   flag,
   square,
+  pinkPotion,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

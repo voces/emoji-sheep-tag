@@ -12,9 +12,7 @@ import { precast } from "../../orders/precast.ts";
 import { postCast } from "../../orders/postCast.ts";
 
 export const advanceCast = (e: Entity, delta: number): number => {
-  // console.log("advance1");
   if (e.order?.type !== "cast") return delta;
-  // console.log("advance2");
   const { action, item } = findActionAndItem(e, e.order.orderId) ?? {};
 
   // Handle movement for cast orders with target and range
@@ -48,8 +46,6 @@ export const advanceCast = (e: Entity, delta: number): number => {
     }
   }
 
-  // console.log("advance3");
-
   if ("path" in e.order) {
     const { path: _path, ...rest } = e.order;
     e.order = { ...rest };
@@ -57,11 +53,9 @@ export const advanceCast = (e: Entity, delta: number): number => {
 
   // Handle cast start side effects (only once when cast begins)
   if (!e.order.started) {
-    // console.log("advance start");
     const orderDef = getOrder(e.order.orderId);
 
     if (!precast(e)) {
-      // console.log("advance bad precast");
       delete e.order;
       return delta;
     }
@@ -71,16 +65,15 @@ export const advanceCast = (e: Entity, delta: number): number => {
     // Mark the order as started
     e.order = { ...e.order, started: true };
   }
-  // console.log("advance4");
   if (delta < e.order.remaining) {
     e.order = { ...e.order, remaining: e.order.remaining - delta };
     return 0;
   }
 
   delta -= e.order.remaining;
-  // console.log("advance5");
+
   if (getOrder(e.order.orderId)?.onCastComplete?.(e) === false) return delta;
-  // console.log("advance6");
+
   postCast(e, item);
 
   delete e.order;

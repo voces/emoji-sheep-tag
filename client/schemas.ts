@@ -103,6 +103,7 @@ const zBaseAction = z.union([
     attackSpeedMultiplier: z.number().optional(),
     movementSpeedBonus: z.number().optional(),
     movementSpeedMultiplier: z.number().optional(),
+    damageMultiplier: z.number().optional(),
     soundOnCastStart: z.string().optional(),
     allowAllies: z.boolean().optional(),
   }),
@@ -165,6 +166,7 @@ const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
 
 const zItem = z.object({
   id: z.string(),
+  prefab: z.string(),
   name: z.string(),
   icon: z.string().optional(),
   gold: z.number(),
@@ -181,6 +183,8 @@ const zBuff = z.object({
   attackSpeedMultiplier: z.number().optional(),
   movementSpeedBonus: z.number().optional(),
   movementSpeedMultiplier: z.number().optional(),
+  damageMultiplier: z.number().optional(),
+  consumeOnAttack: z.boolean().optional(),
   expiration: z.string().optional(),
   progressEasing: z.object({
     type: z.enum(["ease-in", "ease-out", "ease-in-out"]),

@@ -45,6 +45,12 @@ export const tweenSwing = (e: Entity, delta: number): number => {
 
     // Otherwise damage target
     if (target.health) damageEntity(e, target);
+
+    // Consume buffs that are marked as consumeOnAttack
+    if (e.buffs) {
+      const updatedBuffs = e.buffs.filter((buff) => !buff.consumeOnAttack);
+      e.buffs = updatedBuffs.length ? null : updatedBuffs;
+    }
   }
 
   return delta;
