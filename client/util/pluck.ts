@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 
 /**
  * Plucks a deep value from an object using a dot-separated key path and validates it against the provided Zod schema.

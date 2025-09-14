@@ -1,8 +1,8 @@
 import jsdom from "jsdom";
-import { ensureDir } from "jsr:@std/fs";
-import esbuild, { type Plugin } from "npm:esbuild";
-import { denoPlugins } from "jsr:@luca/esbuild-deno-loader";
-import { join, relative } from "jsr:@std/path";
+import { ensureDir } from "@std/fs";
+import esbuild, { type Plugin } from "esbuild";
+import { denoPlugins } from "@luca/esbuild-deno-loader";
+import { join, relative } from "@std/path";
 import { processSoundAssets } from "./processSoundAssets.ts";
 
 const assetInlinePlugin = {

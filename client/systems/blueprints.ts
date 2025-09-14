@@ -29,7 +29,7 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
           ? computeBlueprintColor(playerColor, 0x00ff)
           : 0x00ff,
         alpha: 0.75,
-        selectable: false,
+        isDoodad: true,
       });
     }
     if ("target" in o && o.target) {
@@ -38,7 +38,6 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
         model: "flag",
         owner: e.owner,
         position: { x: o.target.x, y: o.target.y },
-        selectable: false,
         isDoodad: true,
       });
     }
@@ -50,7 +49,6 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
           model: "flag",
           owner: e.owner,
           position: { x: target.position.x, y: target.position.y },
-          selectable: false,
           isDoodad: true,
         });
       }

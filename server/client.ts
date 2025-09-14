@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 
 import type { ServerToClientMessage } from "../client/client.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
@@ -21,6 +21,14 @@ import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
 import { getIdealSheep, getIdealTime } from "./st/roundHelpers.ts";
 import { LobbySettings } from "../client/schemas.ts";
+import {
+  editorCreateEntity,
+  editorSetPathing,
+  editorUpdateEntities,
+  zEditorCreateEntity,
+  zEditorSetPathing,
+  zEditorUpdateEntities,
+} from "./actions/editor.ts";
 
 export type SocketEventMap = {
   close: unknown;
@@ -121,6 +129,9 @@ const zClientToServerMessage = z.union([
   zCancel,
   zPurchase,
   zLobbySettings,
+  zEditorCreateEntity,
+  zEditorUpdateEntities,
+  zEditorSetPathing,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -135,6 +146,9 @@ const actions = {
   cancel,
   purchase,
   lobbySettings,
+  editorCreateEntity,
+  editorUpdateEntities,
+  editorSetPathing,
 };
 
 const serializeLobbySettings = (

@@ -1,7 +1,6 @@
-import { ensureDir } from "jsr:@std/fs/ensure-dir";
-import { walk } from "jsr:@std/fs/walk";
-import { basename, dirname, extname, join, relative } from "jsr:@std/path";
-import { iterateReader } from "jsr:@std/io/iterate-reader";
+import { ensureDir } from "@std/fs/ensure-dir";
+import { walk } from "@std/fs/walk";
+import { basename, dirname, extname, join, relative } from "@std/path";
 
 type Category = "sfx" | "music" | "ambience";
 
@@ -417,31 +416,14 @@ async function isCmdAvailable(cmd: string): Promise<boolean> {
 
 // ---- hashing & cache I/O ----
 async function sha256File(path: string): Promise<string> {
-  const f = await Deno.open(path, { read: true });
-  const chunks: Uint8Array[] = [];
-  try {
-    for await (const chunk of iterateReader(f)) chunks.push(chunk);
-  } finally {
-    f.close();
-  }
-  const buf = concat(chunks);
-  const hash = await crypto.subtle.digest("SHA-256", buf);
+  const data = await Deno.readFile(path); // Uint8Array<ArrayBuffer>
+  const hash = await crypto.subtle.digest("SHA-256", data);
   return hex(new Uint8Array(hash));
 }
 async function sha256String(s: string): Promise<string> {
   const data = new TextEncoder().encode(s);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return hex(new Uint8Array(hash));
-}
-function concat(chunks: Uint8Array[]): Uint8Array {
-  const len = chunks.reduce((n, c) => n + c.byteLength, 0);
-  const out = new Uint8Array(len);
-  let o = 0;
-  for (const c of chunks) {
-    out.set(c, o);
-    o += c.byteLength;
-  }
-  return out;
 }
 function hex(bytes: Uint8Array): string {
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");

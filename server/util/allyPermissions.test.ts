@@ -1,5 +1,5 @@
-import { afterEach, describe } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
+import { afterEach, describe } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { canExecuteActionOnUnit } from "./allyPermissions.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";

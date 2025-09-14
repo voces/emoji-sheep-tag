@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 import { Client } from "../client.ts";
 
 export const zPing = z.object({

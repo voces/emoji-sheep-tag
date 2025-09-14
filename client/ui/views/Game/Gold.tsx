@@ -1,9 +1,10 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { playersVar } from "@/vars/players.ts";
 import { Entity } from "../../../ecs.ts";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
+import { editorVar } from "@/vars/editor.ts";
 
 const Container = styled.div(({ theme }) => ({
   width: 120,
@@ -27,10 +28,11 @@ const InnerGold = ({ entity }: { entity: Entity }) => {
 };
 
 export const Gold = () => {
+  const editor = useReactiveVar(editorVar);
   const players = useReactiveVar(playersVar);
   const playerEntity = players.find((p) => p.local)?.entity;
 
-  if (!playerEntity) return null;
+  if (!playerEntity || editor) return null;
 
   return <InnerGold entity={playerEntity} />;
 };

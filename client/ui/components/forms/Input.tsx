@@ -1,4 +1,6 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
+import { VStack } from "../layout/Layout.tsx";
+import { id } from "@/shared/util/id.ts";
 
 export const Input = styled.input`
   border: 0;
@@ -15,3 +17,26 @@ export const Input = styled.input`
     cursor: not-allowed;
   }
 `;
+
+const FieldLabel = styled.label`
+  font-size: 12px;
+  font-weight: bold;
+`;
+
+const FieldWrapper = styled(VStack)`
+  gap: ${({ theme }) => theme.spacing.xs};
+`;
+
+export const InputField = (
+  { label, ...props }: React.ComponentProps<typeof Input> & {
+    label?: React.ReactNode;
+  },
+) => {
+  const inputId = props.id ?? id("input-field");
+  return (
+    <FieldWrapper>
+      {label && <FieldLabel htmlFor={inputId}>{label}</FieldLabel>}
+      <Input id={inputId} {...props} />
+    </FieldWrapper>
+  );
+};

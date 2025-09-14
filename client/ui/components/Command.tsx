@@ -1,4 +1,4 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 
 export const CommandButton = styled.div`
   position: relative;

@@ -3,9 +3,9 @@ import { setCurrentTestFile } from "@/client-testing/integration-setup.ts";
 
 // Set the current test file name for deterministic port assignment
 setCurrentTestFile("messaging.test.ts");
-import { beforeEach, describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
-import { waitFor } from "npm:@testing-library/react";
+import { beforeEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
+import { waitFor } from "@testing-library/react";
 import { send } from "./messaging.ts";
 import { connect, setServer } from "./connection.ts";
 import {

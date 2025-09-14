@@ -188,6 +188,17 @@ export class PathingMap {
     }
   }
 
+  setPathing(x: number, y: number, pathing: Pathing, scale = this.resolution) {
+    for (let dy = y * scale; dy < (y + 1) * scale; dy++) {
+      for (let dx = x * scale; dx < (x + 1) * scale; dx++) {
+        const tile = this.grid[dy]?.[dx];
+        if (!tile) continue;
+        tile.originalPathing = pathing;
+        tile.recalculatePathing();
+      }
+    }
+  }
+
   /**
    * Internals of PathingMap#pathable. Not private for interface typing
    * reasons.

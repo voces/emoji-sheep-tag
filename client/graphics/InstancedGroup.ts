@@ -31,10 +31,11 @@ export class InstancedGroup extends Group {
   private map: Record<string, number> = {};
   private reverseMap: string[] = [];
   private innerCount: number;
-  private bvh = new BVH();
+  private bvh: BVH;
 
   constructor(group: Group, count: number = 1, readonly svgName?: string) {
     super();
+    this.bvh = new BVH(svgName);
     this.innerCount = count;
     for (const child of group.children) {
       if (child instanceof Mesh) {
@@ -71,9 +72,15 @@ export class InstancedGroup extends Group {
       }
 
       if (c.instanceColor) {
-        // Ensure it exists
-        next.setColorAt(0, new Color(0, 0, 0));
+        // Ensure instanceColor exists by setting first slot
+        next.setColorAt(0, new Color(1, 1, 1));
+        // Copy existing colors from the old instance
         next.instanceColor!.copyArray(c.instanceColor.array);
+        // Initialize new slots with white
+        const white = new Color(1, 1, 1);
+        for (let i = this.innerCount; i < value; i++) {
+          next.setColorAt(i, white);
+        }
       }
 
       const geo = next.geometry as ShapeGeometry;
@@ -192,11 +199,33 @@ export class InstancedGroup extends Group {
     }
   }
 
+  private debouncingChildComputeBoundingBoxMap = new WeakSet<InstancedMesh>();
+  private debouncedChildComputeBoundingBox(child: InstancedMesh) {
+    if (this.debouncingChildComputeBoundingBoxMap.has(child)) return;
+    this.debouncingChildComputeBoundingBoxMap.add(child);
+    queueMicrotask(() => {
+      this.debouncingChildComputeBoundingBoxMap.delete(child);
+      child.computeBoundingBox();
+    });
+  }
+
+  private debouncingChildComputeBoundingSphereMap = new WeakSet<
+    InstancedMesh
+  >();
+  private debouncedChildComputeBoundingSphere(child: InstancedMesh) {
+    if (this.debouncingChildComputeBoundingSphereMap.has(child)) return;
+    this.debouncingChildComputeBoundingSphereMap.add(child);
+    queueMicrotask(() => {
+      this.debouncingChildComputeBoundingSphereMap.delete(child);
+      child.computeBoundingSphere();
+    });
+  }
+
   setPositionAt(
     index: number | string,
     x: number,
     y: number,
-    angle?: number,
+    angle?: number | null,
     z?: number,
   ) {
     if (typeof index === "string") index = this.getIndex(index);
@@ -225,8 +254,8 @@ export class InstancedGroup extends Group {
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);
         child.instanceMatrix.needsUpdate = true;
-        child.computeBoundingBox();
-        child.computeBoundingSphere();
+        this.debouncedChildComputeBoundingBox(child);
+        this.debouncedChildComputeBoundingSphere(child);
       }
     }
     this.updateBvhInstance(index, dummy.matrix);
@@ -247,11 +276,21 @@ export class InstancedGroup extends Group {
     }
   }
 
+  private initializeInstanceColorWithWhite(child: InstancedMesh) {
+    if (!child.instanceColor) {
+      const white = new Color(1, 1, 1);
+      for (let i = 0; i < this.count; i++) {
+        child.setColorAt(i, white);
+      }
+    }
+  }
+
   setPlayerColorAt(index: number | string, color: Color) {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
         if (hasPlayerColor(child.material)) {
+          this.initializeInstanceColorWithWhite(child);
           child.setColorAt(index, color);
           if (child.instanceColor) child.instanceColor.needsUpdate = true;
         }
@@ -267,6 +306,7 @@ export class InstancedGroup extends Group {
     if (typeof index === "string") index = this.getIndex(index);
     for (const child of this.children) {
       if (child instanceof InstancedMesh) {
+        this.initializeInstanceColorWithWhite(child);
         child.setColorAt(index, color);
         if (child.instanceColor) child.instanceColor.needsUpdate = true;
       }
@@ -314,8 +354,8 @@ export class InstancedGroup extends Group {
         dummy.updateMatrix();
         child.setMatrixAt(index, dummy.matrix);
         child.instanceMatrix.needsUpdate = true;
-        child.computeBoundingBox();
-        child.computeBoundingSphere();
+        this.debouncedChildComputeBoundingBox(child);
+        this.debouncedChildComputeBoundingSphere(child);
       }
     }
     this.updateBvhInstance(index, dummy.matrix);
@@ -336,8 +376,6 @@ export class InstancedGroup extends Group {
             "Expected child geometry to have bounding box precomputed",
           );
         });
-        // this.computeGeometryBoundingBox(child.geometry);
-
         // Apply the instance's matrix to the geometry bounding box
         const matrix = new Matrix4();
         child.getMatrixAt(index, matrix);

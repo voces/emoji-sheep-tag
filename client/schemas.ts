@@ -1,4 +1,4 @@
-import z from "npm:zod";
+import z from "zod";
 import { zTeam } from "@/shared/zod.ts";
 import { Entity } from "@/shared/types.ts";
 
@@ -191,7 +191,7 @@ const zBuff = z.object({
   }).optional(),
 });
 
-const zUpdate = z.object({
+export const zUpdate = z.object({
   id: z.string(),
   __delete: z.boolean().optional(),
 
@@ -213,7 +213,7 @@ const zUpdate = z.object({
 
   position: zPoint.optional(),
   movementSpeed: z.number().optional(),
-  facing: z.number().optional(),
+  facing: z.number().nullable().optional(),
   turnSpeed: z.number().optional(),
   actions: z.array(zAction).readonly().optional(),
   completionTime: z.number().optional(),
@@ -265,7 +265,9 @@ const zUpdate = z.object({
 
   // Art
   model: z.string().optional(),
-  modelScale: z.number().optional(),
+  modelScale: z.number().nullable().optional(),
+  vertexColor: z.number().nullable().optional(),
+  playerColor: z.string().nullable().optional(),
   alpha: z.number().optional(),
   icon: z.string().optional(),
   iconEffect: zIconEffect.optional(),

@@ -1,4 +1,4 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 
 const BarContainer = styled.div<{ width?: number; height?: number }>`
   position: relative;

@@ -1,6 +1,6 @@
 //@deno-types="npm:@types/react"
 import { useCallback, useLayoutEffect, useRef } from "react";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { chatLogVar, chatValueVar } from "@/vars/chat.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";

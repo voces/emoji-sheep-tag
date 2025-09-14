@@ -1,4 +1,4 @@
-import { App, newApp } from "jsr:@verit/ecs";
+import { App, newApp } from "@verit/ecs";
 import { Entity } from "@/shared/types.ts";
 import { newEntity, remove, update } from "./updates.ts";
 import { initApp } from "@/shared/context.ts";
@@ -75,16 +75,17 @@ export const newEcs = () => {
 
 import("./systems/action/action.ts");
 import("./systems/autoAttack.ts");
+import("./systems/buffs.ts");
 import("./systems/death.ts");
+import("./systems/editor.ts");
+import("./systems/goldGeneration.ts");
 import("./systems/kd.ts");
 import("./systems/lookup.ts");
 import("./systems/lookup.ts");
-import("./systems/regen.ts");
 import("./systems/pathing.ts");
 import("./systems/pathing.ts");
 import("./systems/playerEntities.ts");
 import("./systems/playerEntities.ts");
 import("./systems/queues.ts");
-import("./systems/goldGeneration.ts");
-import("./systems/buffs.ts");
+import("./systems/regen.ts");
 import("./orders/index.ts");

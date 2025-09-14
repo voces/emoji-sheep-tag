@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 import { pluck } from "../../util/pluck.ts";
 import { items, prefabs } from "@/shared/data.ts";
 import {

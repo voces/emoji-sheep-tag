@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { useLocalPlayer } from "@/vars/players.ts";
@@ -56,12 +56,13 @@ export const Command = ({
   hideTooltip,
   iconProps,
   count,
+  onClick,
 }: {
   name: string;
   description?: string;
   icon?: string;
   binding?: ReadonlyArray<string>;
-  iconScale?: number;
+  iconScale?: number | null;
   pressed?: boolean;
   disabled?: boolean;
   goldCost?: number;
@@ -69,6 +70,7 @@ export const Command = ({
   hideTooltip?: boolean;
   iconProps?: Partial<React.ComponentProps<typeof SvgIcon>>;
   count?: number;
+  onClick?: () => void;
 }) => {
   const localPlayer = useLocalPlayer();
 
@@ -112,6 +114,8 @@ export const Command = ({
   ), [name, goldCost, manaCost]));
 
   const handleClick = () => {
+    onClick?.();
+
     if (!binding?.length) return;
 
     for (const code of binding) {

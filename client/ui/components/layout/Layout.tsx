@@ -1,10 +1,10 @@
-import { styled } from "npm:styled-components";
-import { DefaultTheme } from "npm:styled-components";
+import { styled } from "styled-components";
+import { DefaultTheme } from "styled-components";
 
-export const VStack = styled.div`
+export const VStack = styled.div<{ $gap?: keyof DefaultTheme["spacing"] }>`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme, $gap }) => theme.spacing[$gap ?? "md"]};
 `;
 
 export const HStack = styled.div<

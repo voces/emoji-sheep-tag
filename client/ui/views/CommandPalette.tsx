@@ -1,6 +1,6 @@
 //@deno-types="npm:@types/react"
 import { useEffect, useMemo, useRef, useState } from "react";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { send } from "../../client.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
@@ -12,6 +12,15 @@ import { flags } from "../../flags.ts";
 import { Card } from "@/components/layout/Card.tsx";
 import { Input } from "@/components/forms/Input.tsx";
 import { getLocalPlayer } from "@/vars/players.ts";
+import { editorVar } from "@/vars/editor.ts";
+import { app, Entity, SystemEntity } from "../../ecs.ts";
+import { DEFAULT_FACING } from "@/shared/constants.ts";
+import { terrain } from "../../graphics/three.ts";
+import { Color } from "three";
+import { tiles } from "@/shared/data.ts";
+import { packMap2D } from "@/shared/util/2dPacking.ts";
+import { rad2deg } from "@/shared/util/math.ts";
+import { packEntities } from "@/shared/util/entityPacking.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -113,6 +122,54 @@ export const CommandPalette = () => {
 
   const commands = useMemo((): Command[] => [
     {
+      name: "Export map",
+      description: "Exports the map as JS",
+      valid: editorVar,
+      callback: () => {
+        const doodads = Array.from(app.entities).filter((
+          e,
+        ): e is SystemEntity<"isDoodad" | "prefab" | "position"> =>
+          !!e.isDoodad && !!e.prefab && !!e.position
+        );
+        const entities: Record<string, Partial<Entity>[]> = {};
+        for (const doodad of doodads) {
+          if (!entities[doodad.prefab]) entities[doodad.prefab] = [];
+          const stored: Partial<Entity> = { position: doodad.position };
+          if (
+            typeof doodad.modelScale === "number" && doodad.modelScale !== 1
+          ) stored.modelScale = doodad.modelScale;
+          if (
+            typeof doodad.facing === "number" &&
+            doodad.facing !== DEFAULT_FACING
+          ) stored.facing = rad2deg(doodad.facing);
+          if (doodad.playerColor) stored.playerColor = doodad.playerColor;
+          if (typeof doodad.vertexColor === "number") {
+            stored.vertexColor = doodad.vertexColor;
+          }
+          entities[doodad.prefab].push(stored);
+        }
+
+        const terrainData = Array.from(
+          { length: terrain.height },
+          (_, y) =>
+            Array.from({ length: terrain.width }, (_, x) => {
+              const color = new Color(...terrain.getColor(x, y)).getHex();
+              const tileIndex = tiles.findIndex((t) => t.color === color);
+              return tileIndex;
+            }),
+        );
+
+        console.log({
+          terrain: packMap2D(terrainData, tiles.length),
+          entities: packEntities(
+            Array.from(app.entities).filter((e) =>
+              e.isDoodad && e.prefab && e.position
+            ),
+          ),
+        });
+      },
+    },
+    {
       name: "Open settings",
       description: "Open setting menu",
       callback: () => showSettingsVar(true),
@@ -120,7 +177,8 @@ export const CommandPalette = () => {
     {
       name: "Cancel round",
       description: "Cancels the current round",
-      valid: () => stateVar() === "playing" && !!getLocalPlayer()?.host,
+      valid: () =>
+        stateVar() === "playing" && !!getLocalPlayer()?.host && !editorVar(),
       callback: () => send({ type: "cancel" }),
     },
     {

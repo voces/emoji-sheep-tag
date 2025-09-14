@@ -1,6 +1,6 @@
 //@deno-types="npm:@types/react"
 import React from "react";
-import { ThemeProvider } from "npm:styled-components";
+import { ThemeProvider } from "styled-components";
 import { theme } from "../ui/theme.ts";
 
 /**

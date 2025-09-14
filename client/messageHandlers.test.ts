@@ -1,6 +1,6 @@
 import "@/client-testing/setup.ts";
-import { describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
+import { describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { app, map } from "./ecs.ts";
 import { getLocalPlayer, playersVar } from "@/vars/players.ts";
 import { stateVar } from "@/vars/state.ts";
@@ -9,6 +9,7 @@ import { handlers } from "./messageHandlers.ts";
 import { chatLogVar } from "@/vars/chat.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { roundsVar } from "@/vars/rounds.ts";
+import { generateDoodads } from "@/shared/map.ts";
 
 // Common test objects
 const DEFAULT_LOBBY_SETTINGS = {
@@ -158,31 +159,6 @@ describe("join", () => {
     expect(playersVar()[0].name).toBe("Existing");
     expect(chatLogVar()).toHaveLength(initialChatCount);
   });
-
-  it("clears entities when switching to lobby status", () => {
-    const defaultCount = app.entities.size;
-
-    // First get into playing state with entities
-    handlers.join(createJoinMessage({
-      status: "playing",
-      updates: [{
-        id: "test-entity",
-        prefab: "sheep",
-        position: { x: 10, y: 20 },
-      }],
-      lobbySettings: EMPTY_LOBBY_SETTINGS,
-    }));
-
-    expect(Object.keys(map)).toContain("test-entity");
-
-    // Now join lobby which should clear entities
-    handlers.join(createJoinMessage({
-      lobbySettings: EMPTY_LOBBY_SETTINGS,
-    }));
-
-    expect(app.entities.size).toBe(defaultCount);
-    expect(Object.keys(map)).toHaveLength(0);
-  });
 });
 
 describe("colorChange", () => {
@@ -315,13 +291,6 @@ describe("start", () => {
     expect(data.sheep[0].id).toBe("sheep-1");
     expect(data.wolves).toHaveLength(1);
     expect(data.wolves[0].id).toBe("wolf-1");
-    expect(app.entities.size).toBeGreaterThan(0);
-
-    const entities = Array.from(app.entities);
-    const grassEntities = entities.filter((e) => e.prefab === "grass");
-    const flowerEntities = entities.filter((e) => e.prefab === "flowers");
-    expect(grassEntities.length).toBeGreaterThan(0);
-    expect(flowerEntities.length).toBeGreaterThan(0);
   });
 
   it("handles players not in sheep or wolves lists", () => {
@@ -350,6 +319,7 @@ describe("start", () => {
 
 describe("stop", () => {
   it("returns to lobby and clears entities", () => {
+    generateDoodads();
     const defaultCount = app.entities.size;
 
     // Setup game state first
@@ -364,6 +334,7 @@ describe("stop", () => {
 
     expect(stateVar()).toBe("playing");
     expect(Object.keys(map)).toContain("test-entity");
+    expect(app.entities.size).toBe(defaultCount + 1);
 
     handlers.stop({
       type: "stop",

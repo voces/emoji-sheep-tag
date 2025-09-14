@@ -14,7 +14,7 @@ export const SvgIcon = ({
 }: {
   icon: string;
   color?: string;
-  scale?: number;
+  scale?: number | null;
   overlayStyle?: React.CSSProperties;
 } & React.HTMLAttributes<HTMLDivElement>) => {
   const ref = useRef<HTMLDivElement>(null);

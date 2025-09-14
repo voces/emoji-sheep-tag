@@ -21,7 +21,6 @@ export const tempUnit = (
     prefab: type,
     owner,
     position: { x, y },
-    facing: Math.PI,
     ...extra,
   }) as Entity;
 
@@ -180,13 +179,13 @@ export const isStructure = (entity: Entity) => {
   return !!entity.tilemap;
 };
 
-const isUnit = (entity: Entity) => {
+export const isUnit = (entity: Entity) => {
   if (entity.targetedAs?.includes("unit")) return true;
   if (
     entity.targetedAs?.includes("structure") ||
     entity.targetedAs?.includes("tree")
   ) return false;
-  return !entity.tilemap;
+  return !!entity.movementSpeed;
 };
 
 const isTree = (entity: Entity) => !!entity.targetedAs?.includes("tree");

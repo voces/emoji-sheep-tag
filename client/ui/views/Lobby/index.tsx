@@ -1,4 +1,4 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { Positional, VStack } from "@/components/layout/Layout.tsx";
 import { Players } from "./Players.tsx";
 import { Chat } from "./Chat.tsx";

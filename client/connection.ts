@@ -1,4 +1,4 @@
-import z from "npm:zod";
+import z from "zod";
 import { connectionStatusVar } from "@/vars/state.ts";
 import { LocalWebSocket } from "./local.ts";
 import { getStoredPlayerName } from "./util/playerPrefs.ts";

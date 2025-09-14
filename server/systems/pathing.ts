@@ -1,4 +1,4 @@
-import { App } from "jsr:@verit/ecs";
+import { App } from "@verit/ecs";
 import { Entity } from "@/shared/types.ts";
 import { PathingMap } from "@/shared/pathing/PathingMap.ts";
 import { PathingEntity, TargetEntity } from "@/shared/pathing/types.ts";

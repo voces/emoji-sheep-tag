@@ -83,6 +83,7 @@ addSystem((app) => ({
         prefab: "treeStump",
         position: unit.position,
         facing: unit.facing,
+        modelScale: unit.modelScale,
         maxHealth: 45,
         healthRegen: -1,
       });
@@ -110,6 +111,7 @@ addSystem((app) => ({
         prefab: "tree",
         position: unit.position,
         facing: unit.facing,
+        modelScale: unit.modelScale,
         progress: 0.11,
         completionTime: 1.5,
       });

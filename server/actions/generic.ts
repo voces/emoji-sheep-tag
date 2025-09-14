@@ -1,4 +1,4 @@
-import z from "npm:zod";
+import z from "zod";
 import { Client, getAllClients } from "../client.ts";
 import { send } from "../lobbyApi.ts";
 import { generateUniqueName } from "../util/uniqueName.ts";

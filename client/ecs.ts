@@ -1,4 +1,4 @@
-import { App, newApp, SystemEntity as ECSSystemEntity } from "jsr:@verit/ecs";
+import { App, newApp, SystemEntity as ECSSystemEntity } from "@verit/ecs";
 import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "@/shared/types.ts";
 import { appContext, initApp } from "@/shared/context.ts";
@@ -6,12 +6,8 @@ import { generateDoodads } from "@/shared/map.ts";
 
 export type Entity = CommonEntity & {
   selected?: boolean;
-  /** Blueprint color */
-  vertexColor?: number;
   zIndex?: number;
-  playerColor?: string;
   isKaboom?: boolean;
-  selectable?: boolean;
   /** Server position for restoring after failed interpolation */
   serverPosition?: { readonly x: number; readonly y: number };
   /** Client-side elapsed time for easing calculations */
@@ -45,12 +41,10 @@ export const listen = <P extends keyof Entity>(
   };
 };
 
-// let counter = 0;
 export const app = newApp<Entity>({
   initializeEntity: (entity: Partial<Entity>) => {
     if (!entity.id) throw new Error("Expected entity to have an id");
     // Newest entity on top; works with 2D graphics
-    // entity.zIndex ??= counter++ / 100000;
     const listeners: Listeners = {};
     const proxy = new Proxy(entity as Entity, {
       set: (target, prop, value) => {
@@ -87,10 +81,10 @@ onRender((delta, time) => app.update(delta, time));
 
 export const map: Record<string, Entity> = {};
 
-export const unloadEcs = () => {
+export const unloadEcs = (loadDoodads = false) => {
   for (const entity of app.entities) app.removeEntity(entity);
   for (const key in map) delete map[key];
-  generateDoodads(app);
+  if (loadDoodads) generateDoodads();
 };
 
-generateDoodads(app);
+generateDoodads();

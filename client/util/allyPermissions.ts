@@ -1,5 +1,6 @@
 import { Entity, UnitDataAction } from "@/shared/types.ts";
 import { isAlly } from "@/shared/api/unit.ts";
+import { editorVar } from "@/vars/editor.ts";
 
 /**
  * Checks if a player can execute an action on a unit
@@ -10,6 +11,8 @@ export const canPlayerExecuteAction = (
   unit: Entity,
   action: UnitDataAction,
 ): boolean => {
+  if (editorVar()) return true;
+
   // Direct ownership always allows action
   if (playerId === unit.owner) return true;
 
@@ -35,8 +38,5 @@ export const getExecutableActions = (
   playerId: string,
   unit: Entity,
   actions: readonly UnitDataAction[],
-): UnitDataAction[] => {
-  return actions.filter((action) =>
-    canPlayerExecuteAction(playerId, unit, action)
-  );
-};
+): UnitDataAction[] =>
+  actions.filter((action) => canPlayerExecuteAction(playerId, unit, action));

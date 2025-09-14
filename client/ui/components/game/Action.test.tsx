@@ -1,12 +1,12 @@
 import "@/client-testing/setup.ts";
-import { describe, it } from "jsr:@std/testing/bdd";
-import { render, screen } from "npm:@testing-library/react";
-import { expect } from "jsr:@std/expect";
+import { describe, it } from "@std/testing/bdd";
+import { render, screen } from "@testing-library/react";
+import { expect } from "@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
 import { getAllTexts } from "@/client-testing/utils.tsx";
 import { Action } from "./Action.tsx";
 import { playersVar } from "@/vars/players.ts";
-import { userEvent } from "npm:@testing-library/user-event";
+import { userEvent } from "@testing-library/user-event";
 
 describe("Action", () => {
   it("should render auto action", () => {

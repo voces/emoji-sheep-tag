@@ -1,6 +1,6 @@
-import "npm:global-jsdom/register";
-import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
+import "global-jsdom/register";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { app, Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { prefabs as _prefabs } from "@/shared/data.ts";
@@ -27,16 +27,22 @@ describe("blueprint handlers", () => {
   });
 
   describe("normalize", () => {
-    it("should round to even steps when evenStep is true", () => {
-      expect(normalize(1.3, true)).toBe(1.5);
-      expect(normalize(1.7, true)).toBe(1.5);
-      expect(normalize(2.4, true)).toBe(2.5);
+    it("should round to even steps when half", () => {
+      expect(normalize(1.3, "half")).toBe(1.5);
+      expect(normalize(1.7, "half")).toBe(1.5);
+      expect(normalize(2.4, "half")).toBe(2.5);
     });
 
-    it("should round to half steps when evenStep is false", () => {
-      expect(normalize(1.3, false)).toBe(1.25);
-      expect(normalize(1.7, false)).toBe(1.75);
-      expect(normalize(2.4, false)).toBe(2.25);
+    it("should round to half steps when offset-half", () => {
+      expect(normalize(1.3, "offset-half")).toBe(1.25);
+      expect(normalize(1.7, "offset-half")).toBe(1.75);
+      expect(normalize(2.4, "offset-half")).toBe(2.25);
+    });
+
+    it("should round to full half steps when offset-full", () => {
+      expect(normalize(1.3, "offset-full")).toBe(1.5);
+      expect(normalize(1.7, "offset-full")).toBe(1.5);
+      expect(normalize(2.4, "offset-full")).toBe(2.5);
     });
   });
 

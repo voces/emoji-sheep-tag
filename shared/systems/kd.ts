@@ -2,7 +2,7 @@ import { Point } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { KdTree } from "@/shared/util/KDTree.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
-import { App } from "jsr:@verit/ecs";
+import { App } from "@verit/ecs";
 
 export const dataMap = new WeakMap<
   App<Entity>,

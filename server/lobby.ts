@@ -44,6 +44,7 @@ type Round = {
   start: number;
   clearInterval: () => void;
   practice: boolean;
+  editor: boolean;
 };
 
 export type Lobby = {

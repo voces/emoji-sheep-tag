@@ -7,6 +7,7 @@ import { speedPotOrder } from "./speedPot.ts";
 import { strengthPotionOrder } from "./strengthPotion.ts";
 import { meteorOrder } from "./meteor.ts";
 import { saveOrder } from "./save.ts";
+import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 
 const orderRegistry = new Map<string, OrderDefinition>();
 
@@ -22,3 +23,4 @@ registerOrder(speedPotOrder);
 registerOrder(strengthPotionOrder);
 registerOrder(meteorOrder);
 registerOrder(saveOrder);
+registerOrder(editorRemoveEntity);

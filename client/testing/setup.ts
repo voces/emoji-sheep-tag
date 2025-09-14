@@ -1,6 +1,6 @@
-import "npm:global-jsdom/register";
-import { afterEach, beforeEach } from "jsr:@std/testing/bdd";
-import { cleanup } from "npm:@testing-library/react";
+import "global-jsdom/register";
+import { afterEach, beforeEach } from "@std/testing/bdd";
+import { cleanup } from "@testing-library/react";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
 import { data } from "../data.ts";
 import { app, map, unloadEcs } from "../ecs.ts";

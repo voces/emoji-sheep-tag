@@ -182,43 +182,45 @@ export const items: Record<string, Item> = {
   },
 };
 
-export const prefabs: Record<
-  string,
-  Pick<
-    Entity,
-    | "name"
-    //
-    | "model"
-    | "modelScale"
-    | "alpha"
-    | "sounds"
-    //
-    | "maxHealth"
-    | "healthRegen"
-    | "mana"
-    | "maxMana"
-    | "manaRegen"
-    //
-    | "movementSpeed"
-    | "turnSpeed"
-    | "actions"
-    | "completionTime"
-    | "isDoodad"
-    //
-    | "attack"
-    | "targetedAs"
-    //
-    | "radius"
-    | "pathing"
-    | "requiresPathing"
-    | "tilemap"
-    | "requiresTilemap"
-    //
-    | "inventory"
-    //
-    | "bounty"
-  >
-> = {
+type DataEntity = Pick<
+  Entity,
+  | "name"
+  //
+  | "model"
+  | "modelScale"
+  | "vertexColor"
+  | "alpha"
+  | "sounds"
+  //
+  | "facing"
+  //
+  | "maxHealth"
+  | "healthRegen"
+  | "mana"
+  | "maxMana"
+  | "manaRegen"
+  //
+  | "movementSpeed"
+  | "turnSpeed"
+  | "actions"
+  | "completionTime"
+  | "isDoodad"
+  //
+  | "attack"
+  | "targetedAs"
+  //
+  | "radius"
+  | "pathing"
+  | "requiresPathing"
+  | "tilemap"
+  | "requiresTilemap"
+  //
+  | "inventory"
+  //
+  | "bounty"
+>;
+
+export const prefabs: Record<string, DataEntity> = {
   sheep: {
     name: "Sheep",
     movementSpeed: 3,
@@ -229,6 +231,14 @@ export const prefabs: Record<
       move,
       stop,
       { name: "Build Hut", type: "build", unitType: "hut", binding: ["KeyF"] },
+      {
+        name: "Build House",
+        description: "Can take significantly more damage than a hut.",
+        type: "build",
+        unitType: "house",
+        binding: ["KeyG"],
+        goldCost: 4,
+      },
       {
         name: "Build Wide Hut",
         type: "build",
@@ -404,6 +414,16 @@ export const prefabs: Record<
     actions: [selfDestruct],
     bounty: 1,
   },
+  house: {
+    name: "house",
+    radius: 0.5,
+    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    maxHealth: 220, // Tuned to be 3 hit with 1 claw and 2 hit with 2 claws
+    completionTime: 1.1,
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
+    actions: [selfDestruct],
+    bounty: 2,
+  },
   tinyHut: {
     name: "Tiny Hut",
     model: "hut",
@@ -469,8 +489,16 @@ export const prefabs: Record<
     bounty: 5,
   },
   fence: {
+    name: "Fence",
     radius: 0.25,
     tilemap: { map: Array(4).fill(11), top: -1, left: -1, width: 2, height: 2 },
+    requiresTilemap: {
+      map: Array(4).fill(0),
+      top: -1,
+      left: -1,
+      width: 2,
+      height: 2,
+    },
     isDoodad: true,
   },
   meteor: {
@@ -501,7 +529,31 @@ export const prefabs: Record<
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     isDoodad: true,
   },
+  grass: {
+    name: "Grass",
+    radius: 0.125,
+    pathing: 0,
+    isDoodad: true,
+  },
+  flowers: {
+    name: "Flowers",
+    radius: 0.125,
+    pathing: 0,
+    isDoodad: true,
+  },
+  tile: {
+    name: "Tile",
+    model: "square",
+    radius: 1,
+    tilemap: { map: Array(64).fill(3), top: -4, left: -4, width: 8, height: 8 },
+    isDoodad: true,
+  },
 };
+
+export const tiles = [
+  { name: "Grass", pathing: 8, color: 0x6caa00 },
+  { name: "Pen", pathing: 6, color: 0x4b3061 },
+];
 
 export const colors: string[] = [
   "#ff0303",

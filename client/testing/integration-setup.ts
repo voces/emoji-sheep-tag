@@ -1,6 +1,6 @@
 import "./setup.ts";
-import { afterEach, beforeEach } from "jsr:@std/testing/bdd";
-import { cleanup } from "npm:@testing-library/react";
+import { afterEach, beforeEach } from "@std/testing/bdd";
+import { cleanup } from "@testing-library/react";
 import type { ClientToServerMessage } from "../../server/client.ts";
 
 // Test WebSocket server for messaging tests - fresh server per test for true isolation

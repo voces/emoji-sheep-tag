@@ -7,6 +7,7 @@ import { lookup } from "./systems/lookup.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { checkShortcut } from "./controls/keyboardHandlers.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
+import { editorVar } from "@/vars/editor.ts";
 
 export class MouseEvent extends Event {
   readonly pixels: Vector2;
@@ -88,6 +89,7 @@ let lastIntersectUpdate = performance.now() / 1000;
 const updateIntersects = () => {
   lastIntersectUpdate = performance.now() / 1000;
   raycaster.layers.set(0);
+  if (editorVar()) raycaster.layers.enable(2);
   const intersects = raycaster.intersectObject(scene, true);
   if (intersects.length) {
     const set = new Set<Entity>();
@@ -99,7 +101,7 @@ const updateIntersects = () => {
       const id = intersect.object.getId(intersect.instanceId);
       if (!id) continue;
       const entity = lookup[id];
-      if (!entity || entity.selectable === false) continue;
+      if (!entity || (!editorVar() && entity.isDoodad)) continue;
       set.add(entity);
     }
     if (set.size || mouse.intersects.size) mouse.intersects = set;

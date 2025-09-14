@@ -1,7 +1,7 @@
 import "@/client-testing/setup.ts";
-import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
-import { render } from "npm:@testing-library/react";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
+import { render } from "@testing-library/react";
 import { Lobby } from "./index.tsx";
 import { playersVar } from "@/vars/players.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";

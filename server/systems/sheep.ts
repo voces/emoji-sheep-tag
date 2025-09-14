@@ -1,5 +1,5 @@
 import { addSystem, appContext } from "@/shared/context.ts";
-import { App } from "jsr:@verit/ecs";
+import { App } from "@verit/ecs";
 import { Entity } from "@/shared/types.ts";
 import { raise } from "@/shared/util/raise.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";

@@ -1,5 +1,5 @@
-import { afterEach, describe } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
+import { afterEach, describe } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { addItem, newUnit } from "../api/unit.ts";
 import { unitOrder } from "./unitOrder.ts";
 import { advanceCast } from "../systems/action/advanceCast.ts";

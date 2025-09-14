@@ -1,8 +1,8 @@
-import { serveFile } from "jsr:@std/http/file-server";
-import { resolve } from "jsr:@std/path";
+import { serveFile } from "@std/http/file-server";
+import { resolve } from "@std/path";
 import { handleSocket } from "./client.ts";
 import { startWatchdog } from "./watchdog.ts";
-import { ensureDir } from "jsr:@std/fs";
+import { ensureDir } from "@std/fs";
 
 const isDev = Deno.args.includes("--dev");
 

@@ -1,5 +1,5 @@
 import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { app, Entity } from "../../../ecs.ts";
 import { selection } from "../../../systems/autoSelect.ts";
 import { UnitDataAction } from "@/shared/types.ts";

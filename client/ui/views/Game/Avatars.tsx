@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import { selection } from "../../../systems/autoSelect.ts";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { VStack } from "@/components/layout/Layout.tsx";
 import { Avatar } from "@/components/game/Avatar.tsx";
+import { useSet } from "@/hooks/useSet.ts";
 
 const AvatarContainer = styled(VStack)`
   pointer-events: none;
@@ -12,24 +12,7 @@ const AvatarContainer = styled(VStack)`
 `;
 
 export const Avatars = () => {
-  const [, next] = useState(0);
-
-  useEffect(() => {
-    const clearAdd = selection.addEventListener(
-      "add",
-      () => next((p) => p + 1),
-    );
-
-    const clearDelete = selection.addEventListener(
-      "delete",
-      () => next((p) => p + 1),
-    );
-
-    return () => {
-      clearAdd();
-      clearDelete();
-    };
-  }, []);
+  useSet(selection);
 
   if (!selection.size) return null;
 

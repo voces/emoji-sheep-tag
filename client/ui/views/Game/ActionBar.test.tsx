@@ -1,7 +1,7 @@
 import "@/client-testing/setup.ts";
-import { describe, it } from "jsr:@std/testing/bdd";
-import { render, screen } from "npm:@testing-library/react";
-import { expect } from "jsr:@std/expect";
+import { describe, it } from "@std/testing/bdd";
+import { render, screen } from "@testing-library/react";
+import { expect } from "@std/expect";
 import { ActionBar, selectionVar } from "./ActionBar.tsx";
 import { playersVar } from "@/vars/players.ts";
 import { menuStateVar } from "@/vars/menuState.ts";
@@ -158,7 +158,8 @@ describe("ActionBar", () => {
     render(<ActionBar />, { wrapper: Wrapper });
 
     expect(screen.getByLabelText("Stop")).toBeTruthy();
-    expect(screen.getByLabelText("Use Potion (3)")).toBeTruthy();
+    expect(screen.getByLabelText("Use Potion")).toBeTruthy();
+    expect(screen.getByText("3")).toBeTruthy();
   });
 
   it("should not display inventory actions when charges are 0", () => {
@@ -226,7 +227,8 @@ describe("ActionBar", () => {
 
     expect(screen.getByLabelText("Stop")).toBeTruthy();
     expect(screen.getByLabelText("Attack")).toBeTruthy();
-    expect(screen.getByLabelText("Cast Spell (2)")).toBeTruthy();
+    expect(screen.getByLabelText("Cast Spell")).toBeTruthy();
+    expect(screen.getByText("2")).toBeTruthy();
   });
 
   it("should mark current action as pressed", () => {

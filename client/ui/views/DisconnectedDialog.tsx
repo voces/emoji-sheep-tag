@@ -1,4 +1,4 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { connectionStatusVar, stateVar } from "@/vars/state.ts";
 import { Card } from "@/components/layout/Card.tsx";
@@ -21,7 +21,7 @@ export const DisconnectedDialog = () => {
 
   const handleGiveUp = () => {
     stateVar("menu");
-    unloadEcs();
+    unloadEcs(true);
     playersVar([]);
     stopReconnecting();
     connectionStatusVar("notConnected");

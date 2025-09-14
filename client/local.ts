@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 import { setServer } from "./client.ts";
 
 let worker: SharedWorker | undefined;

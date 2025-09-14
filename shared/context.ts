@@ -1,4 +1,4 @@
-import { App, System } from "jsr:@verit/ecs";
+import { App, System } from "@verit/ecs";
 import { ContextManager } from "./util/ContextManager.ts";
 import { Entity } from "./types.ts";
 

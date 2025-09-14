@@ -1,4 +1,4 @@
-import { App } from "jsr:@verit/ecs";
+import { App } from "@verit/ecs";
 import { Entity, SystemEntity } from "../types.ts";
 import { ExtendedSet } from "../util/ExtendedSet.ts";
 import { addSystem, appContext } from "../context.ts";

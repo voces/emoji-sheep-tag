@@ -15,7 +15,7 @@ export class BVH {
   private freeList: number = -1;
   private map: number[] = [];
 
-  constructor() {
+  constructor(readonly name?: string) {
     // Pre-allocate some nodes if desired, or grow dynamically
   }
 

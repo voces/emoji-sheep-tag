@@ -1,7 +1,7 @@
 import { Entity, SystemEntity } from "@/shared/types.ts";
 import { DoublyLinkedList } from "../util/list.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
-import { App } from "jsr:@verit/ecs";
+import { App } from "@verit/ecs";
 
 type PlayerEntity = SystemEntity<"owner">;
 

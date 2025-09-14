@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 
 import { interval, timeout } from "../api/timing.ts";
 import { newUnit } from "../api/unit.ts";
@@ -7,7 +7,7 @@ import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
-import { center, initEntities } from "@/shared/map.ts";
+import { center, generateDoodads } from "@/shared/map.ts";
 import { appContext } from "@/shared/context.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { addEntity } from "@/shared/api/entity.ts";
@@ -17,11 +17,12 @@ import { endRound } from "../lobbyApi.ts";
 export const zStart = z.object({
   type: z.literal("start"),
   practice: z.boolean().optional(),
+  editor: z.boolean().optional(),
 });
 
 export const start = (
   client: Client,
-  { practice = false }: z.TypeOf<typeof zStart>,
+  { practice = false, editor = false }: z.TypeOf<typeof zStart>,
 ) => {
   const lobby = client.lobby;
   if (
@@ -43,6 +44,7 @@ export const start = (
     ecs,
     start: Date.now(),
     practice,
+    editor,
     clearInterval: interval(() => {
       ecs.tick++;
       ecs.update();
@@ -62,11 +64,7 @@ export const start = (
       wolves: Array.from(wolves, (c) => c.id),
     });
 
-    for (const prefab in initEntities) {
-      for (const partial of initEntities[prefab as keyof typeof initEntities]) {
-        addEntity({ prefab, ...partial });
-      }
-    }
+    generateDoodads();
 
     for (const player of sheep) {
       player.playerEntity = ecs.addEntity({
@@ -96,23 +94,28 @@ export const start = (
         if (practice) newUnit(owner.id, "spirit", ...getSpiritSpawn());
       }
 
-      addEntity({
-        isTimer: true,
-        buffs: [{
-          expiration: "Time until wolves spawn:",
-          remainingDuration: 1.8,
-        }],
-      });
+      if (!practice) {
+        addEntity({
+          isTimer: true,
+          buffs: [{
+            expiration: "Time until wolves spawn:",
+            remainingDuration: 1.8,
+          }],
+        });
+      }
 
       timeout(() => {
         const lobby = lobbyContext.current;
         if (!lobby.round) return;
         for (const owner of practice ? sheep : wolves) {
           newUnit(owner.id, "wolf", center.x, center.y);
-          playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
         }
 
         if (!practice) {
+          if (wolves.size) {
+            playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
+          }
+
           const timeToWin = lobby.settings.time === "auto"
             ? getIdealTime(lobby.players.size, sheep.size)
             : lobby.settings.time;
@@ -130,7 +133,7 @@ export const start = (
             endRound();
           }, timeToWin);
         }
-      }, 1.8);
-    }, 0.3);
+      }, practice ? 0 : 1.8);
+    }, practice ? 0 : 0.3);
   });
 };

@@ -1,91 +1,18 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
 <svg
-  fill="#000000"
-  width="800px"
-  height="800px"
-  viewBox="0 -10 100 100"
-  version="1.1"
   xmlns="http://www.w3.org/2000/svg"
-  xmlns:xlink="http://www.w3.org/1999/xlink"
-  xml:space="preserve"
-  xmlns:serif="http://www.serif.com/"
-  style="fill-rule: evenodd; clip-rule: evenodd; stroke-linejoin: round; stroke-miterlimit: 2"
+  viewBox="0 -10 100 100"
 >
-  <g id="flowers-white" transform="matrix(1.27,0,0,1.27,-10.96,-72.4)">
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        d="M192.54,56.694L194.843,56.694L195.265,71.317L190.812,72.007L192.54,56.694Z"
-        fill="#679a45"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        d="M175.831,36.412L178.188,36.429L178.318,71.007L173.62,71.007L175.831,36.412Z"
-        fill="#679a45"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        d="M206.598,40.436L208.981,40.183L208.973,71.007L204.314,71.007L206.598,40.436Z"
-        fill="#679a45"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        data-player="true"
-        d="M201.594,41.07L198.467,31.668L217.158,31.632L214.115,41.111L201.594,41.07Z"
-        fill="#ffffff"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        data-player="true"
-        d="M170.594,36.573L167.467,27.171L186.158,27.135L183.115,36.614L170.594,36.573Z"
-        fill="#ffffff"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        data-player="true"
-        d="M187.344,56.82L184.217,47.418L202.908,47.382L199.865,56.861L187.344,56.82Z"
-        fill="#ffffff"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        d="M207.324,48.118L195.472,42.662L192.265,44.157L193.902,39.399L206.32,44.82"
-        fill="#679a45"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        d="M205.372,59.502L215.999,47.724L224.473,52.87L216.79,51.187L208.366,59.944L205.372,59.502Z"
-        fill="#679a45"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        d="M176.187,46.971L184.181,43.291L187.388,44.786L185.751,40.029L175.783,44.257"
-        fill="#679a45"
-        fill-rule="nonzero"
-      />
-    </g>
-    <g transform="matrix(1,0,0,1,-143.17,48.9927)">
-      <path
-        d="M177.709,62.08L172.553,41.457L166.597,41.16L169.855,44.155L174.444,65.365L177.709,62.08Z"
-        fill="#679a45"
-        fill-rule="nonzero"
-      />
-    </g>
-  </g>
+  <path
+    fill="#679a45"
+    d="M51.74 61.822h2.925l.536 18.571-5.656.877 2.195-19.448ZM30.52 36.064l2.993.022L33.678 80h-5.966l2.807-43.936ZM69.594 41.174l3.026-.32L72.61 80h-5.917l2.9-38.826Z"
+  />
+  <path
+    fill="#fff"
+    d="m63.238 41.98-3.97-11.94 23.737-.047-3.865 12.039-15.902-.052ZM23.868 36.268l-3.97-11.94 23.737-.046-3.865 12.039-15.902-.053ZM45.141 61.982l-3.971-11.94 23.737-.046-3.864 12.038-15.902-.052Z"
+    data-player="true"
+  />
+  <path
+    fill="#679a45"
+    d="m70.516 50.93-15.052-6.929-4.073 1.9 2.079-6.044 15.77 6.885M68.037 65.388 81.533 50.43l10.762 6.536-9.758-2.138L71.84 65.95l-3.802-.562ZM30.972 49.474 41.124 44.8l4.073 1.899-2.08-6.041-12.658 5.37M32.905 68.662l-6.549-26.19-7.564-.378 4.138 3.804 5.828 26.936 4.147-4.172Z"
+  />
 </svg>

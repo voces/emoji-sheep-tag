@@ -1,6 +1,6 @@
 //@deno-types="npm:@types/react"
 import { useState } from "react";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { keyboard } from "../../../controls.ts";
 import { prefabs } from "@/shared/data.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";

@@ -1,5 +1,5 @@
 import React from "react";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { CheckedIcon } from "../icons/CheckedIcon.tsx";
 import { UncheckedIcon } from "../icons/UncheckedIcon.tsx";
 

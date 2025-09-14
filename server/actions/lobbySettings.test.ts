@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { Client } from "../client.ts";
 import { newLobby } from "../lobby.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";

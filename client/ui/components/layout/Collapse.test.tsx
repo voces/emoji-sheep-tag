@@ -1,8 +1,8 @@
 import "@/client-testing/setup.ts";
-import { describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
-import { render, screen, waitFor } from "npm:@testing-library/react";
-import { userEvent } from "npm:@testing-library/user-event";
+import { describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
+import { render, screen, waitFor } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
 import { useState } from "react";
 import Collapse from "./Collapse.tsx";
 

@@ -1,7 +1,7 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 //@deno-types="npm:@types/react"
 import { useEffect } from "react";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { SettingsSection } from "./SettingsSection.tsx";
 import { VStack } from "@/components/layout/Layout.tsx";

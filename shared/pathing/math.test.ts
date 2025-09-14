@@ -1,5 +1,6 @@
-import { assertEquals } from "jsr:@std/assert";
+import { expect } from "@std/expect";
 import { distanceBetweenEntities, tweenAbsAngles } from "./math.ts";
+import { it } from "@std/testing/bdd";
 
 const sheep = {
   id: "sheep-1",
@@ -7,8 +8,8 @@ const sheep = {
   position: { x: 0, y: 0 },
 };
 
-Deno.test("distanceBetweenEntities > unit & unit", () => {
-  assertEquals(
+it("distanceBetweenEntities > unit & unit", () => {
+  expect(
     distanceBetweenEntities(
       sheep,
       {
@@ -17,10 +18,9 @@ Deno.test("distanceBetweenEntities > unit & unit", () => {
         position: { x: 1, y: 1 },
       },
     ),
-    Math.sqrt(0.25 ** 2 * 2),
-  );
+  ).toEqual(Math.sqrt(0.25 ** 2 * 2));
 
-  assertEquals(
+  expect(
     distanceBetweenEntities(
       sheep,
       {
@@ -29,27 +29,24 @@ Deno.test("distanceBetweenEntities > unit & unit", () => {
         position: { x: 1, y: 0 },
       },
     ),
-    0.25,
-  );
+  ).toEqual(0.25);
 
-  assertEquals(
+  expect(
     distanceBetweenEntities(
       { id: "sheep-1", radius: 0.25, position: { x: 1, y: 1 } },
       { id: "wolf-1", radius: 0.5, position: { x: 1, y: 1 + 1 } },
     ),
-    0.25,
-  );
+  ).toEqual(0.25);
 
-  assertEquals(
+  expect(
     distanceBetweenEntities(
       { id: "sheep-1", radius: 0.25, position: { x: 1, y: 1 } },
       { id: "wolf-1", radius: 0.5, position: { x: 1 + 1, y: 1 } },
     ),
-    0.25,
-  );
+  ).toEqual(0.25);
 });
 
-Deno.test("distanceBetweenEntities > unit & structure", () => {
+it("distanceBetweenEntities > unit & structure", () => {
   const microHutTilemap = {
     map: [1],
     top: -0.5,
@@ -72,52 +69,47 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
     height: 4,
   };
 
-  assertEquals(
+  expect(
     distanceBetweenEntities(sheep, {
       id: "hut-0",
       tilemap: microHutTilemap,
       position: { x: 2, y: 0 },
     }),
-    Math.sqrt(1.625 ** 2 + 0.125 ** 2),
-  );
+  ).toEqual(Math.sqrt(1.625 ** 2 + 0.125 ** 2));
 
-  assertEquals(
+  expect(
     distanceBetweenEntities(sheep, {
       id: "hut-0",
       tilemap: microHutTilemap,
       position: { x: -2, y: 0 },
     }),
-    Math.sqrt(1.625 ** 2 + 0.125 ** 2),
-  );
+  ).toEqual(Math.sqrt(1.625 ** 2 + 0.125 ** 2));
 
-  assertEquals(
+  expect(
     distanceBetweenEntities(sheep, {
       id: "hut-0",
       tilemap: tinyHutTilemap,
       position: { x: 2, y: 0 },
     }),
-    1.5,
-  );
+  ).toEqual(1.5);
 
-  assertEquals(
+  expect(
     distanceBetweenEntities(sheep, {
       id: "hut-0",
       tilemap: tinyHutTilemap,
       position: { x: -2, y: 0 },
     }),
-    1.5,
-  );
+  ).toEqual(1.5);
 
-  assertEquals(
+  expect(
     distanceBetweenEntities(sheep, {
       id: "hut-0",
       tilemap: tinyHutTilemap,
       position: { x: 1.5, y: 1.5 },
     }),
-    Math.SQRT2,
-  );
+  ).toEqual(Math.SQRT2);
 
-  assertEquals(
+  expect(
     distanceBetweenEntities({
       id: "wolf",
       radius: 0.5,
@@ -127,21 +119,16 @@ Deno.test("distanceBetweenEntities > unit & structure", () => {
       tilemap: hutTilemap,
       position: { x: 23, y: 24.5 },
     }),
-    0.75,
-  );
+  ).toEqual(0.75);
 });
 
-Deno.test("tweenAbsAngles", () => {
-  assertEquals(tweenAbsAngles(0, Math.PI / 2, Math.PI / 4), Math.PI / 4);
-  assertEquals(tweenAbsAngles(0, -Math.PI / 2, Math.PI / 4), Math.PI * 7 / 4);
-  assertEquals(tweenAbsAngles(-Math.PI / 4, Math.PI / 4, Math.PI / 4), 0);
-  assertEquals(tweenAbsAngles(Math.PI / 4, -Math.PI / 4, Math.PI / 4), 0);
-  assertEquals(
-    tweenAbsAngles(Math.PI * 3 / 4, Math.PI * 5 / 4, Math.PI / 4),
-    Math.PI,
-  );
-  assertEquals(
-    tweenAbsAngles(Math.PI * 5 / 4, Math.PI * 3 / 4, Math.PI / 4),
-    Math.PI,
-  );
+it("tweenAbsAngles", () => {
+  expect(tweenAbsAngles(0, Math.PI / 2, Math.PI / 4)).toEqual(Math.PI / 4);
+  expect(tweenAbsAngles(0, -Math.PI / 2, Math.PI / 4)).toEqual(Math.PI * 7 / 4);
+  expect(tweenAbsAngles(-Math.PI / 4, Math.PI / 4, Math.PI / 4)).toEqual(0);
+  expect(tweenAbsAngles(Math.PI / 4, -Math.PI / 4, Math.PI / 4)).toEqual(0);
+  expect(tweenAbsAngles(Math.PI * 3 / 4, Math.PI * 5 / 4, Math.PI / 4))
+    .toEqual(Math.PI);
+  expect(tweenAbsAngles(Math.PI * 5 / 4, Math.PI * 3 / 4, Math.PI / 4))
+    .toEqual(Math.PI);
 });

@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 
 import { Entity } from "@/shared/types.ts";
 import { Client } from "../client.ts";

@@ -37,6 +37,14 @@ export class ColorAttribute extends BufferAttribute {
 
     this.needsUpdate = true;
   }
+
+  getFace(index: number): [red: number, green: number, blue: number] {
+    const base = index *
+      ColorAttribute.COMPONENTS_PER_COLOR *
+      ColorAttribute.VERTICES_PER_FACE * 2;
+
+    return [this.data[base], this.data[base + 1], this.data[base + 2]];
+  }
 }
 
 class SquareColorAttribute extends ColorAttribute {
@@ -61,12 +69,16 @@ class GridColorAttribute extends SquareColorAttribute {
   setColor(x: number, y: number, red: number, green: number, blue: number) {
     super.setFaces(y * this.width + x, red, green, blue);
   }
+
+  getColor(x: number, y: number) {
+    return super.getFace(y * this.width + x);
+  }
 }
 
 export class Grid extends Mesh {
   private colors: GridColorAttribute;
 
-  constructor(width = 1, height = 1) {
+  constructor(readonly width = 1, readonly height = 1) {
     const plane = new PlaneGeometry(
       width,
       height,
@@ -90,5 +102,9 @@ export class Grid extends Mesh {
     blue: number,
   ): void {
     this.colors.setColor(x, y, red, green, blue);
+  }
+
+  getColor(x: number, y: number) {
+    return this.colors.getColor(x, y);
   }
 }

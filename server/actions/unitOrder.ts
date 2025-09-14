@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 import { lookup } from "../systems/lookup.ts";
 import { Client } from "../client.ts";
 import { UnknownEntity } from "../errors/UnknownEntity.ts";

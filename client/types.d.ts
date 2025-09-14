@@ -1,7 +1,7 @@
 // styled.d.ts
-import "npm:styled-components";
+import "styled-components";
 
-declare module "npm:styled-components" {
+declare module "styled-components" {
   export interface DefaultTheme {
     colors: {
       // Game colors

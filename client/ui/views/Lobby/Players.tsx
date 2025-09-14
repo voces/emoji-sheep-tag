@@ -1,6 +1,6 @@
 //@deno-types="npm:@types/react"
 import { Fragment } from "react";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { Player, playersVar, useLocalPlayer } from "@/vars/players.ts";
 import { ColorPicker } from "@/components/forms/ColorPicker.tsx";

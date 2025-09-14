@@ -1,4 +1,4 @@
-import { SystemEntity as ECSSystemEntity } from "jsr:@verit/ecs";
+import { SystemEntity as ECSSystemEntity } from "@verit/ecs";
 import { Classification } from "./data.ts";
 import { Point } from "./pathing/math.ts";
 import { Footprint, Pathing } from "./pathing/types.ts";
@@ -149,7 +149,9 @@ export type Entity = {
   owner?: string;
 
   model?: string;
-  modelScale?: number;
+  modelScale?: number | null;
+  vertexColor?: number | null;
+  playerColor?: string | null;
   alpha?: number;
   icon?: string;
   iconEffect?: IconEffect;
@@ -161,7 +163,7 @@ export type Entity = {
   };
 
   position?: { readonly x: number; readonly y: number };
-  facing?: number;
+  facing?: number | null;
 
   // Data
   health?: number;

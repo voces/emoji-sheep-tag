@@ -1,4 +1,4 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 
 // Game-specific styled components for UI elements that need global styling
 

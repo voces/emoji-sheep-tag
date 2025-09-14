@@ -1,4 +1,4 @@
-import { ThemeProvider } from "npm:styled-components";
+import { ThemeProvider } from "styled-components";
 import { theme } from "./theme.ts";
 
 export const Wrapper = ({ children }: { children: React.ReactNode }) => (

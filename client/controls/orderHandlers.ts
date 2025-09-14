@@ -50,12 +50,12 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
   const orders: Array<readonly [Entity, UnitDataActionTarget]> = [];
 
   for (const entity of selections) {
-    const actions = entity.actions?.filter((a): a is UnitDataActionTarget =>
-      a.type === "target" &&
-      (target
-        ? testClassification(entity, target, a.targeting)
-        : typeof a.aoe === "number")
-    ).sort((a, b) => {
+    const action = entity.actions?.filter((a): a is UnitDataActionTarget => {
+      return a.type === "target" &&
+        (target
+          ? testClassification(entity, target, a.targeting)
+          : typeof a.aoe === "number");
+    }).sort((a, b) => {
       const getSmartValue = (action: UnitDataActionTarget) => {
         if (!action.smart) return Infinity;
         return Object.entries(action.smart).reduce(
@@ -85,7 +85,7 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
       return getSmartValue(a) - getSmartValue(b);
     })[0];
 
-    if (actions) orders.push([entity, actions] as const);
+    if (action) orders.push([entity, action] as const);
   }
 
   if (!orders.length) return false;

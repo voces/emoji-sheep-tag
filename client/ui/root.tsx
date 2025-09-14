@@ -1,5 +1,5 @@
 // @deno-types="npm:@types/react-dom/client"
-import { createRoot } from "npm:react-dom/client";
+import { createRoot } from "react-dom/client";
 import { App } from "./App.tsx";
 
 const main = document.querySelector("div#ui");

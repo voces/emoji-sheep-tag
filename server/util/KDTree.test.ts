@@ -1,4 +1,4 @@
-import { expect } from "jsr:@std/expect";
+import { expect } from "@std/expect";
 import { KdTree } from "./KDTree.ts";
 
 type PointTreeNode = {

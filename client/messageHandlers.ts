@@ -10,6 +10,8 @@ import { roundsVar } from "@/vars/rounds.ts";
 import { format } from "./api/player.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import type { ServerToClientMessage } from "./schemas.ts";
+import { editorVar } from "@/vars/editor.ts";
+import { send } from "./client.ts";
 
 export const handlers = {
   join: (data: Extract<ServerToClientMessage, { type: "join" }>) => {
@@ -35,13 +37,17 @@ export const handlers = {
       } ${newPlayers.length > 1 ? "have" : "has"} joined the game!`);
     }
     stateVar(data.status);
-    if (data.status === "lobby") unloadEcs();
+    // if (data.status === "lobby") unloadEcs();
     for (const update of data.updates) {
       if (update.id in map) Object.assign(map[update.id], update);
       else map[update.id] = app.addEntity(update);
     }
     if (data.rounds) roundsVar(data.rounds);
     lobbySettingsVar(data.lobbySettings);
+    if (editorVar()) {
+      stateVar("playing");
+      send({ type: "start", practice: true, editor: true });
+    }
   },
   colorChange: (
     data: Extract<ServerToClientMessage, { type: "colorChange" }>,
@@ -58,6 +64,9 @@ export const handlers = {
     );
   },
   start: (e: Extract<ServerToClientMessage, { type: "start" }>) => {
+    stateVar("lobby");
+    unloadEcs();
+    stateVar("playing");
     const players = playersVar((players) =>
       players.map((p) => {
         const s = e.sheep.find((s) => s.id === p.id);
@@ -66,13 +75,12 @@ export const handlers = {
     );
     data.sheep = players.filter((p) => e.sheep.some((s) => s.id === p.id));
     data.wolves = players.filter((p) => e.wolves.includes(p.id));
-    stateVar("playing");
     camera.position.x = center.x;
     camera.position.y = center.y;
   },
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");
-    unloadEcs();
+    unloadEcs(true);
     if (d.players) {
       playersVar((players) =>
         players.map((p) => {

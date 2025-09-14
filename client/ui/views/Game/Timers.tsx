@@ -1,4 +1,4 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
 import { app, Entity } from "../../../ecs.ts";
 import { formatDuration } from "@/util/formatDuration.ts";

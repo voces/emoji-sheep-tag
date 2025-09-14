@@ -4,10 +4,11 @@ import { VerticalBar } from "@/components/game/VerticalBar.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
 import { isAlly } from "@/shared/api/unit.ts";
 import { getPlayer, useLocalPlayer } from "@/vars/players.ts";
-import type { Entity, Item } from "@/shared/types.ts";
-import { useTheme } from "npm:styled-components";
+import type { Item } from "@/shared/types.ts";
+import { useTheme } from "styled-components";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
+import { Entity } from "../../../ecs.ts";
 
 const InventoryWrapper = styled.div`
   display: grid;
@@ -69,8 +70,18 @@ export const Avatar = ({ entity }: { entity: Entity }) => {
   const iconEffectProps = iconEffect
     ? iconEffects[iconEffect](entity.owner)
     : (entity.alpha ? { style: { opacity: entity.alpha } } : undefined);
-  const color = entity.owner ? getPlayer(entity.owner)?.color : undefined;
-  const iconProps = { ...iconEffectProps, color };
+  const color = entity.playerColor ??
+    (entity.owner ? getPlayer(entity.owner)?.color : undefined);
+  const iconProps: React.ComponentProps<typeof Command>["iconProps"] = {
+    ...iconEffectProps,
+    color,
+  };
+  if (entity.vertexColor && !iconProps.overlayStyle?.backgroundColor) {
+    iconProps.overlayStyle = {
+      ...iconProps.overlayStyle,
+      backgroundColor: `#${entity.vertexColor.toString(16).padStart(6, "0")}`,
+    };
+  }
 
   return (
     <HStack $gap="sm">

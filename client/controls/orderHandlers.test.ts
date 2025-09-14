@@ -3,14 +3,14 @@ import { setCurrentTestFile } from "@/client-testing/integration-setup.ts";
 
 // Set the current test file name for deterministic port assignment
 setCurrentTestFile("orderHandlers.test.ts");
-import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
-import { waitFor } from "npm:@testing-library/react";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
+import { waitFor } from "@testing-library/react";
 import { app, Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { playersVar } from "@/vars/players.ts";
 import { connect, setServer } from "../connection.ts";
-import { connectionStatusVar } from "../ui/vars/state.ts";
+import { connectionStatusVar } from "@/vars/state.ts";
 import {
   clearTestServerMessages,
   getTestServerMessages,
@@ -26,6 +26,7 @@ import {
   playOrderSound,
   setActiveOrder,
 } from "./orderHandlers.ts";
+import { newUnit } from "../../server/api/unit.ts";
 
 describe("order handlers", () => {
   beforeEach(() => {
@@ -129,32 +130,7 @@ describe("order handlers", () => {
     });
 
     it("should issue move order when right-clicking on ground with wolf", async () => {
-      // Create a wolf with both attack and move actions (like real wolf)
-      const wolf = app.addEntity({
-        id: "wolf-1",
-        prefab: "wolf",
-        owner: "player-1",
-        position: { x: 10, y: 10 },
-        actions: [
-          {
-            type: "target" as const,
-            name: "Attack",
-            order: "attack",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { enemy: 0 },
-          },
-          {
-            type: "target" as const,
-            name: "Move",
-            order: "move",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { ground: 0, ally: 0 },
-          },
-        ],
-      });
-
+      const wolf = newUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
 
       // Mock mouse event for ground click (no intersections)
@@ -187,40 +163,15 @@ describe("order handlers", () => {
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("move");
-        expect(message.units).toEqual(["wolf-1"]);
+        expect(message.units).toEqual([wolf.id]);
         expect(message.target).toEqual({ x: 20, y: 20 });
       }
     });
 
     it("should issue attack order when right-clicking on enemy structure", async () => {
-      // Create a wolf with attack action
-      const wolf = app.addEntity({
-        id: "wolf-2",
-        prefab: "wolf",
-        owner: "player-1",
-        position: { x: 10, y: 10 },
-        actions: [
-          {
-            type: "target" as const,
-            name: "Attack",
-            order: "attack",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { enemy: 0 },
-          },
-        ],
-      });
-
-      // Create an enemy structure
-      const enemyHut = app.addEntity({
-        id: "enemy-hut-1",
-        prefab: "hut",
-        owner: "player-2", // Enemy player
-        position: { x: 15, y: 15 },
-        tilemap: { map: [1], top: 0, left: 0, width: 1, height: 1 },
-      });
-
+      const wolf = newUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
+      const enemyHut = newUnit("player-2", "hut", 15, 15);
 
       // Mock mouse event for enemy structure click
       const mockIntersects = new ExtendedSet([enemyHut]);
@@ -253,39 +204,15 @@ describe("order handlers", () => {
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("attack");
-        expect(message.units).toEqual(["wolf-2"]);
-        expect(message.target).toBe("enemy-hut-1");
+        expect(message.units).toEqual([wolf.id]);
+        expect(message.target).toBe(enemyHut.id);
       }
     });
 
     it("should issue attack order when right-clicking on enemy unit", async () => {
-      // Create a wolf with attack action
-      const wolf = app.addEntity({
-        id: "wolf-3",
-        prefab: "wolf",
-        owner: "player-1",
-        position: { x: 10, y: 10 },
-        actions: [
-          {
-            type: "target" as const,
-            name: "Attack",
-            order: "attack",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { enemy: 0 },
-          },
-        ],
-      });
-
-      // Create an enemy unit
-      const enemySheep = app.addEntity({
-        id: "enemy-sheep-1",
-        prefab: "sheep",
-        owner: "player-2", // Enemy player
-        position: { x: 12, y: 12 },
-      });
-
+      const wolf = newUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
+      const enemySheep = newUnit("player-2", "sheep", 12, 12);
 
       // Mock mouse event for enemy unit click
       const mockIntersects = new ExtendedSet([enemySheep]);
@@ -318,8 +245,8 @@ describe("order handlers", () => {
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("attack");
-        expect(message.units).toEqual(["wolf-3"]);
-        expect(message.target).toBe("enemy-sheep-1");
+        expect(message.units).toEqual([wolf.id]);
+        expect(message.target).toBe(enemySheep.id);
       }
     });
   });
@@ -416,24 +343,7 @@ describe("order handlers", () => {
     });
 
     it("should send queue flag when shift is held for smart target", async () => {
-      // Create a wolf
-      const wolf = app.addEntity({
-        id: "wolf-queue-1",
-        prefab: "wolf",
-        owner: "player-1",
-        position: { x: 10, y: 10 },
-        actions: [
-          {
-            type: "target" as const,
-            name: "Move",
-            order: "move",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { ground: 0, ally: 0 },
-          },
-        ],
-      });
-
+      const wolf = newUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
 
       // Mock mouse event with queue flag
@@ -471,24 +381,7 @@ describe("order handlers", () => {
     });
 
     it("should not send queue flag when shift is not held", async () => {
-      // Create a wolf
-      const wolf = app.addEntity({
-        id: "wolf-queue-2",
-        prefab: "wolf",
-        owner: "player-1",
-        position: { x: 10, y: 10 },
-        actions: [
-          {
-            type: "target" as const,
-            name: "Move",
-            order: "move",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { ground: 0, ally: 0 },
-          },
-        ],
-      });
-
+      const wolf = newUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
 
       // Mock mouse event without queue flag
@@ -525,33 +418,9 @@ describe("order handlers", () => {
     });
 
     it("should handle queued attack orders", async () => {
-      // Create a wolf
-      const wolf = app.addEntity({
-        id: "wolf-queue-3",
-        prefab: "wolf",
-        owner: "player-1",
-        position: { x: 10, y: 10 },
-        actions: [
-          {
-            type: "target" as const,
-            name: "Attack",
-            order: "attack",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { enemy: 0 },
-          },
-        ],
-      });
-
-      // Create an enemy
-      const enemySheep = app.addEntity({
-        id: "enemy-sheep-queue",
-        prefab: "sheep",
-        owner: "player-2",
-        position: { x: 15, y: 15 },
-      });
-
+      const wolf = newUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
+      const enemySheep = newUnit("player-2", "sheep", 15, 15);
 
       // Mock mouse event with queue flag
       const mockIntersects = new ExtendedSet([enemySheep]);
@@ -585,46 +454,13 @@ describe("order handlers", () => {
       if (message.type === "unitOrder") {
         expect(message.queue).toBe(true);
         expect(message.order).toBe("attack");
-        expect(message.target).toBe("enemy-sheep-queue");
+        expect(message.target).toBe(enemySheep.id);
       }
     });
 
     it("should handle queued orders with multiple units", async () => {
-      // Create two wolves
-      const wolf1 = app.addEntity({
-        id: "wolf-multi-1",
-        prefab: "wolf",
-        owner: "player-1",
-        position: { x: 10, y: 10 },
-        actions: [
-          {
-            type: "target" as const,
-            name: "Move",
-            order: "move",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { ground: 0 },
-          },
-        ],
-      });
-
-      const wolf2 = app.addEntity({
-        id: "wolf-multi-2",
-        prefab: "wolf",
-        owner: "player-1",
-        position: { x: 12, y: 12 },
-        actions: [
-          {
-            type: "target" as const,
-            name: "Move",
-            order: "move",
-            targeting: ["other"],
-            aoe: 0,
-            smart: { ground: 0 },
-          },
-        ],
-      });
-
+      const wolf1 = newUnit("player-1", "wolf", 10, 10);
+      const wolf2 = newUnit("player-1", "wolf", 12, 12);
       (wolf1 as Entity).selected = true;
       (wolf2 as Entity).selected = true;
 
@@ -659,8 +495,8 @@ describe("order handlers", () => {
       if (message.type === "unitOrder") {
         expect(message.queue).toBe(true);
         expect(message.order).toBe("move");
-        expect(message.units).toContain("wolf-multi-1");
-        expect(message.units).toContain("wolf-multi-2");
+        expect(message.units).toContain(wolf1.id);
+        expect(message.units).toContain(wolf2.id);
         expect(message.units).toHaveLength(2);
       }
     });

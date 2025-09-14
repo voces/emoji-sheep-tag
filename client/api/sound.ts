@@ -2,7 +2,7 @@ import { Audio, AudioLoader, PositionalAudio } from "three";
 import { Channel, channels, listener, scene } from "../graphics/three.ts";
 import { Entity } from "../ecs.ts";
 import { sounds } from "../assets/sounds.ts";
-import { z } from "npm:zod";
+import { z } from "zod";
 
 const audioCache: Record<string, AudioBuffer> = {}; // Cache for loaded audio buffers
 const audioLoader = new AudioLoader();

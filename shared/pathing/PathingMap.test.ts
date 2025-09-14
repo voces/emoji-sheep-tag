@@ -1,6 +1,6 @@
-import { describe, it } from "jsr:@std/testing/bdd";
+import { describe, it } from "@std/testing/bdd";
 import { PathingMap } from "./PathingMap.ts";
-import { expect } from "jsr:@std/expect";
+import { expect } from "@std/expect";
 
 describe("PathingMap", () => {
   it("should find path around obstacles", () => {

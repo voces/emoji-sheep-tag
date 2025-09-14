@@ -1,4 +1,4 @@
-import { z } from "npm:zod";
+import { z } from "zod";
 import { send } from "../lobbyApi.ts";
 import { Client } from "../client.ts";
 

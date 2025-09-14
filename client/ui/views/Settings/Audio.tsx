@@ -1,7 +1,7 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 //@deno-types="npm:@types/react"
 import { useCallback } from "react";
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { type AudioSettings, audioSettingsVar } from "@/vars/audioSettings.ts";
 import { VStack } from "@/components/layout/Layout.tsx";
 import { Slider } from "@/components/forms/Slider.tsx";

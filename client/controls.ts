@@ -4,10 +4,9 @@ import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
 import { getLocalPlayer, playersVar } from "@/vars/players.ts";
 import { selection } from "./systems/autoSelect.ts";
-import { camera } from "./graphics/three.ts";
+import { camera, terrain } from "./graphics/three.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { absurd } from "@/shared/util/absurd.ts";
-import { prefabs } from "@/shared/data.ts";
 import { canBuild } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
 import { playSound } from "./api/sound.ts";
@@ -39,7 +38,7 @@ import {
   getBlueprintPrefab,
   getBuilderFromBlueprint,
   hasBlueprint as hasBlueprintHandler,
-  normalize,
+  normalizeBuildPosition,
   updateBlueprint,
 } from "./controls/blueprintHandlers.ts";
 import { hasAllyActions } from "./util/allyPermissions.ts";
@@ -61,6 +60,14 @@ import {
   keyboard,
 } from "./controls/keyboardHandlers.ts";
 import { center } from "@/shared/map.ts";
+import { SystemEntity } from "./ecs.ts";
+import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
+import { isStructure } from "@/shared/api/unit.ts";
+import { addChatMessage } from "@/vars/chat.ts";
+import { editorVar } from "@/vars/editor.ts";
+import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
+import { Color } from "three";
+import { pathingMap } from "./systems/pathing.ts";
 
 // Re-export for external use
 export { getActiveOrder, keyboard };
@@ -127,18 +134,37 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   const blueprint = getBlueprint();
   if (!blueprint) return;
 
+  if (editorVar() && !blueprint.owner) {
+    const { id: _, position, ...entity } = blueprint;
+    if (blueprint.prefab !== "tile") {
+      send({
+        type: "editorCreateEntity",
+        entity: {
+          ...entity,
+          position: {
+            x: Math.round(position!.x * 1000) / 1000,
+            y: Math.round(position!.y * 1000) / 1000,
+          },
+        },
+      });
+      pickDoodad(entity.prefab);
+      return;
+    }
+
+    const color = new Color(blueprint.vertexColor!);
+    const x = blueprint.position!.x - 0.5;
+    const y = blueprint.position!.y - 0.5;
+    terrain.setColor(x, terrain.height - y - 1, color.r, color.g, color.b);
+    send({ type: "editorSetPathing", x, y, pathing: blueprint.pathing! });
+    pathingMap.setPathing(x, y, blueprint.pathing!);
+    return;
+  }
+
   const prefab = blueprint.prefab;
   const unit = getBuilderFromBlueprint();
   if (!unit) return;
 
-  const x = normalize(
-    e.world.x,
-    (prefabs[prefab]?.tilemap?.width ?? 0) % 4 === 0,
-  );
-  const y = normalize(
-    e.world.y,
-    (prefabs[prefab]?.tilemap?.height ?? 0) % 4 === 0,
-  );
+  const [x, y] = normalizeBuildPosition(e.world.x, e.world.y, prefab);
 
   if (!canBuild(unit, prefab, x, y)) {
     return playSound("ui", pick("error1"), { volume: 0.3 });
@@ -149,9 +175,7 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
 
   if (selection.size) {
     const source = selection.first()?.position;
-    if (source) {
-      playOrderSound(e.world.x, e.world.y);
-    }
+    if (source) playOrderSound(e.world.x, e.world.y);
   }
 
   send({
@@ -183,17 +207,16 @@ mouse.addEventListener("mouseButtonUp", (e) => {
     const localPlayerId = getLocalPlayer()?.id;
 
     for (const entity of entitiesInRect) {
-      // Cast to client Entity type to access client-specific properties
-      const clientEntity = entity as Entity;
-      if (clientEntity.selectable === false || clientEntity.isDoodad) continue;
+      if (entity.isDoodad && !editorVar()) continue;
+      if (entity.id === "selection-rectangle") continue;
 
-      if (clientEntity.owner === localPlayerId) {
-        if (isStructure(clientEntity)) controllableEntities.push(clientEntity);
-        else ownUnits.push(clientEntity);
-      } else if (localPlayerId && hasAllyActions(clientEntity)) {
-        controllableEntities.push(clientEntity);
+      if (entity.owner === localPlayerId) {
+        if (isStructure(entity)) controllableEntities.push(entity);
+        else ownUnits.push(entity);
+      } else if (localPlayerId && hasAllyActions(entity)) {
+        controllableEntities.push(entity);
       } else {
-        otherEntities.push(clientEntity);
+        otherEntities.push(entity);
       }
     }
 
@@ -248,7 +271,6 @@ mouse.addEventListener("mouseMove", (e) => {
           modelScale: 1,
           aspectRatio: 1,
           alpha: 0.3,
-          selectable: false,
           isDoodad: true,
         });
       }
@@ -308,6 +330,8 @@ globalThis.addEventListener("keydown", (e) => {
   if (showSettingsVar()) return false;
 
   const shortcuts = shortcutsVar();
+
+  if (document.activeElement?.tagName === "INPUT") return false;
 
   // Handle UI shortcuts
   if (handleUIShortcuts(e, shortcuts)) return false;
@@ -525,6 +549,7 @@ globalThis.addEventListener("keyup", (e) => {
 globalThis.addEventListener("blur", clearKeyboard);
 
 // Camera controls
+let zoomTimeout = 0;
 globalThis.addEventListener("wheel", (e) => {
   if (
     document.elementFromPoint(mouse.pixels.x, mouse.pixels.y)?.id !== "ui"
@@ -532,7 +557,15 @@ globalThis.addEventListener("wheel", (e) => {
     return false;
   }
   if (e.ctrlKey) return;
-  camera.position.z += e.deltaY > 0 ? 1 : -1;
+  camera.position.z = Math.max(camera.position.z + (e.deltaY > 0 ? 1 : -1), 1);
+  if (zoomTimeout) clearTimeout(zoomTimeout);
+  zoomTimeout = setTimeout(() => {
+    addChatMessage(
+      `Zoom set to ${camera.position.z}${
+        camera.position.z === 9 ? " (default)" : ""
+      }.`,
+    );
+  }, 250);
 });
 
 // Camera panning
@@ -565,7 +598,7 @@ app.addSystem({
       x *= 1 + 1.3 * Math.exp(-10 * panDuration) + (panDuration / 5) ** 0.5 -
         0.32;
       camera.position.x = Math.min(
-        Math.max(0, camera.position.x + x * delta * 10),
+        Math.max(0, camera.position.x + x * delta * camera.position.z),
         center.x * 2,
       );
     }
@@ -573,7 +606,7 @@ app.addSystem({
       y *= 1 + 1.3 * Math.exp(-10 * panDuration) + (panDuration / 5) ** 0.5 -
         0.32;
       camera.position.y = Math.min(
-        Math.max(0, camera.position.y + y * delta * 10),
+        Math.max(0, camera.position.y + y * delta * camera.position.z),
         center.y * 2,
       );
     }
@@ -610,11 +643,6 @@ for (const event of ["pointerdown", "keydown", "contextmenu"]) {
     }
   });
 }
-
-// Shortcut overrides system
-import { SystemEntity } from "./ecs.ts";
-import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
-import { isStructure } from "@/shared/api/unit.ts";
 
 const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
   const shortcuts = shortcutsVar()[e.prefab];

@@ -1,10 +1,11 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { Chat } from "./Chat.tsx";
 import { ActionBar } from "./ActionBar.tsx";
 import { Gold } from "./Gold.tsx";
 import { Avatars } from "./Avatars.tsx";
 import { Timers } from "./Timers.tsx";
 import { HStack } from "@/components/layout/Layout.tsx";
+import { Editor } from "./Editor/index.tsx";
 
 const TopRight = styled(HStack)`
   position: fixed;
@@ -19,6 +20,7 @@ export const Game = () => (
     <TopRight>
       <Gold />
       <Timers />
+      <Editor />
     </TopRight>
     <Chat />
     <ActionBar />

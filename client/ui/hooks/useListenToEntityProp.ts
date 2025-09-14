@@ -38,3 +38,20 @@ export const useListenToEntityProps = <P extends keyof Entity>(
 
   return value;
 };
+
+export const useListenToEntities = (
+  entities: Set<Entity>,
+  props: (keyof Entity)[],
+) => {
+  const [, setValue] = useState(0);
+  useEffect(
+    () => {
+      const unsubs = Array.from(
+        entities,
+        (e) => listen(e, props, () => setValue((v) => v + 1)),
+      );
+      return () => unsubs.forEach((fn) => fn());
+    },
+    [Array.from(entities, (e) => e.id).join(" | "), props.join(" | ")],
+  );
+};

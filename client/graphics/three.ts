@@ -102,7 +102,7 @@ if (listener) {
   import("@/vars/audioSettings.ts");
 }
 
-const terrain = new Grid(tiles[0].length, tiles.length);
+export const terrain = new Grid(tiles[0].length, tiles.length);
 terrain.layers.set(2);
 terrain.position.x = center.x;
 terrain.position.y = center.y;

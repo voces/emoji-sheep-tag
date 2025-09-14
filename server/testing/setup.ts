@@ -1,9 +1,9 @@
-import { it as baseIt } from "jsr:@std/testing/bdd";
+import { it as baseIt } from "@std/testing/bdd";
 import { newEcs } from "../ecs.ts";
 import { Client } from "../client.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { newLobby } from "../lobby.ts";
-import { FakeTime } from "jsr:@std/testing/time";
+import { FakeTime } from "@std/testing/time";
 import { appContext } from "@/shared/context.ts";
 
 export type TestSetupOptions = {
@@ -91,6 +91,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     start: Date.now(),
     clearInterval: () => {},
     practice: false,
+    editor: false,
   };
   appContext.current = ecs;
 

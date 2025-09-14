@@ -1,4 +1,4 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 //@deno-types="npm:@types/react"
 import { useState } from "react";
 import { colors } from "@/shared/data.ts";

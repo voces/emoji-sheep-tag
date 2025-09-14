@@ -1,6 +1,6 @@
 import "@/client-testing/setup.ts";
-import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { app, Entity, SystemEntity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { playersVar } from "@/vars/players.ts";

@@ -1,5 +1,5 @@
-import { afterEach, describe } from "jsr:@std/testing/bdd";
-import { expect } from "jsr:@std/expect";
+import { afterEach, describe } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { getPlayerGold } from "../api/player.ts";
 import { damageEntity, newUnit } from "../api/unit.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";

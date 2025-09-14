@@ -38,6 +38,8 @@ import flag from "../assets/flag.svg" with { type: "text" };
 import square from "../assets/square.svg" with { type: "text" };
 import pinkPotion from "../assets/pinkPotion.svg" with { type: "text" };
 import rock from "../assets/rock.svg" with { type: "text" };
+import house from "../assets/house.svg" with { type: "text" };
+import atom from "../assets/atom.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -70,6 +72,9 @@ export const svgs: Record<string, string> = {
   flag,
   square,
   pinkPotion,
+  rock,
+  house,
+  atom,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -87,10 +92,12 @@ const collections: Record<string, InstancedGroup | undefined> = {
   // Basic units and structures
   sheep: loadSvg(sheep, 1),
   hut: loadSvg(hut, 2),
+  house: loadSvg(house, 3.4),
   divinity: loadSvg(divinity, 1),
   shop: loadSvg(shop, 1),
   fox: loadSvg(fox, 1.8),
   wolf: loadSvg(wolf, 2),
+  atom: loadSvg(atom, 0.05),
 
   // Trees (should render in front of structures)
   tree: loadSvg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
@@ -114,6 +121,7 @@ Object.assign(globalThis, { collections });
 const color = new Color();
 
 const updateColor = (e: Entity) => {
+  if (!app.entities.has(e)) return;
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
@@ -144,25 +152,28 @@ app.addSystem({
   props: ["id", "owner"],
   onAdd: updateColor,
   onChange: updateColor,
+  onRemove: updateColor,
 });
 
 app.addSystem({
   props: ["vertexColor"],
   onAdd: updateColor,
   onChange: updateColor,
+  onRemove: updateColor,
 });
 
 app.addSystem({
   props: ["alpha"],
   onAdd: updateColor,
   onChange: updateColor,
+  onRemove: updateColor,
 });
 
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
 
 const onPositionOrRotationChange = (
   e: SystemEntity<"position"> & {
-    readonly facing?: number;
+    readonly facing?: number | null;
   },
 ) => {
   const model = e.model ?? e.prefab;
@@ -183,7 +194,13 @@ const onPositionOrRotationChange = (
         const dist = movement * 1.05;
         const x = prev.x + dist * Math.cos(angle);
         const y = prev.y + dist * Math.sin(angle);
-        collections[model]?.setPositionAt(e.id, x, y, e.facing, e.zIndex);
+        collections[model]?.setPositionAt(
+          e.id,
+          x,
+          y,
+          e.facing,
+          e.zIndex,
+        );
         prevPositions.set(e, { x, y });
         return;
       }
@@ -263,9 +280,11 @@ app.addSystem({
   props: ["playerColor"],
   onAdd: updateColor,
   onChange: updateColor,
+  onRemove: updateColor,
 });
 
 const updateScale = (e: Entity) => {
+  if (!app.entities.has(e)) return;
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
@@ -276,11 +295,13 @@ app.addSystem({
   props: ["modelScale"],
   onAdd: updateScale,
   onChange: updateScale,
+  onRemove: updateScale,
 });
 app.addSystem({
   props: ["aspectRatio"],
   onAdd: updateScale,
   onChange: updateScale,
+  onRemove: updateScale,
 });
 
 app.addSystem({

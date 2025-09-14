@@ -1,4 +1,4 @@
-import { styled } from "npm:styled-components";
+import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useLocalPlayer } from "@/vars/players.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
