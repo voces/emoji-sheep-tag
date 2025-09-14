@@ -8,9 +8,12 @@ import { setFind } from "../../server/util/set.ts";
 import { computeBlueprintColor } from "../util/colorHelpers.ts";
 import { queued } from "./orderHandlers.ts";
 import { editorVar } from "@/vars/editor.ts";
+import { BuildGrid } from "../graphics/BuildGrid.ts";
+import { scene } from "../graphics/three.ts";
 
 let blueprintIndex = 0;
 let blueprint: SystemEntity<"prefab"> | undefined;
+let buildGrid: BuildGrid | undefined;
 
 export const normalize = (
   value: number,
@@ -87,6 +90,14 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
 
   if (blueprint) app.removeEntity(blueprint);
 
+  if (prefabs[prefab]?.tilemap && builder.owner) {
+    if (!buildGrid) {
+      buildGrid = new BuildGrid();
+      scene.add(buildGrid);
+    }
+    buildGrid.updateForBlueprint(builder, prefab, normalizedX, normalizedY);
+  }
+
   blueprint = app.addEntity({
     id: `blueprint-${blueprintIndex++}`,
     prefab: prefab,
@@ -122,6 +133,16 @@ export const updateBlueprint = (x: number, y: number) => {
 
   blueprint.position = { x: normalizedX, y: normalizedY };
 
+  // Update build grid if it exists
+  if (buildGrid && blueprint.owner) {
+    buildGrid.updateForBlueprint(
+      builder,
+      blueprint.prefab,
+      normalizedX,
+      normalizedY,
+    );
+  }
+
   const localPlayer = getLocalPlayer();
   const playerColor = localPlayer?.color;
   const targetColor =
@@ -143,6 +164,7 @@ export const cancelBlueprint = () => {
     blueprint = undefined;
     updateCursor();
   }
+  if (buildGrid) buildGrid.hide();
 };
 
 export const clearBlueprint = (

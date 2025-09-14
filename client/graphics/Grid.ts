@@ -1,14 +1,22 @@
-import { BufferAttribute, Mesh, MeshBasicMaterial, PlaneGeometry } from "three";
+import {
+  BufferAttribute,
+  DoubleSide,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
+} from "three";
 
 const faceColorMaterial = new MeshBasicMaterial({
   vertexColors: true,
+  transparent: true,
+  side: DoubleSide,
   // flatShading: true,
 });
 
 export class ColorAttribute extends BufferAttribute {
-  static COMPONENTS_PER_COLOR = 3;
+  static COMPONENTS_PER_COLOR = 4;
   static VERTICES_PER_FACE = 3;
-  static ITEM_SIZE = 3;
+  static ITEM_SIZE = 4;
 
   private data: Float32Array;
 
@@ -24,26 +32,35 @@ export class ColorAttribute extends BufferAttribute {
     this.data = data;
   }
 
-  setFace(index: number, red: number, green: number, blue: number) {
+  setFace(index: number, red: number, green: number, blue: number, alpha = 1) {
     const base = index *
       ColorAttribute.COMPONENTS_PER_COLOR *
       ColorAttribute.VERTICES_PER_FACE;
 
     for (let i = 0; i < ColorAttribute.VERTICES_PER_FACE; i++) {
-      this.data[base + i * ColorAttribute.VERTICES_PER_FACE] = red;
-      this.data[base + i * ColorAttribute.VERTICES_PER_FACE + 1] = green;
-      this.data[base + i * ColorAttribute.VERTICES_PER_FACE + 2] = blue;
+      const offset = base + i * ColorAttribute.COMPONENTS_PER_COLOR;
+      this.data[offset] = red;
+      this.data[offset + 1] = green;
+      this.data[offset + 2] = blue;
+      this.data[offset + 3] = alpha;
     }
 
     this.needsUpdate = true;
   }
 
-  getFace(index: number): [red: number, green: number, blue: number] {
+  getFace(
+    index: number,
+  ): [red: number, green: number, blue: number, alpha: number] {
     const base = index *
       ColorAttribute.COMPONENTS_PER_COLOR *
       ColorAttribute.VERTICES_PER_FACE * 2;
 
-    return [this.data[base], this.data[base + 1], this.data[base + 2]];
+    return [
+      this.data[base],
+      this.data[base + 1],
+      this.data[base + 2],
+      this.data[base + 3],
+    ];
   }
 }
 
@@ -52,9 +69,15 @@ class SquareColorAttribute extends ColorAttribute {
     super(faces * 2);
   }
 
-  setFaces(index: number, red: number, green: number, blue: number) {
-    super.setFace(index * 2, red, green, blue);
-    super.setFace(index * 2 + 1, red, green, blue);
+  setFaces(
+    index: number,
+    red: number,
+    green: number,
+    blue: number,
+    alpha?: number,
+  ) {
+    super.setFace(index * 2, red, green, blue, alpha);
+    super.setFace(index * 2 + 1, red, green, blue, alpha);
   }
 }
 
@@ -66,8 +89,15 @@ class GridColorAttribute extends SquareColorAttribute {
     this.width = width;
   }
 
-  setColor(x: number, y: number, red: number, green: number, blue: number) {
-    super.setFaces(y * this.width + x, red, green, blue);
+  setColor(
+    x: number,
+    y: number,
+    red: number,
+    green: number,
+    blue: number,
+    alpha?: number,
+  ) {
+    super.setFaces(y * this.width + x, red, green, blue, alpha);
   }
 
   getColor(x: number, y: number) {
@@ -100,8 +130,9 @@ export class Grid extends Mesh {
     red: number,
     green: number,
     blue: number,
+    alpha?: number,
   ): void {
-    this.colors.setColor(x, y, red, green, blue);
+    this.colors.setColor(x, y, red, green, blue, alpha);
   }
 
   getColor(x: number, y: number) {

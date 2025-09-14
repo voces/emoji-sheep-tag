@@ -153,7 +153,8 @@ export const CommandPalette = () => {
           { length: terrain.height },
           (_, y) =>
             Array.from({ length: terrain.width }, (_, x) => {
-              const color = new Color(...terrain.getColor(x, y)).getHex();
+              const color = new Color(...terrain.getColor(x, y).slice(0, 3))
+                .getHex();
               const tileIndex = tiles.findIndex((t) => t.color === color);
               return tileIndex;
             }),
