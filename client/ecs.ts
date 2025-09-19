@@ -81,10 +81,14 @@ onRender((delta, time) => app.update(delta, time));
 
 export const map: Record<string, Entity> = {};
 
-export const unloadEcs = (loadDoodads = false) => {
-  for (const entity of app.entities) app.removeEntity(entity);
-  for (const key in map) delete map[key];
-  if (loadDoodads) generateDoodads();
-};
+export const unloadEcs = () =>
+  app.batch(() => {
+    for (const entity of app.entities) {
+      if ((entity.type !== "cosmetic" && entity.type !== "static")) {
+        app.removeEntity(entity);
+      }
+    }
+    for (const key in map) delete map[key];
+  });
 
 generateDoodads();

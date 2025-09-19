@@ -59,7 +59,7 @@ import {
   handleKeyUp,
   keyboard,
 } from "./controls/keyboardHandlers.ts";
-import { center } from "@/shared/map.ts";
+import { tiles } from "@/shared/map.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { isStructure } from "@/shared/api/unit.ts";
@@ -599,7 +599,7 @@ app.addSystem({
         0.32;
       camera.position.x = Math.min(
         Math.max(0, camera.position.x + x * delta * camera.position.z),
-        center.x * 2,
+        tiles[0].length,
       );
     }
     if (y) {
@@ -607,7 +607,7 @@ app.addSystem({
         0.32;
       camera.position.y = Math.min(
         Math.max(0, camera.position.y + y * delta * camera.position.z),
-        center.y * 2,
+        tiles.length,
       );
     }
 

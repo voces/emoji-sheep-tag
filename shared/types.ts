@@ -147,6 +147,7 @@ export type Entity = {
   name?: string;
   prefab?: string;
   owner?: string;
+  type?: "cosmetic" | "static" | "dynamic";
 
   model?: string;
   modelScale?: number | null;

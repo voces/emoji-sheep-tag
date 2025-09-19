@@ -9,6 +9,7 @@ export class BuildGrid extends Group {
   private grid: Grid | undefined;
   private currentWidth = 0;
   private currentHeight = 0;
+  private lastUpdate = 0;
 
   constructor() {
     super();
@@ -22,20 +23,25 @@ export class BuildGrid extends Group {
     y: number,
   ) {
     const prefab = prefabs[unitType];
-    if (!prefab?.tilemap || !isPathingEntity(builder)) {
+    if (
+      !(prefab.requiresTilemap ?? prefab?.tilemap) || !isPathingEntity(builder)
+    ) {
       this.visible = false;
       return;
     }
 
-    const { width, height, left, top, map } = prefab.tilemap;
+    const { width, height, left, top, map } = prefab.requiresTilemap ??
+      prefab.tilemap!;
+
+    const now = Date.now();
 
     if (
       this.position.x === x && this.position.y === y && this.grid &&
-      this.currentWidth === width && this.currentHeight === height
-    ) {
-      this.visible = true;
-      return;
-    }
+      this.currentWidth === width && this.currentHeight === height &&
+      this.visible && this.lastUpdate + 200 >= now
+    ) return;
+
+    this.lastUpdate = now;
 
     // Create or recreate grid if size changed
     if (

@@ -1,7 +1,7 @@
 //@deno-types="npm:@types/react"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { styled } from "styled-components";
-import { send } from "../../client.ts";
+import { connect, send } from "../../client.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
 import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
@@ -21,6 +21,7 @@ import { tiles } from "@/shared/data.ts";
 import { packMap2D } from "@/shared/util/2dPacking.ts";
 import { rad2deg } from "@/shared/util/math.ts";
 import { packEntities } from "@/shared/util/entityPacking.ts";
+import { loadLocal } from "../../local.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -122,6 +123,16 @@ export const CommandPalette = () => {
 
   const commands = useMemo((): Command[] => [
     {
+      name: "Open editor",
+      description: "Opens the map editor",
+      valid: () => flags.debug && !editorVar(),
+      callback: () => {
+        editorVar(true);
+        loadLocal();
+        connect();
+      },
+    },
+    {
       name: "Export map",
       description: "Exports the map as JS",
       valid: editorVar,
@@ -191,10 +202,14 @@ export const CommandPalette = () => {
         flags.debug = !flags.debug;
         const stats = document.getElementById("stats");
         if (!flags.debug) {
+          localStorage.removeItem("debug");
           globalThis.latency = 0;
           globalThis.noise = 0;
           if (stats) stats.style.display = "none";
-        } else if (stats) stats.style.display = flags.debugStats ? "" : "none";
+        } else {
+          localStorage.setItem("debug", "true");
+          if (stats) stats.style.display = flags.debugStats ? "" : "none";
+        }
       },
     },
     {

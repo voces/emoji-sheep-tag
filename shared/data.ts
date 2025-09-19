@@ -185,6 +185,7 @@ export const items: Record<string, Item> = {
 type DataEntity = Pick<
   Entity,
   | "name"
+  | "type"
   //
   | "model"
   | "modelScale"
@@ -415,7 +416,7 @@ export const prefabs: Record<string, DataEntity> = {
     bounty: 1,
   },
   house: {
-    name: "house",
+    name: "House",
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 220, // Tuned to be 3 hit with 1 claw and 2 hit with 2 claws
@@ -500,6 +501,7 @@ export const prefabs: Record<string, DataEntity> = {
       height: 2,
     },
     isDoodad: true,
+    type: "static",
   },
   meteor: {
     name: "Meteor",
@@ -528,18 +530,21 @@ export const prefabs: Record<string, DataEntity> = {
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     isDoodad: true,
+    type: "static",
   },
   grass: {
     name: "Grass",
     radius: 0.125,
     pathing: 0,
     isDoodad: true,
+    type: "cosmetic",
   },
   flowers: {
     name: "Flowers",
     radius: 0.125,
     pathing: 0,
     isDoodad: true,
+    type: "cosmetic",
   },
   tile: {
     name: "Tile",

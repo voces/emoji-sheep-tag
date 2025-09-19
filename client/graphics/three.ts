@@ -104,8 +104,8 @@ if (listener) {
 
 export const terrain = new Grid(tiles[0].length, tiles.length);
 terrain.layers.set(2);
-terrain.position.x = center.x;
-terrain.position.y = center.y;
+terrain.position.x = tiles[0].length / 2;
+terrain.position.y = tiles.length / 2;
 terrain.position.z = -0.01;
 scene.add(terrain);
 for (let y = 0; y < tiles.length; y++) {
@@ -162,6 +162,10 @@ type RenderListener = (delta: number, time: number) => void;
 const renderListeners: RenderListener[] = [];
 export const onRender = (fn: RenderListener) => {
   renderListeners.push(fn);
+  return () => {
+    const idx = renderListeners.indexOf(fn);
+    if (idx >= 0) renderListeners.splice(idx, 1);
+  };
 };
 
 let last = performance.now() / 1000;

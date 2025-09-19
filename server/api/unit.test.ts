@@ -331,25 +331,23 @@ describe("damageEntity", () => {
     expect(target.health).toBe(0);
   });
 
-  it("should track last attacker unconditionally", function* () {
+  it("should track last attacker unconditionally", () => {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
 
     // Deal non-lethal damage
     damageEntity(attacker, target, 10);
-    yield;
 
     expect(target.health).toBe(110); // 120 - 10
     expect(target.lastAttacker).toBe(attacker.id);
   });
 
-  it("should track last attacker when unit dies", function* () {
+  it("should track last attacker when unit dies", () => {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
     const target = newUnit("target-owner", "hut", 20, 20);
 
     // Damage target to kill it
     damageEntity(attacker, target, 120);
-    yield;
 
     expect(target.health).toBe(0);
     expect(target.lastAttacker).toBe(attacker.id);

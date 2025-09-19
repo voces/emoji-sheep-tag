@@ -199,6 +199,11 @@ export const zUpdate = z.object({
   prefab: z.string().optional(),
   name: z.string().optional(),
   owner: z.string().optional(),
+  type: z.union([
+    z.literal("cosmetic"),
+    z.literal("static"),
+    z.literal("dynamic"),
+  ]).optional(),
   health: z.number().optional(),
   maxHealth: z.number().optional(),
   healthRegen: z.number().optional(),

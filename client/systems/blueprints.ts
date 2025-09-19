@@ -1,25 +1,44 @@
 import { isAlly } from "@/shared/api/unit.ts";
-import { app, Entity, SystemEntity } from "../ecs.ts";
+import { app, Entity } from "../ecs.ts";
 import { getLocalPlayer, getPlayer } from "../ui/vars/players.ts";
 import { prefabs as blueprintData } from "@/shared/data.ts";
 import { nonNull } from "@/shared/types.ts";
 import { computeBlueprintColor } from "../util/colorHelpers.ts";
 import { lookup } from "./lookup.ts";
+import { id } from "@/shared/util/id.ts";
 
 const blueprints = new Map<Entity, Entity[]>();
 
-const entitiesFromQueue = (e: SystemEntity<"owner">) => {
-  if (!isAlly(e, getLocalPlayer()!.id)) return;
+const clearBlueprints = (e: Entity) => {
+  const existing = blueprints.get(e);
+  if (!existing) return;
+
+  for (const blueprint of existing) app.removeEntity(blueprint);
+  blueprints.delete(e);
+};
+
+const entitiesFromQueue = (e: Entity) => {
+  if (!isAlly(e, getLocalPlayer()!.id) || !e.owner || !app.entities.has(e)) {
+    return clearBlueprints(e);
+  }
 
   const orders = [...(e.queue ?? [])];
   if (e.order && (e.order.type === "build" || e.queue)) orders.unshift(e.order);
 
   const playerColor = getPlayer(e.owner)?.color;
 
-  const orderEntities = orders.map((o) => {
+  const existingBlueprints = blueprints.get(e) ?? [];
+
+  const orderEntities = orders.map((o): Entity | undefined => {
     if (o.type === "build") {
+      const existing = existingBlueprints.find((b) =>
+        b.position?.x === o.x && b.position?.y === o.y &&
+        (b.prefab === o.unitType && b.model === blueprintData[o.unitType].model)
+      );
+      if (existing) return existing;
+
       return app.addEntity({
-        id: `${e.id}-blueprint-${crypto.randomUUID()}`,
+        id: id(`${e.id}-blueprint`),
         prefab: o?.unitType,
         model: blueprintData[o.unitType]?.model,
         modelScale: blueprintData[o.unitType]?.modelScale,
@@ -33,8 +52,13 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
       });
     }
     if ("target" in o && o.target) {
+      const existing = existingBlueprints.find((b) =>
+        b.position?.x === o.target?.x && b.position?.y === o.target?.y &&
+        b.model === "flag"
+      );
+      if (existing) return existing;
       return app.addEntity({
-        id: `${e.id}-blueprint-${crypto.randomUUID()}`,
+        id: id(`${e.id}-blueprint`),
         model: "flag",
         owner: e.owner,
         position: { x: o.target.x, y: o.target.y },
@@ -44,8 +68,14 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
     if ("targetId" in o && o.targetId) {
       const target = lookup[o.targetId];
       if (target && target.position) {
+        const existing = existingBlueprints.find((b) =>
+          b.position?.x === target.position?.x &&
+          b.position?.y === target.position?.y &&
+          b.model === "flag"
+        );
+        if (existing) return existing;
         return app.addEntity({
-          id: `${e.id}-blueprint-${crypto.randomUUID()}`,
+          id: id(`${e.id}-blueprint`),
           model: "flag",
           owner: e.owner,
           position: { x: target.position.x, y: target.position.y },
@@ -55,37 +85,24 @@ const entitiesFromQueue = (e: SystemEntity<"owner">) => {
     }
   }).filter(nonNull);
 
+  for (const blueprint of existingBlueprints) {
+    if (!orderEntities.includes(blueprint)) app.removeEntity(blueprint);
+  }
+
   if (!orderEntities.length) blueprints.delete(e);
-
-  for (const blueprint of blueprints.get(e) ?? []) app.removeEntity(blueprint);
-
-  blueprints.set(e, orderEntities);
+  else blueprints.set(e, orderEntities);
 };
 
 app.addSystem({
   props: ["order", "owner"],
-  onAdd: (e) => entitiesFromQueue(e),
-  onChange: (e) => {
-    const existing = blueprints.get(e);
-    if (existing) existing.forEach((e) => app.removeEntity(e));
-    entitiesFromQueue(e);
-  },
-  onRemove: (e) => {
-    const existing = blueprints.get(e);
-    if (existing) existing.forEach((e) => app.removeEntity(e));
-  },
+  onAdd: entitiesFromQueue,
+  onChange: entitiesFromQueue,
+  onRemove: entitiesFromQueue,
 });
 
 app.addSystem({
   props: ["queue", "owner"],
-  onAdd: (e) => entitiesFromQueue(e),
-  onChange: (e) => {
-    const existing = blueprints.get(e);
-    if (existing) existing.forEach((e) => app.removeEntity(e));
-    entitiesFromQueue(e);
-  },
-  onRemove: (e) => {
-    const existing = blueprints.get(e);
-    if (existing) existing.forEach((e) => app.removeEntity(e));
-  },
+  onAdd: entitiesFromQueue,
+  onChange: entitiesFromQueue,
+  onRemove: entitiesFromQueue,
 });

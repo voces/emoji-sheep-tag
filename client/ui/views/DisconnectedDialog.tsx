@@ -7,6 +7,7 @@ import { Overlay, VStack } from "@/components/layout/Layout.tsx";
 import { stopReconnecting } from "../../connection.ts";
 import { unloadEcs } from "../../ecs.ts";
 import { playersVar } from "@/vars/players.ts";
+import { generateDoodads } from "@/shared/map.ts";
 
 const DisconnectedCard = styled(Card)`
   position: absolute;
@@ -21,7 +22,8 @@ export const DisconnectedDialog = () => {
 
   const handleGiveUp = () => {
     stateVar("menu");
-    unloadEcs(true);
+    unloadEcs();
+    generateDoodads(["dynamic"]);
     playersVar([]);
     stopReconnecting();
     connectionStatusVar("notConnected");

@@ -35,6 +35,7 @@
     "lib": [
       "deno.window",
       "dom",
+      "dom.asynciterable",
       "webworker"
     ],
     "jsx": "react-jsx",

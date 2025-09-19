@@ -118,6 +118,7 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
   return blueprint;
 };
 
+let updateBlueprintInterval = 0;
 export const updateBlueprint = (x: number, y: number) => {
   if (!blueprint) return;
 
@@ -141,6 +142,18 @@ export const updateBlueprint = (x: number, y: number) => {
       normalizedX,
       normalizedY,
     );
+  }
+
+  if (!updateBlueprintInterval) {
+    setInterval(() => {
+      if (!blueprint?.position) {
+        clearInterval(updateBlueprintInterval);
+        updateBlueprintInterval = 0;
+        return;
+      }
+
+      updateBlueprint(blueprint.position.x, blueprint.position.y);
+    }, 250);
   }
 
   const localPlayer = getLocalPlayer();

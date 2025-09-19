@@ -17,6 +17,26 @@ addSystem({
       order: "editorRemoveEntity",
       icon: "collision",
       binding: ["Delete"],
+    }, {
+      type: "auto",
+      name: "Move down",
+      order: "editorMoveEntityDown",
+      binding: ["Numpad2"],
+    }, {
+      type: "auto",
+      name: "Move up",
+      order: "editorMoveEntityUp",
+      binding: ["Numpad8"],
+    }, {
+      type: "auto",
+      name: "Move left",
+      order: "editorMoveEntityLeft",
+      binding: ["Numpad4"],
+    }, {
+      type: "auto",
+      name: "Move right",
+      order: "editorMoveEntityRight",
+      binding: ["Numpad6"],
     }];
   },
 });

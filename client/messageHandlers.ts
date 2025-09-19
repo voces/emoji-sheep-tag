@@ -2,7 +2,7 @@ import { playersVar } from "@/vars/players.ts";
 import { stateVar } from "@/vars/state.ts";
 import { app, map, unloadEcs } from "./ecs.ts";
 import { camera } from "./graphics/three.ts";
-import { center } from "@/shared/map.ts";
+import { center, generateDoodads } from "@/shared/map.ts";
 import { stats } from "./util/Stats.ts";
 import { data } from "./data.ts";
 import { addChatMessage } from "@/vars/chat.ts";
@@ -38,10 +38,12 @@ export const handlers = {
     }
     stateVar(data.status);
     // if (data.status === "lobby") unloadEcs();
-    for (const update of data.updates) {
-      if (update.id in map) Object.assign(map[update.id], update);
-      else map[update.id] = app.addEntity(update);
-    }
+    app.batch(() => {
+      for (const update of data.updates) {
+        if (update.id in map) Object.assign(map[update.id], update);
+        else map[update.id] = app.addEntity(update);
+      }
+    });
     if (data.rounds) roundsVar(data.rounds);
     lobbySettingsVar(data.lobbySettings);
     if (editorVar()) {
@@ -80,7 +82,8 @@ export const handlers = {
   },
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");
-    unloadEcs(true);
+    unloadEcs();
+    generateDoodads(["dynamic"]);
     if (d.players) {
       playersVar((players) =>
         players.map((p) => {
@@ -93,15 +96,17 @@ export const handlers = {
   },
   updates: (data: Extract<ServerToClientMessage, { type: "updates" }>) => {
     if (stateVar() !== "playing") return;
-    for (const { __delete, ...update } of data.updates) {
-      if (update.id in map) Object.assign(map[update.id], update);
-      else map[update.id] = app.addEntity(update);
+    app.batch(() => {
+      for (const { __delete, ...update } of data.updates) {
+        if (update.id in map) Object.assign(map[update.id], update);
+        else map[update.id] = app.addEntity(update);
 
-      if (__delete) {
-        app.removeEntity(map[update.id]);
-        delete map[update.id];
+        if (__delete) {
+          app.removeEntity(map[update.id]);
+          delete map[update.id];
+        }
       }
-    }
+    });
   },
   leave: (data: Extract<ServerToClientMessage, { type: "leave" }>) => {
     const p = playersVar().find((p) => p.id === data.player);

@@ -149,7 +149,7 @@ const updateColor = (e: Entity) => {
 };
 
 app.addSystem({
-  props: ["id", "owner"],
+  props: ["owner"],
   onAdd: updateColor,
   onChange: updateColor,
   onRemove: updateColor,
@@ -215,54 +215,6 @@ const onPositionOrRotationChange = (
   );
   prevPositions.set(e, e.position);
 };
-
-// Reflect logical position to render position
-app.addSystem({
-  props: ["position"],
-  onAdd: (e) => {
-    prevPositions.set(e, e.position);
-    const model = e.model ?? e.prefab;
-    if (!model) return;
-    if (!collections[model]) {
-      return console.warn(`No ${e.model} SVG on ${e.id}`);
-    }
-    collections[model]?.setPositionAt(
-      e.id,
-      e.position.x,
-      e.position.y,
-      e.facing,
-      e.zIndex,
-    );
-  },
-  onChange: onPositionOrRotationChange,
-  onRemove: (e) => collections[e.model ?? e.prefab!]?.delete(e.id),
-});
-
-app.addSystem({
-  props: ["model", "position"],
-  onAdd: (e: SystemEntity<"model" | "position">) => {
-    if (e.prefab) return;
-    prevPositions.set(e, e.position);
-    if (!collections[e.model]) {
-      return console.warn(`No ${e.model} SVG on ${e.id}`);
-    }
-    collections[e.model]?.setPositionAt(
-      e.id,
-      e.position.x,
-      e.position.y,
-      e.facing,
-      e.zIndex,
-    );
-  },
-  onChange: (e) => {
-    if (e.prefab) return;
-    onPositionOrRotationChange;
-  },
-  onRemove: (e) => {
-    if (e.prefab) return;
-    collections[e.model!]?.delete(e.id);
-  },
-});
 
 app.addSystem({
   props: ["facing"],
@@ -374,4 +326,26 @@ app.addSystem({
       );
     }
   },
+});
+
+// Reflect logical position to render position
+app.addSystem({
+  props: ["position"],
+  onAdd: (e) => {
+    prevPositions.set(e, e.position);
+    const model = e.model ?? e.prefab;
+    if (!model) return;
+    if (!collections[model]) {
+      return console.warn(`No ${e.model} SVG on ${e.id}`);
+    }
+    collections[model]?.setPositionAt(
+      e.id,
+      e.position.x,
+      e.position.y,
+      e.facing,
+      e.zIndex,
+    );
+  },
+  onChange: onPositionOrRotationChange,
+  onRemove: (e) => collections[e.model ?? e.prefab!]?.delete(e.id),
 });

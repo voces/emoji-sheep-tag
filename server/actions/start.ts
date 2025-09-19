@@ -64,7 +64,8 @@ export const start = (
       wolves: Array.from(wolves, (c) => c.id),
     });
 
-    generateDoodads();
+    // Don't need to pollute server with cosmetic entities
+    generateDoodads(editor ? [] : ["static", "dynamic"]);
 
     for (const player of sheep) {
       player.playerEntity = ecs.addEntity({

@@ -4,6 +4,7 @@ import { editorVar } from "@/vars/editor.ts";
 import { DoodadsPanel } from "./DoodadsPanel.tsx";
 import { PropertiesPanel } from "./PropertiesPanel.tsx";
 import { TerrainPanel } from "./TerrainPanel.tsx";
+import { AreaPanel } from "./AreaPanel.tsx";
 
 export const Editor = () => {
   const editor = useReactiveVar(editorVar);
@@ -12,6 +13,7 @@ export const Editor = () => {
 
   return (
     <VStack>
+      <AreaPanel />
       <TerrainPanel />
       <DoodadsPanel />
       <PropertiesPanel />

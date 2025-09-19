@@ -3,6 +3,7 @@ import { isLocalPlayer } from "@/vars/players.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
+import { camera } from "../graphics/three.ts";
 
 // X'd farms not removed from selection
 export const selection = new ExtendedSet<SystemEntity<"selected">>();
@@ -35,7 +36,13 @@ app.addSystem({
       isLocalPlayer(e.owner) &&
       (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit")
     ) {
-      if (selection.size === 0) selectEntity(e);
+      if (selection.size === 0) {
+        selectEntity(e);
+        if (e.position) {
+          camera.position.x = e.position.x;
+          camera.position.y = e.position.y;
+        }
+      }
       if (!primary) primary = e;
     }
   },

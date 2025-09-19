@@ -8,6 +8,12 @@ import { strengthPotionOrder } from "./strengthPotion.ts";
 import { meteorOrder } from "./meteor.ts";
 import { saveOrder } from "./save.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
+import {
+  editorMoveEntityDown,
+  editorMoveEntityLeft,
+  editorMoveEntityRight,
+  editorMoveEntityUp,
+} from "./editorMoveEntity.ts";
 
 const orderRegistry = new Map<string, OrderDefinition>();
 
@@ -24,3 +30,7 @@ registerOrder(strengthPotionOrder);
 registerOrder(meteorOrder);
 registerOrder(saveOrder);
 registerOrder(editorRemoveEntity);
+registerOrder(editorMoveEntityDown);
+registerOrder(editorMoveEntityLeft);
+registerOrder(editorMoveEntityRight);
+registerOrder(editorMoveEntityUp);

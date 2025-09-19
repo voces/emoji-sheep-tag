@@ -64,7 +64,7 @@ export const newEcs = () => {
 
   const originalRemoveEntity = app.removeEntity.bind(app);
   app.removeEntity = (entity: Entity) => {
-    remove(entity.id);
+    remove(entity);
     return originalRemoveEntity(entity);
   };
 
@@ -72,6 +72,8 @@ export const newEcs = () => {
 
   return app;
 };
+
+import("./systems/clearFlags.ts");
 
 import("./systems/action/action.ts");
 import("./systems/autoAttack.ts");
