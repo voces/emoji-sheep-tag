@@ -145,7 +145,7 @@ export const updateBlueprint = (x: number, y: number) => {
   }
 
   if (!updateBlueprintInterval) {
-    setInterval(() => {
+    updateBlueprintInterval = setInterval(() => {
       if (!blueprint?.position) {
         clearInterval(updateBlueprintInterval);
         updateBlueprintInterval = 0;
@@ -178,6 +178,10 @@ export const cancelBlueprint = () => {
     updateCursor();
   }
   if (buildGrid) buildGrid.hide();
+  if (updateBlueprintInterval) {
+    clearInterval(updateBlueprintInterval);
+    updateBlueprintInterval = 0;
+  }
 };
 
 export const clearBlueprint = (
