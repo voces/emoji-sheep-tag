@@ -8,6 +8,8 @@ import {
 import { center, tiles } from "@/shared/map.ts";
 import { Grid } from "./Grid.ts";
 import { stats } from "../util/Stats.ts";
+import { tiles as tileDefs } from "@/shared/data.ts";
+import { Terrain2D } from "./Terrain2D.ts";
 
 const canvas = document.querySelector("canvas");
 if (!canvas) throw new Error("Could not find canvas");
@@ -107,7 +109,7 @@ terrain.layers.set(2);
 terrain.position.x = tiles[0].length / 2;
 terrain.position.y = tiles.length / 2;
 terrain.position.z = -0.01;
-scene.add(terrain);
+// scene.add(terrain);
 for (let y = 0; y < tiles.length; y++) {
   for (let x = 0; x < tiles[y].length; x++) {
     if (tiles[y][x] === 6) {
@@ -128,6 +130,45 @@ for (let y = 0; y < tiles.length; y++) {
       );
     }
   }
+}
+
+{
+  const w = 4;
+  const h = 4;
+  const mesh = new Terrain2D({
+    masks: {
+      height: [],
+      cliff: [
+        [0, 0, 0, 0],
+        [0, "r", "r", 0],
+        [0, 1, 1, 0],
+        [0, 0, 0, 0],
+      ],
+      groundTile: Array.from({ length: h }, () => Array(w).fill(0)),
+      cliffTile: Array.from({ length: h }, () => Array(w).fill(2)),
+      water: [],
+      waterHeight: [],
+    },
+    offset: { x: w / 2, y: h / 2, z: 0 },
+    tiles: [
+      ...tileDefs.map((t) => ({
+        color: `#${t.color.toString(16).padStart(6, "0")}`,
+      })),
+      ...tileDefs.map((t) => ({
+        color: `#${
+          new Color(`#${t.color.toString(16).padStart(6, "0")}`).lerp(
+            new Color(0x999999),
+            0.5,
+          ).getHexString()
+        }`,
+      })),
+    ],
+    size: { width: w, height: h },
+  });
+  mesh.position.x = center.x - w / 2;
+  mesh.position.y = center.y + h / 2;
+  mesh.position.z = -0.03;
+  scene.add(mesh);
 }
 
 const BASE_FOV = 50;

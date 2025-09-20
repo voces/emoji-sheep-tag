@@ -1,6 +1,7 @@
 - Login system
 - Invis Farm?
 - Fog of war?
+- Terrain height/fog
 - Items
   - Splash
   - Cloak
@@ -10,3 +11,4 @@
 - Units sometimes get stuck on corners still...
 - Pointer lock setting
 - Perf improvement on mass delete/add
+- Pings

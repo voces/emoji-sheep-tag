@@ -147,6 +147,17 @@ export type Entity = {
   name?: string;
   prefab?: string;
   owner?: string;
+  /**
+   * Spawn mode for entities defined in map files:
+   *
+   * - "cosmetic": client-only. Spawned in the client ECS; the server does not create or track it.
+   *   Purely visual; never replicated.
+   *
+   * - "static": local on both sides. Spawned independently in client and server ECS.
+   *   Not replicated; IDs may differ; no network traffic involves these entities.
+   *
+   * - "dynamic" (default): server-authoritative. Spawned on the server and replicated/synced to clients.
+   */
   type?: "cosmetic" | "static" | "dynamic";
 
   model?: string;
@@ -222,7 +233,7 @@ export type Entity = {
    * 1 walkable
    * 2 buildable
    * 4 blight
-   * 8 spirit (non-0 required for distanceBetweenEntities)
+   * 8 spirit
    */
   pathing?: Pathing;
   /** Override `pathing` for require checks. */

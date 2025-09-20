@@ -1,10 +1,7 @@
 // deno-lint-ignore no-explicit-any
 export const memoize = <A extends Array<any>, B>(
   fn: (...args: A) => B,
-): ((...args: A) => B) & {
-  hits: number;
-  misses: number;
-} => {
+): ((...args: A) => B) & { hits: number; misses: number } => {
   // deno-lint-ignore no-explicit-any
   let rootStore: Map<unknown, any> | Record<any, any>;
 
@@ -17,19 +14,21 @@ export const memoize = <A extends Array<any>, B>(
       let store = rootStore;
       for (let i = 0; i < args.length - 1; i++) {
         if (store instanceof Map) {
-          if (store.has(args[i])) store = store.get(args[i]);
-          else {
-            store.set(
-              args[i],
-              typeof args[i] === "object" ? new Map() : {},
-            );
+          if (store.has(args[i])) {
             store = store.get(args[i]);
+          } else {
+            const next = typeof args[i] === "object" ? new Map() : {};
+            store.set(args[i], next);
+            store = next; // <-- descend!
           }
-        } else if (args[i] in store) store = store[args[i]];
-        else {
-          store[args[i]] =
-            store[args[i]] =
-              typeof args[i] === "object" ? new Map() : {};
+        } else {
+          if (args[i] in store) {
+            store = store[args[i]];
+          } else {
+            const next = typeof args[i] === "object" ? new Map() : {};
+            store[args[i]] = next;
+            store = next; // <-- descend!
+          }
         }
       }
 
@@ -39,19 +38,21 @@ export const memoize = <A extends Array<any>, B>(
         if (store.has(lastArg)) {
           memoized.hits++;
           return store.get(lastArg);
-        } else {
-          memoized.misses++;
-          store.set(lastArg, fn(...args));
-          return store.get(lastArg);
         }
-      } else if (lastArg in store) {
-        memoized.hits++;
-        return store[lastArg];
+        memoized.misses++;
+        const val = fn(...args);
+        store.set(lastArg, val);
+        return val;
+      } else {
+        if (lastArg in store) {
+          memoized.hits++;
+          return store[lastArg];
+        }
+        memoized.misses++;
+        const val = fn(...args);
+        store[lastArg] = val;
+        return val;
       }
-
-      memoized.misses++;
-      store[lastArg] = fn(...args);
-      return store[lastArg];
     },
     { hits: 0, misses: 0 },
   );
