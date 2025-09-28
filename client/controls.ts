@@ -59,15 +59,15 @@ import {
   handleKeyUp,
   keyboard,
 } from "./controls/keyboardHandlers.ts";
-import { tiles } from "@/shared/map.ts";
+import { height, width } from "@/shared/map.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { isStructure } from "@/shared/api/unit.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
-import { Color } from "three";
 import { pathingMap } from "./systems/pathing.ts";
+import { tileDefs } from "@/shared/data.ts";
 
 // Re-export for external use
 export { getActiveOrder, keyboard };
@@ -151,12 +151,24 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
       return;
     }
 
-    const color = new Color(blueprint.vertexColor!);
     const x = blueprint.position!.x - 0.5;
     const y = blueprint.position!.y - 0.5;
-    terrain.setColor(x, terrain.height - y - 1, color.r, color.g, color.b);
-    send({ type: "editorSetPathing", x, y, pathing: blueprint.pathing! });
-    pathingMap.setPathing(x, y, blueprint.pathing!);
+    if (blueprint.vertexColor === 0xff01ff) {
+      terrain.setCliff(x, y, terrain.getCliff(x, y) + 1);
+    } else if (blueprint.vertexColor === 0xff02ff) {
+      terrain.setCliff(x, y, terrain.getCliff(x, y) - 1);
+    } else if (blueprint.vertexColor === 0xff03ff) {
+      terrain.setCliff(x, y, "r");
+    } else {
+      terrain.setGroundTile(
+        x,
+        y,
+        tileDefs.findIndex((t) => t.color === blueprint.vertexColor),
+      );
+      send({ type: "editorSetPathing", x, y, pathing: blueprint.pathing! });
+      pathingMap.setPathing(x, y, blueprint.pathing!);
+    }
+
     return;
   }
 
@@ -599,7 +611,7 @@ app.addSystem({
         0.32;
       camera.position.x = Math.min(
         Math.max(0, camera.position.x + x * delta * camera.position.z),
-        tiles[0].length,
+        width,
       );
     }
     if (y) {
@@ -607,7 +619,7 @@ app.addSystem({
         0.32;
       camera.position.y = Math.min(
         Math.max(0, camera.position.y + y * delta * camera.position.z),
-        tiles.length,
+        height,
       );
     }
 

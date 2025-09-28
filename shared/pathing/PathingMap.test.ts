@@ -143,7 +143,10 @@ describe("PathingMap", () => {
       position: { x: 0.5, y: 0.5 },
       pathing: 1,
     };
-    const solver = new PathingMap({ resolution: 4, pathing: [[0, 0], [0, 0]] });
+    const solver = new PathingMap({
+      resolution: 4,
+      pathing: [[0, 0], [0, 0]],
+    });
     solver.addEntity(sheep);
     solver.addEntity(wolf);
     expect(
@@ -160,6 +163,7 @@ describe("PathingMap", () => {
         new PathingMap({
           pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
           resolution: 4,
+          tileResolution: 2,
         }).pointToTilemap(0.625, 0.625, 0.125),
       ).toEqual({ left: 0, top: 0, height: 1, width: 1, map: [1] });
     });
@@ -169,6 +173,7 @@ describe("PathingMap", () => {
         new PathingMap({
           pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
           resolution: 4,
+          tileResolution: 2,
         }).pointToTilemap(0.5, 0.5, 0.25),
       ).toEqual({
         left: -1,
@@ -184,6 +189,7 @@ describe("PathingMap", () => {
         new PathingMap({
           pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
           resolution: 4,
+          tileResolution: 2,
         }).pointToTilemap(0.625, 0.625, 0.25),
       ).toEqual({
         left: -1,
@@ -199,6 +205,7 @@ describe("PathingMap", () => {
         new PathingMap({
           pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
           resolution: 4,
+          tileResolution: 2,
         }).pointToTilemap(0.375, 0.375, 0.25),
       ).toEqual({
         left: -1,
@@ -214,6 +221,7 @@ describe("PathingMap", () => {
         new PathingMap({
           pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
           resolution: 4,
+          tileResolution: 2,
         }).pointToTilemap(0.625, 0.5, 0.17),
       ).toEqual({
         left: -1,
@@ -229,6 +237,7 @@ describe("PathingMap", () => {
         new PathingMap({
           pathing: Array.from({ length: 5 }, () => Array(5).fill(0)),
           resolution: 4,
+          tileResolution: 2,
         }).pointToTilemap(0.5, 0.625, 0.17),
       ).toEqual({
         left: -1,

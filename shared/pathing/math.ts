@@ -2,7 +2,7 @@ import { Entity, SystemEntity } from "../types.ts";
 import { facingWithin } from "../../server/util/math.ts";
 import { MAX_ATTACK_ANGLE } from "../constants.ts";
 import { PathingMap } from "./PathingMap.ts";
-import { tiles } from "../map.ts";
+import { terrainPathingMap } from "../map.ts";
 import { Footprint } from "./types.ts";
 
 export type Point = { x: number; y: number };
@@ -137,7 +137,8 @@ const unitToTilemap = (unit: Unit) => {
   if (!pm) {
     pm = new PathingMap({
       resolution: 4,
-      pathing: tiles.reverse(),
+      tileResolution: 2,
+      pathing: terrainPathingMap.reverse(),
     });
   }
   return pm.pointToTilemap(unit.position.x, unit.position.y, unit.radius, {
@@ -164,7 +165,8 @@ const footprintPoints = (footprint: Footprint, position: Point) => {
   if (!pm) {
     pm = new PathingMap({
       resolution: 4,
-      pathing: tiles.reverse(),
+      tileResolution: 2,
+      pathing: terrainPathingMap.reverse(),
     });
   }
 

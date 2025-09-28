@@ -1,11 +1,13 @@
 import { app, Entity } from "../ecs.ts";
 import { PathingMap } from "@/shared/pathing/PathingMap.ts";
-import { tiles } from "@/shared/map.ts";
+import { terrainLayers, terrainPathingMap } from "@/shared/map.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
 
 export const pathingMap = new PathingMap({
   resolution: 4,
-  pathing: tiles.reverse(),
+  tileResolution: 2,
+  pathing: terrainPathingMap.reverse(),
+  layers: terrainLayers,
 });
 
 export const pathable = (

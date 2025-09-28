@@ -3,7 +3,7 @@ import { Entity } from "@/shared/types.ts";
 import { PathingMap } from "@/shared/pathing/PathingMap.ts";
 import { PathingEntity, TargetEntity } from "@/shared/pathing/types.ts";
 import { lookup } from "./lookup.ts";
-import { tiles } from "@/shared/map.ts";
+import { terrainLayers, terrainPathingMap } from "@/shared/map.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 
@@ -110,7 +110,9 @@ export const updatePathing = (entity: Entity, max = Infinity) => {
 addSystem((app) => {
   const pathingMap = new PathingMap({
     resolution: 4,
-    pathing: tiles.reverse(),
+    tileResolution: 2,
+    pathing: terrainPathingMap.reverse(),
+    layers: terrainLayers,
   });
 
   pathingMaps.set(app, pathingMap);

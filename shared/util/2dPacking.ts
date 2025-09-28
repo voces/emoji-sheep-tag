@@ -226,7 +226,7 @@ function writeTokenHeader(bw: BitWriter, type2: number, len: number) {
   if (len <= 0) throw new Error("len must be > 0");
   const base = Math.min(len - 1, 63);
   bw.writeU8((type2 << 6) | base);
-  if (base === 63 && len > 64) {
+  if (base === 63 && len >= 64) {
     bw.alignToByte();
     writeVarint(bw, len - 64);
   }

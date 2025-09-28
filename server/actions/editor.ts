@@ -46,18 +46,4 @@ export const zEditorSetPathing = z.object({
 export const editorSetPathing = (
   _: unknown,
   { x, y, pathing }: z.output<typeof zEditorSetPathing>,
-) => {
-  pathingMap().setPathing(x, y, pathing);
-  console.log(
-    "updated?",
-    x,
-    y,
-    pathing,
-    "\n" +
-      pathingMap().grid.map((r) => r.map((t) => t.originalPathing).join(""))
-        .join(
-          "\n",
-        ),
-  );
-  // TODO: send?
-};
+) => pathingMap().setPathing(x, y, pathing);

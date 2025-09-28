@@ -2,13 +2,28 @@ import revo from "./maps/revo.json" with { type: "json" };
 import { addEntity } from "./api/entity.ts";
 import { deg2rad } from "./util/math.ts";
 import { unpackMap2D } from "./util/2dPacking.ts";
-import { prefabs, tiles as tilesDef } from "@/shared/data.ts";
+import { prefabs } from "@/shared/data.ts";
 import { unpackEntities } from "./util/entityPacking.ts";
 import { Entity } from "./types.ts";
+import {
+  getCliffHeight,
+  getPathingMaskFromTerrainMasks,
+} from "./pathing/terrainHelpers.ts";
 
-export const tiles = unpackMap2D(revo.terrain).map((r) =>
-  r.map((i) => tilesDef[i].pathing)
+export const tiles = unpackMap2D(revo.terrain);
+
+export const cliffs = unpackMap2D(revo.cliffs).map((r) =>
+  r.map((v) => v === 0 ? "r" : v - 1)
 );
+
+export const terrainPathingMap = getPathingMaskFromTerrainMasks(tiles, cliffs);
+
+export const terrainLayers = terrainPathingMap.map((r, y) =>
+  r.map((_, x) => Math.floor(getCliffHeight(x, y, cliffs)))
+).toReversed();
+
+export const height = tiles.length;
+export const width = tiles[0].length;
 
 export const center = revo.center;
 

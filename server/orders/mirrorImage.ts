@@ -1,8 +1,8 @@
 import { DEFAULT_FACING, MIRROR_SEPARATION } from "@/shared/constants.ts";
-import { Entity, Order } from "@/shared/types.ts";
+import { Entity, Order, SystemEntity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
-import { updatePathing } from "../systems/pathing.ts";
+import { pathingMap, updatePathing } from "../systems/pathing.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
@@ -58,20 +58,36 @@ export const mirrorImageOrder = {
   onCastComplete: (unit: Entity) => {
     if (
       unit.order?.type !== "cast" || unit.order.orderId !== "mirrorImage" ||
-      !unit.position || !unit.prefab || !unit.owner
+      !unit.position || !unit.prefab || !unit.owner || !unit.radius
     ) return;
 
     // Calculate mirror positions
     const angle1 = (unit.facing ?? DEFAULT_FACING) + Math.PI / 2;
     const angle2 = (unit.facing ?? DEFAULT_FACING) - Math.PI / 2;
-    const pos1 = {
-      x: unit.position.x + Math.cos(angle1) * MIRROR_SEPARATION,
-      y: unit.position.y + Math.sin(angle1) * MIRROR_SEPARATION,
-    };
-    const pos2 = {
-      x: unit.position.x + Math.cos(angle2) * MIRROR_SEPARATION,
-      y: unit.position.y + Math.sin(angle2) * MIRROR_SEPARATION,
-    };
+    const p = pathingMap();
+    const layer = p.layer(unit.position.x, unit.position.y);
+    const pos1Pre = p.nearestSpiralPathing(
+      unit.position.x + Math.cos(angle1) * MIRROR_SEPARATION,
+      unit.position.y + Math.sin(angle1) * MIRROR_SEPARATION,
+      unit as SystemEntity<"position" | "radius">,
+    );
+    const pos1 = p.nearestSpiralPathing(
+      pos1Pre.x,
+      pos1Pre.y,
+      unit as SystemEntity<"position" | "radius">,
+      layer,
+    );
+    const pos2Pre = p.nearestSpiralPathing(
+      unit.position.x + Math.cos(angle2) * MIRROR_SEPARATION,
+      unit.position.y + Math.sin(angle2) * MIRROR_SEPARATION,
+      unit as SystemEntity<"position" | "radius">,
+    );
+    const pos2 = p.nearestSpiralPathing(
+      pos2Pre.x,
+      pos2Pre.y,
+      unit as SystemEntity<"position" | "radius">,
+      layer,
+    );
 
     // Always relocate the caster to first position
     unit.position = pos1;

@@ -39,7 +39,7 @@ try {
 
 const DEFAULT_RESOLUTION = 1;
 
-const MAX_TRIES = 8192;
+const MAX_TRIES = 3481; // 59**2
 const EPSILON = Number.EPSILON * 100;
 
 // interface BaseEntity {
@@ -100,6 +100,7 @@ const h = (a: Point, b: Point) =>
 
 export class PathingMap {
   readonly resolution: number;
+  readonly tileResolution: number;
   private readonly layers?: number[][];
   readonly heightWorld: number;
   readonly widthWorld: number;
@@ -116,42 +117,53 @@ export class PathingMap {
   constructor({
     pathing,
     resolution = DEFAULT_RESOLUTION,
+    tileResolution = 1,
     layers,
   }: {
     pathing: Pathing[][];
     resolution?: number;
+    tileResolution?: number;
     layers?: number[][];
   }) {
     this.resolution = resolution;
+    this.tileResolution = tileResolution;
 
     this.layers = layers;
 
-    this.heightWorld = pathing.length;
-    this.widthWorld = pathing[0].length;
+    // World dimensions: when tileResolution is used, the pathing array is higher resolution
+    // So world size = pathing size / tileResolution
+    this.heightWorld = pathing.length / tileResolution;
+    this.widthWorld = pathing[0].length / tileResolution;
 
-    this.heightMap = this.heightWorld * this.resolution;
-    this.widthMap = this.widthWorld * this.resolution;
+    // Map dimensions are tiles: world * resolution
+    // resolution is tiles per world unit (e.g., 4 means each world unit has 4x4 tiles)
+    this.heightMap = this.heightWorld * resolution;
+    this.widthMap = this.widthWorld * resolution;
 
     this.grid = [];
     // Create tiles
+    // With tileResolution=2, each pathing cell creates (resolution/tileResolution) tiles
+    // e.g., resolution=4, tileResolution=2: each pathing cell creates 2x2 tiles
+    const tilesPerPathingCell = resolution / tileResolution;
+
     for (let y = 0; y < pathing.length; y++) {
       for (let x = 0; x < pathing[y].length; x++) {
-        for (let y2 = 0; y2 < this.resolution; y2++) {
-          if (!this.grid[y * this.resolution + y2]) {
-            this.grid[y * this.resolution + y2] = [];
+        for (let ty = 0; ty < tilesPerPathingCell; ty++) {
+          const gridY = y * tilesPerPathingCell + ty;
+          if (!this.grid[gridY]) {
+            this.grid[gridY] = [];
           }
 
-          for (let x2 = 0; x2 < this.resolution; x2++) {
+          for (let tx = 0; tx < tilesPerPathingCell; tx++) {
+            const gridX = x * tilesPerPathingCell + tx;
             const tile = new Tile(
-              x * this.resolution + x2,
-              y * this.resolution + y2,
-              x + x2 / this.resolution,
-              y + y2 / this.resolution,
+              gridX,
+              gridY,
+              gridX / resolution,
+              gridY / resolution,
               pathing[y][x],
             );
-            this.grid[y * this.resolution + y2][
-              x * this.resolution + x2
-            ] = tile;
+            this.grid[gridY][gridX] = tile;
           }
         }
       }
@@ -188,7 +200,12 @@ export class PathingMap {
     }
   }
 
-  setPathing(x: number, y: number, pathing: Pathing, scale = this.resolution) {
+  setPathing(
+    x: number,
+    y: number,
+    pathing: Pathing,
+    scale = this.resolution,
+  ) {
     for (let dy = y * scale; dy < (y + 1) * scale; dy++) {
       for (let dx = x * scale; dx < (x + 1) * scale; dx++) {
         const tile = this.grid[dy]?.[dx];
@@ -362,11 +379,11 @@ export class PathingMap {
     if (!this.layers) return;
     if (yTile < 0) return;
 
-    xTile = Math.floor(xTile / this.resolution);
-    yTile = Math.floor(yTile / this.resolution);
+    const xLayerTile = Math.floor(xTile / this.tileResolution);
+    const yLayerTile = Math.floor(yTile / this.tileResolution);
 
-    if (this.layers.length <= yTile) return;
-    return this.layers[yTile][xTile];
+    if (this.layers.length <= yLayerTile) return;
+    return this.layers[yLayerTile]?.[xLayerTile];
   }
 
   /**
@@ -378,11 +395,15 @@ export class PathingMap {
     if (!this.layers) return;
     if (yWorld < 0) return;
 
-    xWorld = Math.floor(xWorld);
-    yWorld = Math.floor(yWorld);
+    const xLayerTile = Math.floor(
+      xWorld * this.resolution / this.tileResolution,
+    );
+    const yLayerTile = Math.floor(
+      yWorld * this.resolution / this.tileResolution,
+    );
 
-    if (this.layers.length <= yWorld) return;
-    return this.layers[yWorld][xWorld];
+    if (this.layers.length <= yLayerTile) return;
+    return this.layers[yLayerTile]?.[xLayerTile];
   }
 
   /**

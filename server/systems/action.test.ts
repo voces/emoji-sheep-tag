@@ -10,19 +10,19 @@ it(
   "integration: sheep walking around a corner",
   { wolves: [], sheep: [] },
   function* () {
-    const sheep = newUnit("player-0", "sheep", 0.25, 0.25);
-    newUnit("player-0", "hut", 1.25, 1.25);
+    const sheep = newUnit("player-0", "sheep", 20.25, 20.25);
+    newUnit("player-0", "hut", 21.25, 21.25);
 
-    expect(sheep.position).toEqual({ x: 0.25, y: 0.25 });
+    expect(sheep.position).toEqual({ x: 20.25, y: 20.25 });
 
-    orderMove(sheep, { x: 2.25, y: 2 });
+    orderMove(sheep, { x: 22.25, y: 22 });
 
     expect(sheep.order).toEqual({
       type: "walk",
-      target: { x: 2.25, y: 2 },
-      path: [{ x: 2.25, y: 2 }],
+      target: { x: 22.25, y: 22 },
+      path: [{ x: 22.25, y: 22 }],
     });
 
-    yield* yieldFor(() => expect(sheep.position).toEqual({ x: 2.25, y: 2 }));
+    yield* yieldFor(() => expect(sheep.position).toEqual({ x: 22.25, y: 22 }));
   },
 );

@@ -5,9 +5,10 @@ import {
   Scene,
   WebGLRenderer,
 } from "three";
-import { center, tiles } from "@/shared/map.ts";
-import { Grid } from "./Grid.ts";
+import { center, cliffs, height, tiles, width } from "@/shared/map.ts";
 import { stats } from "../util/Stats.ts";
+import { tileDefs } from "@/shared/data.ts";
+import { Terrain2D } from "./Terrain2D.ts";
 
 const canvas = document.querySelector("canvas");
 if (!canvas) throw new Error("Could not find canvas");
@@ -102,33 +103,28 @@ if (listener) {
   import("@/vars/audioSettings.ts");
 }
 
-export const terrain = new Grid(tiles[0].length, tiles.length);
-terrain.layers.set(2);
-terrain.position.x = tiles[0].length / 2;
-terrain.position.y = tiles.length / 2;
-terrain.position.z = -0.01;
+export const terrain = new Terrain2D(
+  {
+    cliff: cliffs.toReversed(),
+    groundTile: tiles.toReversed(),
+    cliffTile: Array.from(
+      { length: height },
+      () => Array(width).fill(tileDefs.length),
+    ),
+  },
+  [
+    ...tileDefs.map((t) => ({
+      color: `#${t.color.toString(16).padStart(6, "0")}`,
+    })),
+    { color: `#dbbba3` },
+  ],
+);
+terrain.layers.set(3);
+terrain.position.z = -0.03;
+terrain.scale.setScalar(0.5);
 scene.add(terrain);
-for (let y = 0; y < tiles.length; y++) {
-  for (let x = 0; x < tiles[y].length; x++) {
-    if (tiles[y][x] === 6) {
-      terrain.setColor(
-        x,
-        y,
-        0.07,
-        0.03,
-        0.12,
-      );
-    } else {
-      terrain.setColor(
-        x,
-        y,
-        0.15,
-        0.40,
-        0,
-      );
-    }
-  }
-}
+// deno-lint-ignore no-explicit-any
+(globalThis as any).terrain = terrain;
 
 const BASE_FOV = 50;
 const BASE_HEIGHT = 720;

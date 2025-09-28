@@ -72,8 +72,13 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
     const angle = Math.atan2(dy, dx) + Math.PI; // Add 180 degrees (π radians)
 
     // Calculate new position on opposite side
-    const newX = temp.position.x + distance * Math.cos(angle);
-    const newY = temp.position.y + distance * Math.sin(angle);
+    const layer = p.layer(builder.position.x, builder.position.y);
+    const { x: newX, y: newY } = p.nearestSpiralPathing(
+      temp.position.x + distance * Math.cos(angle),
+      temp.position.y + distance * Math.sin(angle),
+      builder,
+      layer,
+    );
 
     // Calculate facing for dash SFX (movement direction)
     const dashFacing = Math.atan2(

@@ -16,12 +16,12 @@ import { editorVar } from "@/vars/editor.ts";
 import { app, Entity, SystemEntity } from "../../ecs.ts";
 import { DEFAULT_FACING } from "@/shared/constants.ts";
 import { terrain } from "../../graphics/three.ts";
-import { Color } from "three";
-import { tiles } from "@/shared/data.ts";
+import { tileDefs } from "@/shared/data.ts";
 import { packMap2D } from "@/shared/util/2dPacking.ts";
 import { rad2deg } from "@/shared/util/math.ts";
 import { packEntities } from "@/shared/util/entityPacking.ts";
 import { loadLocal } from "../../local.ts";
+import { center } from "@/shared/map.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -160,22 +160,26 @@ export const CommandPalette = () => {
           entities[doodad.prefab].push(stored);
         }
 
-        const terrainData = Array.from(
-          { length: terrain.height },
-          (_, y) =>
-            Array.from({ length: terrain.width }, (_, x) => {
-              const color = new Color(...terrain.getColor(x, y).slice(0, 3))
-                .getHex();
-              const tileIndex = tiles.findIndex((t) => t.color === color);
-              return tileIndex;
-            }),
-        );
+        let maxCliff = 0;
+        const cliffs = terrain.masks.cliff.map((r) =>
+          r.map((v) => {
+            if (v === "r") return 0;
+            if (v >= maxCliff) maxCliff = v;
+            return v + 1;
+          })
+        ).reverse();
 
         console.log({
-          terrain: packMap2D(terrainData, tiles.length),
+          center,
+          terrain: packMap2D(
+            terrain.masks.groundTile.toReversed(),
+            tileDefs.length,
+          ),
+          cliffs: packMap2D(cliffs, maxCliff + 1),
           entities: packEntities(
             Array.from(app.entities).filter((e) =>
-              e.isDoodad && e.prefab && e.position
+              e.isDoodad && e.prefab && e.position &&
+              !e.id.startsWith("blueprint-")
             ),
           ),
         });

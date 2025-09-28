@@ -47,7 +47,8 @@
     ]
   },
   "fmt": {
-    "indentWidth": 2
+    "indentWidth": 2,
+    "exclude": ["**/snapshots"]
   },
   "unstable": ["raw-imports"]
 }

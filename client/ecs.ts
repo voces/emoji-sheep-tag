@@ -3,6 +3,7 @@ import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "@/shared/types.ts";
 import { appContext, initApp } from "@/shared/context.ts";
 import { generateDoodads } from "@/shared/map.ts";
+import { editorVar } from "@/vars/editor.ts";
 
 export type Entity = CommonEntity & {
   selected?: boolean;
@@ -83,8 +84,9 @@ export const map: Record<string, Entity> = {};
 
 export const unloadEcs = () =>
   app.batch(() => {
+    const editor = editorVar();
     for (const entity of app.entities) {
-      if ((entity.type !== "cosmetic" && entity.type !== "static")) {
+      if ((entity.type !== "cosmetic" && entity.type !== "static") || editor) {
         app.removeEntity(entity);
       }
     }

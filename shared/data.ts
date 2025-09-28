@@ -555,9 +555,10 @@ export const prefabs: Record<string, DataEntity> = {
   },
 };
 
-export const tiles = [
+export const tileDefs = [
   { name: "Grass", pathing: 8, color: 0x6caa00 },
   { name: "Pen", pathing: 6, color: 0x4b3061 },
+  { name: "Water", pathing: 10, color: 0x385670 },
 ];
 
 export const colors: string[] = [
