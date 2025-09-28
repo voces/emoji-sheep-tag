@@ -109,7 +109,8 @@ export const start = (
         const lobby = lobbyContext.current;
         if (!lobby.round) return;
         for (const owner of practice ? sheep : wolves) {
-          newUnit(owner.id, "wolf", center.x, center.y);
+          const wolf = newUnit(owner.id, "wolf", center.x, center.y);
+          if (practice && wolf.manaRegen) wolf.manaRegen *= 10;
         }
 
         if (!practice) {

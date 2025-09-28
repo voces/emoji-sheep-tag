@@ -66,7 +66,8 @@ export const selectPrimaryUnit = () => {
   for (const entity of app.entities) {
     if (
       entity.owner === localPlayer.id &&
-      (entity.prefab === "sheep" || entity.prefab === "wolf" ||
+      (entity.prefab === "sheep" ||
+        (entity.prefab === "wolf" && !entity.isMirror) ||
         entity.prefab === "spirit")
     ) {
       primaryUnits.push(entity);
