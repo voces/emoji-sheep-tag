@@ -30,6 +30,7 @@ export const miscNames = {
   selectFoxes: "Select foxes",
   queueModifier: "Queue actions modifier",
   addToSelectionModifier: "Add to selection modifier",
+  ping: "Ping location",
 };
 
 export const defaultBindings: Shortcuts = {
@@ -42,6 +43,7 @@ export const defaultBindings: Shortcuts = {
     selectFoxes: ["Digit3"],
     queueModifier: ["ShiftLeft"],
     addToSelectionModifier: ["ShiftLeft"],
+    ping: ["AltLeft", "KeyG"],
   },
   ...Object.fromEntries(
     Object.entries(prefabs).filter(([, d]) => d.actions?.length).map((
@@ -96,6 +98,7 @@ export const createInitialShortcuts = (): Shortcuts => ({
     queueModifier: pluckShortcut("misc.queueModifier") ?? ["ShiftLeft"],
     addToSelectionModifier: pluckShortcut("misc.addToSelectionModifier") ??
       ["ShiftLeft"],
+    ping: pluckShortcut("misc.ping") ?? ["AltLeft", "KeyG"],
   },
   ...Object.fromEntries(
     Object.entries(prefabs).filter(([, d]) => d.actions?.length)

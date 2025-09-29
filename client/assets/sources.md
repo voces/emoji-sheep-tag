@@ -33,6 +33,13 @@
 - https://www.svgrepo.com/svg/247157/potion
 - https://www.svgrepo.com/svg/398225/rock
 - https://www.svgrepo.com/svg/362110/house
+- https://www.svgrepo.com/svg/451375/take-pedestrian-ramp
+- https://www.svgrepo.com/svg/486897/upper-limit
+- https://www.svgrepo.com/svg/486729/lower-limit
+- https://www.svgrepo.com/svg/486530/arrow-down
+- https://www.svgrepo.com/svg/486531/arrow-left
+- https://www.svgrepo.com/svg/486532/arrow-right
+- https://www.svgrepo.com/svg/486533/arrow-up
 
 # Audio
 

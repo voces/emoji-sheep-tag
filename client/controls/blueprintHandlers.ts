@@ -73,6 +73,28 @@ export const getBuilderFromBlueprint = () => {
 };
 
 export const createBlueprint = (prefab: string, x: number, y: number) => {
+  // Special case for ping - no builder required
+  if (prefab === "ping") {
+    const localPlayer = getLocalPlayer();
+    if (!localPlayer) return;
+
+    if (blueprint) app.removeEntity(blueprint);
+
+    blueprint = app.addEntity({
+      id: `blueprint-${blueprintIndex++}`,
+      prefab: "ping",
+      position: { x, y },
+      owner: localPlayer.id,
+      model: "location",
+      modelScale: 1,
+      isDoodad: true,
+      vertexColor: 0x31aaef, // Blue color for ally
+      alpha: 0.75,
+    });
+    updateCursor();
+    return blueprint;
+  }
+
   const builder: Entity | undefined =
     Array.from(selection).find((u) =>
       u.actions?.some((a) => a.type === "build" && a.unitType === prefab)
@@ -121,6 +143,12 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
 let updateBlueprintInterval = 0;
 export const updateBlueprint = (x: number, y: number) => {
   if (!blueprint) return;
+
+  // Special case for ping - no builder required and no normalization
+  if (blueprint.prefab === "ping") {
+    blueprint.position = { x, y };
+    return;
+  }
 
   const builder: Entity | undefined = getBuilderFromBlueprint() ??
     (editorVar() ? { id: "editor" } : undefined);

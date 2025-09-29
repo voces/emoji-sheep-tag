@@ -111,7 +111,7 @@ addSystem((app) => {
   const pathingMap = new PathingMap({
     resolution: 4,
     tileResolution: 2,
-    pathing: terrainPathingMap.reverse(),
+    pathing: terrainPathingMap,
     layers: terrainLayers,
   });
 

@@ -225,6 +225,7 @@ export const zUpdate = z.object({
   progress: z.number().nullable().optional(),
   isDoodad: z.boolean().nullable().optional(),
   isTimer: z.boolean().optional(),
+  teamScoped: z.boolean().optional(),
 
   attack: z.object({
     damage: z.number(),

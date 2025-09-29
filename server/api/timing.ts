@@ -13,15 +13,17 @@ export const timeout = (cb: () => void, timeout: number) => {
   const t = setTimeout(
     () =>
       lobbyContext.with(lobby, () => {
-        if (!lobby.round?.ecs) return clearTimeout(t);
-        try {
-          appContext.with(
-            lobby.round.ecs,
-            () => clientContext.with(client, cb),
-          );
-        } finally {
-          flushUpdates();
-        }
+        const ecs = lobby.round?.ecs;
+        if (!ecs) return clearTimeout(t);
+        appContext.with(
+          ecs,
+          () =>
+            clientContext.with(client, () => {
+              if (ecs.flushScheduled) cb();
+              else ecs.batch(cb);
+            }),
+        );
+        flushUpdates();
       }),
     timeout * 1000,
   );
@@ -34,15 +36,17 @@ export const interval = (cb: () => void, interval: number) => {
   const i = setInterval(
     () =>
       lobbyContext.with(lobby, () => {
-        if (!lobby.round?.ecs) return clearInterval(i);
-        try {
-          appContext.with(
-            lobby.round.ecs,
-            () => clientContext.with(client, cb),
-          );
-        } finally {
-          flushUpdates();
-        }
+        const ecs = lobby.round?.ecs;
+        if (!ecs) return clearInterval(i);
+        appContext.with(
+          ecs,
+          () =>
+            clientContext.with(client, () => {
+              if (ecs.flushScheduled) cb();
+              else ecs.batch(cb);
+            }),
+        );
+        flushUpdates();
       }),
     interval * 1000,
   );

@@ -138,7 +138,7 @@ const unitToTilemap = (unit: Unit) => {
     pm = new PathingMap({
       resolution: 4,
       tileResolution: 2,
-      pathing: terrainPathingMap.reverse(),
+      pathing: terrainPathingMap,
     });
   }
   return pm.pointToTilemap(unit.position.x, unit.position.y, unit.radius, {
@@ -166,7 +166,7 @@ const footprintPoints = (footprint: Footprint, position: Point) => {
     pm = new PathingMap({
       resolution: 4,
       tileResolution: 2,
-      pathing: terrainPathingMap.reverse(),
+      pathing: terrainPathingMap,
     });
   }
 

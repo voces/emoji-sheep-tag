@@ -6,7 +6,7 @@ import { isPathingEntity } from "@/shared/pathing/util.ts";
 export const pathingMap = new PathingMap({
   resolution: 4,
   tileResolution: 2,
-  pathing: terrainPathingMap.reverse(),
+  pathing: terrainPathingMap,
   layers: terrainLayers,
 });
 

@@ -134,6 +134,12 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   const blueprint = getBlueprint();
   if (!blueprint) return;
 
+  if (blueprint.prefab === "ping") {
+    send({ type: "mapPing", x: e.world.x, y: e.world.y });
+    cancelBlueprint();
+    return;
+  }
+
   if (editorVar() && !blueprint.owner) {
     const { id: _, position, ...entity } = blueprint;
     if (blueprint.prefab !== "tile") {
@@ -353,6 +359,14 @@ globalThis.addEventListener("keydown", (e) => {
 
   // Handle action shortcuts
   const { units, action } = findActionForShortcut(e, shortcuts);
+
+  // Handle ping shortcut
+  if (checkShortcut(shortcuts.misc.ping, e.code)) {
+    e.preventDefault();
+    // Create ping blueprint at current mouse position
+    createBlueprint("ping", mouse.world.x, mouse.world.y);
+    return false;
+  }
 
   if (!action) {
     // Handle cancel

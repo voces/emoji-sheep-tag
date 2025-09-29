@@ -12,6 +12,3 @@
 - Pointer lock setting
 - Perf improvement on mass delete/add
 - Pings
-
-- Jump too far
-- Mirror image placement

@@ -34,12 +34,7 @@ export const TerrainPanel = () => (
       ))}
       <Command
         name="Raise cliff"
-        icon="square"
-        // iconProps={{
-        //   overlayStyle: {
-        //     backgroundColor: `#${color.toString(16).padStart(6, "2")}`,
-        //   },
-        // }}
+        icon="raise"
         iconScale={0.85}
         onClick={() => {
           const blueprint = createBlueprint(
@@ -54,7 +49,7 @@ export const TerrainPanel = () => (
       />
       <Command
         name="Lower cliff"
-        icon="square"
+        icon="lower"
         iconScale={0.85}
         onClick={() => {
           const blueprint = createBlueprint(
@@ -69,7 +64,7 @@ export const TerrainPanel = () => (
       />
       <Command
         name="Ramp"
-        icon="square"
+        icon="ramp"
         iconScale={0.85}
         onClick={() => {
           const blueprint = createBlueprint(

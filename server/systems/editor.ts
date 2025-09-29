@@ -20,21 +20,25 @@ addSystem({
     }, {
       type: "auto",
       name: "Move down",
+      icon: "down",
       order: "editorMoveEntityDown",
       binding: ["Numpad2"],
     }, {
       type: "auto",
       name: "Move up",
+      icon: "up",
       order: "editorMoveEntityUp",
       binding: ["Numpad8"],
     }, {
       type: "auto",
       name: "Move left",
+      icon: "left",
       order: "editorMoveEntityLeft",
       binding: ["Numpad4"],
     }, {
       type: "auto",
       name: "Move right",
+      icon: "right",
       order: "editorMoveEntityRight",
       binding: ["Numpad6"],
     }];

@@ -11,6 +11,7 @@ import { colors } from "@/shared/data.ts";
 import { unitOrder, zOrderEvent } from "./actions/unitOrder.ts";
 import { flushUpdates } from "./updates.ts";
 import { ping, zPing } from "./actions/ping.ts";
+import { mapPing, zMapPing } from "./actions/mapPing.ts";
 import { generic, zGenericEvent } from "./actions/generic.ts";
 import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
@@ -124,6 +125,7 @@ const zClientToServerMessage = z.union([
   zBuild,
   zOrderEvent,
   zPing,
+  zMapPing,
   zGenericEvent,
   zChat,
   zCancel,
@@ -141,6 +143,7 @@ const actions = {
   build,
   unitOrder,
   ping,
+  mapPing,
   generic,
   chat,
   cancel,

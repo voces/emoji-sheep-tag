@@ -3,9 +3,9 @@ import { Color } from "three";
 import { app, Entity, SystemEntity } from "../ecs.ts";
 import { InstancedGroup } from "../graphics/InstancedGroup.ts";
 import { loadSvg } from "../graphics/loadSvg.ts";
-import { playersVar } from "../ui/vars/players.ts";
+import { getLocalPlayer, playersVar } from "../ui/vars/players.ts";
 import { getFps } from "../graphics/three.ts";
-import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
+import { computeUnitMovementSpeed, isAlly } from "@/shared/api/unit.ts";
 
 import sheep from "../assets/sheep.svg" with { type: "text" };
 import wolf from "../assets/wolf.svg" with { type: "text" };
@@ -40,6 +40,14 @@ import pinkPotion from "../assets/pinkPotion.svg" with { type: "text" };
 import rock from "../assets/rock.svg" with { type: "text" };
 import house from "../assets/house.svg" with { type: "text" };
 import atom from "../assets/atom.svg" with { type: "text" };
+import ramp from "../assets/ramp.svg" with { type: "text" };
+import raise from "../assets/raise.svg" with { type: "text" };
+import lower from "../assets/lower.svg" with { type: "text" };
+import left from "../assets/left.svg" with { type: "text" };
+import right from "../assets/right.svg" with { type: "text" };
+import up from "../assets/up.svg" with { type: "text" };
+import down from "../assets/down.svg" with { type: "text" };
+import location from "../assets/location.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -75,6 +83,14 @@ export const svgs: Record<string, string> = {
   rock,
   house,
   atom,
+  ramp,
+  raise,
+  lower,
+  left,
+  right,
+  up,
+  down,
+  location,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -110,6 +126,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   claw: loadSvg(claw, 0.05, { layer: 2 }),
   dash: loadSvg(dash, 0.1, { layer: 2 }),
   flag: loadSvg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),
+  location: loadSvg(location, 2, { layer: 2 }),
   circle: loadSvg(circle, 0.08, { layer: 2 }),
   gravity: loadSvg(gravity, 2, { layer: 2 }),
   collision: loadSvg(collision, 2, { layer: 2 }),
@@ -118,10 +135,17 @@ const collections: Record<string, InstancedGroup | undefined> = {
 };
 Object.assign(globalThis, { collections });
 
+const isVisibleToLocalPlayer = (e: Entity) => {
+  if (!e.teamScoped) return true;
+  const l = getLocalPlayer()?.id;
+  if (!l) return true;
+  return isAlly(e, l);
+};
+
 const color = new Color();
 
 const updateColor = (e: Entity) => {
-  if (!app.entities.has(e)) return;
+  if (!app.entities.has(e) || !isVisibleToLocalPlayer(e)) return;
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
@@ -169,6 +193,13 @@ app.addSystem({
   onRemove: updateColor,
 });
 
+app.addSystem({
+  props: ["playerColor"],
+  onAdd: updateColor,
+  onChange: updateColor,
+  onRemove: updateColor,
+});
+
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
 
 const onPositionOrRotationChange = (
@@ -177,7 +208,7 @@ const onPositionOrRotationChange = (
   },
 ) => {
   const model = e.model ?? e.prefab;
-  if (!model) return;
+  if (!model || !isVisibleToLocalPlayer(e)) return;
   if (e.order && "path" in e.order) {
     const prev = prevPositions.get(e);
     if (prev) {
@@ -227,16 +258,8 @@ app.addSystem({
   },
 });
 
-// Apply playerColor override
-app.addSystem({
-  props: ["playerColor"],
-  onAdd: updateColor,
-  onChange: updateColor,
-  onRemove: updateColor,
-});
-
 const updateScale = (e: Entity) => {
-  if (!app.entities.has(e)) return;
+  if (!app.entities.has(e) || !isVisibleToLocalPlayer(e)) return;
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
@@ -267,7 +290,7 @@ app.addSystem({
 });
 
 const updateAlpha = (e: Entity) => {
-  if (!app.entities.has(e)) return;
+  if (!app.entities.has(e) || !isVisibleToLocalPlayer(e)) return;
   const collection = collections[e.model ?? e.prefab ?? ""];
   if (!collection) return;
   collection.setAlphaAt(
@@ -296,7 +319,7 @@ app.addSystem({
     const model = e.model ?? e.prefab;
     if (
       !model || e.order.type !== "cast" || "path" in e.order ||
-      e.order.remaining === 0
+      e.order.remaining === 0 || !isVisibleToLocalPlayer(e)
     ) return;
 
     const r = Math.random() * Math.PI * 2;
@@ -311,7 +334,9 @@ app.addSystem({
   update: (delta) => {
     for (const [e, remaining] of wasCastingMirror) {
       const model = e.model ?? e.prefab;
-      if (!model || !e.position) return wasCastingMirror.delete(e);
+      if (!model || !e.position || !isVisibleToLocalPlayer(e)) {
+        return wasCastingMirror.delete(e);
+      }
 
       if ((remaining ?? 0) < delta) wasCastingMirror.delete(e);
       else wasCastingMirror.set(e, remaining - delta);
@@ -334,7 +359,7 @@ app.addSystem({
   onAdd: (e) => {
     prevPositions.set(e, e.position);
     const model = e.model ?? e.prefab;
-    if (!model) return;
+    if (!model || !isVisibleToLocalPlayer(e)) return;
     if (!collections[model]) {
       return console.warn(`No ${e.model} SVG on ${e.id}`);
     }

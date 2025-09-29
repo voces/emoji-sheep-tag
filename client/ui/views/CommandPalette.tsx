@@ -125,7 +125,7 @@ export const CommandPalette = () => {
     {
       name: "Open editor",
       description: "Opens the map editor",
-      valid: () => flags.debug && !editorVar(),
+      valid: () => flags.debug && !editorVar() && stateVar() === "menu",
       callback: () => {
         editorVar(true);
         loadLocal();

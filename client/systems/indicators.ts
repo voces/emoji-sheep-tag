@@ -23,7 +23,8 @@ app.addSystem({
       if (next < 0.01) app.removeEntity(indicator);
       else {
         indicator.modelScale = next;
-        indicator.facing = ((next - 0.01) / 0.99) ** 0.5 * Math.PI * 2;
+        indicator.facing = ((next - 0.01) / 0.99) ** 0.5 * Math.PI * 2 *
+          (indicator.turnSpeed ?? 1);
       }
     }
   },

@@ -200,6 +200,8 @@ export type Entity = {
   /** A doodad cannot be clicked */
   isDoodad?: boolean | null;
   isTimer?: boolean;
+  /** Only visible to the owner's team */
+  teamScoped?: boolean;
 
   // Attacking
   attack?: {

@@ -2,7 +2,7 @@ import { Entity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { findLastPlayerUnit } from "../systems/playerEntities.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
-import { isUnit } from "@/shared/api/unit.ts";
+import { isStructure } from "@/shared/api/unit.ts";
 
 export const destroyLastFarmOrder = {
   id: "destroyLastFarm",
@@ -31,7 +31,7 @@ export const destroyLastFarmOrder = {
     if (!unit.owner) return false;
     const lastFarm = findLastPlayerUnit(
       unit.owner,
-      (entity) => !!entity.position && !isUnit(entity),
+      (entity) => !!entity.position && isStructure(entity),
     );
     if (lastFarm) {
       lastFarm.lastAttacker = null;

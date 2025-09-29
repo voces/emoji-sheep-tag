@@ -16,9 +16,13 @@ export const cliffs = unpackMap2D(revo.cliffs).map((r) =>
   r.map((v) => v === 0 ? "r" : v - 1)
 );
 
-export const terrainPathingMap = getPathingMaskFromTerrainMasks(tiles, cliffs);
+const upsideDownTerrainPathingMap = getPathingMaskFromTerrainMasks(
+  tiles,
+  cliffs,
+);
+export const terrainPathingMap = upsideDownTerrainPathingMap.toReversed();
 
-export const terrainLayers = terrainPathingMap.map((r, y) =>
+export const terrainLayers = upsideDownTerrainPathingMap.map((r, y) =>
   r.map((_, x) => Math.floor(getCliffHeight(x, y, cliffs)))
 ).toReversed();
 
