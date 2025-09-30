@@ -1,4 +1,5 @@
 import { mouse, MouseButtonEvent } from "./mouse.ts";
+import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { send } from "./client.ts";
 import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
@@ -85,6 +86,9 @@ export const cancelOrder = (
 let dragStart: { x: number; y: number } | null = null;
 let selectionEntity: Entity | null = null;
 
+// Middle-click camera panning state
+let panGrabPixels: { x: number; y: number } | null = null;
+
 // Mouse event handlers
 mouse.addEventListener("mouseButtonDown", (e) => {
   // Handle focus/blur for UI elements
@@ -117,6 +121,9 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       handleSmartTarget(e);
     }
   } else if (e.button === "left") handleLeftClick(e);
+  else if (e.button === "middle") {
+    panGrabPixels = { x: e.pixels.x, y: e.pixels.y };
+  }
 });
 
 const handleLeftClick = (e: MouseButtonEvent) => {
@@ -210,7 +217,8 @@ const addToSelection = () =>
   checkShortcut(shortcutsVar().misc.addToSelectionModifier);
 
 mouse.addEventListener("mouseButtonUp", (e) => {
-  if (e.button === "left" && selectionEntity && dragStart) {
+  if (e.button === "middle") panGrabPixels = null;
+  else if (e.button === "left" && selectionEntity && dragStart) {
     // Calculate selection bounds
     const minX = Math.min(dragStart.x, e.world.x);
     const maxX = Math.max(dragStart.x, e.world.x);
@@ -604,6 +612,51 @@ app.addSystem({
     }
 
     const skipKeyboard = showCommandPaletteVar() === "open";
+
+    // Handle middle-click panning using raycaster approach
+    if (panGrabPixels) {
+      const raycaster = new Raycaster();
+      const plane = new Plane(new Vector3(0, 0, 1), 0);
+
+      // Calculate previous world position
+      const prevCameraSpace = new Vector2(
+        (panGrabPixels.x / globalThis.innerWidth) * 2 - 1,
+        -(panGrabPixels.y / globalThis.innerHeight) * 2 + 1,
+      );
+      raycaster.setFromCamera(prevCameraSpace, camera);
+      const prevWorld3 = new Vector3();
+      raycaster.ray.intersectPlane(plane, prevWorld3);
+
+      // Calculate current world position
+      const currCameraSpace = new Vector2(
+        (mouse.pixels.x / globalThis.innerWidth) * 2 - 1,
+        -(mouse.pixels.y / globalThis.innerHeight) * 2 + 1,
+      );
+      raycaster.setFromCamera(currCameraSpace, camera);
+      const currWorld3 = new Vector3();
+      raycaster.ray.intersectPlane(plane, currWorld3);
+
+      // Calculate world movement delta
+      const worldDeltaX = currWorld3.x - prevWorld3.x;
+      const worldDeltaY = currWorld3.y - prevWorld3.y;
+
+      // Move camera opposite to maintain cursor lock on world
+      camera.position.x = Math.min(
+        Math.max(0, camera.position.x - worldDeltaX),
+        width,
+      );
+      camera.position.y = Math.min(
+        Math.max(0, camera.position.y - worldDeltaY),
+        height,
+      );
+
+      // Update grab position for next frame
+      panGrabPixels = { x: mouse.pixels.x, y: mouse.pixels.y };
+
+      // Skip arrow/edge panning
+      updateCursor();
+      return;
+    }
 
     let x = (keyboard.ArrowLeft && !skipKeyboard ? -1 : 0) +
       (keyboard.ArrowRight && !skipKeyboard ? 1 : 0) +

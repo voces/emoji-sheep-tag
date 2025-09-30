@@ -10,4 +10,3 @@
 - Units sometimes get stuck on corners still...
 - Pointer lock setting
 - Perf improvement on mass delete/add
-- Drag scroll
