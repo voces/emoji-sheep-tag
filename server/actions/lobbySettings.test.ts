@@ -61,6 +61,7 @@ describe("lobbySettings action", () => {
       time: 120,
       autoTime: true,
       startingGold: { sheep: 200, wolves: 250 },
+      income: { sheep: 1, wolves: 1 },
     });
   });
 
@@ -125,6 +126,7 @@ describe("lobbySettings action", () => {
       time: 120,
       autoTime: true,
       startingGold: { sheep: 100, wolves: 150 },
+      income: { sheep: 1, wolves: 1 },
     });
   });
 
@@ -158,6 +160,7 @@ describe("lobbySettings action", () => {
       time: 120,
       autoTime: true,
       startingGold: { sheep: 300, wolves: 150 },
+      income: { sheep: 1, wolves: 1 },
     });
   });
 
@@ -219,6 +222,7 @@ describe("lobbySettings action", () => {
         time: 120,
         autoTime: true,
         startingGold: { sheep: 400, wolves: 500 },
+        income: { sheep: 1, wolves: 1 },
       });
     });
   });
@@ -251,6 +255,7 @@ describe("lobbySettings action", () => {
       time: 120,
       autoTime: true,
       startingGold: { sheep: 0, wolves: 1000 },
+      income: { sheep: 1, wolves: 1 },
     });
   });
 });

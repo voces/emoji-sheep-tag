@@ -322,6 +322,10 @@ const zLobbySettings = z.object({
     sheep: z.number(),
     wolves: z.number(),
   }),
+  income: z.object({
+    sheep: z.number(),
+    wolves: z.number(),
+  }),
 });
 
 export type LobbySettings = z.input<typeof zLobbySettings>;

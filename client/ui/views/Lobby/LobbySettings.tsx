@@ -9,6 +9,7 @@ import { Input } from "@/components/forms/Input.tsx";
 import { TimeInput } from "@/components/forms/TimeInput.tsx";
 import { Button } from "@/components/forms/Button.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
+import { useEffect, useState } from "react";
 
 const SettingsCard = styled(Card)`
   width: 40%;
@@ -48,6 +49,20 @@ const SettingsInput = styled(Input)`
 export const LobbySettings = () => {
   const localPlayer = useLocalPlayer();
   const lobbySettings = useReactiveVar(lobbySettingsVar);
+
+  const [sheepIncome, setSheepIncome] = useState(
+    lobbySettings.income.sheep.toString(),
+  );
+  useEffect(() => setSheepIncome(lobbySettings.income.sheep.toString()), [
+    lobbySettings.income.sheep,
+  ]);
+
+  const [wolfIncome, setWolfIncome] = useState(
+    lobbySettings.income.wolves.toString(),
+  );
+  useEffect(() => setWolfIncome(lobbySettings.income.wolves.toString()), [
+    lobbySettings.income.wolves,
+  ]);
 
   return (
     <SettingsCard>
@@ -133,6 +148,86 @@ export const LobbySettings = () => {
                   wolves: value,
                 },
               });
+            }}
+            disabled={!localPlayer?.host}
+          />
+        </SettingsRow>
+
+        <SettingsRow>
+          <SettingsLabel htmlFor="sheep-income">
+            Income Rate - Sheep
+          </SettingsLabel>
+          <SettingsInput
+            id="sheep-income"
+            type="number"
+            min={0}
+            max={100}
+            step={0.01}
+            value={sheepIncome}
+            onChange={(e) => {
+              if (!e.currentTarget.value) return setSheepIncome("");
+              const value = Math.round(
+                Math.max(
+                  0,
+                  Math.min(100, parseFloat(e.currentTarget.value) || 0),
+                ) * 100,
+              ) / 100;
+              send({
+                type: "lobbySettings",
+                income: {
+                  ...lobbySettings.income,
+                  sheep: value,
+                },
+              });
+            }}
+            onBlur={(e) => {
+              if (e.currentTarget.value === "") {
+                setSheepIncome("1");
+                send({
+                  type: "lobbySettings",
+                  income: { ...lobbySettings.income, sheep: 1 },
+                });
+              }
+            }}
+            disabled={!localPlayer?.host}
+          />
+        </SettingsRow>
+
+        <SettingsRow>
+          <SettingsLabel htmlFor="wolves-income">
+            Income Rate - Wolves
+          </SettingsLabel>
+          <SettingsInput
+            id="wolves-income"
+            type="number"
+            min={0}
+            max={100}
+            step={0.01}
+            value={wolfIncome}
+            onChange={(e) => {
+              if (!e.currentTarget.value) return setWolfIncome("");
+              const value = Math.round(
+                Math.max(
+                  0,
+                  Math.min(100, parseFloat(e.currentTarget.value) || 0),
+                ) * 100,
+              ) / 100;
+              send({
+                type: "lobbySettings",
+                income: {
+                  ...lobbySettings.income,
+                  wolves: value,
+                },
+              });
+            }}
+            onBlur={(e) => {
+              if (e.currentTarget.value === "") {
+                setWolfIncome("1");
+                send({
+                  type: "lobbySettings",
+                  income: { ...lobbySettings.income, wolves: 1 },
+                });
+              }
             }}
             disabled={!localPlayer?.host}
           />

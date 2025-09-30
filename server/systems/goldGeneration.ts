@@ -1,5 +1,6 @@
 import { addSystem } from "@/shared/context.ts";
 import { getPlayerTeam } from "@/shared/api/player.ts";
+import { lobbyContext } from "../contexts.ts";
 
 addSystem({
   props: ["isPlayer", "owner"],
@@ -11,7 +12,9 @@ addSystem({
     if (team !== "sheep" && team !== "wolf") return;
 
     // Determine gold generation rate based on team
-    const goldPerSecond = team === "sheep" ? 1 : (1 / 1.5); // Sheep: 1/second, Wolf: 1/1.5 seconds
+    const goldPerSecond = team === "sheep"
+      ? lobbyContext.current.settings.income.sheep
+      : lobbyContext.current.settings.income.wolves * 2 / 3;
 
     // Increment gold continuously based on delta time
     entity.gold = (entity.gold ?? 0) + (goldPerSecond * delta);

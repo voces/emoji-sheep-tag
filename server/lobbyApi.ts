@@ -36,6 +36,7 @@ export const endRound = (canceled = false) => {
       : undefined,
     round: canceled || lobby.round.practice ? undefined : round,
   });
+  if (canceled) send({ type: "chat", message: "Round canceled." });
 };
 
 export const send = (message: ServerToClientMessage) => {

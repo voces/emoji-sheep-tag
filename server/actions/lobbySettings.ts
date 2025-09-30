@@ -16,6 +16,14 @@ export const zLobbySettings = z.object({
     sheep: z.number().min(0).max(100_000),
     wolves: z.number().min(0).max(100_000),
   }).optional(),
+  income: z.object({
+    sheep: z.number().min(0).max(100).transform((v) =>
+      Math.round(v * 100) / 100
+    ),
+    wolves: z.number().min(0).max(100).transform((v) =>
+      Math.round(v * 100) / 100
+    ),
+  }).optional(),
 });
 
 // S->C
@@ -32,12 +40,13 @@ export const serializeLobbySettings = (
       : lobby.settings.time,
     autoTime: lobby.settings.time === "auto",
     startingGold: lobby.settings.startingGold,
+    income: lobby.settings.income,
   };
 };
 
 export const lobbySettings = (
   client: Client,
-  { startingGold, time }: z.TypeOf<typeof zLobbySettings>,
+  { startingGold, time, income }: z.TypeOf<typeof zLobbySettings>,
 ) => {
   const lobby = client.lobby;
   if (!lobby || lobby.host !== client) {
@@ -48,6 +57,7 @@ export const lobbySettings = (
   // Update lobby settings
   if (startingGold !== undefined) lobby.settings.startingGold = startingGold;
   if (time !== undefined) lobby.settings.time = time;
+  if (income !== undefined) lobby.settings.income = income;
 
   // Send updated settings to all players in the lobby
   send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });

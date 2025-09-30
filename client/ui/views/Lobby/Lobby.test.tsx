@@ -18,6 +18,7 @@ describe("Lobby Settings UI", () => {
       time: 300,
       autoTime: false,
       startingGold: { sheep: 100, wolves: 150 },
+      income: { sheep: 1, wolves: 1 },
     });
   });
 
@@ -29,6 +30,7 @@ describe("Lobby Settings UI", () => {
       time: 0,
       autoTime: true,
       startingGold: { sheep: 0, wolves: 0 },
+      income: { sheep: 1, wolves: 1 },
     });
   });
 
@@ -197,6 +199,7 @@ describe("Lobby Settings UI", () => {
       time: 300,
       autoTime: false,
       startingGold: { sheep: 500, wolves: 750 },
+      income: { sheep: 1, wolves: 1 },
     });
 
     rerender(<Lobby />);

@@ -31,7 +31,7 @@ type LobbySettings = {
   //  */
   time: "auto" | number;
   startingGold: { sheep: number; wolves: number };
-  // income: { sheep: number; wolves: number };
+  income: { sheep: number; wolves: number };
   // view: boolean;
 };
 
@@ -77,6 +77,7 @@ export const newLobby = (host?: Client) => {
       teams: new Map(),
       time: "auto",
       startingGold: { sheep: 0, wolves: 0 },
+      income: { sheep: 1, wolves: 1 },
     },
     status: "lobby",
     rounds: [],

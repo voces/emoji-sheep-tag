@@ -82,6 +82,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
       sheep: gold,
       wolves: gold,
     },
+    income: { sheep: 1, wolves: 1 },
   };
   lobbyContext.current = lobby;
   lobby.round = {

@@ -17,6 +17,7 @@ const DEFAULT_LOBBY_SETTINGS = {
   time: 300,
   autoTime: false,
   startingGold: { sheep: 25, wolves: 100 },
+  income: { sheep: 1, wolves: 1 },
 } as const;
 
 const EMPTY_LOBBY_SETTINGS = {
@@ -225,6 +226,7 @@ describe("nameChange", () => {
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
+        income: { sheep: 1, wolves: 1 },
       },
     });
 
@@ -363,6 +365,7 @@ describe("stop", () => {
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
+        income: { sheep: 1, wolves: 1 },
       },
     });
 
@@ -418,6 +421,7 @@ describe("updates", () => {
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
+        income: { sheep: 1, wolves: 1 },
       },
     });
 
@@ -560,6 +564,7 @@ describe("leave", () => {
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
+        income: { sheep: 1, wolves: 1 },
       },
     });
 
@@ -603,6 +608,7 @@ describe("leave", () => {
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
+        income: { sheep: 1, wolves: 1 },
       },
     });
 
@@ -688,6 +694,7 @@ describe("lobbySettings", () => {
       time: 300,
       autoTime: false,
       startingGold: { sheep: 50, wolves: 75 },
+      income: { sheep: 1, wolves: 1 },
     });
 
     expect(lobbySettingsVar().startingGold).toEqual({ sheep: 50, wolves: 75 });
@@ -702,6 +709,7 @@ describe("lobbySettings", () => {
       time: 300,
       autoTime: false,
       startingGold: { sheep: 25, wolves: 100 },
+      income: { sheep: 1, wolves: 1 },
     });
 
     handlers.lobbySettings({
@@ -710,6 +718,7 @@ describe("lobbySettings", () => {
       time: 400,
       autoTime: true,
       startingGold: { sheep: 75, wolves: 50 },
+      income: { sheep: 1, wolves: 1 },
     });
 
     expect(lobbySettingsVar().startingGold).toEqual({ sheep: 75, wolves: 50 });

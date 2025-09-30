@@ -51,8 +51,13 @@ const onSheepDeath = (sheep: Entity) => {
 
   const unitKiller = sheep.lastAttacker;
   const playerKiller = unitKiller ? lookup(unitKiller)?.owner : undefined;
+
   for (const wolf of getTeams().wolves) {
-    grantPlayerGold(wolf.owner, wolf.owner === playerKiller ? 40 : 15);
+    grantPlayerGold(
+      wolf.owner,
+      (wolf.owner === playerKiller ? 40 : 15) *
+        lobbyContext.current.settings.income.wolves,
+    );
   }
 
   if (isPractice()) {
@@ -72,7 +77,12 @@ addSystem((app) => ({
     // Grant bounty to killer if entity has bounty and lastAttacker
     if (unit.bounty && unit.lastAttacker) {
       const killer = lookup(unit.lastAttacker);
-      if (killer?.owner) grantPlayerGold(killer.owner, unit.bounty);
+      if (killer?.owner) {
+        grantPlayerGold(
+          killer.owner,
+          unit.bounty * lobbyContext.current.settings.income.wolves,
+        );
+      }
     }
 
     if (unit.prefab === "sheep") onSheepDeath(unit);

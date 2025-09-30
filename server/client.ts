@@ -167,6 +167,7 @@ const serializeLobbySettings = (
       : lobby.settings.time,
     autoTime: lobby.settings.time === "auto",
     startingGold: lobby.settings.startingGold,
+    income: lobby.settings.income,
   };
 };
 

@@ -68,7 +68,7 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
     const dy = builder.position.y - temp.position.y;
 
     // Convert to polar coordinates and add 180 degrees
-    const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+    const distance = Math.max(Math.sqrt(dx * dx + dy * dy) * 1.5, 1);
     const angle = Math.atan2(dy, dx) + Math.PI; // Add 180 degrees (π radians)
 
     // Calculate new position on opposite side
