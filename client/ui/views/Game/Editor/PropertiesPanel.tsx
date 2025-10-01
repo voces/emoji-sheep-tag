@@ -59,7 +59,8 @@ export const PropertiesPanel = () => {
   const facing = new ExtendedSet(
     Array.from(
       selection,
-      (e) => typeof e.facing === "number" ? rad2deg(e.facing) : e.facing,
+      (e) =>
+        typeof e.facing === "number" ? Math.round(rad2deg(e.facing)) : e.facing,
     ),
   );
 

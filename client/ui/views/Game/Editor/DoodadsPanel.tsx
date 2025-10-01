@@ -29,6 +29,14 @@ export const pickDoodad = (prefab: string) => {
     }`;
     blueprint.facing = Math.round(Math.random()) * Math.PI;
     blueprint.isDoodad = true;
+  } else if (blueprint?.prefab === "scarecrow") {
+    blueprint.modelScale = Math.round((1 + (Math.random() - 0.5) / 10) * 100) /
+      100;
+    const r = Math.floor(Math.random() * 255).toString(16).padStart(2, "0");
+    const g = Math.floor(Math.random() * 255).toString(16).padStart(2, "0");
+    const b = Math.floor(Math.random() * 255).toString(16).padStart(2, "0");
+    blueprint.playerColor = `#${r}${g}${b}`;
+    blueprint.isDoodad = true;
   }
 };
 

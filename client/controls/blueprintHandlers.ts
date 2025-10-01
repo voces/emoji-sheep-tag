@@ -54,7 +54,7 @@ export const normalizeBuildPosition = (
       y,
       unitType === "tile"
         ? "offset-full"
-        : ((prefabs[unitType]?.tilemap?.width ?? 0) % 4 === 0
+        : ((prefabs[unitType]?.tilemap?.height ?? 0) % 4 === 0
           ? "half"
           : "offset-half"),
     )

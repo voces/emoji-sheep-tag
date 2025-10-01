@@ -121,7 +121,9 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
     y: targetTarget ? target?.position?.y ?? e.world.y : e.world.y,
   }, {
     model: "gravity",
-    color: target && orders.some(([u]) => isEnemy(u, target))
+    color: target && (orders.some(([u, order]) =>
+        order.order === "attack" || isEnemy(u, target)
+      ))
       ? "#dd3333"
       : undefined,
     scale: targetTarget && target?.radius ? target.radius * 4 : 1,
@@ -196,7 +198,8 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
       y: unitsWithTarget.size ? target?.position?.y ?? e.world.y : e.world.y,
     }, {
       model: "gravity",
-      color: target && unitsWithTarget.some((u) => isEnemy(u, target))
+      color: orderToExecute === "attack" ||
+          (target && unitsWithTarget.some((u) => isEnemy(u, target)))
         ? "#dd3333"
         : undefined,
       scale: unitsWithTarget.size && target?.radius ? target.radius * 4 : 1,

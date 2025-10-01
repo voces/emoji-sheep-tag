@@ -40,6 +40,13 @@
 - https://www.svgrepo.com/svg/486531/arrow-left
 - https://www.svgrepo.com/svg/486532/arrow-right
 - https://www.svgrepo.com/svg/486533/arrow-up
+- https://www.svgrepo.com/svg/206151/well
+- https://www.svgrepo.com/svg/206175/windmill-mill
+- https://www.svgrepo.com/svg/276147/scarecrow
+- https://www.svgrepo.com/svg/107002/tractor
+- https://www.svgrepo.com/svg/275484/barrel
+- https://www.svgrepo.com/svg/228580/bale-hay
+- https://www.svgrepo.com/svg/178406/wood-nature
 
 # Audio
 

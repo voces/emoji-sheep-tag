@@ -152,7 +152,7 @@ export const CommandPalette = () => {
           if (
             typeof doodad.facing === "number" &&
             doodad.facing !== DEFAULT_FACING
-          ) stored.facing = rad2deg(doodad.facing);
+          ) stored.facing = Math.round(rad2deg(doodad.facing));
           if (doodad.playerColor) stored.playerColor = doodad.playerColor;
           if (typeof doodad.vertexColor === "number") {
             stored.vertexColor = doodad.vertexColor;

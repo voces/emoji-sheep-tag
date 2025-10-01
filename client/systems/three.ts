@@ -39,7 +39,7 @@ import square from "../assets/square.svg" with { type: "text" };
 import pinkPotion from "../assets/pinkPotion.svg" with { type: "text" };
 import rock from "../assets/rock.svg" with { type: "text" };
 import house from "../assets/house.svg" with { type: "text" };
-import atom from "../assets/atom.svg" with { type: "text" };
+// import atom from "../assets/atom.svg" with { type: "text" };
 import ramp from "../assets/ramp.svg" with { type: "text" };
 import raise from "../assets/raise.svg" with { type: "text" };
 import lower from "../assets/lower.svg" with { type: "text" };
@@ -48,6 +48,14 @@ import right from "../assets/right.svg" with { type: "text" };
 import up from "../assets/up.svg" with { type: "text" };
 import down from "../assets/down.svg" with { type: "text" };
 import location from "../assets/location.svg" with { type: "text" };
+import well from "../assets/well.svg" with { type: "text" };
+import windmill from "../assets/windmill.svg" with { type: "text" };
+import scarecrow from "../assets/scarecrow.svg" with { type: "text" };
+// import tractor from "../assets/tractor.svg" with { type: "text" };
+import derelictHouse from "../assets/derelictHouse.svg" with { type: "text" };
+import barrel from "../assets/barrel.svg" with { type: "text" };
+import hayBale from "../assets/hayBale.svg" with { type: "text" };
+import wood from "../assets/wood.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -82,7 +90,7 @@ export const svgs: Record<string, string> = {
   pinkPotion,
   rock,
   house,
-  atom,
+  // atom,
   ramp,
   raise,
   lower,
@@ -91,6 +99,14 @@ export const svgs: Record<string, string> = {
   up,
   down,
   location,
+  well,
+  windmill,
+  scarecrow,
+  // tractor,
+  derelictHouse,
+  barrel,
+  hayBale,
+  wood,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -104,18 +120,26 @@ const collections: Record<string, InstancedGroup | undefined> = {
   }),
   rock: loadSvg(rock, 0.6, { layer: 2 }),
   fence: loadSvg(fence, 0.07, { layer: 2 }),
+  well: loadSvg(well, 0.13, { layer: 2 }),
+  scarecrow: loadSvg(scarecrow, 0.14, { layer: 2 }),
+  derelictHouse: loadSvg(derelictHouse, 3.5, { layer: 2 }),
+  barrel: loadSvg(barrel, 0.14, { layer: 2 }),
+  hayBale: loadSvg(hayBale, 0.31, { layer: 2, xOffset: -0.05, yOffset: -0.1 }),
+  wood: loadSvg(wood, 0.12, { layer: 2 }),
+  // tractor: loadSvg(tractor, 1, { layer: 2 }),
 
   // Basic units and structures
   sheep: loadSvg(sheep, 1),
   hut: loadSvg(hut, 2),
   house: loadSvg(house, 3.4),
   divinity: loadSvg(divinity, 1),
-  shop: loadSvg(shop, 1),
+  // shop: loadSvg(shop, 1),
   fox: loadSvg(fox, 1.8),
   wolf: loadSvg(wolf, 2),
-  atom: loadSvg(atom, 0.05),
+  // atom: loadSvg(atom, 0.05),
 
   // Trees (should render in front of structures)
+  windmill: loadSvg(windmill, 0.24, { layer: 2, yOffset: 0.1, xOffset: -0.1 }),
   tree: loadSvg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
 
   // Temple stacks on things, we want it visible, always
