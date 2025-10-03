@@ -36,7 +36,7 @@ const updateFires = (e: Entity, remove = false) => {
           x: e.position.x + fireOffsets[i].x,
           y: e.position.y + fireOffsets[i].y,
         },
-        zIndex: 0.2 + i * 0.01,
+        zIndex: 0.05 + i * 0.01,
         isDoodad: true,
       });
       existing.push(fire);

@@ -220,6 +220,7 @@ export const zUpdate = z.object({
   movementSpeed: z.number().optional(),
   facing: z.number().nullable().optional(),
   turnSpeed: z.number().optional(),
+  sightRadius: z.number().optional(),
   actions: z.array(zAction).readonly().optional(),
   completionTime: z.number().optional(),
   progress: z.number().nullable().optional(),
@@ -255,6 +256,9 @@ export const zUpdate = z.object({
 
   // Bounty
   bounty: z.number().optional(),
+
+  // Fog of war
+  blocksLineOfSight: z.number().optional(),
 
   // Pathing
   radius: z.number().optional(),

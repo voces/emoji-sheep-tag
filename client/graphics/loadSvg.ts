@@ -69,7 +69,7 @@ export const loadSvg = (
         opacity,
         transparent: true,
         side: DoubleSide,
-        depthWrite: false,
+        depthWrite: true,
         userData: { player: "player" in path.userData?.node.dataset },
       });
       material.onBeforeCompile = (shader) => {

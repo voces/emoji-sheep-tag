@@ -1,4 +1,5 @@
 import { app, SystemEntity } from "../ecs.ts";
+import { getLocalPlayer } from "@/vars/players.ts";
 
 const indicators = new Map<
   SystemEntity<"prefab" | "modelScale">,
@@ -46,5 +47,6 @@ export const newIndicator = (
     position,
     modelScale: scale,
     isDoodad: true,
+    owner: getLocalPlayer()?.id,
   });
 };

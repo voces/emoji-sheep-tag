@@ -6,13 +6,6 @@ import {
   PlaneGeometry,
 } from "three";
 
-const faceColorMaterial = new MeshBasicMaterial({
-  vertexColors: true,
-  transparent: true,
-  side: DoubleSide,
-  // flatShading: true,
-});
-
 export class ColorAttribute extends BufferAttribute {
   static COMPONENTS_PER_COLOR = 4;
   static VERTICES_PER_FACE = 3;
@@ -119,7 +112,14 @@ export class Grid extends Mesh {
     const colors = new GridColorAttribute(width, height);
     plane.setAttribute("color", colors);
 
-    super(plane, faceColorMaterial);
+    super(
+      plane,
+      new MeshBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        side: DoubleSide,
+      }),
+    );
 
     this.colors = colors;
   }

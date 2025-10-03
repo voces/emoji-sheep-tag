@@ -52,7 +52,10 @@ export class BuildGrid extends Group {
         this.grid.geometry.dispose();
       }
       this.grid = new Grid(width, height);
-      this.grid.position.z = -0.005; // Slightly above terrain but below everything else
+      if ("depthWrite" in this.grid.material) {
+        this.grid.material.depthWrite = false;
+      }
+      this.grid.position.z = -0.001; // Slightly above terrain but below everything else
       this.grid.scale.setScalar(0.25);
       this.add(this.grid);
       this.currentWidth = width;

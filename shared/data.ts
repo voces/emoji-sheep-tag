@@ -203,6 +203,8 @@ type DataEntity = Pick<
   //
   | "movementSpeed"
   | "turnSpeed"
+  | "sightRadius"
+  | "blocksLineOfSight"
   | "actions"
   | "completionTime"
   | "isDoodad"
@@ -226,6 +228,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Sheep",
     movementSpeed: 3,
     turnSpeed: 15,
+    sightRadius: 6,
     radius: 0.25,
     pathing: 1,
     actions: [
@@ -303,6 +306,7 @@ export const prefabs: Record<string, DataEntity> = {
     inventory: [],
     movementSpeed: 3.1,
     turnSpeed: 10,
+    sightRadius: 9,
     radius: 0.5,
     pathing: 1,
     mana: 60,
@@ -369,6 +373,7 @@ export const prefabs: Record<string, DataEntity> = {
     alpha: 0.7,
     movementSpeed: 1,
     turnSpeed: 5,
+    sightRadius: 4,
     radius: 0.125,
     pathing: 8,
     actions: [move, stop],
@@ -379,6 +384,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Fox",
     movementSpeed: 2.5,
     turnSpeed: 8,
+    sightRadius: 6,
     radius: 0.5,
     pathing: 1,
     attack: {
@@ -407,6 +413,7 @@ export const prefabs: Record<string, DataEntity> = {
   },
   hut: {
     name: "Hut",
+    sightRadius: 4,
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 120,
@@ -417,6 +424,7 @@ export const prefabs: Record<string, DataEntity> = {
   },
   house: {
     name: "House",
+    sightRadius: 4,
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 220, // Tuned to be 3 hit with 1 claw and 2 hit with 2 claws
@@ -429,6 +437,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Tiny Hut",
     model: "hut",
     modelScale: 0.5,
+    sightRadius: 4,
     radius: 0.25,
     tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
     maxHealth: 20,
@@ -441,6 +450,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Wide Hut",
     model: "hut",
     modelScale: 1.5,
+    sightRadius: 4,
     radius: 0.75,
     tilemap: { map: Array(36).fill(3), top: -3, left: -3, width: 6, height: 6 },
     maxHealth: 140,
@@ -453,6 +463,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Rotund Hut",
     model: "hut",
     modelScale: 2,
+    sightRadius: 4,
     radius: 1,
     tilemap: { map: Array(64).fill(3), top: -4, left: -4, width: 8, height: 8 },
     maxHealth: 200,
@@ -464,6 +475,7 @@ export const prefabs: Record<string, DataEntity> = {
   temple: {
     name: "Temple",
     model: "hinduTemple",
+    sightRadius: 4,
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     requiresTilemap: {
@@ -482,6 +494,7 @@ export const prefabs: Record<string, DataEntity> = {
   translocationHut: {
     name: "Translocation Hut",
     model: "divinity",
+    sightRadius: 4,
     radius: 0.5,
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 10,
@@ -520,6 +533,7 @@ export const prefabs: Record<string, DataEntity> = {
     maxHealth: 25,
     targetedAs: ["tree"],
     sounds: { death: ["treefall1"] },
+    blocksLineOfSight: 1,
   },
   treeStump: {
     name: "Tree Stump",

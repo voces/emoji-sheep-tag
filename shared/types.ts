@@ -193,6 +193,7 @@ export type Entity = {
   movementSpeed?: number;
   /** Radians per second */
   turnSpeed?: number;
+  sightRadius?: number;
   actions?: ReadonlyArray<UnitDataAction>;
   completionTime?: number;
   progress?: number | null;
@@ -254,6 +255,9 @@ export type Entity = {
 
   // Bounty
   bounty?: number;
+
+  // Fog of war
+  blocksLineOfSight?: number; // Number of height levels this blocks vision
 
   // Orders
   order?: Order | null;

@@ -67,51 +67,6 @@ for (const group in classificationGroups) {
   }
 }
 
-// const computeTargetClassifications = (
-//   source: Entity,
-//   target: Entity,
-// ) => {
-//   const classifications: Classification[] = [];
-
-//   if (isAlly(source, target)) classifications.push("ally");
-//   if (isEnemy(source, target)) classifications.push("enemy");
-//   if (isNeutral(source, target)) classifications.push("neutral");
-
-//   if (isOther(source, target)) classifications.push("other");
-//   if (isSelf(source, target)) classifications.push("self");
-
-//   if (isStructure(target)) classifications.push("structure");
-//   if (isUnit(target)) classifications.push("unit");
-
-//   if (isSpirit(target)) classifications.push("spirit");
-//   if (isNotSpirit(target)) classifications.push("notSpirit");
-
-//   return classifications;
-// };
-
-// const computeSourceClassifications = (
-//   source: Entity,
-//   target: Entity,
-//   overrides?: Classification[],
-// ) => {
-//   const classifications: Classification[] = [];
-
-//   if (isAlly(source, target)) classifications.push("ally");
-//   if (isEnemy(source, target)) classifications.push("enemy");
-//   if (isNeutral(source, target)) classifications.push("neutral");
-
-//   if (isOther(source, target)) classifications.push("other");
-//   if (isSelf(source, target)) classifications.push("self");
-
-//   if (isStructure(target)) classifications.push("structure");
-//   if (isUnit(target)) classifications.push("unit");
-
-//   if (isSpirit(target)) classifications.push("spirit");
-//   if (isNotSpirit(target)) classifications.push("notSpirit");
-
-//   return classifications;
-// };
-
 export const isAlly = (source: Entity | string, target: Entity | string) => {
   if (typeof target !== "string") {
     if (target.targetedAs?.includes("ally")) return true;
@@ -188,7 +143,7 @@ export const isUnit = (entity: Entity) => {
   return !!entity.movementSpeed;
 };
 
-const isTree = (entity: Entity) => !!entity.targetedAs?.includes("tree");
+export const isTree = (entity: Entity) => !!entity.targetedAs?.includes("tree");
 
 const isSpirit = (entity: Entity) => !!entity.targetedAs?.includes("spirit");
 

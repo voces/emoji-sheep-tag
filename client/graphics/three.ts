@@ -1,14 +1,18 @@
 import {
   AudioListener,
   Color,
+  DepthTexture,
   PerspectiveCamera,
   Scene,
+  UnsignedInt248Type,
   WebGLRenderer,
+  WebGLRenderTarget,
 } from "three";
 import { center, cliffs, height, tiles, width } from "@/shared/map.ts";
 import { stats } from "../util/Stats.ts";
 import { tileDefs } from "@/shared/data.ts";
 import { Terrain2D } from "./Terrain2D.ts";
+import { FogPass } from "./FogPass.ts";
 
 const canvas = document.querySelector("canvas");
 if (!canvas) throw new Error("Could not find canvas");
@@ -24,12 +28,31 @@ Object.assign(globalThis, { camera });
 
 // undefined in tests
 export let renderer: WebGLRenderer | undefined;
+export let renderTarget: WebGLRenderTarget | undefined;
+
+const fogState = { pass: undefined as FogPass | undefined };
+export const getFogPass = () => fogState.pass;
+export const setFogPass = (pass: FogPass) => {
+  fogState.pass = pass;
+};
+
 if (!("Deno" in globalThis)) {
   renderer = new WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(globalThis.devicePixelRatio);
   renderer.setClearColor(new Color(0x333333));
   renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
   document.body.appendChild(renderer.domElement);
+
+  const width = globalThis.innerWidth * globalThis.devicePixelRatio;
+  const height = globalThis.innerHeight * globalThis.devicePixelRatio;
+
+  // Render target with depth texture for fog shader
+  // Keep it in LinearSRGBColorSpace (default) - the fog shader will handle gamma
+  renderTarget = new WebGLRenderTarget(width, height, {
+    depthBuffer: true,
+    depthTexture: new DepthTexture(width, height, UnsignedInt248Type),
+    samples: 4, // WebGL2 MSAA
+  });
 }
 
 camera.position.z = 9;
@@ -120,8 +143,9 @@ export const terrain = new Terrain2D(
   ],
 );
 terrain.layers.set(3);
-terrain.position.z = -0.03;
+terrain.position.z = -0.002;
 terrain.scale.setScalar(0.5);
+if ("depthWrite" in terrain.material) terrain.material.depthWrite = false;
 scene.add(terrain);
 // deno-lint-ignore no-explicit-any
 (globalThis as any).terrain = terrain;
@@ -149,6 +173,11 @@ const resize = () => {
 
   // Update renderer size
   renderer?.setSize(newWidth, newHeight);
+
+  // Update render target with pixel ratio
+  const width = newWidth * globalThis.devicePixelRatio;
+  const height = newHeight * globalThis.devicePixelRatio;
+  renderTarget?.setSize(width, height);
 };
 
 globalThis.addEventListener("resize", resize);
@@ -182,7 +211,20 @@ const animate = () => {
     renderListeners[i](delta, time);
   }
 
-  renderer?.render(scene, camera);
+  const fogPass = getFogPass();
+  if (fogPass && renderTarget && renderer) {
+    fogPass.updateCamera(camera);
+
+    // Render scene to non-MSAA target with depth
+    renderer.setRenderTarget(renderTarget);
+    renderer.clear();
+    renderer.render(scene, camera);
+
+    // Apply fog pass
+    fogPass.render(renderer, renderTarget, renderTarget, delta);
+  } else {
+    renderer?.render(scene, camera);
+  }
 
   stats.end();
 };

@@ -3,7 +3,7 @@ import { Color } from "three";
 import { app, Entity, SystemEntity } from "../ecs.ts";
 import { InstancedGroup } from "../graphics/InstancedGroup.ts";
 import { loadSvg } from "../graphics/loadSvg.ts";
-import { getLocalPlayer, playersVar } from "../ui/vars/players.ts";
+import { getLocalPlayer, playersVar } from "@/vars/players.ts";
 import { getFps } from "../graphics/three.ts";
 import { computeUnitMovementSpeed, isAlly } from "@/shared/api/unit.ts";
 
@@ -160,6 +160,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
 Object.assign(globalThis, { collections });
 
 const isVisibleToLocalPlayer = (e: Entity) => {
+  if (e.hiddenByFog) return false;
   if (!e.teamScoped) return true;
   const l = getLocalPlayer()?.id;
   if (!l) return true;
@@ -169,7 +170,7 @@ const isVisibleToLocalPlayer = (e: Entity) => {
 const color = new Color();
 
 const updateColor = (e: Entity) => {
-  if (!app.entities.has(e) || !isVisibleToLocalPlayer(e)) return;
+  if (!app.entities.has(e)) return;
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
@@ -232,7 +233,17 @@ const onPositionOrRotationChange = (
   },
 ) => {
   const model = e.model ?? e.prefab;
-  if (!model || !isVisibleToLocalPlayer(e)) return;
+  if (!model) return;
+
+  if (!isVisibleToLocalPlayer(e)) {
+    return collections[model]?.setPositionAt(
+      e.id,
+      Infinity,
+      Infinity,
+      e.facing,
+      e.zIndex,
+    );
+  }
   if (e.order && "path" in e.order) {
     const prev = prevPositions.get(e);
     if (prev) {
@@ -271,6 +282,15 @@ const onPositionOrRotationChange = (
   prevPositions.set(e, e.position);
 };
 
+const handleFog = (e: Entity) =>
+  e.position && onPositionOrRotationChange(e as SystemEntity<"position">);
+app.addSystem({
+  props: ["hiddenByFog"],
+  onAdd: handleFog,
+  onChange: handleFog,
+  onRemove: handleFog,
+});
+
 app.addSystem({
   props: ["facing"],
   onChange: (e) => {
@@ -283,7 +303,7 @@ app.addSystem({
 });
 
 const updateScale = (e: Entity) => {
-  if (!app.entities.has(e) || !isVisibleToLocalPlayer(e)) return;
+  if (!app.entities.has(e)) return;
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
@@ -314,7 +334,7 @@ app.addSystem({
 });
 
 const updateAlpha = (e: Entity) => {
-  if (!app.entities.has(e) || !isVisibleToLocalPlayer(e)) return;
+  if (!app.entities.has(e)) return;
   const collection = collections[e.model ?? e.prefab ?? ""];
   if (!collection) return;
   collection.setAlphaAt(
@@ -343,8 +363,18 @@ app.addSystem({
     const model = e.model ?? e.prefab;
     if (
       !model || e.order.type !== "cast" || "path" in e.order ||
-      e.order.remaining === 0 || !isVisibleToLocalPlayer(e)
+      e.order.remaining === 0
     ) return;
+
+    if (!isVisibleToLocalPlayer(e)) {
+      return collections[model]?.setPositionAt(
+        e.id,
+        Infinity,
+        Infinity,
+        e.facing,
+        e.zIndex,
+      );
+    }
 
     const r = Math.random() * Math.PI * 2;
     collections[model]?.setPositionAt(
@@ -358,8 +388,21 @@ app.addSystem({
   update: (delta) => {
     for (const [e, remaining] of wasCastingMirror) {
       const model = e.model ?? e.prefab;
-      if (!model || !e.position || !isVisibleToLocalPlayer(e)) {
-        return wasCastingMirror.delete(e);
+      if (!model || !e.position) {
+        wasCastingMirror.delete(e);
+        continue;
+      }
+
+      if (!isVisibleToLocalPlayer(e)) {
+        collections[model]?.setPositionAt(
+          e.id,
+          Infinity,
+          Infinity,
+          e.facing,
+          e.zIndex,
+        );
+        wasCastingMirror.delete(e);
+        continue;
       }
 
       if ((remaining ?? 0) < delta) wasCastingMirror.delete(e);
@@ -383,10 +426,21 @@ app.addSystem({
   onAdd: (e) => {
     prevPositions.set(e, e.position);
     const model = e.model ?? e.prefab;
-    if (!model || !isVisibleToLocalPlayer(e)) return;
+    if (!model) return;
     if (!collections[model]) {
       return console.warn(`No ${e.model} SVG on ${e.id}`);
     }
+
+    if (!isVisibleToLocalPlayer(e)) {
+      return collections[model]?.setPositionAt(
+        e.id,
+        Infinity,
+        Infinity,
+        e.facing,
+        e.zIndex,
+      );
+    }
+
     collections[model]?.setPositionAt(
       e.id,
       e.position.x,

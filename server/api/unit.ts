@@ -185,7 +185,8 @@ const isReachableTarget = (attacker: Entity, target: Entity) => {
 export const acquireTarget = (e: Entity) => {
   const pos = e.position;
   if (!pos) return;
-  return getEntitiesInRange(pos.x, pos.y, 10)
+
+  const target = getEntitiesInRange(pos.x, pos.y, e.sightRadius ?? 5)
     .filter((e2) =>
       e2.position &&
       isEnemy(e, e2) &&
@@ -199,6 +200,12 @@ export const acquireTarget = (e: Entity) => {
       } else if (b[0].prefab === "sheep") return 1;
       return a[1] - b[1];
     }).find(([e2]) => isReachableTarget(e, e2))?.[0];
+  console.log(
+    "acquireTarget",
+    e.sightRadius,
+    target ? distanceBetweenPoints(pos, target.position!) : undefined,
+  );
+  return target;
 };
 
 export const orderAttack = (

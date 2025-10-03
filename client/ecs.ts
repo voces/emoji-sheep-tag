@@ -4,6 +4,7 @@ import { Entity as CommonEntity } from "@/shared/types.ts";
 import { appContext, initApp } from "@/shared/context.ts";
 import { generateDoodads } from "@/shared/map.ts";
 import { editorVar } from "@/vars/editor.ts";
+import { resetFog } from "./systems/fog.ts";
 
 export type Entity = CommonEntity & {
   selected?: boolean;
@@ -14,6 +15,8 @@ export type Entity = CommonEntity & {
   /** Client-side elapsed time for easing calculations */
   clientElapsedTime?: number;
   aspectRatio?: number;
+  /** Hidden by fog of war */
+  hiddenByFog?: boolean;
 };
 
 export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;
@@ -91,6 +94,7 @@ export const unloadEcs = () =>
       }
     }
     for (const key in map) delete map[key];
+    resetFog();
   });
 
 generateDoodads();
