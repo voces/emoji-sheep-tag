@@ -9,7 +9,6 @@ import {
   ShapeGeometry,
   Vector3,
 } from "three";
-//@deno-types="three/SVGLoader.d.ts"
 import { SVGLoader } from "three/SVGLoader";
 import { InstancedGroup } from "./InstancedGroup.ts";
 import { scene } from "./three.ts";

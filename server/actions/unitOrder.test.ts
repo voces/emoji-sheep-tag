@@ -279,13 +279,11 @@ describe("unitOrder basic actions", () => {
     const client = clients.get("test-client")!;
 
     // Try to execute action on non-existent unit - should not throw
-    expect(() => {
-      unitOrder(client, {
-        type: "unitOrder",
-        units: ["unknown-unit"],
-        order: "stop",
-      });
-    }).toThrow();
+    unitOrder(client, {
+      type: "unitOrder",
+      units: ["unknown-unit"],
+      order: "stop",
+    });
     yield;
   });
 });
