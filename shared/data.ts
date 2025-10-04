@@ -180,6 +180,24 @@ export const items: Record<string, Item> = {
       damage: 50,
     }],
   },
+  manaPotion: {
+    id: "manaPotion",
+    name: "Mana Potion",
+    description: "Restores 100 mana.",
+    icon: "bluePotion",
+    gold: 30,
+    binding: ["KeyM"],
+    charges: 1,
+    actions: [{
+      name: "Drink Mana Potion",
+      type: "auto",
+      order: "manaPotion",
+      icon: "bluePotion",
+      binding: ["KeyM"],
+      manaRestore: 100,
+      soundOnCastStart: "jarOpen1",
+    }],
+  },
 };
 
 type DataEntity = Pick<

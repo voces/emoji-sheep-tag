@@ -119,6 +119,7 @@ export type UnitDataAction = {
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
   readonly damageMultiplier?: number;
+  readonly manaRestore?: number;
   readonly soundOnCastStart?: string;
   readonly allowAllies?: boolean;
 } | {

@@ -69,7 +69,7 @@ export const unitOrder = (
       const issueResult = orderDef.onIssue(unit, target, queue);
 
       if (issueResult === "immediate") {
-        if (!precast(unit, false)) continue;
+        if (!precast(unit, false, order)) continue;
 
         orderDef?.onCastStart?.(unit);
 

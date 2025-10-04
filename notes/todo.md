@@ -1,6 +1,5 @@
 - Login system
 - Invis Farm?
-- Fog of war?
 - Items
   - Splash
   - Cloak

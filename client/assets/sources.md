@@ -47,6 +47,9 @@
 - https://www.svgrepo.com/svg/275484/barrel
 - https://www.svgrepo.com/svg/228580/bale-hay
 - https://www.svgrepo.com/svg/178406/wood-nature
+- https://www.svgrepo.com/svg/277706/potion
+- https://www.svgrepo.com/svg/57987/joystick
+- https://www.svgrepo.com/svg/395592/eye
 
 # Audio
 

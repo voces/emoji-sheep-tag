@@ -25,7 +25,6 @@ import { getEntitiesInRange } from "./kd.ts";
 
 type Cell = {
   visible: Set<Entity>;
-  trueSight: Set<Entity>;
   isVisible: boolean; // Cache for visible.size > 0
   x: number;
   y: number;
@@ -90,7 +89,6 @@ class VisibilityGrid {
       (_, y) =>
         Array.from({ length: width }, (_, x) => ({
           visible: new Set<Entity>(),
-          trueSight: new Set<Entity>(),
           isVisible: false,
           x,
           y,
@@ -112,7 +110,7 @@ class VisibilityGrid {
     this.fogTexture.needsUpdate = true;
   }
 
-  updateEntity(entity: Entity, trueSight = false) {
+  updateEntity(entity: Entity) {
     if (!entity.sightRadius || !entity.position) return;
 
     const cx = Math.floor(entity.position.x * FOG_RESOLUTION_MULTIPLIER);
@@ -188,19 +186,22 @@ class VisibilityGrid {
       }
     }
 
-    // Use flood fill from entity position outward (much faster than raycasting)
+    // Use flood fill with shadow casting for blockers
     const radiusSquared = (entity.sightRadius * FOG_RESOLUTION_MULTIPLIER) ** 2;
     const visited = new Set<number>();
-    const queue: { x: number; y: number; blockerDepth: number }[] = [{
+    const blocked = new Set<number>(); // Cells in shadow of blockers
+    const queue: { x: number; y: number }[] = [{
       x: cx,
       y: cy,
-      blockerDepth: 0,
     }];
 
     visited.add(cy * this.width + cx);
 
     while (queue.length > 0) {
-      const { x, y, blockerDepth } = queue.shift()!;
+      const { x, y } = queue.shift()!;
+
+      // Skip if this cell is in a shadow
+      if (blocked.has(y * this.width + x)) continue;
 
       // Check distance
       const dx = x - cx;
@@ -221,26 +222,64 @@ class VisibilityGrid {
       const cell = this.cells[y][x];
       const wasVisible = cell.isVisible;
       cell.visible.add(entity);
-      if (trueSight) cell.trueSight.add(entity);
       if (!wasVisible) cell.isVisible = true;
       newCells.add(cell);
       newCellKeys.add(cellIndex);
       this.modifiedCells.add(cellIndex);
 
       // Check if blocked by entity
-      let newBlockerDepth = blockerDepth;
       const blockerRow = blockerGrid.get(y);
       if (blockerRow?.has(x)) {
         const blocker = blockerAtCell.get(y)?.get(x);
         if (blocker && blocker.blocksLineOfSight) {
           const heightDiff = Math.abs(height - entityHeight);
           if (heightDiff < blocker.blocksLineOfSight) {
-            newBlockerDepth++;
-            if (newBlockerDepth > 1) continue; // Block further expansion
+            // Cast a shadow cone behind this blocker
+            // Calculate direction from viewer to blocker
+            const dirX = x - cx;
+            const dirY = y - cy;
+            const dist = Math.sqrt(dirX * dirX + dirY * dirY);
+            if (dist > 0.1) {
+              const normalX = dirX / dist;
+              const normalY = dirY / dist;
+
+              // Cast shadow rays in a small cone to account for blocker width
+              const shadowLength = Math.ceil(
+                entity.sightRadius * FOG_RESOLUTION_MULTIPLIER,
+              );
+
+              // Perpendicular vector for cone width
+              const perpX = -normalY;
+              const perpY = normalX;
+
+              // Cast multiple shadow rays to fill the cone
+              // Use blocker's radius to determine cone width (convert to fog cells)
+              const blockerRadius = blocker.radius ?? 0.5;
+              const coneWidth = blockerRadius * FOG_RESOLUTION_MULTIPLIER;
+              for (
+                let offset = -coneWidth;
+                offset <= coneWidth;
+                offset += 0.5
+              ) {
+                const rayStartX = x + perpX * offset;
+                const rayStartY = y + perpY * offset;
+
+                for (let i = 1; i <= shadowLength; i++) {
+                  const shadowX = Math.round(rayStartX + normalX * i);
+                  const shadowY = Math.round(rayStartY + normalY * i);
+                  if (
+                    shadowX >= 0 && shadowX < this.width && shadowY >= 0 &&
+                    shadowY < this.height
+                  ) {
+                    blocked.add(shadowY * this.width + shadowX);
+                  }
+                }
+              }
+            }
+            // Don't add neighbors - this blocker stops vision
+            continue;
           }
         }
-      } else {
-        newBlockerDepth = 0; // Reset when leaving blocker
       }
 
       // Add neighbors to queue
@@ -266,7 +305,6 @@ class VisibilityGrid {
         queue.push({
           x: neighbor.x,
           y: neighbor.y,
-          blockerDepth: newBlockerDepth,
         });
       }
     }
@@ -276,7 +314,6 @@ class VisibilityGrid {
       for (const cell of oldCells) {
         if (!newCells.has(cell)) {
           cell.visible.delete(entity);
-          cell.trueSight.delete(entity);
           cell.isVisible = cell.visible.size > 0;
           this.modifiedCells.add(cell.y * this.width + cell.x);
         }
@@ -292,7 +329,6 @@ class VisibilityGrid {
 
     for (const cell of cells) {
       cell.visible.delete(entity);
-      cell.trueSight.delete(entity);
       cell.isVisible = cell.visible.size > 0;
       // Mark cell as modified so fog updates
       this.modifiedCells.add(cell.y * this.width + cell.x);
@@ -331,13 +367,6 @@ class VisibilityGrid {
     const fy = Math.floor(y * FOG_RESOLUTION_MULTIPLIER);
     if (fx < 0 || fx >= this.width || fy < 0 || fy >= this.height) return false;
     return this.cells[fy][fx].visible.size > 0;
-  }
-
-  hasTrueSight(x: number, y: number): boolean {
-    const fx = Math.floor(x * FOG_RESOLUTION_MULTIPLIER);
-    const fy = Math.floor(y * FOG_RESOLUTION_MULTIPLIER);
-    if (fx < 0 || fx >= this.width || fy < 0 || fy >= this.height) return false;
-    return this.cells[fy][fx].trueSight.size > 0;
   }
 
   isPositionVisible(x: number, y: number): boolean {
@@ -388,7 +417,6 @@ class VisibilityGrid {
       for (let x = 0; x < this.width; x++) {
         const cell = this.cells[y][x];
         cell.visible.clear();
-        cell.trueSight.clear();
         cell.isVisible = false;
       }
     }
@@ -514,6 +542,7 @@ export const resetFog = () => {
 
 // System to hide enemy units in fog (but keep structures visible once seen)
 const handleEntityVisibility = (entity: SystemEntity<"position">) => {
+  // These entities are always visible
   if (
     entity.type === "cosmetic" || entity.type === "static" || isTree(entity)
   ) return;

@@ -6,6 +6,7 @@ export const playSoundAt = (
   soundName: string,
   maxDuration = 10,
 ) => {
+  console.log("create sound entity");
   addEntity({
     id: `sound-${Date.now()}-${Math.random()}`,
     position: { x: position.x, y: position.y },

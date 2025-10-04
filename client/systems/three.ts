@@ -56,6 +56,7 @@ import derelictHouse from "../assets/derelictHouse.svg" with { type: "text" };
 import barrel from "../assets/barrel.svg" with { type: "text" };
 import hayBale from "../assets/hayBale.svg" with { type: "text" };
 import wood from "../assets/wood.svg" with { type: "text" };
+import bluePotion from "../assets/blue-potion.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -107,6 +108,7 @@ export const svgs: Record<string, string> = {
   barrel,
   hayBale,
   wood,
+  bluePotion,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

@@ -7,6 +7,7 @@ import { speedPotOrder } from "./speedPot.ts";
 import { strengthPotionOrder } from "./strengthPotion.ts";
 import { meteorOrder } from "./meteor.ts";
 import { saveOrder } from "./save.ts";
+import { manaPotionOrder } from "./manaPotion.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -29,6 +30,7 @@ registerOrder(speedPotOrder);
 registerOrder(strengthPotionOrder);
 registerOrder(meteorOrder);
 registerOrder(saveOrder);
+registerOrder(manaPotionOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);
