@@ -98,7 +98,7 @@ class VisibilityGrid {
     this.fogData = new Uint8Array(width * height);
 
     this.fogTexture = new DataTexture(
-      this.fogData as unknown as BufferSource,
+      this.fogData,
       width,
       height,
       RedFormat,
