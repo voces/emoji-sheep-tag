@@ -7,6 +7,7 @@ import { CommandPalette } from "./views/CommandPalette.tsx";
 import { Settings } from "./views/Settings/index.tsx";
 import { Wrapper } from "./Wrapper.tsx";
 import { DisconnectedDialog } from "./views/DisconnectedDialog.tsx";
+import { PerformanceWarning } from "@/components/PerformanceWarning.tsx";
 
 const pages = {
   menu: Menu,
@@ -20,6 +21,7 @@ export const App = () => {
 
   return (
     <Wrapper>
+      <PerformanceWarning />
       <Page />
       <DisconnectedDialog />
       <CommandPalette />
