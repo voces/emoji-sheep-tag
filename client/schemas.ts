@@ -76,7 +76,7 @@ const zClassification = z.union([
 const zIconEffect = z.union([z.literal("mirror")]);
 
 // Define the base action types first (non-recursive)
-const zBaseAction = z.union([
+const zBaseAction = z.discriminatedUnion("type", [
   z.object({
     name: z.string(),
     type: z.literal("build"),
@@ -384,7 +384,7 @@ const zLobbySettingsMessage = zLobbySettings.extend({
   type: z.literal("lobbySettings"),
 });
 
-export const zMessage = z.union([
+export const zMessage = z.discriminatedUnion("type", [
   zStart,
   zUpdates,
   zColorChange,

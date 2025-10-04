@@ -5,7 +5,7 @@ let worker: SharedWorker | undefined;
 
 let channel: BroadcastChannel | undefined;
 let sharedBlobURL: string | undefined;
-const zLocalBlobMessage = z.union([
+const zLocalBlobMessage = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("blobUrl"),
     url: z.string(),

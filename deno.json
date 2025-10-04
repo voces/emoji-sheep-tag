@@ -21,11 +21,11 @@
     "@verit/ecs": "jsr:@verit/ecs",
     "esbuild": "npm:esbuild",
     "global-jsdom/register": "npm:global-jsdom/register",
-    "jsdom": "https://esm.sh/jsdom@24.1.0&pin=v135",
+    "jsdom": "npm:jsdom@24.1.0",
     "react-dom": "npm:react-dom",
     "react": "npm:react",
     "styled-components": "npm:styled-components",
-    "three": "npm:three@0.166.1",
+    "three": "npm:three",
     "three/SVGLoader": "npm:three/examples/jsm/loaders/SVGLoader.js",
     "typed-event-target": "https://deno.land/x/typescript_event_target@v1.0.5/mod.ts",
     "zod": "npm:zod"
@@ -41,7 +41,7 @@
     "jsxImportSource": "npm:react",
     "types": [
       "npm:@types/react",
-      "npm:@types/three@0.166",
+      "npm:@types/three",
       "./client/assets/asset.d.ts",
       "./client/types.d.ts"
     ]

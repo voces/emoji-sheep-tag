@@ -120,7 +120,7 @@ export class Client {
 // type ClientInstance = InstanceType<typeof Client>;
 // export type { ClientInstance as Client };
 
-const zClientToServerMessage = z.union([
+const zClientToServerMessage = z.discriminatedUnion("type", [
   zStart,
   zBuild,
   zOrderEvent,

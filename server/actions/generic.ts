@@ -5,7 +5,7 @@ import { generateUniqueName } from "../util/uniqueName.ts";
 
 export const zGenericEvent = z.object({
   type: z.literal("generic"),
-  event: z.union([
+  event: z.discriminatedUnion("type", [
     z.object({
       type: z.literal("colorChange"),
       color: z.string().regex(/^#[a-f0-9]{6}$/i, {
