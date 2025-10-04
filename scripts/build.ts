@@ -82,13 +82,22 @@ const buildHtml = async (env: "dev" | "prod") => {
 export const build = async (env: "dev" | "prod") => {
   const start = performance.now();
 
-  // Run HTML/JS building and sound asset copying in true parallel
-  await Promise.all([
-    buildHtml(env),
-    processSoundAssets(),
-  ]);
+  try {
+    // Run HTML/JS building and sound asset copying in true parallel
+    await Promise.all([
+      buildHtml(env),
+      processSoundAssets(),
+    ]);
 
-  console.log("[Build] Built in", Math.round(performance.now() - start), "ms!");
+    console.log(
+      "[Build] Built in",
+      Math.round(performance.now() - start),
+      "ms!",
+    );
+  } finally {
+    // Always stop esbuild service to prevent orphaned processes
+    await esbuild.stop();
+  }
 };
 
 if (import.meta.main) await build(Deno.args.includes("--dev") ? "dev" : "prod");

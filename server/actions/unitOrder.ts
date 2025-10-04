@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { lookup } from "../systems/lookup.ts";
 import { Client } from "../client.ts";
-import { UnknownEntity } from "../errors/UnknownEntity.ts";
 import { zPoint } from "@/shared/zod.ts";
 import { handleMove } from "./move.ts";
 import { handleAttack } from "./attack.ts";
@@ -25,7 +24,7 @@ export const unitOrder = (
 ) => {
   for (const uId of units) {
     const unit = lookup(uId);
-    if (!unit) throw new UnknownEntity(uId);
+    if (!unit) return;
 
     // Find action from all possible sources
     const result = findActionAndItem(unit, order);

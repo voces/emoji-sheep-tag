@@ -1,6 +1,7 @@
 import { appContext } from "@/shared/context.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { flushUpdates } from "../updates.ts";
+import { lobbies } from "../lobby.ts";
 
 /**
  * @param cb
@@ -11,10 +12,11 @@ export const timeout = (cb: () => void, timeout: number) => {
   const lobby = lobbyContext.current;
   const client = clientContext.current;
   const t = setTimeout(
-    () =>
+    () => {
+      if (!lobbies.has(lobby)) return;
       lobbyContext.with(lobby, () => {
         const ecs = lobby.round?.ecs;
-        if (!ecs) return clearTimeout(t);
+        if (!ecs) return;
         appContext.with(
           ecs,
           () =>
@@ -24,17 +26,19 @@ export const timeout = (cb: () => void, timeout: number) => {
             }),
         );
         flushUpdates();
-      }),
+      });
+    },
     timeout * 1000,
   );
   return () => clearTimeout(t);
 };
 
-export const interval = (cb: () => void, interval: number) => {
+export const interval = (cb: () => void, intervalSeconds: number) => {
   const lobby = lobbyContext.current;
   const client = clientContext.current;
   const i = setInterval(
-    () =>
+    () => {
+      if (!lobbies.has(lobby)) return clearInterval(i);
       lobbyContext.with(lobby, () => {
         const ecs = lobby.round?.ecs;
         if (!ecs) return clearInterval(i);
@@ -47,8 +51,9 @@ export const interval = (cb: () => void, interval: number) => {
             }),
         );
         flushUpdates();
-      }),
-    interval * 1000,
+      });
+    },
+    intervalSeconds * 1000,
   );
   return () => clearInterval(i);
 };
