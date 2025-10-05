@@ -58,6 +58,7 @@ describe("lobbySettings action", () => {
     expect(mockMessages[0]).toEqual({
       type: "lobbySettings",
       sheep: 1,
+      autoSheep: true,
       time: 120,
       autoTime: true,
       startingGold: { sheep: 200, wolves: 250 },
@@ -123,6 +124,7 @@ describe("lobbySettings action", () => {
     expect(mockMessages[0]).toEqual({
       type: "lobbySettings",
       sheep: 1,
+      autoSheep: true,
       time: 120,
       autoTime: true,
       startingGold: { sheep: 100, wolves: 150 },
@@ -157,6 +159,7 @@ describe("lobbySettings action", () => {
     expect(mockMessages[0]).toEqual({
       type: "lobbySettings",
       sheep: 1,
+      autoSheep: true,
       time: 120,
       autoTime: true,
       startingGold: { sheep: 300, wolves: 150 },
@@ -219,6 +222,7 @@ describe("lobbySettings action", () => {
       expect(message).toEqual({
         type: "lobbySettings",
         sheep: 1,
+        autoSheep: true,
         time: 120,
         autoTime: true,
         startingGold: { sheep: 400, wolves: 500 },
@@ -252,6 +256,7 @@ describe("lobbySettings action", () => {
     expect(mockMessages[0]).toEqual({
       type: "lobbySettings",
       sheep: 1,
+      autoSheep: true,
       time: 120,
       autoTime: true,
       startingGold: { sheep: 0, wolves: 1000 },
