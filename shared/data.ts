@@ -298,6 +298,14 @@ export const prefabs: Record<string, DataEntity> = {
         goldCost: 30,
       },
       {
+        name: "Build Watchtower",
+        description: "Provides vision over a large area.",
+        type: "build",
+        unitType: "watchtower",
+        binding: ["KeyC"],
+        goldCost: 12,
+      },
+      {
         name: "Destroy last farm",
         type: "auto",
         order: "destroyLastFarm",
@@ -533,6 +541,17 @@ export const prefabs: Record<string, DataEntity> = {
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
     bounty: 5,
+  },
+  watchtower: {
+    name: "Watchtower",
+    sightRadius: 14,
+    radius: 0.5,
+    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    maxHealth: 200,
+    completionTime: 3,
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
+    actions: [selfDestruct],
+    bounty: 3,
   },
   fence: {
     name: "Fence",

@@ -192,10 +192,10 @@ class VisibilityGrid {
       }
     }
 
-    // Use flood fill with shadow casting for blockers
+    // Use flood fill with shadow casting for blockers and cliffs
     const radiusSquared = (entity.sightRadius * FOG_RESOLUTION_MULTIPLIER) ** 2;
     const visited = new Set<number>();
-    const blocked = new Set<number>(); // Cells in shadow of blockers
+    const blocked = new Set<number>(); // Cells in shadow of blockers/cliffs
     const queue: { x: number; y: number }[] = [{
       x: cx,
       y: cy,
@@ -221,7 +221,41 @@ class VisibilityGrid {
       const terrainRow = terrainLayers[terrainY];
       const height = terrainRow?.[terrainX] ?? 0;
 
-      if (height > entityHeight) continue; // Cliff blocks
+      if (height > entityHeight) {
+        // Cliff blocks - cast shadow behind it
+        const dist = Math.sqrt(distSquared);
+        if (dist > 0.1) {
+          const normalX = dx / dist;
+          const normalY = dy / dist;
+
+          // Cast shadow from this cliff cell
+          const shadowLength = Math.ceil(
+            entity.sightRadius * FOG_RESOLUTION_MULTIPLIER,
+          );
+
+          // Perpendicular vector for cone width
+          const perpX = -normalY;
+          const perpY = normalX;
+
+          // Cast shadow rays in a cone (1 cell wide for cliff edges)
+          for (let offset = -1; offset <= 1; offset += 0.5) {
+            const rayStartX = x + perpX * offset;
+            const rayStartY = y + perpY * offset;
+
+            for (let i = 1; i <= shadowLength; i++) {
+              const shadowX = Math.round(rayStartX + normalX * i);
+              const shadowY = Math.round(rayStartY + normalY * i);
+              if (
+                shadowX >= 0 && shadowX < this.width && shadowY >= 0 &&
+                shadowY < this.height
+              ) {
+                blocked.add(shadowY * this.width + shadowX);
+              }
+            }
+          }
+        }
+        continue; // Don't add neighbors - cliff stops vision
+      }
 
       // Mark as visible
       const cellIndex = y * this.width + x;
