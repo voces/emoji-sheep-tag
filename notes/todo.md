@@ -8,7 +8,8 @@
   - Scythe?
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
-- Fix save message
+- Max 24 players
+- Multiple lobbies (allow lobby select)
 
 # Perf
 

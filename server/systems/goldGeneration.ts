@@ -1,6 +1,7 @@
 import { addSystem } from "@/shared/context.ts";
 import { getPlayerTeam } from "@/shared/api/player.ts";
 import { lobbyContext } from "../contexts.ts";
+import { getSheep } from "./sheep.ts";
 
 addSystem({
   props: ["isPlayer", "owner"],
@@ -10,6 +11,12 @@ addSystem({
     const team = getPlayerTeam(entity.owner);
 
     if (team !== "sheep" && team !== "wolf") return;
+
+    // Sheep players only generate gold if they have a living sheep
+    if (team === "sheep") {
+      const sheep = getSheep(entity.owner);
+      if (!sheep || !sheep.health || sheep.health <= 0) return;
+    }
 
     // Determine gold generation rate based on team
     const goldPerSecond = team === "sheep"

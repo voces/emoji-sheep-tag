@@ -9,10 +9,11 @@ import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
 import { center, generateDoodads } from "@/shared/map.ts";
 import { appContext } from "@/shared/context.ts";
-import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
+import { getSheepSpawn } from "../st/getSheepSpawn.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { draftTeams, getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
 import { endRound } from "../lobbyApi.ts";
+import { spawnPracticeUnits } from "../api/player.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -100,8 +101,11 @@ export const start = (
       const lobby2 = lobbyContext.current;
       if (!lobby2.round) return;
       for (const owner of sheep) {
-        newUnit(owner.id, "sheep", ...getSheepSpawn());
-        if (practice) newUnit(owner.id, "spirit", ...getSpiritSpawn());
+        if (practice) {
+          spawnPracticeUnits(owner.id);
+        } else {
+          newUnit(owner.id, "sheep", ...getSheepSpawn());
+        }
       }
 
       if (!practice) {
@@ -117,9 +121,10 @@ export const start = (
       timeout(() => {
         const lobby = lobbyContext.current;
         if (!lobby.round) return;
-        for (const owner of practice ? sheep : wolves) {
-          const wolf = newUnit(owner.id, "wolf", center.x, center.y);
-          if (practice && wolf.manaRegen) wolf.manaRegen *= 10;
+        if (!practice) {
+          for (const owner of wolves) {
+            newUnit(owner.id, "wolf", center.x, center.y);
+          }
         }
 
         if (!practice) {

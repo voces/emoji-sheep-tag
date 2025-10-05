@@ -21,6 +21,7 @@ import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
 import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
 import { getIdealSheep, getIdealTime } from "./st/roundHelpers.ts";
+import { addPlayerToPracticeGame } from "./api/player.ts";
 import { LobbySettings } from "../client/schemas.ts";
 import {
   editorCreateEntity,
@@ -215,6 +216,15 @@ export const handleSocket = (socket: Socket, url?: URL) => {
         "added to lobby",
         lobby.name,
       );
+
+      // If joining mid-round in practice mode, add to sheep team and spawn units
+      if (lobby.round?.practice && !client.playerEntity) {
+        const ecs = lobby.round.ecs;
+        appContext.with(
+          ecs,
+          () => ecs.batch(() => addPlayerToPracticeGame(client)),
+        );
+      }
     });
   });
 
@@ -280,8 +290,17 @@ export const handleSocket = (socket: Socket, url?: URL) => {
   socket.addEventListener(
     "close",
     wrap(client, () => {
-      leave();
-      allClients.delete(client);
+      let batch = (fn: () => void) => fn();
+      try {
+        batch = appContext.current.batch;
+      } catch { /* do nothing */ }
+
+      try {
+        batch(leave);
+        allClients.delete(client);
+      } finally {
+        flushUpdates();
+      }
     }),
   );
 };

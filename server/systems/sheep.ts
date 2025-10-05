@@ -7,14 +7,11 @@ import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 const map = new WeakMap<App<Entity>, ExtendedSet<Entity>>();
 
 export function getSheep(): ExtendedSet<Entity>;
-export function getSheep(player: string): Entity;
+export function getSheep(player: string): Entity | undefined;
 export function getSheep(player?: string | undefined) {
   const sheep = map.get(appContext.current) ??
-    raise("Expected sheep map to bet for app");
-  return player
-    ? sheep.find((s) => s.owner === player) ??
-      raise(`Could not find sheep for ${player}`)
-    : sheep;
+    raise("Expected sheep map to be exist for app");
+  return player ? sheep.find((s) => s.owner === player) : sheep;
 }
 
 addSystem((app) => {

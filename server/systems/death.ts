@@ -2,10 +2,11 @@ import { endRound, send } from "../lobbyApi.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { start } from "../actions/start.ts";
 import { timeout } from "../api/timing.ts";
-import { getPlayer, grantPlayerGold } from "../api/player.ts";
+import { getPlayer, grantPlayerGold, sendPlayerGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getSheep } from "./sheep.ts";
+import { distributeEquitably } from "../util/equitableDistribution.ts";
 import { newUnit, orderAttack } from "../api/unit.ts";
 import { Entity } from "@/shared/types.ts";
 import { newGoldText } from "../api/floatingText.ts";
@@ -106,7 +107,30 @@ const onSheepDeath = (sheep: Entity) => {
       const attacker = lookup(sheep.lastAttacker);
       if (attacker) orderAttack(attacker, newSheep);
     }
-  } else newUnit(sheep.owner, "spirit", ...getSpiritSpawn());
+  } else {
+    newUnit(sheep.owner, "spirit", ...getSpiritSpawn());
+
+    const dyingSheepGold = getPlayer(sheep.owner)?.gold ?? 0;
+    if (dyingSheepGold > 0) {
+      const survivingAllies = Array.from(getSheep())
+        .filter((s) => s.health && s.health > 0 && s.owner !== sheep.owner);
+
+      if (survivingAllies.length > 0) {
+        const currentGold = survivingAllies.map((ally) =>
+          getPlayer(ally.owner)?.gold ?? 0
+        );
+        const shares = distributeEquitably(dyingSheepGold, currentGold);
+
+        for (let i = 0; i < survivingAllies.length; i++) {
+          const ally = survivingAllies[i];
+          const share = shares[i];
+          if (!ally.owner || share === 0) continue;
+
+          sendPlayerGold(sheep.owner, ally.owner, share);
+        }
+      }
+    }
+  }
 };
 
 addSystem((app) => ({

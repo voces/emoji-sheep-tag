@@ -7,5 +7,12 @@ export const getPlayerTeam = (player: string) => {
   return "neutral";
 };
 
-export const colorName = (player: { color: string; name: string }) =>
-  `|c${player.color}|${player.name}|`;
+export const colorName = (
+  player: { color: string; name: string } | {
+    playerColor?: string | undefined | null;
+    name?: string | undefined;
+  },
+) =>
+  `|c${("color" in player ? player.color : player.playerColor) || "#FFFFFF"}|${
+    player.name ?? "<unknown>"
+  }|`;

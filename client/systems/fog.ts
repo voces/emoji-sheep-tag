@@ -22,6 +22,7 @@ import { FogPass } from "../graphics/FogPass.ts";
 import { isAlly, isStructure, isTree } from "@/shared/api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getEntitiesInRange } from "./kd.ts";
+import { getPlayerTeam } from "@/shared/api/player.ts";
 
 type Cell = {
   visible: Set<Entity>;
@@ -62,9 +63,14 @@ const removeEntityFromGrid = (entity: Entity) => {
 };
 
 // Check if an entity is allied with the local player
+// Observers (neutral team) see all entities
 const isAlliedWithLocalPlayer = (entity: Entity): boolean => {
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return false;
+
+  // If local player is neutral (observer), grant vision from all entities
+  const localTeam = getPlayerTeam(localPlayer.id);
+  if (localTeam === "neutral") return true;
 
   return isAlly(localPlayer.id, entity);
 };

@@ -1,4 +1,8 @@
 import { lobbyContext } from "../contexts.ts";
+import { newUnit } from "./unit.ts";
+import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
+import { center } from "@/shared/map.ts";
+import type { Client } from "../client.ts";
 
 /**
  * Gets a player entity by their ID
@@ -47,4 +51,55 @@ export const grantPlayerGold = (playerId: string, amount: number) => {
   if (!player) return;
 
   player.gold = Math.max((player.gold ?? 0) + amount, 0);
+};
+
+export const sendPlayerGold = (
+  senderId: string,
+  recipientId: string,
+  amount: number,
+) => {
+  const sender = getPlayer(senderId);
+  if (!sender) return;
+
+  amount = Math.min(sender.gold ?? 0, amount);
+
+  const recipient = getPlayer(recipientId);
+  if (!recipient) return;
+
+  deductPlayerGold(senderId, amount);
+  grantPlayerGold(recipientId, amount);
+};
+
+/**
+ * Spawns practice mode units for a player (sheep, spirit, and wolf)
+ * @param playerId The player's ID
+ */
+export const spawnPracticeUnits = (playerId: string) => {
+  newUnit(playerId, "sheep", ...getSheepSpawn());
+  newUnit(playerId, "spirit", ...getSpiritSpawn());
+  const wolf = newUnit(playerId, "wolf", center.x, center.y);
+  if (wolf.manaRegen) wolf.manaRegen *= 10;
+};
+
+/**
+ * Adds a player to an ongoing practice game
+ * Creates player entity and spawns units
+ * @param client The client to add to the practice game
+ */
+export const addPlayerToPracticeGame = (client: Client) => {
+  const lobby = lobbyContext.current;
+  if (!lobby?.round?.practice || client.playerEntity) return;
+
+  client.playerEntity = lobby.round.ecs.addEntity({
+    name: client.name,
+    owner: client.id,
+    playerColor: client.color,
+    isPlayer: true,
+    team: "sheep",
+    gold: 100_000,
+  });
+
+  lobby.round.sheep.add(client);
+
+  spawnPracticeUnits(client.id);
 };

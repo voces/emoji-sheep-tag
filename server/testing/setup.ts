@@ -86,6 +86,12 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     income: { sheep: 1, wolves: 1 },
   };
   lobbyContext.current = lobby;
+
+  // Add all clients to lobby.players
+  for (const client of clients.values()) {
+    lobby.players.add(client);
+  }
+
   lobby.round = {
     sheep: new Set(sheepClients.map((s) => s.client)),
     wolves: new Set(wolfClients.map((w) => w.client)),
