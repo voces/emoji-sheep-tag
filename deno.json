@@ -4,7 +4,7 @@
     "test": "deno test --no-check --allow-env --allow-net --allow-read --allow-write --unstable-broadcast-channel",
     "build": "deno run --allow-env --allow-read --allow-write --allow-run scripts/build.ts",
     "setup-hooks": "mkdir -p .hooks && cp .git/hooks/* .hooks/ 2>/dev/null || true && rm -f .hooks/*.sample 2>/dev/null || true && git config core.hooksPath .hooks",
-    "pre-commit": "deno fmt && deno lint"
+    "pre-commit": "deno fmt && deno lint && deno check"
   },
   "imports": {
     "@/client-testing/": "./client/testing/",

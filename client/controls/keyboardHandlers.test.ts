@@ -94,19 +94,19 @@ describe("keyboard handlers", () => {
         type: "target" as const,
         order: "attack",
         name: "Attack",
-        targeting: ["enemy" as const],
+        targeting: [["enemy" as const]],
       };
       const action2 = {
         type: "target" as const,
         order: "attack",
         name: "Attack",
-        targeting: ["enemy" as const],
+        targeting: [["enemy" as const]],
       };
       const action3 = {
         type: "target" as const,
         order: "heal",
         name: "Heal",
-        targeting: ["ally" as const],
+        targeting: [["ally" as const]],
       };
 
       expect(isSameAction(action1, action2)).toBe(true);
