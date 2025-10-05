@@ -16,25 +16,39 @@ import { getTeams } from "@/shared/systems/teams.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { newSfx } from "../api/sfx.ts";
 import { isEnemy } from "@/shared/api/unit.ts";
+import { formatDuration } from "@/util/formatDuration.ts";
+import { colorName } from "@/shared/api/player.ts";
 
 const onLose = () =>
   timeout(() => {
-    send({ type: "chat", message: "Wolves win!" });
+    const lobby = lobbyContext.current;
+
+    send({
+      type: "chat",
+      message: `Wolves win! ${
+        new Intl.ListFormat().format(
+          Array.from(getTeams().sheep).map((s) =>
+            colorName({
+              color: s.playerColor ?? "#ffffff",
+              name: s.name ?? "<unknown>",
+            })
+          ),
+        )
+      } lasted ${formatDuration(Date.now() - lobby.round!.start)}!`,
+    });
     endRound();
 
     // Auto start
-    const lobby = lobbyContext.current;
     setTimeout(() => {
-      if (lobby.host) {
-        clientContext.with(
-          lobby.host,
-          () =>
-            lobbyContext.with(
-              lobby,
-              () => start(lobby.host!, { type: "start" }),
-            ),
-        );
-      }
+      if (!lobby.host) return;
+      clientContext.with(
+        lobby.host,
+        () =>
+          lobbyContext.with(
+            lobby,
+            () => start(lobby.host!, { type: "start" }),
+          ),
+      );
     }, 250);
   }, 0.05);
 

@@ -1,6 +1,6 @@
 import { app, Entity, SystemEntity } from "../ecs.ts";
 
-const swings = new WeakMap<Entity, Entity>();
+const swings = new Map<Entity, Entity>();
 
 const updateSwing = (e: SystemEntity<"swing">) => {
   const existing = swings.get(e);

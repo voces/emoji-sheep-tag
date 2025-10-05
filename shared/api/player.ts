@@ -6,3 +6,6 @@ export const getPlayerTeam = (player: string) => {
   if (teams.wolves.some((p) => p.owner === player)) return "wolf";
   return "neutral";
 };
+
+export const colorName = (player: { color: string; name: string }) =>
+  `|c${player.color}|${player.name}|`;

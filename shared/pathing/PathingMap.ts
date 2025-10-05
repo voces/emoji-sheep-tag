@@ -766,14 +766,40 @@ export class PathingMap {
     );
 
     const offset = entity.radius % (1 / this.resolution);
-    // We can assume start is pathable
     const startReal = {
       x: start.x * this.resolution,
       y: start.y * this.resolution,
     };
 
     const targetPosition = "x" in target ? target : target.position;
-    const startTile = this.entityToTile(entity);
+
+    // Get start tile - if not pathable, find nearest pathable tile
+    let startTile = this.entityToTile(entity);
+    const startPathable = startTile &&
+      startTile.pathable(pathing) &&
+      cache._pathable(minimalTilemap, startTile.x, startTile.y);
+
+    if (!startPathable) {
+      // Entity has already been removed from pathingMap, so we can directly use nearestPathing
+      const nearestStart = this.nearestPathing(start.x, start.y, entity);
+
+      // Check if nearest pathable tile is too far - prevent jumps/teleports
+      const maxDistanceFromStart = 0.5; // Allow small adjustments only
+      const distanceSquared = (nearestStart.x - start.x) ** 2 +
+        (nearestStart.y - start.y) ** 2;
+
+      if (distanceSquared > maxDistanceFromStart ** 2) {
+        // Too far to reasonably path - return empty path
+        if (removed) this.addEntity(entity);
+        for (const entity of removedMovingEntities) this.addEntity(entity);
+        return [];
+      }
+
+      startTile = this.grid[
+        Math.round((nearestStart.y - offset) * this.resolution)
+      ][Math.round((nearestStart.x - offset) * this.resolution)];
+    }
+
     // For target, if the exact spot is pathable, we aim towards that; otherwise the nearest spot
     const targetTile = this.entityToTile(entity, targetPosition);
 

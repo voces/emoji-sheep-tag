@@ -134,7 +134,7 @@ const createGeometry = (faces: Face2D[], cliffMask: CliffMask) => {
         Math.round(vertex.y),
         cliffMask,
       );
-      const c = face.color.clone().offsetHSL(0, 0, (height - 2) / 30);
+      const c = face.color.clone().offsetHSL(0, 0, (height - 2) / 15);
       colors.push(c.r, c.g, c.b);
       vertexIndex++;
     }

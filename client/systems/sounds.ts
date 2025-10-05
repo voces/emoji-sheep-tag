@@ -5,7 +5,7 @@ import { stateVar } from "@/vars/state.ts";
 import { selection } from "./autoSelect.ts";
 import { lookup } from "./lookup.ts";
 import { addChatMessage } from "@/vars/chat.ts";
-import { format } from "../api/player.ts";
+import { colorName } from "@/shared/api/player.ts";
 
 app.addSystem({
   props: ["id"],
@@ -27,9 +27,9 @@ app.addSystem({
       const victim = getPlayer(e.owner);
       if (killingPlayer && victim) {
         addChatMessage(
-          `${format(killingPlayer)} ${
+          `${colorName(killingPlayer)} ${
             e.prefab === "sheep" ? "killed" : "saved"
-          } ${format(victim)}`,
+          } ${colorName(victim)}`,
         );
       }
     }

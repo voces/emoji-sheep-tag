@@ -41,8 +41,16 @@ export const tweenAttack = (e: Entity, delta: number) => {
             delete e.order;
             return delta;
           }
+          // Path was updated - try new path immediately
+          const retryResult = tweenPath(e, delta);
+          if (retryResult.pathBlocked) {
+            // Still blocked after retry, give up for this frame
+            return 0;
+          }
+          return retryResult.delta;
         }
-        return delta;
+        // No path to handle, can't make progress
+        return 0;
       }
 
       // Recalculate path to account for moving target

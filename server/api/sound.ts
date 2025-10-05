@@ -11,4 +11,5 @@ export const playSoundAt = (
     position: { x: position.x, y: position.y },
     sounds: { birth: [soundName] },
     buffs: [{ remainingDuration: maxDuration, expiration: "Sound" }],
+    isDoodad: true,
   });

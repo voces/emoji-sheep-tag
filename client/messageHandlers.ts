@@ -7,11 +7,11 @@ import { stats } from "./util/Stats.ts";
 import { data } from "./data.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { roundsVar } from "@/vars/rounds.ts";
-import { format } from "./api/player.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import type { ServerToClientMessage } from "./schemas.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { send } from "./client.ts";
+import { colorName } from "@/shared/api/player.ts";
 
 export const handlers = {
   join: (data: Extract<ServerToClientMessage, { type: "join" }>) => {
@@ -115,7 +115,7 @@ export const handlers = {
         !p.host && data.host === p.id ? { ...p, host: true } : p
       )
     );
-    if (p) addChatMessage(`${format(p)} has left the game!`);
+    if (p) addChatMessage(`${colorName(p)} has left the game!`);
     lobbySettingsVar(data.lobbySettings);
   },
   pong: ({ data }: Extract<ServerToClientMessage, { type: "pong" }>) => {

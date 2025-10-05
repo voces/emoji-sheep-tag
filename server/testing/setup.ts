@@ -103,6 +103,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     client.playerEntity = ecs.addEntity({
       name: client.name,
       owner: client.id,
+      playerColor: client.color,
       isPlayer: true,
       team: "sheep",
       gold: gold,
@@ -113,6 +114,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     client.playerEntity = ecs.addEntity({
       name: client.name,
       owner: client.id,
+      playerColor: client.color,
       isPlayer: true,
       team: "wolf",
       gold: gold,

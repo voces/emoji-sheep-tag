@@ -157,6 +157,133 @@ describe("PathingMap", () => {
     ]);
   });
 
+  describe("start position fixes", () => {
+    it("should handle entity at non-pathable start tile", () => {
+      // Create a map with a fence blocking x=1
+      // 0 0 1 0
+      // 0 0 1 0
+      const solver = new PathingMap({
+        pathing: [
+          [0, 0, 1, 0],
+          [0, 0, 1, 0],
+        ],
+        resolution: 4,
+      });
+
+      // Entity at position that rounds to a blocked tile
+      const entity = {
+        id: "entity-0",
+        position: { x: 0.5, y: 0.5 },
+        radius: 0.25,
+        pathing: 1,
+      };
+
+      // This should find nearest pathable tile and generate a valid path
+      const path = solver.path(entity, { x: 1.5, y: 0.5 });
+
+      // Should have a valid path with multiple waypoints
+      expect(path.length).toBeGreaterThan(1);
+
+      // First waypoint should be linearly pathable from start
+      expect(solver.linearPathable(entity, path[0], path[1])).toBe(true);
+    });
+
+    it("should return empty path when nearest pathable tile is too far", () => {
+      // Create a map where entity is surrounded by walls with pathable corners
+      // 0 1 1 1 0
+      // 1 1 1 1 1
+      // 1 1 1 1 1  <- entity at center, on blocked tile
+      // 1 1 1 1 1
+      // 0 1 1 1 0
+      const solver = new PathingMap({
+        pathing: [
+          [0, 1, 1, 1, 0],
+          [1, 1, 1, 1, 1],
+          [1, 1, 1, 1, 1],
+          [1, 1, 1, 1, 1],
+          [0, 1, 1, 1, 0],
+        ],
+        resolution: 4,
+      });
+
+      // Entity at center, which rounds to a non-pathable tile
+      // Nearest pathable tile is at corner (0.5, 0.5) which is ~2.83 units away
+      const entity = {
+        id: "entity-0",
+        position: { x: 2.5, y: 2.5 },
+        radius: 0.25,
+        pathing: 1,
+      };
+
+      // Should return empty path because nearest pathable tile is too far (> 0.5 units)
+      const path = solver.path(entity, { x: 0.5, y: 0.5 });
+      expect(path).toEqual([]);
+    });
+
+    it("should allow small position adjustments within 0.5 units", () => {
+      // Create a narrow corridor scenario
+      // 0 1 0
+      // 0 0 0
+      const solver = new PathingMap({
+        pathing: [
+          [0, 1, 0],
+          [0, 0, 0],
+        ],
+        resolution: 4,
+      });
+
+      // Entity slightly off-center from pathable position
+      const entity = {
+        id: "entity-0",
+        position: { x: 0.4, y: 0.5 },
+        radius: 0.25,
+        pathing: 1,
+      };
+
+      // Should adjust to nearby pathable tile and find path
+      const path = solver.path(entity, { x: 2.5, y: 0.5 });
+      expect(path.length).toBeGreaterThan(0);
+    });
+
+    it("should generate valid first waypoint even with obstacles nearby", () => {
+      // Recreate the stuck wolf scenario
+      // Wolf at (1.87, 1.34), fence wall at x=1.25
+      const solver = new PathingMap({
+        pathing: [
+          [0, 0, 1, 0, 0],
+          [0, 0, 1, 0, 0],
+          [0, 0, 1, 0, 0],
+          [0, 0, 1, 0, 0],
+          [0, 0, 1, 0, 0],
+        ],
+        resolution: 4,
+      });
+
+      const entity = {
+        id: "wolf-0",
+        position: { x: 1.87, y: 1.34 },
+        radius: 0.25,
+        pathing: 1,
+      };
+
+      const target = { x: 2.5, y: 0.88 };
+      const path = solver.path(entity, target);
+
+      // Should generate a valid path with multiple waypoints
+      expect(path.length).toBeGreaterThan(1);
+
+      const firstWaypoint = path[1];
+
+      // Should be able to reach first waypoint (this is the key fix)
+      expect(solver.linearPathable(entity, path[0], firstWaypoint)).toBe(true);
+
+      // All segments in path should be linearly pathable
+      for (let i = 0; i < path.length - 1; i++) {
+        expect(solver.linearPathable(entity, path[i], path[i + 1])).toBe(true);
+      }
+    });
+  });
+
   describe("pointToTilemap", () => {
     it("1x1 aligned", () => {
       expect(

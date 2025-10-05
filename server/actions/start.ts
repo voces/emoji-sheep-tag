@@ -72,6 +72,7 @@ export const start = (
       player.playerEntity = ecs.addEntity({
         name: player.name,
         owner: player.id,
+        playerColor: player.color,
         isPlayer: true,
         team: "sheep",
         gold: practice ? 100_000 : lobby.settings.startingGold.sheep,
@@ -82,6 +83,7 @@ export const start = (
       player.playerEntity = ecs.addEntity({
         name: player.name,
         owner: player.id,
+        playerColor: player.color,
         isPlayer: true,
         team: "wolf",
         gold: lobby.settings.startingGold.wolves,
