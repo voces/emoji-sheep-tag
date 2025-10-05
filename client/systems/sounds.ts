@@ -1,11 +1,7 @@
 import { playEntitySound, playSoundAt } from "../api/sound.ts";
 import { app } from "../ecs.ts";
-import { getPlayer } from "@/vars/players.ts";
 import { stateVar } from "@/vars/state.ts";
 import { selection } from "./autoSelect.ts";
-import { lookup } from "./lookup.ts";
-import { addChatMessage } from "@/vars/chat.ts";
-import { colorName } from "@/shared/api/player.ts";
 
 app.addSystem({
   props: ["id"],
@@ -16,22 +12,6 @@ app.addSystem({
     if (stateVar() !== "playing") return;
     if (typeof e.health === "number" && typeof e.maxHealth === "number") {
       playEntitySound(e, ["death"], { volume: e.tilemap ? 0.3 : 0.6 });
-    }
-    if (
-      (e.prefab === "sheep" || e.prefab === "spirit") && e.lastAttacker &&
-      e.owner
-    ) {
-      const killingUnit = lookup[e.lastAttacker];
-      if (!killingUnit || !killingUnit.owner) return;
-      const killingPlayer = getPlayer(killingUnit.owner);
-      const victim = getPlayer(e.owner);
-      if (killingPlayer && victim) {
-        addChatMessage(
-          `${colorName(killingPlayer)} ${
-            e.prefab === "sheep" ? "killed" : "saved"
-          } ${colorName(victim)}`,
-        );
-      }
     }
   },
 });

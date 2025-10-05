@@ -2,7 +2,7 @@ import { endRound, send } from "../lobbyApi.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { start } from "../actions/start.ts";
 import { timeout } from "../api/timing.ts";
-import { grantPlayerGold } from "../api/player.ts";
+import { getPlayer, grantPlayerGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getSheep } from "./sheep.ts";
@@ -25,7 +25,7 @@ const onLose = () =>
 
     send({
       type: "chat",
-      message: `Wolves win! ${
+      message: `${
         new Intl.ListFormat().format(
           Array.from(getTeams().sheep).map((s) =>
             colorName({
@@ -60,16 +60,35 @@ const onSheepDeath = (sheep: Entity) => {
     entity.health = 0;
   }
 
-  if (
-    !getSheep().some((u) => u.health) &&
-    !isPractice()
-  ) return onLose();
+  const isLastSheep = !getSheep().some((u) => u.health);
 
-  const unitKiller = sheep.lastAttacker;
-  const playerKiller = unitKiller ? lookup(unitKiller)?.owner : undefined;
+  if (isLastSheep && !isPractice()) return onLose();
+
+  const killingPlayerId = lookup(sheep.lastAttacker)?.owner;
+  const killingPlayer = getPlayer(killingPlayerId);
+
+  const victimPlayer = getPlayer(sheep.owner);
+
+  // Send kill message only if not the last sheep
+  if (!isLastSheep && !isPractice() && killingPlayer && victimPlayer) {
+    send({
+      type: "chat",
+      message: `${
+        colorName({
+          color: killingPlayer.playerColor ?? "#ffffff",
+          name: killingPlayer.name ?? "<unknown>",
+        })
+      } killed ${
+        colorName({
+          color: victimPlayer.playerColor ?? "#ffffff",
+          name: victimPlayer.name ?? "<unknown>",
+        })
+      }`,
+    });
+  }
 
   for (const wolf of getTeams().wolves) {
-    const bounty = (wolf.owner === playerKiller ? 40 : 15) *
+    const bounty = (wolf.owner === killingPlayerId ? 40 : 15) *
       lobbyContext.current.settings.income.wolves;
     grantPlayerGold(wolf.owner, bounty);
     const wolfUnit = findPlayerUnit(wolf.owner, (fn) => fn.prefab === "wolf");

@@ -51,14 +51,6 @@ it(
     expect(wolf.position!.x).toBeGreaterThan(20);
 
     // Eventually wolf should reach attack range and attack
-    yield* yieldFor(() => {
-      console.log(
-        "Waiting for swing, wolf position:",
-        wolf.position,
-        "order:",
-        wolf.order,
-      );
-      expect(wolf.swing).toBeDefined();
-    }, { timeout: 10 });
+    yield* yieldFor(() => expect(wolf.swing).toBeDefined(), { timeout: 10 });
   },
 );

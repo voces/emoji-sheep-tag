@@ -5,12 +5,13 @@ import { addSystem } from "@/shared/context.ts";
 
 const data = new WeakMap<App<Entity>, Record<string, Entity | undefined>>();
 
-export const lookup = (entityId: string) => {
+export const lookup = (entityId: string | null | undefined) => {
+  if (!entityId) return;
+
   const app = lobbyContext.current.round?.ecs;
   if (!app) return;
-  const entity = data.get(app)?.[entityId];
-  // if (!entity) throw new Error(`Could not find entity ${entityId}`);
-  return entity;
+
+  return data.get(app)?.[entityId];
 };
 
 addSystem((app) => {

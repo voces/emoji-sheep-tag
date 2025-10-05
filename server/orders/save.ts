@@ -7,8 +7,10 @@ import { removeEntity } from "@/shared/api/entity.ts";
 import { distanceBetweenEntities } from "@/shared/pathing/math.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { isPractice } from "../api/st.ts";
-import { grantPlayerGold } from "../api/player.ts";
+import { getPlayer, grantPlayerGold } from "../api/player.ts";
 import { newGoldText } from "../api/floatingText.ts";
+import { send } from "../lobbyApi.ts";
+import { colorName } from "@/shared/api/player.ts";
 
 export const saveOrder = {
   id: "save",
@@ -71,6 +73,27 @@ export const saveOrder = {
         grantPlayerGold(unit.owner, 100);
         if (unit.position) {
           newGoldText({ x: unit.position.x, y: unit.position.y + 0.5 }, 100);
+        }
+
+        // Send save message
+        const savingPlayer = getPlayer(unit.owner);
+        const savedPlayer = getPlayer(target.owner);
+
+        if (savingPlayer && savedPlayer && !isPractice()) {
+          send({
+            type: "chat",
+            message: `${
+              colorName({
+                color: savingPlayer.playerColor ?? "#ffffff",
+                name: savingPlayer.name ?? "<unknown>",
+              })
+            } saved ${
+              colorName({
+                color: savedPlayer.playerColor ?? "#ffffff",
+                name: savedPlayer.name ?? "<unknown>",
+              })
+            }`,
+          });
         }
       }
     } else damageEntity(unit, target, 100);
