@@ -1,10 +1,4 @@
-import {
-  BufferAttribute,
-  DoubleSide,
-  Mesh,
-  MeshBasicMaterial,
-  PlaneGeometry,
-} from "three";
+import { BufferAttribute, Mesh, MeshBasicMaterial, PlaneGeometry } from "three";
 
 export class ColorAttribute extends BufferAttribute {
   static COMPONENTS_PER_COLOR = 4;
@@ -114,11 +108,7 @@ export class Grid extends Mesh {
 
     super(
       plane,
-      new MeshBasicMaterial({
-        vertexColors: true,
-        transparent: true,
-        side: DoubleSide,
-      }),
+      new MeshBasicMaterial({ vertexColors: true, transparent: true }),
     );
 
     this.colors = colors;

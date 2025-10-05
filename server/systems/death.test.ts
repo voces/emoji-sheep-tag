@@ -9,6 +9,7 @@ afterEach(cleanupTest);
 describe("death system bounty integration", () => {
   it(
     "should grant bounty when wolf kills hut",
+    { wolves: ["wolf-player"], sheep: ["sheep-player"] },
     function* () {
       const wolf = newUnit("wolf-player", "wolf", 0, 0);
       const hut = newUnit("sheep-player", "hut", 5, 5);

@@ -13,7 +13,7 @@ import {
 } from "three";
 import {
   camera,
-  getFogPass,
+  fogPass,
   renderer,
   renderTarget,
   setFogPass,
@@ -433,13 +433,13 @@ const visibilityGrid = new VisibilityGrid(
 );
 
 if (renderTarget?.depthTexture) {
-  const fogPass = new FogPass(
+  const pass = new FogPass(
     visibilityGrid.fogTexture,
     renderTarget.depthTexture,
     camera,
   );
-  fogPass.renderToScreen = true;
-  setFogPass(fogPass);
+  pass.renderToScreen = true;
+  setFogPass(pass);
 }
 
 // System to track blockers (kept for quick filtering, but KDTree does spatial queries)
@@ -536,7 +536,6 @@ const everSeen = new Set<string>();
 export const resetFog = () => {
   everSeen.clear();
   visibilityGrid.reset();
-  const fogPass = getFogPass();
   if (fogPass && renderer) fogPass.reset(renderer);
 };
 

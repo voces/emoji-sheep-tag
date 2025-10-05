@@ -2,6 +2,7 @@ import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { lookup } from "../lookup.ts";
 import { computeUnitAttackSpeed, damageEntity } from "../../api/unit.ts";
+import { newFloatingText } from "../../api/floatingText.ts";
 
 export const tweenSwing = (e: Entity, delta: number): number => {
   if (!e.swing || !e.attack) return delta;
@@ -41,7 +42,15 @@ export const tweenSwing = (e: Entity, delta: number): number => {
     if (
       distanceBetweenPoints(target.position, swingTarget) >
         e.attack.rangeMotionBuffer
-    ) return delta;
+    ) {
+      if (e.position) {
+        newFloatingText({ x: e.position.x, y: e.position.y + 0.5 }, "miss", {
+          color: 0xff0303,
+          speed: 1.5,
+        });
+      }
+      return delta;
+    }
 
     // Otherwise damage target
     if (target.health) damageEntity(e, target);

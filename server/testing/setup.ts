@@ -104,6 +104,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
       name: client.name,
       owner: client.id,
       isPlayer: true,
+      team: "sheep",
       gold: gold,
     });
   }
@@ -113,6 +114,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
       name: client.name,
       owner: client.id,
       isPlayer: true,
+      team: "wolf",
       gold: gold,
     });
   }

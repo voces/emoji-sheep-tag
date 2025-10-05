@@ -191,7 +191,7 @@ export const acquireTarget = (e: Entity) => {
       e2.position &&
       isEnemy(e, e2) &&
       (!e2.targetedAs ||
-        testClassification(e, e2, ["enemy"]))
+        testClassification(e, e2, [["enemy"]]))
     )
     .map((e2) => [e2, distanceBetweenPoints(pos, e2.position!)] as const)
     .sort((a, b) => {
@@ -213,7 +213,7 @@ export const orderAttack = (
   if ("id" in target) {
     if (
       !target.position ||
-      !testClassification(attacker, target, ["other"])
+      !testClassification(attacker, target, [["other"]])
     ) return false;
 
     // If within attack range..

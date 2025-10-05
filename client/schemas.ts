@@ -64,6 +64,7 @@ const zClassification = z.union([
   z.literal("unit"),
   z.literal("structure"),
   z.literal("tree"),
+  z.literal("ward"),
   z.literal("ally"),
   z.literal("enemy"),
   z.literal("neutral"),
@@ -104,6 +105,7 @@ const zBaseAction = z.discriminatedUnion("type", [
     movementSpeedBonus: z.number().optional(),
     movementSpeedMultiplier: z.number().optional(),
     damageMultiplier: z.number().optional(),
+    manaRestore: z.number().optional(),
     soundOnCastStart: z.string().optional(),
     allowAllies: z.boolean().optional(),
   }),
@@ -126,7 +128,8 @@ const zBaseAction = z.discriminatedUnion("type", [
     icon: z.string().optional(),
     iconEffect: zIconEffect.optional(),
     order: z.string(),
-    targeting: z.array(zClassification).readonly().optional(),
+    targeting: z.array(z.array(zClassification).readonly()).readonly()
+      .optional(),
     aoe: z.number().optional(),
     binding: z.array(z.string()).readonly().optional(),
     smart: z.partialRecord(
@@ -226,6 +229,7 @@ export const zUpdate = z.object({
   progress: z.number().nullable().optional(),
   isDoodad: z.boolean().nullable().optional(),
   isTimer: z.boolean().optional(),
+  isFloatingText: z.boolean().optional(),
   teamScoped: z.boolean().optional(),
 
   attack: z.object({

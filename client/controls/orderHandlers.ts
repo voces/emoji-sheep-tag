@@ -65,9 +65,9 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
               // With target: test classification against target
               // Skip "ground" classification when there's a target
               if (classification !== "ground") {
-                test = testClassification(entity, target, [
+                test = testClassification(entity, target, [[
                   classification as Classification,
-                ]);
+                ]]);
               } else {
                 test = false;
               }
@@ -112,7 +112,7 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
 
     if (order === "attack") {
       const e = groupedOrders[order].find((e) => e.sounds?.ackAttack);
-      if (e) playEntitySound(e, "ackAttack");
+      if (e) playEntitySound(e, "ackAttack", { throttle: 1000 });
     }
   }
 
@@ -150,11 +150,8 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
 
   if (target && unitsWithTarget.size) {
     if (orderToExecute === "attack") {
-      playEntitySound(
-        unitsWithTarget.find((e) => !!e.sounds?.ackAttack?.length) ??
-          { id: "unknown" },
-        "ackAttack",
-      );
+      const e2 = unitsWithTarget.find((e) => !!e.sounds?.ackAttack?.length);
+      if (e2) playEntitySound(e2, "ackAttack", { throttle: 1000 });
     }
     send({
       type: "unitOrder",
@@ -177,11 +174,8 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
 
   if (unitsWithoutTarget.size) {
     if (orderToExecute === "attack") {
-      playEntitySound(
-        unitsWithoutTarget.find((e) => !!e.sounds?.ackAttack?.length) ??
-          { id: "unknown" },
-        "ackAttack",
-      );
+      const e2 = unitsWithoutTarget.find((e) => !!e.sounds?.ackAttack?.length);
+      if (e2) playEntitySound(e2, "ackAttack", { throttle: 1000 });
     }
     send({
       type: "unitOrder",

@@ -80,8 +80,8 @@ export type UnitDataActionTarget = {
   readonly description?: string;
   readonly icon?: string;
   readonly iconEffect?: IconEffect;
-  /** By default, actions can target everything */
-  readonly targeting?: ReadonlyArray<Classification>;
+  /** By default, actions can target everything. Outer array is OR, inner array is AND */
+  readonly targeting?: ReadonlyArray<ReadonlyArray<Classification>>;
   /** `aoe` of `0` allows targeting the ground */
   readonly aoe?: number;
   readonly binding?: ReadonlyArray<string>;
@@ -202,6 +202,7 @@ export type Entity = {
   /** A doodad cannot be clicked */
   isDoodad?: boolean | null;
   isTimer?: boolean;
+  isFloatingText?: boolean;
   /** Only visible to the owner's team */
   teamScoped?: boolean;
 
@@ -238,6 +239,7 @@ export type Entity = {
    * 2 buildable
    * 4 blight
    * 8 spirit
+   * 16 reserved
    */
   pathing?: Pathing;
   /** Override `pathing` for require checks. */

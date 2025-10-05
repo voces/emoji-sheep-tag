@@ -129,7 +129,9 @@ const isSelf = (source: Entity, target: Entity) => {
 export const isStructure = (entity: Entity) => {
   if (entity.targetedAs?.includes("structure")) return true;
   if (
-    entity.targetedAs?.includes("unit") || entity.targetedAs?.includes("tree")
+    entity.targetedAs?.includes("unit") ||
+    entity.targetedAs?.includes("tree") ||
+    entity.targetedAs?.includes("ward")
   ) return false;
   return !!entity.tilemap;
 };
@@ -138,12 +140,24 @@ export const isUnit = (entity: Entity) => {
   if (entity.targetedAs?.includes("unit")) return true;
   if (
     entity.targetedAs?.includes("structure") ||
-    entity.targetedAs?.includes("tree")
+    entity.targetedAs?.includes("tree") ||
+    entity.targetedAs?.includes("ward")
   ) return false;
   return !!entity.movementSpeed;
 };
 
 export const isTree = (entity: Entity) => !!entity.targetedAs?.includes("tree");
+
+export const isWard = (entity: Entity) => {
+  if (entity.targetedAs?.includes("ward")) return true;
+  if (
+    entity.targetedAs?.includes("unit") ||
+    entity.targetedAs?.includes("tree") ||
+    entity.targetedAs?.includes("structure")
+  ) return false;
+  return !entity.tilemap && !entity.movementSpeed && !entity.isDoodad &&
+    !!entity.owner;
+};
 
 const isSpirit = (entity: Entity) => !!entity.targetedAs?.includes("spirit");
 
@@ -156,96 +170,106 @@ const isNotSpirit = (entity: Entity) => {
 export const testClassification = (
   source: Entity,
   target: Entity,
-  classifications: ReadonlyArray<Classification> = [],
+  classifications: ReadonlyArray<ReadonlyArray<Classification>> = [],
 ): boolean => {
   // if (!classifications?.length) return true;
-  const groups = classifications.reduce(
-    (groups, classification) => {
-      const group = classificationToGroup[classification];
-      if (!groups[group]) groups[group] = [];
-      groups[group].push(classification as never);
-      return groups;
-    },
-    {} as {
-      [key in ClassificationGroup]: typeof classificationGroups[key][number][];
-    },
-  );
 
-  for (const g in classificationGroups) {
-    const group = g as ClassificationGroup;
-    switch (group) {
-      case "alliance":
-        if (
-          !(groups[group] ?? defaultClassifications[group]).some(
-            (classification) => {
-              switch (classification) {
-                case "ally":
-                  return isAlly(source, target);
-                case "enemy":
-                  return isEnemy(source, target);
-                case "neutral":
-                  return isNeutral(source, target);
-                default:
-                  throw absurd(classification);
-              }
-            },
-          )
-        ) return false;
-        break;
-      case "identity":
-        if (
-          !(groups[group] ?? defaultClassifications[group]).some(
-            (classification) => {
-              switch (classification) {
-                case "other":
-                  return isOther(source, target);
-                case "self":
-                  return isSelf(source, target);
-                default:
-                  throw absurd(classification);
-              }
-            },
-          )
-        ) return false;
-        break;
-      case "destructibles":
-        if (
-          !(groups[group] ?? defaultClassifications[group]).some(
-            (classification) => {
-              switch (classification) {
-                case "structure":
-                  return isStructure(target);
-                case "unit":
-                  return isUnit(target);
-                case "tree":
-                  return isTree(target);
-                default:
-                  throw absurd(classification);
-              }
-            },
-          )
-        ) return false;
-        break;
-      case "spirit":
-        if (
-          !(groups[group] ?? defaultClassifications[group]).some(
-            (classification) => {
-              switch (classification) {
-                case "notSpirit":
-                  return isNotSpirit(target);
-                case "spirit":
-                  return isSpirit(target);
-                default:
-                  throw absurd(classification);
-              }
-            },
-          )
-        ) return false;
-        break;
-      default:
-        throw absurd(group);
+  // Outer array is OR - at least one must match
+  return classifications.some((andClassifications) => {
+    // Inner array is AND - all must match
+    const groups = andClassifications.reduce(
+      (groups, c) => {
+        const group = classificationToGroup[c];
+        if (!groups[group]) groups[group] = [];
+        groups[group].push(c as never);
+        return groups;
+      },
+      {} as {
+        [key in ClassificationGroup]:
+          typeof classificationGroups[key][number][];
+      },
+    );
+
+    for (const g in classificationGroups) {
+      const group = g as ClassificationGroup;
+      switch (group) {
+        case "alliance":
+          if (
+            !(groups[group] ?? defaultClassifications[group]).some(
+              (classification) => {
+                switch (classification) {
+                  case "ally":
+                    return isAlly(source, target);
+                  case "enemy":
+                    return isEnemy(source, target);
+                  case "neutral":
+                    return isNeutral(source, target);
+                  default:
+                    throw absurd(classification);
+                }
+              },
+            )
+          ) return false;
+          break;
+        case "identity":
+          if (
+            !(groups[group] ?? defaultClassifications[group]).some(
+              (classification) => {
+                switch (classification) {
+                  case "other":
+                    return isOther(source, target);
+                  case "self":
+                    return isSelf(source, target);
+                  default:
+                    throw absurd(classification);
+                }
+              },
+            )
+          ) return false;
+          break;
+        case "destructibles":
+          if (
+            !(groups[group] ?? defaultClassifications[group]).some(
+              (classification) => {
+                switch (classification) {
+                  case "structure":
+                    return isStructure(target);
+                  case "unit":
+                    return isUnit(target);
+                  case "tree":
+                    return isTree(target);
+                  case "ward":
+                    return isWard(target);
+                  default:
+                    throw absurd(classification);
+                }
+              },
+            )
+          ) {
+            return false;
+          }
+          break;
+        case "spirit":
+          if (
+            !(groups[group] ?? defaultClassifications[group]).some(
+              (classification) => {
+                switch (classification) {
+                  case "notSpirit":
+                    return isNotSpirit(target);
+                  case "spirit":
+                    return isSpirit(target);
+                  default:
+                    throw absurd(classification);
+                }
+              },
+            )
+          ) return false;
+          break;
+        default:
+          throw absurd(group);
+      }
     }
-  }
 
-  return true;
+    return true;
+  });
 };

@@ -36,9 +36,8 @@ describe("ally actions integration", () => {
       yield;
       expect(potentialAllyStructure.health).toBe(100);
 
-      // Test that permission system correctly evaluates the request
-      // In this game design, individual players maintain control of their own units
-      // The system should properly check ally permissions regardless of outcome
+      // Ally sheep player can use selfDestruct on another sheep player's structure
+      // because allowAllies is true
       unitOrder(sheepClient1, {
         type: "unitOrder",
         units: [potentialAllyStructure.id],
@@ -47,9 +46,8 @@ describe("ally actions integration", () => {
       });
 
       yield;
-      // The system correctly implements permission checking
-      // Structure remains unchanged, confirming proper permission validation
-      expect(potentialAllyStructure.health).toBe(100);
+      // Allies can execute actions with allowAllies: true
+      expect(potentialAllyStructure.health).toBe(0);
     });
 
     it("should allow owner to selfDestruct their own structure", {
@@ -220,7 +218,8 @@ describe("ally actions integration", () => {
       expect(hut1.health).toBe(100);
       expect(hut2.health).toBe(100);
 
-      // Test permission system with multiple units
+      // Wolf player 1 can use selfDestruct on wolf player 2's structures
+      // because they're allies and allowAllies is true
       unitOrder(wolfClient1, {
         type: "unitOrder",
         units: [hut1.id, hut2.id],
@@ -229,9 +228,9 @@ describe("ally actions integration", () => {
       });
 
       yield;
-      // Permission system correctly handles multiple units
-      expect(hut1.health).toBe(100);
-      expect(hut2.health).toBe(100);
+      // Allies can execute actions with allowAllies: true on multiple units
+      expect(hut1.health).toBe(0);
+      expect(hut2.health).toBe(0);
     });
   });
 });

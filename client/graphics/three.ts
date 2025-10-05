@@ -13,6 +13,7 @@ import { stats } from "../util/Stats.ts";
 import { tileDefs } from "@/shared/data.ts";
 import { Terrain2D } from "./Terrain2D.ts";
 import { FogPass } from "./FogPass.ts";
+import { floatingTextScene } from "../systems/floatingText.ts";
 
 const canvas = document.querySelector("canvas");
 if (!canvas) throw new Error("Could not find canvas");
@@ -29,11 +30,9 @@ Object.assign(globalThis, { camera });
 // undefined in tests
 export let renderer: WebGLRenderer | undefined;
 export let renderTarget: WebGLRenderTarget | undefined;
-
-const fogState = { pass: undefined as FogPass | undefined };
-export const getFogPass = () => fogState.pass;
+export let fogPass: FogPass | undefined;
 export const setFogPass = (pass: FogPass) => {
-  fogState.pass = pass;
+  fogPass = pass;
 };
 
 if (!("Deno" in globalThis)) {
@@ -211,20 +210,23 @@ const animate = () => {
     renderListeners[i](delta, time);
   }
 
-  const fogPass = getFogPass();
-  if (fogPass && renderTarget && renderer) {
-    fogPass.updateCamera(camera);
+  if (!renderer || !fogPass || !renderTarget) return;
 
-    // Render scene to non-MSAA target with depth
-    renderer.setRenderTarget(renderTarget);
-    renderer.clear();
-    renderer.render(scene, camera);
+  fogPass.updateCamera(camera);
 
-    // Apply fog pass
-    fogPass.render(renderer, renderTarget, renderTarget, delta);
-  } else {
-    renderer?.render(scene, camera);
-  }
+  // Render scene to non-MSAA target with depth
+  renderer.setRenderTarget(renderTarget);
+  renderer.clear();
+  renderer.render(scene, camera);
+
+  // Apply fog pass
+  fogPass.render(renderer, renderTarget, renderTarget, delta);
+  renderer.setRenderTarget(null);
+
+  // Render floating text on top
+  renderer.autoClear = false;
+  renderer.render(floatingTextScene, camera);
+  renderer.autoClear = true;
 
   stats.end();
 };

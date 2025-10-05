@@ -96,31 +96,45 @@ export const ActionBar = () => {
   }
 
   const currentActionCheck = useMemo(
-    () => (action: UnitDataAction) =>
-      !!selection &&
-      (action.type === "build"
-        ? selection.order?.type === "build" &&
-          selection.order.unitType === action.unitType
-        : action.type === "auto"
-        ? action.order ===
-          (selection.order?.type === "cast"
-            ? selection.order.orderId
-            : selection.order?.type === "hold"
-            ? "hold"
-            : !selection.order
-            ? "stop"
-            : undefined)
-        : action.type === "target"
-        ? action.order === "attack"
-          ? selection.order?.type === "attack" ||
-            (selection.order?.type === "attackMove")
-          : action.order === "move" && !!selection.order &&
-            "path" in selection.order
-        : action.type === "purchase"
-        ? false // Purchase actions are instant, never current
-        : action.type === "menu"
-        ? !!(currentMenu && currentMenu.action === action)
-        : false),
+    () => (action: UnitDataAction) => {
+      if (!selection) return false;
+
+      switch (action.type) {
+        case "build":
+          return selection.order?.type === "build" &&
+            selection.order.unitType === action.unitType;
+
+        case "auto":
+          if (selection.order?.type === "cast") {
+            return action.order === selection.order.orderId;
+          }
+          if (selection.order?.type === "hold") return action.order === "hold";
+          if (!selection.order) return action.order === "stop";
+          return false;
+
+        case "target":
+          // Special cases for attack and move
+          if (action.order === "attack") {
+            return selection.order?.type === "attack" ||
+              selection.order?.type === "attackMove";
+          }
+          if (action.order === "move") {
+            return !!selection.order && "path" in selection.order;
+          }
+          // Generic target actions (sentry, meteor, save, etc.)
+          return selection.order?.type === "cast" &&
+            selection.order.orderId === action.order;
+
+        case "purchase":
+          return false; // Purchase actions are instant, never current
+
+        case "menu":
+          return !!(currentMenu && currentMenu.action === action);
+
+        default:
+          return false;
+      }
+    },
     [selection, currentMenu],
   );
 

@@ -8,12 +8,14 @@ import { addSystem } from "@/shared/context.ts";
 import { getSheep } from "./sheep.ts";
 import { newUnit, orderAttack } from "../api/unit.ts";
 import { Entity } from "@/shared/types.ts";
-import { getPlayerUnits } from "./playerEntities.ts";
+import { newGoldText } from "../api/floatingText.ts";
+import { findPlayerUnit, getPlayerUnits } from "./playerEntities.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { isPractice } from "../api/st.ts";
 import { getTeams } from "@/shared/systems/teams.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { newSfx } from "../api/sfx.ts";
+import { isEnemy } from "@/shared/api/unit.ts";
 
 const onLose = () =>
   timeout(() => {
@@ -53,11 +55,16 @@ const onSheepDeath = (sheep: Entity) => {
   const playerKiller = unitKiller ? lookup(unitKiller)?.owner : undefined;
 
   for (const wolf of getTeams().wolves) {
-    grantPlayerGold(
-      wolf.owner,
-      (wolf.owner === playerKiller ? 40 : 15) *
-        lobbyContext.current.settings.income.wolves,
-    );
+    const bounty = (wolf.owner === playerKiller ? 40 : 15) *
+      lobbyContext.current.settings.income.wolves;
+    grantPlayerGold(wolf.owner, bounty);
+    const wolfUnit = findPlayerUnit(wolf.owner, (fn) => fn.prefab === "wolf");
+    if (wolfUnit?.position) {
+      newGoldText(
+        { x: wolfUnit.position.x, y: wolfUnit.position.y + 0.5 },
+        bounty,
+      );
+    }
   }
 
   if (isPractice()) {
@@ -77,11 +84,16 @@ addSystem((app) => ({
     // Grant bounty to killer if entity has bounty and lastAttacker
     if (unit.bounty && unit.lastAttacker) {
       const killer = lookup(unit.lastAttacker);
-      if (killer?.owner) {
-        grantPlayerGold(
-          killer.owner,
-          unit.bounty * lobbyContext.current.settings.income.wolves,
-        );
+      if (killer?.owner && isEnemy(killer, unit)) {
+        const bounty = unit.bounty *
+          lobbyContext.current.settings.income.wolves;
+        grantPlayerGold(killer.owner, bounty);
+        if (killer.position) {
+          newGoldText(
+            { x: killer.position.x, y: killer.position.y + 0.5 },
+            bounty,
+          );
+        }
       }
     }
 

@@ -8,4 +8,9 @@
   - Scythe?
 - Units sometimes get stuck on corners still...
 - Pointer lock setting
-- Perf improvement on mass delete/add
+- Perf
+  - Improvement on mass delete/add
+  - InstancedGroup
+    - Automatic split into "static" and "dynamic"
+    - Use `updateRange`
+    - Per-mirror instances

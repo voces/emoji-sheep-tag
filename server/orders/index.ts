@@ -8,6 +8,7 @@ import { strengthPotionOrder } from "./strengthPotion.ts";
 import { meteorOrder } from "./meteor.ts";
 import { saveOrder } from "./save.ts";
 import { manaPotionOrder } from "./manaPotion.ts";
+import { sentryOrder } from "./sentry.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -31,6 +32,7 @@ registerOrder(strengthPotionOrder);
 registerOrder(meteorOrder);
 registerOrder(saveOrder);
 registerOrder(manaPotionOrder);
+registerOrder(sentryOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);

@@ -111,11 +111,30 @@ const getSoundFromSet = (entity: Entity, ...sets: SoundSet[]) => {
   return choices[Math.floor(Math.random() * choices.length)];
 };
 
+// Track last play time for throttling
+const lastPlayTime = new Map<string, number>();
+
 export const playEntitySound = (
   entity: Entity,
   sets: SoundSet | SoundSet[],
-  { volume, x, y }: { volume?: number; x?: number; y?: number } = {},
+  { volume, x, y, throttle }: {
+    volume?: number;
+    x?: number;
+    y?: number;
+    throttle?: number;
+  } = {},
 ) => {
+  // Check throttle if specified
+  if (throttle !== undefined) {
+    const key = `${entity.id}-${Array.isArray(sets) ? sets.join(",") : sets}`;
+    const now = performance.now();
+    const last = lastPlayTime.get(key);
+    if (last !== undefined && now - last < throttle) {
+      return; // Skip playing, too soon
+    }
+    lastPlayTime.set(key, now);
+  }
+
   const sound = getSoundFromSet(
     entity,
     ...(Array.isArray(sets) ? sets : [sets]),

@@ -108,4 +108,26 @@ describe("formatDuration", () => {
       expect(formatDuration(610000)).toBe("10:10"); // 10:10 - the problematic case
     });
   });
+
+  describe("invalid input handling", () => {
+    it("should handle float inputs (seconds instead of ms)", () => {
+      // If someone passes 63.53436 seconds instead of milliseconds
+      expect(formatDuration(63.53436)).toBe("0:00"); // truncates to 0ms
+      expect(formatDuration(63534.36)).toBe("1:03"); // 63.534 seconds = 1:03
+    });
+
+    it("should handle when seconds are passed instead of milliseconds", () => {
+      // Common mistake: passing seconds (63.5) instead of ms (63500)
+      const secondsAsFloat = 63.53436;
+      const correctMs = secondsAsFloat * 1000;
+      expect(formatDuration(correctMs)).toBe("1:03"); // Should be 1:03
+    });
+
+    it("should not produce malformed output like '0:63.53.436'", () => {
+      // The bug: "0:63.53.436" suggests float milliseconds with includeMs=true
+      // Now properly floors input to avoid float in milliseconds display
+      expect(formatDuration(63.53436, true)).toBe("0:00.063");
+      expect(formatDuration(63534.36, true)).toBe("1:03.534");
+    });
+  });
 });

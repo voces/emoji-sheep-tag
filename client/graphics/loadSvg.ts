@@ -2,20 +2,66 @@ import {
   Box3,
   BufferGeometry,
   Color,
+  ColorRepresentation,
   DoubleSide,
   Group,
   Mesh,
   MeshBasicMaterial,
   ShapeGeometry,
   Vector3,
+  WebGLProgramParametersWithUniforms,
 } from "three";
 import { SVGLoader } from "three/SVGLoader";
 import { InstancedGroup } from "./InstancedGroup.ts";
 import { scene } from "./three.ts";
 import { svgs } from "../systems/three.ts";
+import { memoize } from "@/shared/pathing/memoize.ts";
 
 const loader = new SVGLoader();
 let zOrderCounter = 0;
+
+const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
+  // 1) Declare our attribute & a varying
+  shader.vertexShader = "attribute float instanceAlpha;\n" +
+    "varying float vInstanceAlpha;\n" +
+    shader.vertexShader;
+
+  // 2) Pass it through in the vertex stage
+  shader.vertexShader = shader.vertexShader.replace(
+    "void main() {",
+    "void main() {\n" +
+      "  vInstanceAlpha = instanceAlpha;",
+  );
+
+  shader.fragmentShader = "varying float vInstanceAlpha;\n" +
+    shader.fragmentShader;
+
+  // 4) Multiply the built-in opacity by our per-instance alpha
+  shader.fragmentShader = shader.fragmentShader.replace(
+    /vec4 diffuseColor = vec4\( diffuse, opacity \);/,
+    `vec4 diffuseColor = vec4( diffuse, opacity * vInstanceAlpha );`,
+  );
+};
+
+const getMaterial = memoize((
+  color: ColorRepresentation | undefined,
+  opacity: number | undefined,
+  player: boolean,
+) => {
+  const material = new MeshBasicMaterial({
+    color,
+    opacity,
+    transparent: true,
+    side: DoubleSide,
+    depthWrite: true,
+    forceSinglePass: true,
+    userData: { player },
+  });
+  material.customProgramCacheKey = () => "instanceAlpha";
+  material.onBeforeCompile = addInstanceAlpha;
+
+  return material;
+});
 
 export const loadSvg = (
   svg: string,
@@ -63,36 +109,11 @@ export const loadSvg = (
         }
       }
 
-      const material = new MeshBasicMaterial({
-        color,
+      const material = getMaterial(
+        color.getHex(),
         opacity,
-        transparent: true,
-        side: DoubleSide,
-        depthWrite: true,
-        userData: { player: "player" in path.userData?.node.dataset },
-      });
-      material.onBeforeCompile = (shader) => {
-        // 1) Declare our attribute & a varying
-        shader.vertexShader = "attribute float instanceAlpha;\n" +
-          "varying float vInstanceAlpha;\n" +
-          shader.vertexShader;
-
-        // 2) Pass it through in the vertex stage
-        shader.vertexShader = shader.vertexShader.replace(
-          "void main() {",
-          "void main() {\n" +
-            "  vInstanceAlpha = instanceAlpha;",
-        );
-
-        shader.fragmentShader = "varying float vInstanceAlpha;\n" +
-          shader.fragmentShader;
-
-        // 4) Multiply the built-in opacity by our per-instance alpha
-        shader.fragmentShader = shader.fragmentShader.replace(
-          /vec4 diffuseColor = vec4\( diffuse, opacity \);/,
-          `vec4 diffuseColor = vec4( diffuse, opacity * vInstanceAlpha );`,
-        );
-      };
+        "player" in path.userData?.node.dataset,
+      );
 
       const shapes = SVGLoader.createShapes(path);
 

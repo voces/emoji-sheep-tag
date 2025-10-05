@@ -57,6 +57,7 @@ import barrel from "../assets/barrel.svg" with { type: "text" };
 import hayBale from "../assets/hayBale.svg" with { type: "text" };
 import wood from "../assets/wood.svg" with { type: "text" };
 import bluePotion from "../assets/blue-potion.svg" with { type: "text" };
+import sentry from "../assets/sentry.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -109,6 +110,7 @@ export const svgs: Record<string, string> = {
   hayBale,
   wood,
   bluePotion,
+  sentry,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -131,6 +133,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   // tractor: loadSvg(tractor, 1, { layer: 2 }),
 
   // Basic units and structures
+  sentry: loadSvg(sentry, 0.12),
   sheep: loadSvg(sheep, 1),
   hut: loadSvg(hut, 2),
   house: loadSvg(house, 3.4),
