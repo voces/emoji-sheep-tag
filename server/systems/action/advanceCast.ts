@@ -10,6 +10,7 @@ import { calcPath } from "../pathing.ts";
 import { lookup } from "../lookup.ts";
 import { precast } from "../../orders/precast.ts";
 import { postCast } from "../../orders/postCast.ts";
+import { handleBlockedPath } from "./pathRetry.ts";
 
 export const advanceCast = (e: Entity, delta: number): number => {
   if (e.order?.type !== "cast") return delta;
@@ -29,20 +30,41 @@ export const advanceCast = (e: Entity, delta: number): number => {
       ? distanceBetweenPoints(e.position, target)
       : distanceBetweenEntities(e, target);
     if (dist > range) {
-      // Out of range - need to move closer
-      const path = calcPath(e, "x" in target ? target : target.id, {
-        distanceFromTarget: range,
-      });
+      if (!e.order.path) {
+        const path = calcPath(e, "x" in target ? target : target.id, {
+          distanceFromTarget: range,
+        });
+        if (!path.length) {
+          const currentDist = "x" in target
+            ? distanceBetweenPoints(e.position, target)
+            : distanceBetweenEntities(e, target);
+          if (currentDist > range) {
+            // Target unreachable and out of cast range
+            delete e.order;
+            return delta;
+          }
+          // Within cast range but can't path closer - proceed without path
+          return delta;
+        }
+        e.order = { ...e.order, path };
+      }
 
-      if (!path.length) {
-        // Can't reach target, fail the order
-        delete e.order;
+      const tweenResult = tweenPath(e, delta);
+
+      if (tweenResult.pathBlocked && e.order.path) {
+        const targetRef = "x" in target ? target : target.id;
+        if (
+          handleBlockedPath(e, targetRef, e.order.path, {
+            distanceFromTarget: range,
+          })
+        ) {
+          delete e.order;
+          return delta;
+        }
         return delta;
       }
-      e.order = { ...e.order, path };
 
-      // Tween along the path
-      return tweenPath(e, delta);
+      return tweenResult.delta;
     }
   }
 

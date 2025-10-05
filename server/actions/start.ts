@@ -45,11 +45,12 @@ export const start = (
     start: Date.now(),
     practice,
     editor,
-    clearInterval: interval(() => {
-      ecs.tick++;
-      ecs.update();
-    }, 0.05),
+    clearInterval: () => {},
   };
+  lobby.round.clearInterval = interval(() => {
+    ecs.tick++;
+    ecs.update();
+  }, 0.05);
 
   const withContexts = (fn: () => void) =>
     lobbyContext.with(lobby, () => appContext.with(ecs, fn));

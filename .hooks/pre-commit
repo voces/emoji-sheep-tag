@@ -6,10 +6,10 @@ if command -v deno >/dev/null 2>&1; then
     echo "Running deno fmt and lint..."
     deno task pre-commit
     if [ $? -ne 0 ]; then
-        echo "❌ Formatting or linting failed"
+        echo "❌ Formatting, linting, or typechecking failed"
         exit 1
     fi
-    echo "✅ Code formatted and linted successfully"
+    echo "✅ Code formatted, linted, and checked successfully"
 else
     echo "Warning: deno not found, skipping pre-commit formatting"
 fi

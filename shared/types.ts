@@ -7,6 +7,7 @@ export type WalkOrder =
   & {
     readonly type: "walk";
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
+    readonly lastRepath?: number;
   }
   & (
     | { readonly targetId: string }
@@ -20,10 +21,12 @@ export type Order = Readonly<
     readonly x: number;
     readonly y: number;
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
+    readonly lastRepath?: number;
   } | {
     readonly type: "attack";
     readonly targetId: string;
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
+    readonly lastRepath?: number;
   } | {
     readonly type: "hold";
   } | {
@@ -34,12 +37,14 @@ export type Order = Readonly<
     readonly targetId?: string;
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
     readonly started?: boolean;
+    readonly lastRepath?: number;
   } | {
     readonly type: "attackMove";
     readonly target: Readonly<Point>;
     /** Current acquired target */
     readonly targetId?: string;
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
+    readonly lastRepath?: number;
   }
 >;
 

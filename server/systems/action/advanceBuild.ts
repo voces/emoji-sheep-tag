@@ -4,6 +4,7 @@ import { build, computeBuildDistance } from "../../api/unit.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 import { addSystem } from "@/shared/context.ts";
+import { handleBlockedPath } from "./pathRetry.ts";
 
 export const advanceBuild = (e: Entity, delta: number): number => {
   if (e.order?.type !== "build") return delta;
@@ -17,33 +18,32 @@ export const advanceBuild = (e: Entity, delta: number): number => {
   // No longer in range; get in range
   if (distanceBetweenPoints(e.position, e.order) > d) {
     if (!e.order.path) {
-      e.order = {
-        ...e.order,
-        path: calcPath(e, e.order, { distanceFromTarget: d }),
-      };
-      if (!e.order.path?.length) {
-        delete e.order;
+      const path = calcPath(e, e.order, { distanceFromTarget: d });
+      if (!path.length) {
+        if (distanceBetweenPoints(e.position, e.order) > d) {
+          // Target unreachable and out of build range
+          delete e.order;
+          return delta;
+        }
+        // Within build range but can't path closer - proceed without path
         return delta;
       }
+      e.order = { ...e.order, path };
     }
 
-    const newDelta = tweenPath(e, delta);
+    const tweenResult = tweenPath(e, delta);
 
-    if (delta === newDelta) {
-      const newPath = calcPath(e, e.order, { distanceFromTarget: d });
+    if (tweenResult.pathBlocked && e.order.path) {
       if (
-        !newPath.length ||
-        (newPath.length === e.order.path.length &&
-          newPath.every((p, i) =>
-            e.order && "path" in e.order && e.order.path?.[i] === p
-          ))
+        handleBlockedPath(e, e.order, e.order.path, { distanceFromTarget: d })
       ) {
         delete e.order;
         return delta;
-      } else e.order = { ...e.order, path: newPath };
+      }
+      return delta;
     }
 
-    return newDelta;
+    return tweenResult.delta;
   }
 
   build(e, e.order.unitType, e.order.x, e.order.y);

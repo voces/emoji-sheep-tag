@@ -3,12 +3,17 @@ import { Entity } from "@/shared/types.ts";
 import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
 import { pathable } from "../pathing.ts";
 
-export const tweenPath = (e: Entity, delta: number): number => {
+export type TweenPathResult = {
+  delta: number;
+  pathBlocked: boolean;
+};
+
+export const tweenPath = (e: Entity, delta: number): TweenPathResult => {
   const originalDelta = delta;
   if (
     !e.order || !("path" in e.order) || !e.order.path?.length ||
     !e.position || !e.movementSpeed
-  ) return delta;
+  ) return { delta, pathBlocked: false };
 
   let target = e.order.path[0];
   const effectiveMovementSpeed = computeUnitMovementSpeed(e);
@@ -27,11 +32,13 @@ export const tweenPath = (e: Entity, delta: number): number => {
     // End of path
     if (e.order.path?.length === 1) {
       // If end position isn't pathable, do nothing
-      if (!pathable(e, target)) return delta;
+      if (!pathable(e, target)) {
+        return { delta: originalDelta, pathBlocked: true };
+      }
 
       // Update end position
       e.position = { ...target };
-      return delta;
+      return { delta, pathBlocked: false };
     }
 
     // Not end of path, advance along it
@@ -56,7 +63,9 @@ export const tweenPath = (e: Entity, delta: number): number => {
     };
 
   // If end position isn't pathable, do nothing
-  if (!pathable(e, newPosition)) return originalDelta;
+  if (!pathable(e, newPosition)) {
+    return { delta: originalDelta, pathBlocked: true };
+  }
 
   // Only now that we've confirmed the move is valid, update the path if we advanced along it
   if (typeof newPath !== "undefined") {
@@ -64,5 +73,5 @@ export const tweenPath = (e: Entity, delta: number): number => {
   }
 
   e.position = newPosition;
-  return delta;
+  return { delta, pathBlocked: false };
 };

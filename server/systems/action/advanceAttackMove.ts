@@ -4,6 +4,7 @@ import { lookup } from "../lookup.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenAttack } from "./tweenAttack.ts";
 import { tweenPath } from "./tweenPath.ts";
+import { handleBlockedPath } from "./pathRetry.ts";
 
 export const advanceAttackMove = (e: Entity, delta: number): number => {
   if (e.order?.type !== "attackMove") return delta;
@@ -27,19 +28,29 @@ export const advanceAttackMove = (e: Entity, delta: number): number => {
   if (e.order.targetId) return tweenAttack(e, delta);
 
   // Otherwise proceed along path
-  const path = calcPath(e, e.order.target);
-  if (!path.length) {
-    delete e.order;
+  if (!e.order.path) {
+    const path = calcPath(e, e.order.target);
+    if (!path.length) {
+      delete e.order;
+      return delta;
+    }
+    e.order = { ...e.order, path };
+  }
+
+  const tweenResult = tweenPath(e, delta);
+
+  if (tweenResult.pathBlocked && e.order.path) {
+    if (handleBlockedPath(e, e.order.target, e.order.path)) {
+      delete e.order;
+      return delta;
+    }
     return delta;
   }
-  e.order = { ...e.order, path };
-
-  delta = tweenPath(e, delta);
 
   if (
     (e.order.path?.at(-1)?.x === e.position?.x &&
       e.order.path?.at(-1)?.y === e.position?.y)
   ) delete e.order;
 
-  return delta;
+  return tweenResult.delta;
 };

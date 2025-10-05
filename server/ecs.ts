@@ -107,9 +107,13 @@ export const newEcs = () => {
 
           // Per-entity changes drainer
           while (changes.size) {
-            guardChange(`changes=${changes.size}`);
-
             const [system, props] = changes.entries().next().value!;
+            guardChange(
+              `entity=${entity.id} changes=${changes.size} props=[${
+                Array.from(props).join(",")
+              }]`,
+            );
+
             changes.delete(system);
 
             // Already in the system; either a change or removal
