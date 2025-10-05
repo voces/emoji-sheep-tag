@@ -324,6 +324,7 @@ const zRound = z.object({
 
 const zLobbySettings = z.object({
   sheep: z.number(),
+  autoSheep: z.boolean(),
   time: z.number(),
   autoTime: z.boolean(),
   startingGold: z.object({

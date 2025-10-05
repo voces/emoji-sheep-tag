@@ -8,6 +8,10 @@ import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
 // C->S
 export const zLobbySettings = z.object({
   type: z.literal("lobbySettings"),
+  sheep: z.union([
+    z.number().transform((v) => Math.max(v, 1)),
+    z.literal("auto"),
+  ]).optional(),
   time: z.union([
     z.number().transform((v) => Math.min(Math.max(v, 1), 3599)),
     z.literal("auto"),
@@ -32,9 +36,13 @@ export const serializeLobbySettings = (
   playerOffset = 0,
 ): LobbySettings => {
   const players = lobby.players.size + playerOffset;
-  const sheep = getIdealSheep(players);
+  const idealSheep = getIdealSheep(players);
+  const sheep = lobby.settings.sheep === "auto"
+    ? idealSheep
+    : Math.max(Math.min(lobby.settings.sheep, Math.max(players - 1, 1)), 1);
   return {
     sheep,
+    autoSheep: lobby.settings.sheep === "auto",
     time: lobby.settings.time === "auto"
       ? getIdealTime(players, sheep)
       : lobby.settings.time,
@@ -46,7 +54,7 @@ export const serializeLobbySettings = (
 
 export const lobbySettings = (
   client: Client,
-  { startingGold, time, income }: z.TypeOf<typeof zLobbySettings>,
+  { sheep, startingGold, time, income }: z.TypeOf<typeof zLobbySettings>,
 ) => {
   const lobby = client.lobby;
   if (!lobby || lobby.host !== client) {
@@ -55,6 +63,7 @@ export const lobbySettings = (
   }
 
   // Update lobby settings
+  if (sheep !== undefined) lobby.settings.sheep = sheep;
   if (startingGold !== undefined) lobby.settings.startingGold = startingGold;
   if (time !== undefined) lobby.settings.time = time;
   if (income !== undefined) lobby.settings.income = income;

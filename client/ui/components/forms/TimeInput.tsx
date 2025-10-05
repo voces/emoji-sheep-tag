@@ -20,23 +20,27 @@ const formatTime = (totalSeconds: number): string => {
 };
 
 const parseTime = (timeString: string): number | null => {
-  // Remove any non-digit characters except colon
-  const cleaned = timeString.replace(/[^\d:]/g, "");
+  // Remove any non-digit characters except colon and decimal point
+  const cleaned = timeString.replace(/[^\d:.]/g, "");
 
   // Handle various formats
   if (cleaned.includes(":")) {
     const [minutesPart, secondsPart] = cleaned.split(":");
-    const minutes = parseInt(minutesPart) || 0;
-    const seconds = parseInt(secondsPart) || 0;
+    let minutes = Math.round(parseFloat(minutesPart)) || 0;
+    let seconds = Math.round(parseFloat(secondsPart)) || 0;
 
     // Validate seconds part (should be 0-59)
-    if (seconds >= 60) return null;
+    if (seconds >= 60) {
+      minutes += Math.floor(seconds / 60);
+      seconds = seconds % 60;
+    }
 
     return minutes * 60 + seconds;
   } else {
-    // If no colon, treat as total seconds
-    const totalSeconds = parseInt(cleaned);
-    return isNaN(totalSeconds) ? null : totalSeconds;
+    // If no colon, treat as minutes and convert to seconds
+    const minutes = parseFloat(cleaned);
+    if (isNaN(minutes)) return null;
+    return Math.round(minutes * 60);
   }
 };
 

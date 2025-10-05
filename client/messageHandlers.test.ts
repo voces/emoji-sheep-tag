@@ -14,6 +14,7 @@ import { generateDoodads } from "@/shared/map.ts";
 // Common test objects
 const DEFAULT_LOBBY_SETTINGS = {
   sheep: 1,
+  autoSheep: false,
   time: 300,
   autoTime: false,
   startingGold: { sheep: 25, wolves: 100 },
@@ -223,6 +224,7 @@ describe("nameChange", () => {
       updates: [],
       lobbySettings: {
         sheep: 1,
+        autoSheep: false,
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
@@ -362,6 +364,7 @@ describe("stop", () => {
       updates: [],
       lobbySettings: {
         sheep: 1,
+        autoSheep: false,
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
@@ -418,6 +421,7 @@ describe("updates", () => {
       updates: [],
       lobbySettings: {
         sheep: 0,
+        autoSheep: true,
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
@@ -561,6 +565,7 @@ describe("leave", () => {
       updates: [],
       lobbySettings: {
         sheep: 1,
+        autoSheep: false,
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
@@ -605,6 +610,7 @@ describe("leave", () => {
       updates: [],
       lobbySettings: {
         sheep: 1,
+        autoSheep: false,
         time: 300,
         autoTime: false,
         startingGold: { sheep: 25, wolves: 100 },
@@ -691,6 +697,7 @@ describe("lobbySettings", () => {
     handlers.lobbySettings({
       type: "lobbySettings",
       sheep: 2,
+      autoSheep: false,
       time: 300,
       autoTime: false,
       startingGold: { sheep: 50, wolves: 75 },
@@ -706,6 +713,7 @@ describe("lobbySettings", () => {
     handlers.lobbySettings({
       type: "lobbySettings",
       sheep: 2,
+      autoSheep: false,
       time: 300,
       autoTime: false,
       startingGold: { sheep: 25, wolves: 100 },
@@ -715,6 +723,7 @@ describe("lobbySettings", () => {
     handlers.lobbySettings({
       type: "lobbySettings",
       sheep: 3,
+      autoSheep: true,
       time: 400,
       autoTime: true,
       startingGold: { sheep: 75, wolves: 50 },

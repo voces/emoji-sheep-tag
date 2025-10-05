@@ -159,9 +159,13 @@ const serializeLobbySettings = (
   playerOffset = 0,
 ): LobbySettings => {
   const players = lobby.players.size + playerOffset;
-  const sheep = getIdealSheep(players);
+  const idealSheep = getIdealSheep(players);
+  const sheep = lobby.settings.sheep === "auto"
+    ? idealSheep
+    : Math.min(Math.max(lobby.settings.sheep, 1), Math.max(players - 1, 1));
   return {
     sheep,
+    autoSheep: lobby.settings.sheep === "auto",
     time: lobby.settings.time === "auto"
       ? getIdealTime(players, sheep)
       : lobby.settings.time,

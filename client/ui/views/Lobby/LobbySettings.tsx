@@ -10,6 +10,7 @@ import { TimeInput } from "@/components/forms/TimeInput.tsx";
 import { Button } from "@/components/forms/Button.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
 import { useEffect, useState } from "react";
+import { playersVar } from "@/vars/players.ts";
 
 const SettingsCard = styled(Card)`
   width: 40%;
@@ -49,6 +50,7 @@ const SettingsInput = styled(Input)`
 export const LobbySettings = () => {
   const localPlayer = useLocalPlayer();
   const lobbySettings = useReactiveVar(lobbySettingsVar);
+  const players = useReactiveVar(playersVar);
 
   const [sheepIncome, setSheepIncome] = useState(
     lobbySettings.income.sheep.toString(),
@@ -64,12 +66,49 @@ export const LobbySettings = () => {
     lobbySettings.income.wolves,
   ]);
 
+  const maxSheep = Math.max(players.length - 1, 1);
+
   return (
     <SettingsCard>
       <GameSettingsContainer>
         <SettingsHeader>
           Game Settings
         </SettingsHeader>
+
+        <SettingsRow>
+          <SettingsLabel htmlFor="sheep">
+            Sheep Count
+          </SettingsLabel>
+          <HStack $align="center">
+            <SettingsInput
+              id="sheep"
+              type="number"
+              min={1}
+              max={maxSheep}
+              value={lobbySettings.sheep}
+              onChange={(e) => {
+                const value = Math.max(
+                  1,
+                  Math.min(maxSheep, parseInt(e.target.value) || 1),
+                );
+                send({ type: "lobbySettings", sheep: value });
+              }}
+              disabled={!localPlayer?.host || lobbySettings.autoSheep}
+              style={{ flex: 1 }}
+            />
+            <SettingsLabel htmlFor="autoSheep">Auto</SettingsLabel>
+            <Checkbox
+              id="autoSheep"
+              checked={lobbySettings.autoSheep}
+              onChange={(e) =>
+                send({
+                  type: "lobbySettings",
+                  sheep: e.currentTarget.checked ? "auto" : lobbySettings.sheep,
+                })}
+              disabled={!localPlayer?.host}
+            />
+          </HStack>
+        </SettingsRow>
 
         <SettingsRow>
           <SettingsLabel htmlFor="time">

@@ -33,9 +33,15 @@ export const start = (
   console.log(new Date(), "Round started in lobby", lobby.name);
 
   lobby.status = "playing";
+  const desiredSheep = lobby.settings.sheep === "auto"
+    ? getIdealSheep(lobby.players.size)
+    : Math.min(
+      Math.max(lobby.settings.sheep, 1),
+      Math.max(lobby.players.size - 1, 1),
+    );
   const { sheep, wolves } = practice
     ? { sheep: new Set(lobby.players), wolves: new Set<Client>() }
-    : draftTeams(lobby, getIdealSheep(lobby.players.size));
+    : draftTeams(lobby, desiredSheep);
 
   const ecs = newEcs();
   lobby.round = {

@@ -20,15 +20,15 @@ type LobbySettings = {
   //  * Uses a smart algorithm to rotate sheep and wolves
   //  */
   // teamSelection: "smart";
-  // /**
-  //  * - A `number` will draft the specified number of sheep
-  //  * - `"auto"` will draft (N/2)-1 sheep, where N is the number of players
-  //  */
-  // sheep: "auto" | number;
-  // /**
-  //  * - A number indicates the max number of seconds of each round
-  //  * - `"auto"` factors in sheep and wolves to determine an appropiate time
-  //  */
+  /**
+   * - A `number` will draft the specified number of sheep
+   * - `"auto"` will draft (N/2)-1 sheep, where N is the number of players
+   */
+  sheep: "auto" | number;
+  /**
+   * - A number indicates the max number of seconds of each round
+   * - `"auto"` factors in sheep and wolves to determine an appropiate time
+   */
   time: "auto" | number;
   startingGold: { sheep: number; wolves: number };
   income: { sheep: number; wolves: number };
@@ -75,6 +75,7 @@ export const newLobby = (host?: Client) => {
     name: `lobby-${lobbyIndex++}`,
     settings: {
       teams: new Map(),
+      sheep: "auto",
       time: "auto",
       startingGold: { sheep: 0, wolves: 0 },
       income: { sheep: 1, wolves: 1 },
