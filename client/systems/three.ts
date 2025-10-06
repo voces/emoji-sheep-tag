@@ -59,6 +59,7 @@ import wood from "../assets/wood.svg" with { type: "text" };
 import bluePotion from "../assets/blue-potion.svg" with { type: "text" };
 import sentry from "../assets/sentry.svg" with { type: "text" };
 import watchtower from "../assets/watchtower.svg" with { type: "text" };
+import bite from "../assets/bite.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -113,6 +114,7 @@ export const svgs: Record<string, string> = {
   bluePotion,
   sentry,
   watchtower,
+  bite,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

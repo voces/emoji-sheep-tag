@@ -316,7 +316,7 @@ export const prefabs: Record<string, DataEntity> = {
         name: "Bite",
         description: "Destroy enemy wards and save dead allies.",
         type: "target",
-        icon: "sheep",
+        icon: "bite",
         targeting: [["spirit"], ["ward"]],
         order: "save",
         range: 0,
