@@ -413,7 +413,7 @@ export const prefabs: Record<string, DataEntity> = {
     alpha: 0.7,
     movementSpeed: 1,
     turnSpeed: 5,
-    sightRadius: 4,
+    sightRadius: 3,
     radius: 0.125,
     pathing: 8,
     actions: [move, stop],

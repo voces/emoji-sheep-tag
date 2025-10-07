@@ -1,4 +1,3 @@
-//@deno-types="npm:@types/react"
 import { useEffect, useRef } from "react";
 import { Color } from "three";
 import { svgs } from "../../systems/three.ts";

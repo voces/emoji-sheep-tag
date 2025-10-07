@@ -80,12 +80,25 @@ export const getCliffMapFromCliffMask = (cliffMask: (number | "r")[][]) => {
 export const getPathingMaskFromTerrainMasks = (
   tileMask: number[][],
   cliffMask: (number | "r")[][],
+  bounds?: { min: { x: number; y: number }; max: { x: number; y: number } },
 ) => {
   const parsedTiles = double(tileMask);
   const cliffMap = getCliffMapFromCliffMask(cliffMask);
 
   return parsedTiles.map((r, y) =>
     r.map((tileIndex, x) => {
+      // Check if outside bounds - treat as fully blocked (0xFF)
+      if (bounds) {
+        const worldX = x / 2; // tileResolution is 2
+        const worldY = y / 2;
+        if (
+          worldX < bounds.min.x || worldX >= bounds.max.x ||
+          worldY < bounds.min.y || worldY >= bounds.max.y
+        ) {
+          return 0xFF;
+        }
+      }
+
       try {
         return tileDefs[tileIndex].pathing | (cliffMap[y]?.[x] ? 3 : 0);
       } catch (err) {

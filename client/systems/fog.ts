@@ -1,6 +1,6 @@
 import { Entity, SystemEntity } from "../ecs.ts";
 import { getLocalPlayer } from "@/vars/players.ts";
-import { height, terrainLayers, width } from "@/shared/map.ts";
+import { bounds, height, terrainLayers, width } from "@/shared/map.ts";
 
 // Fog resolution multiplier: 2 = 160x160, 4 = 320x320, etc.
 const FOG_RESOLUTION_MULTIPLIER = 4;
@@ -215,7 +215,15 @@ class VisibilityGrid {
       const distSquared = dx * dx + dy * dy;
       if (distSquared > radiusSquared) continue;
 
-      // Check height blocking
+      // Check bounds - treat out of bounds as blocked (bounds are in world coordinates)
+      const worldX = x / FOG_RESOLUTION_MULTIPLIER;
+      const worldY = y / FOG_RESOLUTION_MULTIPLIER;
+      if (
+        worldX < bounds.min.x || worldX > bounds.max.x ||
+        worldY < bounds.min.y || worldY > bounds.max.y
+      ) continue;
+
+      // Check height blocking (terrainLayers is 2x resolution)
       const terrainX = Math.floor(x / terrainScale);
       const terrainY = Math.floor(y / terrainScale);
       const terrainRow = terrainLayers[terrainY];
@@ -583,7 +591,8 @@ export const resetFog = () => {
 const handleEntityVisibility = (entity: SystemEntity<"position">) => {
   // These entities are always visible
   if (
-    entity.type === "cosmetic" || entity.type === "static" || isTree(entity)
+    entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
+    entity.id.startsWith("blueprint-")
   ) return;
   // Skip allied entities
   if (isAlliedWithLocalPlayer(entity)) {

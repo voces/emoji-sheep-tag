@@ -1,4 +1,3 @@
-//@deno-types="npm:@types/react"
 import { useSyncExternalStore } from "react";
 
 type SetValue<T> = undefined extends T ? T | ((oldValue: T) => T) // Allow explicit `undefined` if T already includes it.

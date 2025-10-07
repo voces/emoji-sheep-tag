@@ -3,7 +3,7 @@ import { stateVar } from "./vars/state.ts";
 import { Lobby } from "./views/Lobby/index.tsx";
 import { Menu } from "./views/Menu.tsx";
 import { Game } from "./views/Game/index.tsx";
-import { CommandPalette } from "./views/CommandPalette.tsx";
+import { CommandPalette } from "./views/CommandPalette/index.tsx";
 import { Settings } from "./views/Settings/index.tsx";
 import { Wrapper } from "./Wrapper.tsx";
 import { DisconnectedDialog } from "./views/DisconnectedDialog.tsx";

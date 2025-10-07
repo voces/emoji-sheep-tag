@@ -1,27 +1,19 @@
-//@deno-types="npm:@types/react"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { styled } from "styled-components";
-import { connect, send } from "../../client.ts";
+import { connect, send } from "../../../client.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
 import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
 import { useMemoWithPrevious } from "@/hooks/useMemoWithPrevious.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { stateVar } from "@/vars/state.ts";
-import { flags } from "../../flags.ts";
+import { flags } from "../../../flags.ts";
 import { Card } from "@/components/layout/Card.tsx";
 import { Input } from "@/components/forms/Input.tsx";
 import { getLocalPlayer } from "@/vars/players.ts";
 import { editorVar } from "@/vars/editor.ts";
-import { app, Entity, SystemEntity } from "../../ecs.ts";
-import { DEFAULT_FACING } from "@/shared/constants.ts";
-import { terrain } from "../../graphics/three.ts";
-import { tileDefs } from "@/shared/data.ts";
-import { packMap2D } from "@/shared/util/2dPacking.ts";
-import { rad2deg } from "@/shared/util/math.ts";
-import { packEntities } from "@/shared/util/entityPacking.ts";
-import { loadLocal } from "../../local.ts";
-import { center } from "@/shared/map.ts";
+import { loadLocal } from "../../../local.ts";
+import { useExportMap } from "./useExportMap.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -121,6 +113,8 @@ export const CommandPalette = () => {
   const [prompt, setPrompt] = useState("");
   const [inputs, setInputs] = useState<string[]>([]);
 
+  const exportMap = useExportMap();
+
   const commands = useMemo((): Command[] => [
     {
       name: "Open editor",
@@ -132,59 +126,7 @@ export const CommandPalette = () => {
         connect();
       },
     },
-    {
-      name: "Export map",
-      description: "Exports the map as JS",
-      valid: editorVar,
-      callback: () => {
-        const doodads = Array.from(app.entities).filter((
-          e,
-        ): e is SystemEntity<"isDoodad" | "prefab" | "position"> =>
-          !!e.isDoodad && !!e.prefab && !!e.position
-        );
-        const entities: Record<string, Partial<Entity>[]> = {};
-        for (const doodad of doodads) {
-          if (!entities[doodad.prefab]) entities[doodad.prefab] = [];
-          const stored: Partial<Entity> = { position: doodad.position };
-          if (
-            typeof doodad.modelScale === "number" && doodad.modelScale !== 1
-          ) stored.modelScale = doodad.modelScale;
-          if (
-            typeof doodad.facing === "number" &&
-            doodad.facing !== DEFAULT_FACING
-          ) stored.facing = Math.round(rad2deg(doodad.facing));
-          if (doodad.playerColor) stored.playerColor = doodad.playerColor;
-          if (typeof doodad.vertexColor === "number") {
-            stored.vertexColor = doodad.vertexColor;
-          }
-          entities[doodad.prefab].push(stored);
-        }
-
-        let maxCliff = 0;
-        const cliffs = terrain.masks.cliff.map((r) =>
-          r.map((v) => {
-            if (v === "r") return 0;
-            if (v >= maxCliff) maxCliff = v;
-            return v + 1;
-          })
-        ).reverse();
-
-        console.log({
-          center,
-          terrain: packMap2D(
-            terrain.masks.groundTile.toReversed(),
-            tileDefs.length,
-          ),
-          cliffs: packMap2D(cliffs, maxCliff + 1),
-          entities: packEntities(
-            Array.from(app.entities).filter((e) =>
-              e.isDoodad && e.prefab && e.position &&
-              !e.id.startsWith("blueprint-")
-            ),
-          ),
-        });
-      },
-    },
+    exportMap,
     {
       name: "Open settings",
       description: "Open setting menu",

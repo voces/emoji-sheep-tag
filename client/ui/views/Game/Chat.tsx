@@ -1,4 +1,3 @@
-//@deno-types="npm:@types/react"
 import { useEffect, useRef } from "react";
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";

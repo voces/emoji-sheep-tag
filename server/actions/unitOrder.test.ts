@@ -15,7 +15,7 @@ describe("unitOrder fox item integration", () => {
     const client = clients.get("test-client")!;
 
     // Create a wolf unit
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     // Add fox item to inventory
     addItem(wolf, "foxToken");
@@ -51,7 +51,7 @@ describe("unitOrder fox item integration", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     // Add fox item with 0 charges
     addItem(wolf, "foxToken");
@@ -74,7 +74,7 @@ describe("unitOrder fox item integration", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     // Add fox item twice (should stack charges)
     addItem(wolf, "foxToken");
@@ -117,7 +117,7 @@ describe("unitOrder fox item integration", () => {
   it("should not allow other clients to use unit's fox item", {
     wolves: ["test-client", "other-client"],
   }, function* ({ clients }) {
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     addItem(wolf, "foxToken");
     yield;
 
@@ -145,7 +145,7 @@ describe("unitOrder fox item integration", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     // Add fox item
     addItem(wolf, "foxToken");
@@ -170,11 +170,11 @@ describe("unitOrder basic actions", () => {
     const client = clients.get("test-client")!;
 
     // Use sheep which has stop action
-    const sheep = newUnit("test-client", "sheep", 5, 5);
+    const sheep = newUnit("test-client", "sheep", 15, 15);
 
     // Give the unit some orders and queue
-    sheep.order = { type: "walk", target: { x: 10, y: 10 } };
-    sheep.queue = [{ type: "walk", target: { x: 20, y: 20 } }];
+    sheep.order = { type: "walk", target: { x: 20, y: 20 } };
+    sheep.queue = [{ type: "walk", target: { x: 30, y: 30 } }];
     yield;
 
     // Execute stop action
@@ -192,7 +192,7 @@ describe("unitOrder basic actions", () => {
     const client = clients.get("test-client")!;
 
     // Use wolf which has hold action
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
 
     // Execute hold action
@@ -210,8 +210,8 @@ describe("unitOrder basic actions", () => {
     const client = clients.get("test-client")!;
 
     // Use sheep which has move action
-    const sheep = newUnit("test-client", "sheep", 5, 5);
-    const target = { x: 15, y: 20 };
+    const sheep = newUnit("test-client", "sheep", 15, 15);
+    const target = { x: 25, y: 30 };
     yield;
 
     // Execute move action
@@ -236,8 +236,8 @@ describe("unitOrder basic actions", () => {
     const client = clients.get("test-client")!;
 
     // Use sheep which has move action
-    const sheep = newUnit("test-client", "sheep", 5, 5);
-    const targetUnit = newUnit("test-client", "wolf", 15, 20);
+    const sheep = newUnit("test-client", "sheep", 15, 15);
+    const targetUnit = newUnit("test-client", "wolf", 25, 30);
     yield;
 
     // Execute move action with target entity
@@ -261,7 +261,7 @@ describe("unitOrder basic actions", () => {
     const client = clients.get("test-client")!;
 
     // Create sheep owned by different client
-    const sheep = newUnit("other-client", "sheep", 5, 5);
+    const sheep = newUnit("other-client", "sheep", 15, 15);
     yield;
     const initialOrder = sheep.order;
 
@@ -294,8 +294,8 @@ describe("unitOrder combat actions", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
-    const targetUnit = newUnit("other-client", "sheep", 15, 20);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
+    const targetUnit = newUnit("other-client", "sheep", 25, 30);
     yield;
 
     // Execute attack action
@@ -318,8 +318,8 @@ describe("unitOrder combat actions", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
-    const target = { x: 15, y: 20 };
+    const wolf = newUnit("test-client", "wolf", 15, 15);
+    const target = { x: 25, y: 30 };
     yield;
 
     // Execute attack action with ground target
@@ -344,7 +344,7 @@ describe("unitOrder combat actions", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
     const initialOrder = wolf.order;
 
@@ -366,7 +366,7 @@ describe("unitOrder combat actions", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
     const initialOrder = wolf.order;
 
@@ -386,7 +386,7 @@ describe("unitOrder special abilities", () => {
     const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
 
     // Execute mirror image action
@@ -412,9 +412,9 @@ describe("unitOrder special abilities", () => {
     const client = clients.get("test-client")!;
 
     // Use sheep which has destroy last farm action
-    const sheep = newUnit("test-client", "sheep", 5, 5);
+    const sheep = newUnit("test-client", "sheep", 15, 15);
     // Create a hut to destroy
-    const hut = newUnit("test-client", "hut", 10, 10);
+    const hut = newUnit("test-client", "hut", 20, 20);
     yield;
     expect(hut.health).toBe(120);
 
@@ -436,7 +436,7 @@ describe("unitOrder special abilities", () => {
     const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
     // Set mana to 0
     wolf.mana = 0;
@@ -463,7 +463,7 @@ describe("unitOrder special abilities", () => {
     const client = clients.get("test-client")!;
 
     // Use wolf which has mirror image action
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     wolf.mana = 100;
     wolf.maxMana = 100;
     yield;
@@ -492,7 +492,7 @@ describe("unitOrder self destruct", () => {
     const client = clients.get("test-client")!;
 
     // Use hut which has self destruct action
-    const hut = newUnit("test-client", "hut", 5, 5);
+    const hut = newUnit("test-client", "hut", 15, 15);
     hut.health = 100;
     hut.maxHealth = 100;
     yield;
@@ -515,7 +515,7 @@ describe("unitOrder self destruct", () => {
     const client = clients.get("test-client")!;
 
     // Use wolf which doesn't have self destruct action
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     wolf.health = 100;
     wolf.maxHealth = 100;
     yield;
@@ -541,7 +541,7 @@ describe("unitOrder self destruct", () => {
       const client = clients.get("test-client")!;
 
       // Use tiny hut which has self destruct action
-      const tinyHut = newUnit("test-client", "tinyHut", 5, 5);
+      const tinyHut = newUnit("test-client", "tinyHut", 15, 15);
       tinyHut.health = 1;
       tinyHut.maxHealth = 100;
       yield;
@@ -565,7 +565,7 @@ describe("unitOrder timed entities", () => {
     wolves: ["test-client"],
   }, function* ({ ecs, clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     // Add fox item to inventory
     addItem(wolf, "foxToken");
@@ -594,7 +594,7 @@ describe("unitOrder timed entities", () => {
     wolves: ["test-client"],
   }, function* ({ ecs, clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     addItem(wolf, "foxToken");
     yield;
@@ -639,7 +639,7 @@ describe("unitOrder timed entities", () => {
     wolves: ["test-client"],
   }, function* ({ ecs, clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     wolf.mana = 100;
     yield;
 
@@ -676,7 +676,7 @@ describe("unitOrder timed entities", () => {
     wolves: ["test-client"],
   }, function* ({ ecs, clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     wolf.mana = 100;
     yield;
 
@@ -732,7 +732,7 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const sheep = newUnit("test-client", "sheep", 5, 5);
+    const sheep = newUnit("test-client", "sheep", 15, 15);
     yield;
 
     // Issue initial move order
@@ -740,7 +740,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [sheep.id],
       order: "move",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
     });
     yield;
 
@@ -748,14 +748,14 @@ describe("unitOrder queuing system", () => {
     expect(sheep.order).toBeDefined();
     expect(sheep.order!.type).toBe("walk");
     expect((sheep.order as { target: { x: number; y: number } }).target)
-      .toEqual({ x: 10, y: 10 });
+      .toEqual({ x: 30, y: 30 });
 
     // Queue a second move order
     unitOrder(client, {
       type: "unitOrder",
       units: [sheep.id],
       order: "move",
-      target: { x: 20, y: 20 },
+      target: { x: 30, y: 30 },
       queue: true,
     });
     yield;
@@ -763,21 +763,21 @@ describe("unitOrder queuing system", () => {
     // Current order should remain unchanged
     expect(sheep.order!.type).toBe("walk");
     expect((sheep.order as { target: { x: number; y: number } }).target)
-      .toEqual({ x: 10, y: 10 });
+      .toEqual({ x: 30, y: 30 });
 
     // Should have queue with one entry
     expect(sheep.queue).toBeDefined();
     expect(sheep.queue).toHaveLength(1);
     expect(sheep.queue![0].type).toBe("walk");
     expect((sheep.queue![0] as { target: { x: number; y: number } }).target)
-      .toEqual({ x: 20, y: 20 });
+      .toEqual({ x: 30, y: 30 });
   });
 
   it("should queue multiple orders", {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
 
     // Issue initial attack order
@@ -785,7 +785,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [wolf.id],
       order: "attack",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
     });
     yield;
 
@@ -794,14 +794,14 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [wolf.id],
       order: "move",
-      target: { x: 15, y: 15 },
+      target: { x: 25, y: 25 },
       queue: true,
     });
     unitOrder(client, {
       type: "unitOrder",
       units: [wolf.id],
       order: "attack",
-      target: { x: 20, y: 20 },
+      target: { x: 30, y: 30 },
       queue: true,
     });
     yield;
@@ -819,7 +819,7 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
 
     // Set initial move order
@@ -827,7 +827,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [wolf.id],
       order: "move",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
     });
     yield;
 
@@ -852,7 +852,7 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const sheep = newUnit("test-client", "sheep", 5, 5);
+    const sheep = newUnit("test-client", "sheep", 15, 15);
     yield;
 
     // Set up initial order and queue
@@ -860,13 +860,13 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [sheep.id],
       order: "move",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
     });
     unitOrder(client, {
       type: "unitOrder",
       units: [sheep.id],
       order: "move",
-      target: { x: 15, y: 15 },
+      target: { x: 25, y: 25 },
       queue: true,
     });
     yield;
@@ -879,7 +879,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [sheep.id],
       order: "move",
-      target: { x: 20, y: 20 },
+      target: { x: 30, y: 30 },
       queue: false,
     });
     yield;
@@ -887,7 +887,7 @@ describe("unitOrder queuing system", () => {
     // Should replace current order and clear queue
     expect(sheep.order!.type).toBe("walk");
     expect((sheep.order as { target: { x: number; y: number } }).target)
-      .toEqual({ x: 20, y: 20 });
+      .toEqual({ x: 30, y: 30 });
     expect(sheep.queue).toBeFalsy();
   });
 
@@ -895,7 +895,7 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     wolf.mana = 100;
     wolf.maxMana = 100;
     yield;
@@ -905,7 +905,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [wolf.id],
       order: "move",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
     });
     yield;
 
@@ -931,7 +931,7 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     addItem(wolf, "foxToken");
     yield;
 
@@ -940,7 +940,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [wolf.id],
       order: "move",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
     });
     yield;
 
@@ -970,9 +970,9 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
-    const enemy1 = newUnit("other-client", "sheep", 10, 10);
-    const enemy2 = newUnit("other-client", "sheep", 15, 15);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
+    const enemy1 = newUnit("other-client", "sheep", 20, 20);
+    const enemy2 = newUnit("other-client", "sheep", 25, 25);
     yield;
 
     // Issue initial attack order
@@ -1009,7 +1009,7 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
 
     // Issue initial move order
@@ -1017,7 +1017,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [wolf.id],
       order: "move",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
     });
     yield;
 
@@ -1026,7 +1026,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [wolf.id],
       order: "attack",
-      target: { x: 20, y: 20 },
+      target: { x: 30, y: 30 },
       queue: true,
     });
     yield;
@@ -1039,14 +1039,14 @@ describe("unitOrder queuing system", () => {
     expect(wolf.queue).toHaveLength(1);
     expect(wolf.queue![0].type).toBe("attackMove");
     expect((wolf.queue![0] as { target: { x: number; y: number } }).target)
-      .toEqual({ x: 20, y: 20 });
+      .toEqual({ x: 30, y: 30 });
   });
 
   it("should queue speed pot order", {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     addItem(wolf, "speedPot");
     yield;
 
@@ -1055,7 +1055,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [wolf.id],
       order: "move",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
     });
     yield;
 
@@ -1081,12 +1081,12 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const sheep = newUnit("test-client", "sheep", 5, 5);
+    const sheep = newUnit("test-client", "sheep", 15, 15);
     yield;
 
     // Set up initial order
-    sheep.order = { type: "walk", target: { x: 10, y: 10 } };
-    sheep.queue = [{ type: "walk", target: { x: 20, y: 20 } }];
+    sheep.order = { type: "walk", target: { x: 20, y: 20 } };
+    sheep.queue = [{ type: "walk", target: { x: 30, y: 30 } }];
     yield;
 
     const initialQueue = [...sheep.queue];
@@ -1103,7 +1103,7 @@ describe("unitOrder queuing system", () => {
     // Nothing should change - order might have path added but core fields same
     expect(sheep.order!.type).toBe("walk");
     expect((sheep.order as { target: { x: number; y: number } }).target)
-      .toEqual({ x: 10, y: 10 });
+      .toEqual({ x: 20, y: 20 });
     expect(sheep.queue).toEqual(initialQueue);
   });
 
@@ -1111,8 +1111,8 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const sheep = newUnit("test-client", "sheep", 5, 5);
-    const hut = newUnit("test-client", "hut", 10, 10);
+    const sheep = newUnit("test-client", "sheep", 15, 15);
+    const hut = newUnit("test-client", "hut", 20, 20);
     yield;
 
     // Issue initial move order
@@ -1120,7 +1120,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [sheep.id],
       order: "move",
-      target: { x: 15, y: 15 },
+      target: { x: 25, y: 25 },
     });
     yield;
 
@@ -1151,7 +1151,7 @@ describe("unitOrder queuing system", () => {
     wolves: ["test-client"],
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
-    const sheep = newUnit("test-client", "sheep", 5, 5);
+    const sheep = newUnit("test-client", "sheep", 15, 15);
     yield;
 
     // Queue move order with no current order
@@ -1159,7 +1159,7 @@ describe("unitOrder queuing system", () => {
       type: "unitOrder",
       units: [sheep.id],
       order: "move",
-      target: { x: 10, y: 10 },
+      target: { x: 30, y: 30 },
       queue: true,
     });
     yield;
@@ -1177,7 +1177,7 @@ describe("unitOrder generalized charge system", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     // Add a hypothetical lightning item that would work with any action
     wolf.inventory = [{
@@ -1227,7 +1227,7 @@ describe("unitOrder generalized charge system", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
     yield;
 
     // Add item without charges property
@@ -1261,7 +1261,7 @@ describe("unitOrder generalized charge system", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     // Add item with exactly 1 charge
     addItem(wolf, "foxToken");
@@ -1281,7 +1281,7 @@ describe("unitOrder generalized charge system", () => {
   }, function* ({ clients }) {
     const client = clients.get("test-client")!;
 
-    const wolf = newUnit("test-client", "wolf", 5, 5);
+    const wolf = newUnit("test-client", "wolf", 15, 15);
 
     // Add fox item to inventory
     addItem(wolf, "foxToken");

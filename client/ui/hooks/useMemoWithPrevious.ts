@@ -1,4 +1,3 @@
-//@deno-types="npm:@types/react"
 import { DependencyList, useMemo, useRef } from "react";
 
 export const useMemoWithPrevious = <T>(

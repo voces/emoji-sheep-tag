@@ -16,6 +16,12 @@ import {
   WebGLRenderTarget,
 } from "three";
 
+import {
+  bounds,
+  height as mapHeight,
+  width as mapWidth,
+} from "@/shared/map.ts";
+
 export class FogPass {
   private scene: Scene;
   private camera: OrthographicCamera;
@@ -58,7 +64,9 @@ export class FogPass {
         cameraNear: { value: camera.near },
         cameraFar: { value: camera.far },
         worldMin: { value: new Vector2(0, 0) },
-        worldMax: { value: new Vector2(80, 80) },
+        worldMax: { value: new Vector2(mapWidth, mapHeight) },
+        boundsMin: { value: new Vector2(bounds.min.x, bounds.min.y) },
+        boundsMax: { value: new Vector2(bounds.max.x, bounds.max.y) },
         fogColor: { value: new Color(0x000000) },
         fogOpacity: { value: 0.95 },
         projInv: { value: new Matrix4() },
@@ -85,6 +93,8 @@ export class FogPass {
         uniform float cameraFar;
         uniform vec2 worldMin;
         uniform vec2 worldMax;
+        uniform vec2 boundsMin;
+        uniform vec2 boundsMax;
         uniform mat4 projInv;
         uniform mat4 viewInv;
         uniform float deltaTime;
@@ -138,6 +148,14 @@ export class FogPass {
           // Get world XY coordinates directly from screen position
           vec2 worldXY = screenToWorld(vUv);
 
+          // Calculate distance to nearest boundary edge
+          float fadeInset = 0.25; // Fade starts this far inside bounds
+          float fadeOutset = 0.125; // Fade extends this far outside bounds
+          float distToEdge = min(
+            min(worldXY.x - boundsMin.x, boundsMax.x - worldXY.x),
+            min(worldXY.y - boundsMin.y, boundsMax.y - worldXY.y)
+          );
+
           // Map world XY to fog UV
           vec2 fogUV;
           fogUV.x = (worldXY.x - worldMin.x) / (worldMax.x - worldMin.x);
@@ -149,6 +167,14 @@ export class FogPass {
 
           // Apply fog only in hidden areas
           float alpha = fogOpacity * (1.0 - vis);
+
+          // Apply boundary fade if near or outside bounds
+          if (distToEdge < fadeInset) {
+            // Calculate fade: -fadeOutset (outside) to +fadeInset (inside)
+            float fadeAmount = smoothstep(-fadeOutset, fadeInset, distToEdge);
+            // Mix from deeper fog (0.99) outside to normal alpha inside
+            alpha = mix(0.99, alpha, fadeAmount);
+          }
 
           // If alpha is negligible, apply gamma and pass through
           if (alpha <= 0.0) {

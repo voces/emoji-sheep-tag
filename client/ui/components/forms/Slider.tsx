@@ -1,5 +1,4 @@
 import { styled } from "styled-components";
-//@deno-types="npm:@types/react"
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mouse, MouseButtonEvent, MouseMoveEvent } from "../../../mouse.ts";
 

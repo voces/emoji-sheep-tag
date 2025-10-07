@@ -1,5 +1,4 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-//@deno-types="npm:@types/react"
 import { useEffect } from "react";
 import { styled } from "styled-components";
 import { shortcutsVar } from "@/vars/shortcuts.ts";

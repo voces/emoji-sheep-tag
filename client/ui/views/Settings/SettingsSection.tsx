@@ -1,4 +1,3 @@
-//@deno-types="npm:@types/react"
 import { useState } from "react";
 import { styled } from "styled-components";
 import { keyboard } from "../../../controls.ts";

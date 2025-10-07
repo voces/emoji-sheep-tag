@@ -1,6 +1,4 @@
-//@deno-types="npm:@types/react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-// @deno-types="npm:@types/react-dom"
 import { createPortal } from "react-dom";
 import { styled } from "styled-components";
 
