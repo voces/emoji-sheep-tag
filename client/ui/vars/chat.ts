@@ -11,7 +11,7 @@ export const addChatMessage = (message: string) => {
     }),
   );
   chatLogVar(
-    (log) => [...(log.length === 100 ? log.slice(1) : log), {
+    (log) => [...(log.length > 100 ? log.slice(-99) : log), {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
       message,

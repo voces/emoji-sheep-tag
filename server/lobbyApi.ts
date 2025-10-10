@@ -9,6 +9,7 @@ import { getPlayer, sendPlayerGold } from "./api/player.ts";
 import { getSheep } from "./systems/sheep.ts";
 import { distributeEquitably } from "./util/equitableDistribution.ts";
 import { isPractice } from "./api/st.ts";
+import { broadcastLobbyList, joinHub } from "./hub.ts";
 
 export const endRound = (canceled = false) => {
   const lobby = lobbyContext.current;
@@ -150,4 +151,11 @@ export const leave = (client?: Client) => {
       ) endRound();
     }
   }
+
+  // Remove lobby reference and return client to hub
+  client.lobby = undefined;
+  joinHub(client);
+
+  // Update lobby list for hub
+  broadcastLobbyList();
 };

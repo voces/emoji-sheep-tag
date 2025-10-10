@@ -1,5 +1,6 @@
 import type { ClientToServerMessage } from "../server/client.ts";
 import { getWebSocket } from "./connection.ts";
+import { flags } from "./flags.ts";
 
 const delay = (fn: () => void) => {
   if (typeof latency !== "number" && typeof noise !== "number") {
@@ -33,6 +34,7 @@ export const startPing = () => {
   }
 
   pingInterval = setInterval(() => {
+    if (!flags.debug || !flags.debugStats) return;
     const ws = getWebSocket();
     if (ws?.readyState !== 1) return; // 1 = OPEN
     const time = performance.now();

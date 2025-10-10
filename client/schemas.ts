@@ -389,6 +389,19 @@ const zLobbySettingsMessage = zLobbySettings.extend({
   type: z.literal("lobbySettings"),
 });
 
+const zLobby = z.object({
+  name: z.string(),
+  playerCount: z.number(),
+  status: z.union([z.literal("lobby"), z.literal("playing")]),
+});
+
+export type Lobby = z.infer<typeof zLobby>;
+
+const zHubState = z.object({
+  type: z.literal("hubState"),
+  lobbies: z.array(zLobby).readonly(),
+});
+
 export const zMessage = z.discriminatedUnion("type", [
   zStart,
   zUpdates,
@@ -400,6 +413,7 @@ export const zMessage = z.discriminatedUnion("type", [
   zPong,
   zChat,
   zLobbySettingsMessage,
+  zHubState,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;

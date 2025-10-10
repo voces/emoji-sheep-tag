@@ -4,7 +4,7 @@ import type { ServerToClientMessage } from "../client/client.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import type { Entity } from "@/shared/types.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
-import { leave, send } from "./lobbyApi.ts";
+import { leave } from "./lobbyApi.ts";
 import { build, zBuild } from "./actions/build.ts";
 import { start, zStart } from "./actions/start.ts";
 import { colors } from "@/shared/data.ts";
@@ -13,7 +13,6 @@ import { flushUpdates } from "./updates.ts";
 import { ping, zPing } from "./actions/ping.ts";
 import { mapPing, zMapPing } from "./actions/mapPing.ts";
 import { generic, zGenericEvent } from "./actions/generic.ts";
-import { setSome } from "./util/set.ts";
 import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
 import { purchase, zPurchase } from "./actions/purchase.ts";
@@ -21,7 +20,6 @@ import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
 import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
 import { getIdealSheep, getIdealTime } from "./st/roundHelpers.ts";
-import { addPlayerToPracticeGame } from "./api/player.ts";
 import { LobbySettings } from "../client/schemas.ts";
 import {
   editorCreateEntity,
@@ -31,6 +29,9 @@ import {
   zEditorSetPathing,
   zEditorUpdateEntities,
 } from "./actions/editor.ts";
+import { joinLobby, zJoinLobby } from "./actions/joinLobby.ts";
+import { createLobby, zCreateLobby } from "./actions/createLobby.ts";
+import { joinHub, leaveHub, serializeLobbyList } from "./hub.ts";
 
 export type SocketEventMap = {
   close: unknown;
@@ -135,6 +136,8 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zEditorCreateEntity,
   zEditorUpdateEntities,
   zEditorSetPathing,
+  zJoinLobby,
+  zCreateLobby,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -153,6 +156,8 @@ const actions = {
   editorCreateEntity,
   editorUpdateEntities,
   editorSetPathing,
+  joinLobby,
+  createLobby,
 };
 
 const serializeLobbySettings = (
@@ -180,77 +185,44 @@ export const handleSocket = (socket: Socket, url?: URL) => {
   const client = new Client(socket, url?.searchParams.get("name") || undefined);
   console.log(new Date(), "Client", client.id, "connected");
 
-  clientContext.with(client, () => {
-    if (!lobbies.size) return client.lobby = newLobby(client);
-
-    const result = lobbies.values().next();
-    if (result.done) throw new Error("Expected lobby");
-    const lobby = client.lobby = result.value;
-    lobbyContext.with(client.lobby, () => {
-      lobby.settings.teams.set(client, "pending");
-      client.color = colors.find((c) =>
-        !setSome(lobby.players, (p) => p.color === c)
-      ) ?? client.color;
-      client.sheepCount = Math.max(
-        ...Array.from(lobby.players, (p) => p.sheepCount),
-      );
-      send({
-        type: "join",
-        status: lobby.status,
-        players: [{
-          id: client.id,
-          name: client.name,
-          color: client.color,
-          team: "pending",
-          host: false,
-          sheepCount: client.sheepCount,
-        }],
-        updates: [],
-        lobbySettings: serializeLobbySettings(lobby, 1),
-      });
-      lobby.players.add(client);
-      console.log(
-        new Date(),
-        "Client",
-        client.id,
-        "added to lobby",
-        lobby.name,
-      );
-
-      // If joining mid-round in practice mode, add to sheep team and spawn units
-      if (lobby.round?.practice && !client.playerEntity) {
-        const ecs = lobby.round.ecs;
-        appContext.with(
-          ecs,
-          () => ecs.batch(() => addPlayerToPracticeGame(client)),
-        );
-      }
-    });
-  });
+  // If no lobbies exist, create one and add client to it
+  if (lobbies.size === 0) {
+    const lobby = newLobby(client);
+    client.lobby = lobby;
+    // Otherwise, add client to hub (lobby browser)
+  } else joinHub(client);
 
   socket.addEventListener(
     "open",
     wrap(client, () => {
-      if (!client.lobby) return;
-      client.send({
-        type: "join",
-        status: client.lobby.status,
-        players: Array.from(
-          client.lobby.players,
-          (p) => ({
-            id: p.id,
-            name: p.name,
-            color: p.color,
-            team: client.lobby!.settings.teams.get(client)! ?? "pending",
-            local: p === client ? true : undefined,
-            host: client.lobby?.host === p,
-            sheepCount: p.sheepCount,
-          }),
-        ),
-        updates: Array.from(client.lobby.round?.ecs.entities ?? []),
-        rounds: client.lobby.rounds,
-        lobbySettings: serializeLobbySettings(client.lobby),
-      });
+      if (client.lobby) {
+        // Auto-joined a lobby
+        client.send({
+          type: "join",
+          status: client.lobby.status,
+          players: Array.from(
+            client.lobby.players,
+            (p) => ({
+              id: p.id,
+              name: p.name,
+              color: p.color,
+              team: client.lobby!.settings.teams.get(client)! ?? "pending",
+              local: p === client ? true : undefined,
+              host: client.lobby?.host === p,
+              sheepCount: p.sheepCount,
+            }),
+          ),
+          updates: Array.from(client.lobby.round?.ecs.entities ?? []),
+          rounds: client.lobby.rounds,
+          lobbySettings: serializeLobbySettings(client.lobby),
+        });
+      } else {
+        // Client in hub - send initial lobby list
+        client.send({
+          type: "hubState",
+          lobbies: serializeLobbyList(),
+        });
+      }
     }),
   );
 
@@ -296,7 +268,9 @@ export const handleSocket = (socket: Socket, url?: URL) => {
       } catch { /* do nothing */ }
 
       try {
-        batch(leave);
+        if (client.lobby) batch(leave);
+        // Client was in hub
+        else leaveHub(client);
         allClients.delete(client);
       } finally {
         flushUpdates();

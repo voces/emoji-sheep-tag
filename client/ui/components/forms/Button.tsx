@@ -4,7 +4,7 @@ export const Button = styled.button`
   border: 0;
   background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 10));
   color: ${({ theme }) => theme.colors.border};
-  padding: 0 ${({ theme }) => theme.spacing.sm};
+  padding: 0 ${({ theme }) => theme.spacing.md};
   cursor: pointer;
 
   &:hover:not([disabled]),

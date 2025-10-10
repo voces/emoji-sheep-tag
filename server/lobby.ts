@@ -1,6 +1,8 @@
 import { Team } from "@/shared/zod.ts";
 import { type Client } from "./client.ts";
 import { Game } from "./ecs.ts";
+import { broadcastLobbyList } from "./hub.ts";
+import { generateLobbyName } from "./util/lobbyNames.ts";
 
 /**
  * Contexts:
@@ -65,14 +67,14 @@ export const deleteLobby = (lobby: Lobby) => {
   lobby.round?.clearInterval();
   delete lobby.round;
   console.log(new Date(), "Lobby deleted", lobby.name);
+  broadcastLobbyList();
 };
 
-let lobbyIndex = 0;
 export const newLobby = (host?: Client) => {
   const lobby: Lobby = {
     players: new Set(host ? [host] : []),
     host: host,
-    name: `lobby-${lobbyIndex++}`,
+    name: generateLobbyName(),
     settings: {
       teams: new Map(),
       sheep: "auto",
@@ -85,5 +87,9 @@ export const newLobby = (host?: Client) => {
   };
   console.log(new Date(), "Lobby", lobby.name, "created with host", host?.id);
   lobbies.add(lobby);
+
+  // Update lobby list for hub
+  broadcastLobbyList();
+
   return lobby;
 };

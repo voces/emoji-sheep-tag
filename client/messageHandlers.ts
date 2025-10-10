@@ -12,6 +12,9 @@ import type { ServerToClientMessage } from "./schemas.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { send } from "./client.ts";
 import { colorName } from "@/shared/api/player.ts";
+import { getWebSocket } from "./connection.ts";
+import { LocalWebSocket } from "./local.ts";
+import { lobbiesVar } from "@/vars/lobbies.ts";
 
 export const handlers = {
   join: (data: Extract<ServerToClientMessage, { type: "join" }>) => {
@@ -135,4 +138,18 @@ export const handlers = {
       { type: "lobbySettings" }
     >,
   ) => lobbySettingsVar(lobbySettings),
+  hubState: (
+    { lobbies }: Extract<ServerToClientMessage, { type: "hubState" }>,
+  ) => {
+    // In offline mode, auto-join the first lobby if one exists
+    const ws = getWebSocket();
+    if (ws instanceof LocalWebSocket && lobbies.length > 0) {
+      send({ type: "joinLobby", lobbyName: lobbies[0].name });
+      return;
+    }
+
+    // Otherwise, switch to hub view
+    stateVar("hub");
+    lobbiesVar(lobbies);
+  },
 };

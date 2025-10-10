@@ -3,7 +3,6 @@ import z from "zod";
 export const zTeam = z.union([
   z.literal("sheep"),
   z.literal("wolf"),
-  z.literal("wisp"),
   z.literal("observer"),
   z.literal("pending"),
 ]);

@@ -1,6 +1,6 @@
 import { makeVar } from "@/hooks/useVar.tsx";
 
-export const stateVar = makeVar<"menu" | "lobby" | "playing">(
+export const stateVar = makeVar<"menu" | "hub" | "lobby" | "playing">(
   "menu",
 );
 

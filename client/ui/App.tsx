@@ -8,9 +8,11 @@ import { Settings } from "./views/Settings/index.tsx";
 import { Wrapper } from "./Wrapper.tsx";
 import { DisconnectedDialog } from "./views/DisconnectedDialog.tsx";
 import { PerformanceWarning } from "@/components/PerformanceWarning.tsx";
+import { Hub } from "./views/Hub/index.tsx";
 
 const pages = {
   menu: Menu,
+  hub: Hub,
   lobby: Lobby,
   playing: Game,
 };
