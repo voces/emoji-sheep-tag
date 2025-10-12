@@ -17,11 +17,17 @@ export const addSystem = <K extends keyof Entity>(
   systemConfig:
     | Partial<System<Entity, K>>
     | ((game: App<Entity>) => Partial<System<Entity, K>>),
-) =>
+) => {
+  const trace = new Error("").stack;
+  const name = trace?.split("\n")[2]?.trim() || "unknown";
   onInit((game) =>
-    game.addSystem(
-      typeof systemConfig === "function"
-        ? systemConfig(game)
-        : { ...systemConfig },
+    Object.assign(
+      game.addSystem(
+        typeof systemConfig === "function"
+          ? systemConfig(game)
+          : { ...systemConfig },
+      ),
+      { trace, name },
     )
   );
+};

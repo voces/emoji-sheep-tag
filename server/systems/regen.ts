@@ -13,7 +13,7 @@ addSystem({
 addSystem({
   props: ["health", "maxHealth", "healthRegen"],
   updateEntity: (e, delta) => {
-    if (e.health < 0) return;
+    if (e.health <= 0) return;
     e.health = Math.max(
       Math.min(e.maxHealth, e.health + e.healthRegen * delta),
       0,

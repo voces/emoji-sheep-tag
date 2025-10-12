@@ -16,10 +16,14 @@ function makeLoopGuard(
   let i = 0, lastWarn = 0;
   return (progressInfo?: string) => {
     i++;
-    if (i === warnIters || (i > warnIters && i - lastWarn >= warnIters)) {
+    if (i >= warnIters || (i > warnIters && i - lastWarn >= warnIters)) {
       lastWarn = i;
       console.warn(
-        `[loop-warn] ${label} i=${i}${progressInfo ? " " + progressInfo : ""}`,
+        new Error(
+          `[loop-warn] ${label} i=${i}${
+            progressInfo ? " " + progressInfo : ""
+          }`,
+        ),
       );
     }
     if (i >= throwIters) {
@@ -84,35 +88,59 @@ export const newEcs = () => {
   const app = newApp<Entity>({
     initializeEntity,
     flush: () => {
-      // Guards per loop level
-      const guardFlush = makeLoopGuard("flush-outer");
-      const guardEntity = makeLoopGuard("flush-entities");
-      const guardChange = makeLoopGuard("flush-changes");
+      // Guard for the outer flush loop (total iterations across entire flush)
+      const guardFlush = makeLoopGuard("flush-outer", 10, 1000);
 
-      // Track “progress” per outer cycle: how many changes/callbacks we actually applied
+      // Guards per entity - persists across the entire flush
+      const entityGuards = new Map<string, ReturnType<typeof makeLoopGuard>>();
+
+      // Guards per (entity, system) pair - persists across the entire flush
+      const changeGuards = new Map<string, ReturnType<typeof makeLoopGuard>>();
+
+      // Track "progress" per outer cycle: how many changes/callbacks we actually applied
       let appliedThisCycle = 0;
 
       // Outer drainer
       while (app.callbackQueue.length || app.entityChangeQueue.size) {
+        guardFlush(
+          `callbacks=${app.callbackQueue.length} entities=${app.entityChangeQueue.size}`,
+        );
+
         const beforeCallbacks = app.callbackQueue.length;
         const beforeEntities = app.entityChangeQueue.size;
 
         // Entity queue drainer
         while (app.entityChangeQueue.size) {
-          guardEntity(`entities=${app.entityChangeQueue.size}`);
-
           const [entity, changes] = app.entityChangeQueue.entries().next()
             .value!;
           const beforeChanges = changes.size;
 
+          // Get or create guard for this entity (persists across re-queues)
+          if (!entityGuards.has(entity.id)) {
+            entityGuards.set(
+              entity.id,
+              makeLoopGuard(`flush-entity[${entity.id}]`, 50, 500),
+            );
+          }
+          const guardEntity = entityGuards.get(entity.id)!;
+
           // Per-entity changes drainer
           while (changes.size) {
             const [system, props] = changes.entries().next().value!;
-            guardChange(
-              `entity=${entity.id} changes=${changes.size} props=[${
-                Array.from(props).join(",")
-              }]`,
-            );
+
+            // Get or create guard for this (entity, system) pair (persists across re-queues)
+            const systemName = (system as { name?: string }).name || "unknown";
+            const systemKey = `${entity.id}:${systemName}`;
+            if (!changeGuards.has(systemKey)) {
+              changeGuards.set(
+                systemKey,
+                makeLoopGuard(`flush-change[${systemKey}]`, 50, 500),
+              );
+            }
+            const guardChange = changeGuards.get(systemKey)!;
+
+            guardEntity(`changes=${changes.size}`);
+            guardChange(`props=[${Array.from(props).join(",")}]`);
 
             changes.delete(system);
 
@@ -157,7 +185,7 @@ export const newEcs = () => {
         }
 
         // Outer no-progress detector:
-        // if neither queue shrank AND we didn’t apply anything, we’re spinning.
+        // if neither queue shrank AND we didn't apply anything, we're spinning.
         if (
           app.callbackQueue.length >= beforeCallbacks &&
           app.entityChangeQueue.size >= beforeEntities &&
@@ -168,9 +196,6 @@ export const newEcs = () => {
           );
         }
 
-        guardFlush(
-          `callbacks=${app.callbackQueue.length} entities=${app.entityChangeQueue.size}`,
-        );
         appliedThisCycle = 0; // reset for next outer cycle
       }
 
