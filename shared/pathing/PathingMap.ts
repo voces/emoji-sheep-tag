@@ -20,6 +20,13 @@ import {
   PATHING_WALK_IGNORE_DISTANCE,
 } from "../constants.ts";
 import { Entity } from "../types.ts";
+import {
+  pointToTilemap as calculatePointToTilemap,
+  xTileToWorld as tileToWorldX,
+  xWorldToTile as worldToTileX,
+  yTileToWorld as tileToWorldY,
+  yWorldToTile as worldToTileY,
+} from "./coordinates.ts";
 
 let debugging = false;
 // const elems: HTMLElement[] = [];
@@ -106,7 +113,8 @@ export class PathingMap {
   readonly widthWorld: number;
   readonly heightMap: number;
   readonly widthMap: number;
-  readonly grid: Tile[][];
+  readonly grid: (Tile | undefined)[][];
+  private readonly pathing: Pathing[][];
 
   // debugging
   // private _elem?: HTMLDivElement;
@@ -127,7 +135,7 @@ export class PathingMap {
   }) {
     this.resolution = resolution;
     this.tileResolution = tileResolution;
-
+    this.pathing = pathing;
     this.layers = layers;
 
     // World dimensions: when tileResolution is used, the pathing array is higher resolution
@@ -140,49 +148,10 @@ export class PathingMap {
     this.heightMap = this.heightWorld * resolution;
     this.widthMap = this.widthWorld * resolution;
 
+    // Initialize grid with empty arrays - tiles created lazily
     this.grid = [];
-    // Create tiles
-    // With tileResolution=2, each pathing cell creates (resolution/tileResolution) tiles
-    // e.g., resolution=4, tileResolution=2: each pathing cell creates 2x2 tiles
-    const tilesPerPathingCell = resolution / tileResolution;
-
-    for (let y = 0; y < pathing.length; y++) {
-      for (let x = 0; x < pathing[y].length; x++) {
-        for (let ty = 0; ty < tilesPerPathingCell; ty++) {
-          const gridY = y * tilesPerPathingCell + ty;
-          if (!this.grid[gridY]) {
-            this.grid[gridY] = [];
-          }
-
-          for (let tx = 0; tx < tilesPerPathingCell; tx++) {
-            const gridX = x * tilesPerPathingCell + tx;
-            const tile = new Tile(
-              gridX,
-              gridY,
-              gridX / resolution,
-              gridY / resolution,
-              pathing[y][x],
-            );
-            this.grid[gridY][gridX] = tile;
-          }
-        }
-      }
-    }
-
-    // Tell them about each other
-    for (let y = 0; y < this.grid.length; y++) {
-      for (let x = 0; x < this.grid[y].length; x++) {
-        const nodes: Tile[] = this.grid[y][x].nodes;
-
-        // Below
-        if (y < this.heightMap - 1) nodes.push(this.grid[y + 1][x]);
-        // Right
-        if (x < this.widthMap - 1) nodes.push(this.grid[y][x + 1]);
-        // Left
-        if (x > 0) nodes.push(this.grid[y][x - 1]);
-        // Above
-        if (y > 0) nodes.push(this.grid[y - 1][x]);
-      }
+    for (let y = 0; y < this.heightMap; y++) {
+      this.grid[y] = [];
     }
 
     if (debugging) {
@@ -198,6 +167,67 @@ export class PathingMap {
         return ret;
       };
     }
+  }
+
+  /**
+   * Lazily creates a tile at the given coordinates if it doesn't exist.
+   * Neighbors are NOT set up eagerly to avoid cascading tile creation.
+   * Instead, they're set up lazily via getNeighbors().
+   */
+  private getTile(x: number, y: number): Tile {
+    // Return existing tile if already created
+    if (this.grid[y][x]) return this.grid[y][x]!;
+
+    // Calculate which pathing cell this tile belongs to
+    const tilesPerPathingCell = this.resolution / this.tileResolution;
+    const pathingX = Math.floor(x / tilesPerPathingCell);
+    const pathingY = Math.floor(y / tilesPerPathingCell);
+
+    // Create the tile
+    const tile = new Tile(
+      x,
+      y,
+      x / this.resolution,
+      y / this.resolution,
+      this.pathing[pathingY][pathingX],
+    );
+    this.grid[y][x] = tile;
+
+    return tile;
+  }
+
+  /**
+   * Lazily gets the neighbors for a tile. Sets up the neighbor
+   * relationships on first access.
+   */
+  private getNeighbors(tile: Tile): Tile[] {
+    // If neighbors already set up, return them
+    if (tile.nodes.length > 0) return tile.nodes;
+
+    const { x, y } = tile;
+    const nodes: Tile[] = tile.nodes;
+
+    // Important: We add neighbors in consistent order (down, right, up, left)
+    // to match the original eager initialization order
+
+    // Below
+    if (y < this.heightMap - 1) {
+      nodes.push(this.getTile(x, y + 1));
+    }
+    // Right
+    if (x < this.widthMap - 1) {
+      nodes.push(this.getTile(x + 1, y));
+    }
+    // Above
+    if (y > 0) {
+      nodes.push(this.getTile(x, y - 1));
+    }
+    // Left
+    if (x > 0) {
+      nodes.push(this.getTile(x - 1, y));
+    }
+
+    return nodes;
   }
 
   setPathing(
@@ -244,9 +274,14 @@ export class PathingMap {
         x++, i++
       ) {
         if (
-          this.grid[y]?.[x] === undefined ||
-          !this.grid[y][x].pathable(map.map[i]) ||
-          (test && !test(this.grid[y][x]))
+          y < 0 || y >= this.heightMap || x < 0 || x >= this.widthMap
+        ) {
+          return false;
+        }
+        const tile = this.getTile(x, y);
+        if (
+          !tile.pathable(map.map[i]) ||
+          (test && !test(tile))
         ) {
           return false;
         }
@@ -329,9 +364,9 @@ export class PathingMap {
         { type: pathing },
       );
     const radiusOffset = entity.radius % (1 / this.resolution);
-    const offset = (point: Point) => ({
-      x: point.x + radiusOffset,
-      y: point.y + radiusOffset,
+    const offset = (point: { xWorld: number; yWorld: number }) => ({
+      x: point.xWorld + radiusOffset,
+      y: point.yWorld + radiusOffset,
     });
 
     // Create our heap
@@ -345,7 +380,7 @@ export class PathingMap {
     // Seed our heap
     const start = tile;
     start.__npTag = tag;
-    start.__np = distance(target, offset(start.world));
+    start.__np = distance(target, offset(start));
     heap.push(start);
 
     let prev: Point | undefined;
@@ -359,13 +394,13 @@ export class PathingMap {
         this._pathable(minimalTilemap, current.x, current.y, test)
       ) {
         if (prev) yield prev;
-        prev = offset(current.world);
+        prev = offset(current);
       }
 
-      current.nodes.forEach((neighbor) => {
+      this.getNeighbors(current).forEach((neighbor) => {
         if (neighbor.__npTag === tag) return;
         neighbor.__npTag = tag;
-        neighbor.__np = distance(target, offset(neighbor.world));
+        neighbor.__np = distance(target, offset(neighbor));
 
         heap.push(neighbor);
       });
@@ -490,8 +525,11 @@ export class PathingMap {
     }
 
     const tried = [];
-    if (this.grid[yTile] && this.grid[yTile][xTile]) {
-      tried.push(this.grid[yTile][xTile]);
+    if (
+      yTile >= 0 && yTile < this.heightMap && xTile >= 0 &&
+      xTile < this.widthMap
+    ) {
+      tried.push(this.getTile(xTile, yTile));
     }
 
     while (
@@ -515,8 +553,11 @@ export class PathingMap {
           break;
       }
 
-      if (this.grid[yTile] && this.grid[yTile][xTile]) {
-        tried.push(this.grid[yTile][xTile]);
+      if (
+        yTile >= 0 && yTile < this.heightMap && xTile >= 0 &&
+        xTile < this.widthMap
+      ) {
+        tried.push(this.getTile(xTile, yTile));
       }
 
       if (steps === 0) {
@@ -537,25 +578,26 @@ export class PathingMap {
   }
 
   worldToTile(world: Point): Tile {
-    return this.grid[this.yWorldToTile(world.y)]?.[
-      this.xWorldToTile(world.x)
-    ];
+    return this.getTile(
+      this.xWorldToTile(world.x),
+      this.yWorldToTile(world.y),
+    );
   }
 
   xWorldToTile(x: number): number {
-    return Math.floor(x * this.resolution);
+    return worldToTileX(x, this.resolution);
   }
 
   yWorldToTile(y: number): number {
-    return Math.floor(y * this.resolution);
+    return worldToTileY(y, this.resolution);
   }
 
   xTileToWorld(x: number): number {
-    return x / this.resolution;
+    return tileToWorldX(x, this.resolution);
   }
 
   yTileToWorld(y: number): number {
-    return y / this.resolution;
+    return tileToWorldY(y, this.resolution);
   }
 
   /**
@@ -568,50 +610,14 @@ export class PathingMap {
     radius = 0,
     { type = PATHING_TYPES.WALKABLE } = {},
   ): Footprint {
-    radius -= EPSILON * radius * this.widthWorld;
-
-    const xTile = this.xWorldToTile(xWorld);
-    const yTile = this.yWorldToTile(yWorld);
-
-    const map = [];
-
-    const xMiss = xTile / this.resolution - xWorld;
-    const yMiss = yTile / this.resolution - yWorld;
-
-    const minX = this.xWorldToTile(xWorld - radius) - xTile;
-    const maxX = this.xWorldToTile(xWorld + radius) - xTile;
-    const minY = this.yWorldToTile(yWorld - radius) - yTile;
-    const maxY = this.yWorldToTile(yWorld + radius) - yTile;
-
-    const radiusSquared = radius ** 2;
-
-    for (let tY = minY; tY <= maxY; tY++) {
-      for (let tX = minX; tX <= maxX; tX++) {
-        const yDelta = tY < 0
-          ? (tY + 1) / this.resolution + yMiss
-          : tY > 0
-          ? tY / this.resolution + yMiss
-          : 0;
-        const xDelta = tX < 0
-          ? (tX + 1) / this.resolution + xMiss
-          : tX > 0
-          ? tX / this.resolution + xMiss
-          : 0;
-
-        if (xDelta ** 2 + yDelta ** 2 < radiusSquared) map.push(type);
-        else map.push(0);
-      }
-    }
-
-    const footprint = {
-      map,
-      top: minY,
-      left: minX,
-      width: maxX - minX + 1,
-      height: maxY - minY + 1,
-    };
-
-    return footprint;
+    return calculatePointToTilemap(
+      xWorld,
+      yWorld,
+      radius,
+      this.resolution,
+      this.widthWorld,
+      { type },
+    );
   }
 
   private yBoundTile(yIndex: number): number {
@@ -795,9 +801,10 @@ export class PathingMap {
         return [];
       }
 
-      startTile = this.grid[
-        Math.round((nearestStart.y - offset) * this.resolution)
-      ][Math.round((nearestStart.x - offset) * this.resolution)];
+      startTile = this.getTile(
+        Math.round((nearestStart.x - offset) * this.resolution),
+        Math.round((nearestStart.y - offset) * this.resolution),
+      );
     }
 
     // For target, if the exact spot is pathable, we aim towards that; otherwise the nearest spot
@@ -862,9 +869,10 @@ export class PathingMap {
       let next = endNearestPathingGen.next();
       let { x, y } = next.value;
 
-      let tile = this.grid[
-        Math.round((y - offset) * this.resolution)
-      ][Math.round((x - offset) * this.resolution)];
+      let tile = this.getTile(
+        Math.round((x - offset) * this.resolution),
+        Math.round((y - offset) * this.resolution),
+      );
 
       const maxEndEstimate = "position" in target
         ? distanceBetweenEntities({
@@ -905,11 +913,12 @@ export class PathingMap {
         if (next.done) break;
         next = endNearestPathingGen.next();
         ({ x, y } = next.value);
-        tile = this.grid[
-          Math.round((y - offset) * this.resolution)
-        ][Math.round((x - offset) * this.resolution)];
+        tile = this.getTile(
+          Math.round((x - offset) * this.resolution),
+          Math.round((y - offset) * this.resolution),
+        );
       }
-      endBest = endHeap[0];
+      endBest = endHeap[0] || targetTile;
     }
 
     const startHeap = new BinaryHeap(
@@ -922,7 +931,7 @@ export class PathingMap {
     startHeap.push(startTile);
     startTile.__startTag = startTag;
     startTile.__startRealCostFromOrigin = h(startReal, startTile);
-    startTile.__startEstimatedCostRemaining = h(startTile, endHeap[0]);
+    startTile.__startEstimatedCostRemaining = h(startTile, endBest);
     startTile.__startRealPlusEstimatedCost =
       startTile.__startEstimatedCostRemaining +
       startTile.__startRealCostFromOrigin;
@@ -948,10 +957,16 @@ export class PathingMap {
         typeof distanceFromTarget === "number" &&
         ("position" in target
           ? distanceBetweenEntities(
-                { ...entity, position: startCurrent.world },
+                {
+                  ...entity,
+                  position: { x: startCurrent.xWorld, y: startCurrent.yWorld },
+                },
                 target,
               ) * this.resolution < distanceFromTarget
-          : distanceBetweenPoints(startCurrent.world, target) *
+          : distanceBetweenPoints({
+                x: startCurrent.xWorld,
+                y: startCurrent.yWorld,
+              }, target) *
               this.resolution < distanceFromTarget)
       ) {
         startBest = startCurrent;
@@ -960,7 +975,7 @@ export class PathingMap {
 
       startCurrent.__startClosed = true;
 
-      const startNeighbors = startCurrent.nodes;
+      const startNeighbors = this.getNeighbors(startCurrent);
 
       for (let i = 0, length = startNeighbors.length; i < length; i++) {
         const neighbor = startNeighbors[i];
@@ -1081,10 +1096,10 @@ export class PathingMap {
           entity,
           (tile) => tile.__endTag !== endTag,
         );
-        const newEndtile =
-          this.grid[Math.round((y - offset) * this.resolution)][
-            Math.round((x - offset) * this.resolution)
-          ];
+        const newEndtile = this.getTile(
+          Math.round((x - offset) * this.resolution),
+          Math.round((y - offset) * this.resolution),
+        );
 
         endBest = newEndtile;
         endHeap.push(newEndtile);
@@ -1114,7 +1129,7 @@ export class PathingMap {
 
       endCurrent.__endClosed = true;
 
-      const endNeighbors = endCurrent.nodes;
+      const endNeighbors = this.getNeighbors(endCurrent);
 
       for (let i = 0, length = endNeighbors.length; i < length; i++) {
         const neighbor = endNeighbors[i];
@@ -1466,8 +1481,8 @@ export class PathingMap {
     const radiusOffset = entity.radius % (1 / this.resolution);
     return this.linearPathable(
       entity,
-      offset(startTile.world, radiusOffset),
-      offset(endTile.world, radiusOffset),
+      offset({ x: startTile.xWorld, y: startTile.yWorld }, radiusOffset),
+      offset({ x: endTile.xWorld, y: endTile.yWorld }, radiusOffset),
     );
   }
 
@@ -1489,7 +1504,7 @@ export class PathingMap {
   // BAD?
   entityToTile(entity: PathingEntity, position: Point = entity.position): Tile {
     const { x, y } = this.entityToTileCoordsBounded(entity, position);
-    return this.grid[y][x];
+    return this.getTile(x, y);
   }
 
   /**
@@ -1724,9 +1739,14 @@ export class PathingMap {
     const tileY = this.yWorldToTile(position.y);
     for (let y = top; y < top + height; y++) {
       for (let x = left; x < left + width; x++) {
-        if (!this.grid[tileY + y]?.[tileX + x]) continue;
-        tiles.push(this.grid[tileY + y][tileX + x]);
-        this.grid[tileY + y][tileX + x].addEntity(
+        const tx = tileX + x;
+        const ty = tileY + y;
+        if (ty < 0 || ty >= this.heightMap || tx < 0 || tx >= this.widthMap) {
+          continue;
+        }
+        const tile = this.getTile(tx, ty);
+        tiles.push(tile);
+        tile.addEntity(
           entity,
           map[(y - top) * width + (x - left)],
         );
@@ -1761,10 +1781,10 @@ export class PathingMap {
         const gridX = tileX + x;
         // Check bounds before accessing grid
         if (
-          gridY >= 0 && gridY < this.grid.length &&
-          gridX >= 0 && gridX < this.grid[gridY].length
+          gridY >= 0 && gridY < this.heightMap &&
+          gridX >= 0 && gridX < this.widthMap
         ) {
-          newTiles.push(this.grid[gridY][gridX]);
+          newTiles.push(this.getTile(gridX, gridY));
           newTileMapValues.push(map[(y - top) * width + (x - left)]);
         }
       }

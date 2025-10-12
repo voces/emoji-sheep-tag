@@ -4,7 +4,8 @@ import { Pathing, PathingEntity } from "./types.ts";
 export class Tile {
   x: number;
   y: number;
-  world: { x: number; y: number };
+  xWorld: number;
+  yWorld: number;
   /** The pathing of the tile without any entities on top of it. */
   originalPathing: Pathing;
   pathing: Pathing;
@@ -42,7 +43,8 @@ export class Tile {
   ) {
     this.x = xTile;
     this.y = yTile;
-    this.world = { x: xWorld, y: yWorld };
+    this.xWorld = xWorld;
+    this.yWorld = yWorld;
     this.pathing = this.originalPathing = pathing;
     this.nodes = [];
   }

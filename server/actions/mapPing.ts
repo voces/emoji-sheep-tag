@@ -34,5 +34,5 @@ export const mapPing = (
     position: { x, y },
   });
 
-  timeout(() => removeEntity(pingEntity), 3000);
+  timeout(() => removeEntity(pingEntity), 10);
 };

@@ -1,9 +1,14 @@
 import { Entity, SystemEntity } from "../types.ts";
 import { facingWithin } from "../../server/util/math.ts";
 import { MAX_ATTACK_ANGLE } from "../constants.ts";
-import { PathingMap } from "./PathingMap.ts";
-import { terrainPathingMap } from "../map.ts";
 import { Footprint } from "./types.ts";
+import {
+  pointToTilemap as calculateTilemap,
+  xTileToWorld,
+  xWorldToTile,
+  yTileToWorld,
+  yWorldToTile,
+} from "./coordinates.ts";
 
 export type Point = { x: number; y: number };
 
@@ -132,19 +137,19 @@ export const distanceToPoint = (entity: Entity, point: Point) => {
   return min;
 };
 
-let pm: PathingMap;
-const unitToTilemap = (unit: Unit) => {
-  if (!pm) {
-    pm = new PathingMap({
-      resolution: 4,
-      tileResolution: 2,
-      pathing: terrainPathingMap,
-    });
-  }
-  return pm.pointToTilemap(unit.position.x, unit.position.y, unit.radius, {
-    type: unit.pathing,
-  });
-};
+// Constants matching the PathingMap configuration
+const RESOLUTION = 4;
+const WORLD_WIDTH = 96; // 96x96 world
+
+const unitToTilemap = (unit: Unit) =>
+  calculateTilemap(
+    unit.position.x,
+    unit.position.y,
+    unit.radius,
+    RESOLUTION,
+    WORLD_WIDTH,
+    { type: unit.pathing },
+  );
 
 export const entityPoints = (entity: Entity) => {
   if (!entity.position) return [];
@@ -162,22 +167,16 @@ export const entityPoints = (entity: Entity) => {
 const tileSize = 0.25; // Each tile represents 0.25 units in world space
 
 const footprintPoints = (footprint: Footprint, position: Point) => {
-  if (!pm) {
-    pm = new PathingMap({
-      resolution: 4,
-      tileResolution: 2,
-      pathing: terrainPathingMap,
-    });
-  }
-
   const points: Point[] = [];
 
   const { width, height, left, top, map } = footprint;
 
   // Calculate the origin (top-left corner) of the tilemap in world coordinates
-  const tilemapOriginX = pm.xTileToWorld(pm.xWorldToTile(position.x)) +
+  const tilemapOriginX =
+    xTileToWorld(xWorldToTile(position.x, RESOLUTION), RESOLUTION) +
     left * tileSize;
-  const tilemapOriginY = pm.yTileToWorld(pm.yWorldToTile(position.y)) +
+  const tilemapOriginY =
+    yTileToWorld(yWorldToTile(position.y, RESOLUTION), RESOLUTION) +
     top * tileSize;
 
   for (let y = 0; y < height; y++) {

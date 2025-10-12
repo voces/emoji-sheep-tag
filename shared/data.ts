@@ -295,7 +295,7 @@ export const prefabs: Record<string, DataEntity> = {
         type: "build",
         unitType: "translocationHut",
         binding: ["KeyE"],
-        goldCost: 30,
+        goldCost: 70,
       },
       {
         name: "Build Watchtower",
