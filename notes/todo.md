@@ -9,7 +9,7 @@
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
 - Max 24 players
-- Multiple lobbies (allow lobby select)
+- Allow custom action menus
 
 # Perf
 

@@ -462,7 +462,7 @@ export const prefabs: Record<string, DataEntity> = {
     actions: [{
       name: "Illusify",
       description:
-        "Makes the hut an illusion, allowing units to free pass through it.",
+        "Makes the hut an illusion, allowing units to pass through it.",
       type: "auto",
       order: "illusify",
       icon: "hut",

@@ -25,6 +25,11 @@ export class ExtendedSet<T> extends Set<T> {
     return false;
   }
 
+  every(predicate: (value: T) => unknown) {
+    for (const entity of this) if (!predicate(entity)) return false;
+    return true;
+  }
+
   filter<U extends T>(
     predicate: ((value: T) => value is U) | ((value: T) => unknown),
   ) {

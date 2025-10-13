@@ -1,13 +1,19 @@
-import { app } from "../ecs.ts";
 import { Entity } from "../ecs.ts";
-import { selection } from "../systems/autoSelect.ts";
+import { camera } from "../graphics/three.ts";
+import {
+  foxes,
+  getPrimaryUnit,
+  mirrors,
+  selection,
+} from "../systems/autoSelect.ts";
 import { closeMenusForUnit } from "@/vars/menuState.ts";
-import { getLocalPlayer } from "@/vars/players.ts";
+import { focusGroup } from "./camera.ts";
 
 export const selectEntity = (entity: Entity, clearCurrentSelection = true) => {
   if (clearCurrentSelection) {
     // Close menus for units being deselected
     for (const deselectedEntity of selection) {
+      if (entity === deselectedEntity) continue;
       closeMenusForUnit(deselectedEntity.id);
       delete (deselectedEntity as Entity).selected;
     }
@@ -15,93 +21,40 @@ export const selectEntity = (entity: Entity, clearCurrentSelection = true) => {
   entity.selected = true;
 };
 
-/**
- * Select all units of a specific type owned by the local player
- */
-export const selectAllUnitsOfType = (unitType: string) => {
-  const localPlayer = getLocalPlayer();
-  if (!localPlayer) return;
+export const selectAllFoxes = () => {
+  if (!foxes.size) return;
 
-  const units: Entity[] = [];
-  for (const entity of app.entities) {
-    if (entity.owner === localPlayer.id && entity.prefab === unitType) {
-      units.push(entity);
-    }
+  if (foxes.every((f) => f.selected) && foxes.size === selection.size) {
+    return focusGroup(foxes);
   }
 
-  if (units.length > 0) {
-    clearSelection();
-    for (const entity of units) entity.selected = true;
-  }
+  clearSelection();
+  for (const fox of foxes) fox.selected = true;
 };
 
-/**
- * Select all mirror images owned by the local player
- */
 export const selectAllMirrors = () => {
-  const localPlayer = getLocalPlayer();
-  if (!localPlayer) return;
+  if (!mirrors.size) return;
 
-  const mirrorEntities: Entity[] = [];
-  for (const entity of app.entities) {
-    if (entity.owner === localPlayer.id && entity.isMirror === true) {
-      mirrorEntities.push(entity);
-    }
+  if (mirrors.every((e) => e.selected) && mirrors.size === selection.size) {
+    return focusGroup(mirrors);
   }
 
-  if (mirrorEntities.length > 0) {
-    clearSelection();
-    for (const entity of mirrorEntities) entity.selected = true;
-  }
+  clearSelection();
+  for (const entity of mirrors) entity.selected = true;
 };
 
 /**
- * Select the primary unit (sheep or wolf) owned by the local player
+ * Select the primary unit (sheep, wolf, or spirit) owned by the local player
  */
 export const selectPrimaryUnit = () => {
-  const localPlayer = getLocalPlayer();
-  if (!localPlayer) return;
-
-  const primaryUnits: Entity[] = [];
-  for (const entity of app.entities) {
-    if (
-      entity.owner === localPlayer.id &&
-      (entity.prefab === "sheep" ||
-        (entity.prefab === "wolf" && !entity.isMirror) ||
-        entity.prefab === "spirit")
-    ) {
-      primaryUnits.push(entity);
+  const primaryUnit = getPrimaryUnit();
+  if (primaryUnit) {
+    if (primaryUnit.selected && primaryUnit.position && selection.size === 1) {
+      camera.position.x = primaryUnit.position.x;
+      camera.position.y = primaryUnit.position.y;
     }
+    selectEntity(primaryUnit);
   }
-
-  if (primaryUnits.length === 0) return;
-
-  // Find the first selected primary unit
-  let currentIndex = -1;
-  for (const selectedEntity of selection) {
-    const index = primaryUnits.findIndex((unit) =>
-      unit.id === selectedEntity.id
-    );
-    if (index !== -1) {
-      currentIndex = index;
-      break;
-    }
-  }
-
-  // Find the next unselected primary unit after the current one
-  if (currentIndex !== -1) {
-    for (let i = 1; i < primaryUnits.length; i++) {
-      const nextIndex = (currentIndex + i) % primaryUnits.length;
-      const nextUnit = primaryUnits[nextIndex];
-      if (!nextUnit.selected) {
-        selectEntity(nextUnit);
-        return;
-      }
-    }
-  }
-
-  // If all primary units are selected or no primary unit is selected, select the first one
-  selectEntity(primaryUnits[0]);
 };
 
 /**

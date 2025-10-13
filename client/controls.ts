@@ -21,8 +21,8 @@ import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { isSoftwareRenderer } from "./util/gpu.ts";
 import {
   clearSelection,
+  selectAllFoxes,
   selectAllMirrors,
-  selectAllUnitsOfType,
   selectEntity,
   selectPrimaryUnit,
 } from "./api/selection.ts";
@@ -455,7 +455,7 @@ const handleUIShortcuts = (
     stateVar() === "playing"
   ) {
     e.preventDefault();
-    selectAllUnitsOfType("fox");
+    selectAllFoxes();
     return true;
   }
 
@@ -566,6 +566,8 @@ const handleAutoAction = (
   } else {
     playOrderSound();
   }
+
+  if (action.order === "illusify") selectPrimaryUnit();
 
   send({
     type: "unitOrder",

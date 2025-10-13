@@ -10,8 +10,10 @@ import { applyZoom } from "../api/player.ts";
 export const selection = new ExtendedSet<SystemEntity<"selected">>();
 
 let primary: Entity | undefined;
-
 export const getPrimaryUnit = () => primary;
+
+export const foxes = new ExtendedSet<Entity>();
+export const mirrors = new ExtendedSet<Entity>();
 
 app.addSystem({
   props: ["selected"],
@@ -33,12 +35,11 @@ app.addSystem({
 
 // Auto select unit
 app.addSystem({
-  props: ["id", "prefab", "owner"],
+  props: ["prefab", "owner"],
   onAdd: (e) => {
-    if (
-      isLocalPlayer(e.owner) &&
-      (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit")
-    ) {
+    if (!isLocalPlayer(e.owner)) return;
+
+    if (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit") {
       if (selection.size === 0) {
         selectEntity(e);
         if (e.position) {
@@ -51,8 +52,13 @@ app.addSystem({
         applyZoom();
       }
     }
+
+    if (e.prefab === "wolf" && e.isMirror) mirrors.add(e);
+    if (e.prefab === "fox") foxes.add(e);
   },
   onRemove: (e) => {
     if (e === primary) primary = undefined;
+    mirrors.delete(e);
+    foxes.delete(e);
   },
 });

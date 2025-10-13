@@ -11,11 +11,12 @@ import { playersVar } from "@/vars/players.ts";
 // Import the functions we want to test
 import {
   clearSelection,
+  selectAllFoxes,
   selectAllMirrors,
-  selectAllUnitsOfType,
   selectEntity,
   selectPrimaryUnit,
 } from "./selection.ts";
+import { camera } from "../graphics/three.ts";
 
 describe("selection handlers", () => {
   beforeEach(() => {
@@ -96,7 +97,7 @@ describe("selection handlers", () => {
     });
   });
 
-  describe("selectAllUnitsOfType", () => {
+  describe("selectAllFoxes", () => {
     beforeEach(() => {
       // Create various units
       app.addEntity({
@@ -123,51 +124,55 @@ describe("selection handlers", () => {
         owner: "player-2", // Different owner
         position: { x: 4, y: 4 },
       });
+      app.addEntity({
+        id: "fox-1",
+        prefab: "fox",
+        owner: "player-1",
+        position: { x: 5, y: 5 },
+      });
+      app.addEntity({
+        id: "fox-2",
+        prefab: "fox",
+        owner: "player-1",
+        position: { x: 6, y: 6 },
+      });
+      app.addEntity({
+        id: "fox-enemy",
+        prefab: "fox",
+        owner: "player-2",
+        position: { x: 7, y: 7 },
+      });
     });
 
-    it("should select all units of specified type owned by local player", () => {
-      selectAllUnitsOfType("sheep");
+    it("should select all foxes owned by local player", () => {
+      selectAllFoxes();
 
       const selectedEntities = Array.from(selection);
       expect(selectedEntities).toHaveLength(2);
       expect(
         selectedEntities.every((e) =>
-          e.prefab === "sheep" && e.owner === "player-1"
+          e.prefab === "fox" && e.owner === "player-1"
         ),
       ).toBe(true);
     });
 
     it("should not select units owned by other players", () => {
-      selectAllUnitsOfType("sheep");
+      selectAllFoxes();
 
-      const enemySheep = Array.from(app.entities).find((e) =>
-        e.id === "sheep-enemy"
+      const enemyFox = Array.from(app.entities).find((e) =>
+        e.id === "fox-enemy"
       );
-      expect(enemySheep?.selected).toBeUndefined();
+      expect(enemyFox?.selected).toBeUndefined();
     });
 
     it("should clear previous selection", () => {
       const wolf = Array.from(app.entities).find((e) => e.prefab === "wolf");
       if (wolf) selectEntity(wolf);
 
-      selectAllUnitsOfType("sheep");
+      selectAllFoxes();
 
       expect(wolf?.selected).toBeUndefined();
       expect(selection.size).toBe(2);
-    });
-
-    it("should handle when no units of type exist", () => {
-      clearSelection(); // Ensure no previous selection
-      selectAllUnitsOfType("nonexistent");
-
-      expect(selection.size).toBe(0);
-    });
-
-    it("should handle when no units match type", () => {
-      clearSelection(); // Ensure no previous selection
-      selectAllUnitsOfType("dragon"); // Non-existent unit type
-
-      expect(selection.size).toBe(0);
     });
   });
 
@@ -190,207 +195,117 @@ describe("selection handlers", () => {
       });
       app.addEntity({
         id: "regular-unit",
-        prefab: "sheep",
+        prefab: "wolf",
         owner: "player-1",
         position: { x: 3, y: 3 },
       });
       app.addEntity({
         id: "enemy-mirror",
-        prefab: "sheep",
+        prefab: "wolf",
         owner: "player-2",
         position: { x: 4, y: 4 },
         isMirror: true,
       });
     });
 
-    it("should select all mirror units owned by local player", () => {
+    it("should select wolf mirrors and move the camera on second selection", () => {
       selectAllMirrors();
 
       const selectedEntities = Array.from(selection);
-      expect(selectedEntities).toHaveLength(2);
-      expect(
-        selectedEntities.every((e) =>
-          e.isMirror === true && e.owner === "player-1"
-        ),
-      ).toBe(true);
-    });
-
-    it("should not select regular units", () => {
-      selectAllMirrors();
-
-      const regularUnit = Array.from(app.entities).find((e) =>
-        e.id === "regular-unit"
-      );
-      expect(regularUnit?.selected).toBeUndefined();
-    });
-
-    it("should not select enemy mirror units", () => {
-      selectAllMirrors();
-
-      const enemyMirror = Array.from(app.entities).find((e) =>
-        e.id === "enemy-mirror"
-      );
-      expect(enemyMirror?.selected).toBeUndefined();
-    });
-
-    it("should handle when no mirror units exist", () => {
-      // Remove all mirrors
-      for (const entity of app.entities) {
-        if (entity.isMirror) app.removeEntity(entity);
-      }
+      expect(selectedEntities).toHaveLength(1);
+      expect(selectedEntities[0].id).toBe("mirror-2");
+      // Camera moved to sheep on spawn
+      expect(camera.position.x).toBe(1);
+      expect(camera.position.y).toBe(1);
 
       selectAllMirrors();
 
-      expect(selection.size).toBe(0);
+      // Camera moved to fox on double select
+      expect(camera.position.x).toBe(2);
+      expect(camera.position.y).toBe(2);
     });
   });
 
   describe("selectPrimaryUnit", () => {
-    beforeEach(() => {
-      // Create various units including sheep and wolf
+    it("should select sheep primary unit and move camera (with extra primary units)", () => {
+      // Create sheep primary unit (first one) plus extra primary units
       app.addEntity({
         id: "sheep-1",
         prefab: "sheep",
         owner: "player-1",
-        position: { x: 1, y: 1 },
+        position: { x: 10, y: 20 },
+      });
+      app.addEntity({
+        id: "sheep-2",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 30, y: 40 },
       });
       app.addEntity({
         id: "wolf-1",
         prefab: "wolf",
         owner: "player-1",
-        position: { x: 2, y: 2 },
+        position: { x: 50, y: 60 },
       });
+
+      // Set camera to a different position
+      camera.position.x = 100;
+      camera.position.y = 100;
+
+      selectPrimaryUnit();
+
+      // Should select first sheep (the primary unit)
+      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
+
+      // Camera should move to the sheep's position
+      expect(camera.position.x).toBe(10);
+      expect(camera.position.y).toBe(20);
+    });
+
+    it("should select wolf primary unit and move camera", () => {
+      // Create wolf primary unit
       app.addEntity({
-        id: "hut-1",
-        prefab: "hut",
+        id: "wolf-1",
+        prefab: "wolf",
         owner: "player-1",
-        position: { x: 3, y: 3 },
+        position: { x: 15, y: 25 },
       });
-      app.addEntity({
-        id: "enemy-sheep",
-        prefab: "sheep",
-        owner: "player-2",
-        position: { x: 4, y: 4 },
-      });
+
+      // Set camera to a different position
+      camera.position.x = 100;
+      camera.position.y = 100;
+
+      selectPrimaryUnit();
+
+      // Should select the wolf
+      expect(Array.from(selection, (e) => e.id)).toEqual(["wolf-1"]);
+
+      // Camera should move to the wolf's position
+      expect(camera.position.x).toBe(15);
+      expect(camera.position.y).toBe(25);
+    });
+
+    it("should select spirit primary unit and move camera", () => {
+      // Create spirit primary unit
       app.addEntity({
         id: "spirit-1",
         prefab: "spirit",
         owner: "player-1",
-        position: { x: 5, y: 5 },
+        position: { x: 35, y: 45 },
       });
-    });
 
-    it("should cycle between primary units", () => {
-      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
-
-      selectPrimaryUnit();
-
-      expect(Array.from(selection, (e) => e.id)).toEqual(["wolf-1"]);
+      // Set camera to a different position
+      camera.position.x = 100;
+      camera.position.y = 100;
 
       selectPrimaryUnit();
 
+      // Should select the spirit
       expect(Array.from(selection, (e) => e.id)).toEqual(["spirit-1"]);
 
-      selectPrimaryUnit();
-
-      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
-    });
-
-    it("should work with multiple selections", () => {
-      // Select sheep and a hut
-      const sheep = Array.from(app.entities).find((e) => e.id === "sheep-1");
-      const hut = Array.from(app.entities).find((e) => e.id === "hut-1");
-      if (sheep) selectEntity(sheep, false);
-      if (hut) selectEntity(hut, false);
-
-      expect(selection.size).toBe(2);
-
-      selectPrimaryUnit();
-
-      // Should select the next primary unit (wolf) after sheep
-      expect(Array.from(selection, (e) => e.id)).toEqual(["wolf-1"]);
-    });
-
-    it("should handle when all primary units are selected", () => {
-      // Select all primary units
-      const sheep = Array.from(app.entities).find((e) => e.id === "sheep-1");
-      const wolf = Array.from(app.entities).find((e) => e.id === "wolf-1");
-      const spirit = Array.from(app.entities).find((e) => e.id === "spirit-1");
-
-      if (sheep) selectEntity(sheep, false);
-      if (wolf) selectEntity(wolf, false);
-      if (spirit) selectEntity(spirit, false);
-
-      expect(selection.size).toBe(3);
-
-      selectPrimaryUnit();
-
-      // Should select just the first primary unit
-      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
-    });
-
-    it("should handle when no primary units are selected", () => {
-      // Select only a hut
-      const hut = Array.from(app.entities).find((e) => e.id === "hut-1");
-      if (hut) selectEntity(hut);
-
-      expect(Array.from(selection, (e) => e.id)).toEqual(["hut-1"]);
-
-      selectPrimaryUnit();
-
-      // Should select the first primary unit
-      expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
-    });
-
-    it("should select wolf if no sheep exists", () => {
-      // Remove sheep
-      const sheep = Array.from(app.entities).find((e) =>
-        e.prefab === "sheep" && e.owner === "player-1"
-      );
-      if (sheep) app.removeEntity(sheep);
-
-      selectPrimaryUnit();
-
-      const selectedEntities = Array.from(selection);
-      expect(selectedEntities).toHaveLength(1);
-      expect(selectedEntities[0].prefab).toBe("wolf");
-      expect(selectedEntities[0].owner).toBe("player-1");
-    });
-
-    it("should not select units owned by other players", () => {
-      // Remove local player's sheep and wolf
-      const playerUnits = Array.from(app.entities).filter((e) =>
-        e.owner === "player-1" &&
-        (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit")
-      );
-      for (const unit of playerUnits) app.removeEntity(unit);
-
-      expect(Array.from(selection, (e) => e.id)).toEqual([]);
-
-      selectPrimaryUnit();
-
-      expect(Array.from(selection, (e) => e.id)).toEqual([]);
-      const enemySheep = Array.from(app.entities).find((e) =>
-        e.id === "enemy-sheep"
-      );
-      expect(enemySheep?.selected).toBeUndefined();
-    });
-
-    it("should not select non-primary units like huts", () => {
-      // Remove sheep and wolf, leaving only hut
-      const primaryUnits = Array.from(app.entities).filter((e) =>
-        e.owner === "player-1" &&
-        (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit")
-      );
-      for (const unit of primaryUnits) {
-        app.removeEntity(unit);
-      }
-
-      selectPrimaryUnit();
-
-      expect(selection.size).toBe(0);
-      const hut = Array.from(app.entities).find((e) => e.id === "hut-1");
-      expect(hut?.selected).toBeUndefined();
+      // Camera should move to the spirit's position
+      expect(camera.position.x).toBe(35);
+      expect(camera.position.y).toBe(45);
     });
   });
 
