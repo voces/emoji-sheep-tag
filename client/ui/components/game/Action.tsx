@@ -17,9 +17,9 @@ export const Action = ({ action, current, entity }: {
 
   const owningPlayer = entity.owner ? getPlayer(entity.owner) : undefined;
 
-  // Check if action is disabled due to insufficient gold (for build and purchase actions)
-  if (action.type === "build" || action.type === "purchase") {
-    const goldCost = action.goldCost ?? 0;
+  // Check if action is disabled due to insufficient gold
+  if ("goldCost" in action && action.goldCost) {
+    const goldCost = action.goldCost;
     // Find the owning player of the entity
     const playerGold = owningPlayer?.entity?.gold ?? 0;
     disabled = disabled || (goldCost > 0 && playerGold < goldCost);
@@ -36,6 +36,7 @@ export const Action = ({ action, current, entity }: {
           binding={action.binding}
           pressed={current}
           disabled={disabled}
+          goldCost={"goldCost" in action ? action.goldCost : undefined}
           manaCost={manaCost}
           iconProps={action.iconEffect
             ? iconEffects[action.iconEffect](owningPlayer?.id)

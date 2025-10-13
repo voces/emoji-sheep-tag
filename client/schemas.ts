@@ -99,6 +99,7 @@ const zBaseAction = z.discriminatedUnion("type", [
     order: z.string(),
     binding: z.array(z.string()).readonly().optional(),
     manaCost: z.number().optional(),
+    goldCost: z.number().optional(),
     castDuration: z.number().optional(),
     buffDuration: z.number().optional(),
     attackSpeedMultiplier: z.number().optional(),

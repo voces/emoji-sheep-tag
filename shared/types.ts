@@ -118,6 +118,7 @@ export type UnitDataAction = {
   readonly iconEffect?: IconEffect;
   readonly binding?: ReadonlyArray<string>;
   readonly manaCost?: number;
+  readonly goldCost?: number;
   readonly castDuration?: number;
   readonly buffDuration?: number;
   readonly attackSpeedMultiplier?: number;

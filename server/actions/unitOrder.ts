@@ -75,7 +75,7 @@ export const unitOrder = (
         // NOTE: remaining is ignored, so cast completes immediately after it starts
         orderDef.onCastComplete?.(unit);
 
-        postCast(unit, itemWithAction);
+        postCast(unit, itemWithAction, order);
       }
     } else {
       // Fall back to legacy handlers

@@ -14,7 +14,14 @@ import { getPrimaryUnit } from "../systems/autoSelect.ts";
 export const applyZoom = () => {
   const settings = gameplaySettingsVar();
   const localPlayer = getLocalPlayer();
-  const primaryUnit = getPrimaryUnit();
+
+  // Try to get primary unit, but handle case where module isn't loaded yet
+  let primaryUnit;
+  try {
+    primaryUnit = getPrimaryUnit();
+  } catch {
+    // getPrimaryUnit not available yet during initialization
+  }
 
   if (localPlayer && primaryUnit && primaryUnit.owner === localPlayer.id) {
     if (primaryUnit.prefab === "sheep") {
@@ -34,5 +41,5 @@ export const applyZoom = () => {
   }
 };
 
-// Apply zoom on initial load
+// Apply zoom on initial load (safe because we handle getPrimaryUnit not being ready)
 applyZoom();

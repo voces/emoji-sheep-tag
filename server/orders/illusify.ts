@@ -1,0 +1,48 @@
+import { Entity } from "@/shared/types.ts";
+import { OrderDefinition } from "./types.ts";
+import { appContext } from "@/shared/context.ts";
+
+export const illusifyOrder = {
+  id: "illusify",
+
+  canExecute: (unit: Entity) => {
+    // Can only illusify if the unit has a tilemap
+    return !!unit.tilemap;
+  },
+
+  onIssue: (unit: Entity, _, queue) => {
+    if (!unit.tilemap) return "failed";
+    if (queue) {
+      unit.queue = [...unit.queue ?? [], {
+        type: "cast",
+        orderId: "illusify",
+        remaining: 0,
+      }];
+      return "ordered";
+    }
+    return "immediate";
+  },
+
+  onCastComplete: (unit: Entity) => {
+    if (!unit.tilemap || !unit.position) return false;
+
+    // Replace all tiles with 16 (passable tile)
+    unit.tilemap = {
+      ...unit.tilemap,
+      map: unit.tilemap.map.map((t) => t ? 16 : 0),
+    };
+
+    unit.isMirror = true;
+
+    appContext.current.enqueue(() => {
+      // Remove the illusify action after use
+      if (unit.actions) {
+        unit.actions = unit.actions.filter((action) =>
+          !(action.type === "auto" && action.order === "illusify")
+        );
+      }
+    });
+
+    return true;
+  },
+} satisfies OrderDefinition;

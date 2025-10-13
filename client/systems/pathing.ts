@@ -2,6 +2,7 @@ import { app, Entity } from "../ecs.ts";
 import { PathingMap } from "@/shared/pathing/PathingMap.ts";
 import { terrainLayers, terrainPathingMap } from "@/shared/map.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
+import { PathingEntity } from "@/shared/pathing/types.ts";
 
 export const pathingMap = new PathingMap({
   resolution: 4,
@@ -23,4 +24,13 @@ app.addSystem({
   onAdd: (e) => !e.vertexColor && pathingMap.addEntity(e),
   onChange: (e) => !e.vertexColor && pathingMap.updateEntity(e),
   onRemove: (e) => pathingMap.removeEntity(e),
+});
+
+app.addSystem({
+  props: ["tilemap"],
+  onChange: (e) => {
+    if (!e.position) return;
+    pathingMap.removeEntity(e);
+    pathingMap.addEntity(e as PathingEntity);
+  },
 });

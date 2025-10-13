@@ -9,6 +9,7 @@ import { meteorOrder } from "./meteor.ts";
 import { saveOrder } from "./save.ts";
 import { manaPotionOrder } from "./manaPotion.ts";
 import { sentryOrder } from "./sentry.ts";
+import { illusifyOrder } from "./illusify.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -33,6 +34,7 @@ registerOrder(meteorOrder);
 registerOrder(saveOrder);
 registerOrder(manaPotionOrder);
 registerOrder(sentryOrder);
+registerOrder(illusifyOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);

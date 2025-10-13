@@ -459,7 +459,17 @@ export const prefabs: Record<string, DataEntity> = {
     maxHealth: 120,
     completionTime: 0.7,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
-    actions: [selfDestruct],
+    actions: [{
+      name: "Illusify",
+      description:
+        "Makes the hut an illusion, allowing units to free pass through it.",
+      type: "auto",
+      order: "illusify",
+      icon: "hut",
+      iconEffect: "mirror",
+      goldCost: 12,
+      binding: ["KeyS"],
+    }, selfDestruct],
     bounty: 1,
   },
   house: {

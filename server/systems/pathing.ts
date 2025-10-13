@@ -130,3 +130,12 @@ addSystem((app) => {
     onRemove: (e) => pathingMap.removeEntity(e as PathingEntity),
   };
 });
+
+addSystem({
+  props: ["tilemap"],
+  onChange: (e) => {
+    if (!e.position) return;
+    pathingMap().removeEntity(e);
+    pathingMap().addEntity(e as PathingEntity);
+  },
+});
