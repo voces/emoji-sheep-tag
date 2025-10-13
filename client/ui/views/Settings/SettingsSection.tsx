@@ -89,12 +89,13 @@ interface SettingsSectionProps {
   section: string;
   shortcuts: Record<string, string[]>;
   setBinding: (shortcut: string, binding: string[]) => Shortcuts;
+  defaultOpen?: boolean;
 }
 
 export const SettingsSection = (
-  { section, shortcuts, setBinding }: SettingsSectionProps,
+  { section, shortcuts, setBinding, defaultOpen = false }: SettingsSectionProps,
 ) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   // Group shortcuts by menu context (nested vs top-level)
   const topLevelShortcuts: Record<string, string[]> = {};

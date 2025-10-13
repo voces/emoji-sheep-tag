@@ -4,11 +4,14 @@ import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
 import { camera } from "../graphics/three.ts";
+import { applyZoom } from "../api/player.ts";
 
 // X'd farms not removed from selection
 export const selection = new ExtendedSet<SystemEntity<"selected">>();
 
 let primary: Entity | undefined;
+
+export const getPrimaryUnit = () => primary;
 
 app.addSystem({
   props: ["selected"],
@@ -43,7 +46,10 @@ app.addSystem({
           camera.position.y = e.position.y;
         }
       }
-      if (!primary) primary = e;
+      if (!primary) {
+        primary = e;
+        applyZoom();
+      }
     }
   },
   onRemove: (e) => {

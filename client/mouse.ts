@@ -67,8 +67,8 @@ type Mouse = {
 export const mouse: MouseEventTarget & Mouse = Object.assign(
   new MouseEventTarget(),
   {
-    pixels: new Vector2(),
-    percent: new Vector2(),
+    pixels: new Vector2(globalThis.innerWidth / 2, globalThis.innerHeight / 2),
+    percent: new Vector2(0.5, 0.5),
     world: new Vector2(),
     angle: 0,
     intersects: new Set<Entity>(),

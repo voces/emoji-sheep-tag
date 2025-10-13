@@ -17,6 +17,8 @@ import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
 import { stateVar } from "@/vars/state.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
+import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { isSoftwareRenderer } from "./util/gpu.ts";
 import {
   clearSelection,
   selectAllMirrors,
@@ -116,6 +118,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   }
 
   if (e.button === "right") {
+    if (gameplaySettingsVar().clearOrderOnRightClick) cancelOrder();
     if (selection.size) {
       playOrderSound(e.world.x, e.world.y);
       handleSmartTarget(e);
@@ -594,11 +597,17 @@ globalThis.addEventListener("wheel", (e) => {
   camera.position.z = Math.max(camera.position.z + (e.deltaY > 0 ? 1 : -1), 1);
   if (zoomTimeout) clearTimeout(zoomTimeout);
   zoomTimeout = setTimeout(() => {
-    addChatMessage(
-      `Zoom set to ${camera.position.z}${
-        camera.position.z === 9 ? " (default)" : ""
-      }.`,
-    );
+    const settings = gameplaySettingsVar();
+    const labels = [];
+
+    if (camera.position.z === settings.sheepZoom) labels.push("sheep");
+    if (camera.position.z === settings.wolfZoom) labels.push("wolf");
+    if (camera.position.z === settings.spiritZoom) labels.push("spirit");
+    if (camera.position.z === 9) labels.push("default");
+
+    const labelText = labels.length > 0 ? ` (${labels.join(", ")})` : "";
+
+    addChatMessage(`Zoom set to ${camera.position.z}${labelText}.`);
   }, 250);
 });
 
@@ -707,7 +716,7 @@ document.addEventListener("pointerlockchange", () => {
 
 for (const event of ["pointerdown", "keydown", "contextmenu"]) {
   globalThis.document.body.addEventListener(event, async () => {
-    if (!document.pointerLockElement) {
+    if (!document.pointerLockElement && !isSoftwareRenderer()) {
       try {
         // Ensure body has focus before requesting pointer lock
         // This fixes scrolling issues when entering via keyboard

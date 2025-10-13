@@ -60,6 +60,7 @@ export const Slider = ({
   min = 0,
   max = 1,
   step = 0.01,
+  formatValue = (v) => v.toString(),
 }: {
   label: string;
   value: number;
@@ -67,6 +68,7 @@ export const Slider = ({
   min?: number;
   max?: number;
   step?: number;
+  formatValue?: (value: number) => string;
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
@@ -196,7 +198,7 @@ export const Slider = ({
     <SliderContainer>
       <SliderLabel>
         {label}
-        <SliderValue>{Math.round(displayValue * 100)}%</SliderValue>
+        <SliderValue>{formatValue(displayValue)}</SliderValue>
       </SliderLabel>
       <SliderTrack ref={trackRef}>
         <SliderRail />

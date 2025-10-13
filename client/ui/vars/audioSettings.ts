@@ -1,18 +1,14 @@
 import { makeVar } from "@/hooks/useVar.tsx";
+import { z } from "zod";
 
-export type AudioSettings = {
-  master: number;
-  sfx: number;
-  ui: number;
-  ambience: number;
-};
+const audioSettingsSchema = z.object({
+  master: z.number().min(0).max(1).catch(1),
+  sfx: z.number().min(0).max(1).catch(1),
+  ui: z.number().min(0).max(1).catch(1),
+  ambience: z.number().min(0).max(1).catch(1),
+});
 
-const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
-  master: 1,
-  sfx: 1,
-  ui: 1,
-  ambience: 1,
-};
+export type AudioSettings = z.infer<typeof audioSettingsSchema>;
 
 const AUDIO_SETTINGS_KEY = "emoji-sheep-tag-audio-settings";
 
@@ -20,22 +16,12 @@ const getStoredAudioSettings = (): AudioSettings => {
   try {
     const stored = localStorage.getItem(AUDIO_SETTINGS_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored);
-      // Validate that all required keys exist
-      if (
-        typeof parsed === "object" &&
-        typeof parsed.master === "number" &&
-        typeof parsed.sfx === "number" &&
-        typeof parsed.ui === "number" &&
-        typeof parsed.ambience === "number"
-      ) {
-        return parsed;
-      }
+      return audioSettingsSchema.parse(JSON.parse(stored));
     }
   } catch {
     // Fall through to default
   }
-  return DEFAULT_AUDIO_SETTINGS;
+  return audioSettingsSchema.parse({});
 };
 
 export const audioSettingsVar = makeVar<AudioSettings>(

@@ -1,16 +1,8 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useEffect } from "react";
-import { styled } from "styled-components";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { SettingsSection } from "./SettingsSection.tsx";
-import { VStack } from "@/components/layout/Layout.tsx";
-
-const ShortcutsContainer = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.lg};
-  max-height: 100%;
-  overflow: auto;
-  padding-right: ${({ theme }) => theme.spacing.lg};
-`;
+import { SettingsPanelContainer } from "./commonStyles.tsx";
 
 export const Shortcuts = () => {
   const sections = useReactiveVar(shortcutsVar);
@@ -19,13 +11,16 @@ export const Shortcuts = () => {
     localStorage.setItem("shortcuts", JSON.stringify(sections));
   }, [sections]);
 
+  const sectionEntries = Object.entries(sections);
+
   return (
-    <ShortcutsContainer>
-      {Object.entries(sections).map(([section, shortcuts]) => (
+    <SettingsPanelContainer>
+      {sectionEntries.map(([section, shortcuts], index) => (
         <SettingsSection
           key={section}
           section={section}
           shortcuts={shortcuts}
+          defaultOpen={index === 0}
           setBinding={(shortcut, binding) =>
             shortcutsVar({
               ...sections,
@@ -33,6 +28,6 @@ export const Shortcuts = () => {
             })}
         />
       ))}
-    </ShortcutsContainer>
+    </SettingsPanelContainer>
   );
 };

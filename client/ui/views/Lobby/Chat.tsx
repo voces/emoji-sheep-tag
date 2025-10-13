@@ -1,4 +1,10 @@
-import { useCallback, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { chatLogVar, chatValueVar } from "@/vars/chat.ts";
@@ -32,6 +38,8 @@ export const Chat = () => {
   const chatValue = useReactiveVar(chatValueVar);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
+  const [disabled, setDisabled] = useState(true);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleScroll = useCallback(() => {
     const el = chatLogRef.current;
@@ -46,6 +54,15 @@ export const Chat = () => {
     if (wasAtBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [chatLog]);
 
+  useLayoutEffect(() => {
+    const timeout = setTimeout(() => setDisabled(false), 250);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!disabled) inputRef.current?.focus();
+  }, [disabled]);
+
   return (
     <ChatCard>
       <ChatMessagesContainer
@@ -59,9 +76,10 @@ export const Chat = () => {
         ))}
       </ChatMessagesContainer>
       <ChatInput
-        autoFocus
+        ref={inputRef}
         maxLength={150}
         value={chatValue}
+        disabled={disabled}
         onInput={(e) => chatValueVar(e.currentTarget.value)}
         onKeyDown={(e) => {
           if (!e.code.includes("Enter") || !e.currentTarget.value) return;

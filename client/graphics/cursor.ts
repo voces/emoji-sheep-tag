@@ -124,4 +124,4 @@ export const updateCursor = (updatePosition = false) => {
   }
 };
 
-document.addEventListener("pointerlockchange", () => updateCursor(false));
+document.addEventListener("pointerlockchange", () => updateCursor(true));

@@ -5,6 +5,7 @@ import { showSettingsVar } from "@/vars/showSettings.ts";
 import { HStack, Overlay, VStack } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
 import { Button } from "@/components/forms/Button.tsx";
+import { Gameplay } from "./Gameplay.tsx";
 import { Shortcuts } from "./Shortcuts.tsx";
 import { Audio } from "./Audio.tsx";
 
@@ -78,8 +79,10 @@ const CloseButton = styled(Button)`
 
 export const Settings = () => {
   const showSettings = useReactiveVar(showSettingsVar);
-  const [activeTab, setActiveTab] = useState<"shortcuts" | "audio">(
-    "shortcuts",
+  const [activeTab, setActiveTab] = useState<
+    "gameplay" | "shortcuts" | "audio"
+  >(
+    "gameplay",
   );
 
   if (!showSettings) return null;
@@ -100,6 +103,12 @@ export const Settings = () => {
         <SettingsContent>
           <TabsContainer>
             <Tab
+              $active={activeTab === "gameplay"}
+              onClick={() => setActiveTab("gameplay")}
+            >
+              Gameplay
+            </Tab>
+            <Tab
               $active={activeTab === "shortcuts"}
               onClick={() => setActiveTab("shortcuts")}
             >
@@ -113,6 +122,7 @@ export const Settings = () => {
             </Tab>
           </TabsContainer>
           <TabContent>
+            {activeTab === "gameplay" && <Gameplay />}
             {activeTab === "shortcuts" && <Shortcuts />}
             {activeTab === "audio" && <Audio />}
           </TabContent>

@@ -15,6 +15,7 @@ import { colorName } from "@/shared/api/player.ts";
 import { getWebSocket } from "./connection.ts";
 import { LocalWebSocket } from "./local.ts";
 import { lobbiesVar } from "@/vars/lobbies.ts";
+import { applyZoom } from "./api/player.ts";
 
 export const handlers = {
   join: (data: Extract<ServerToClientMessage, { type: "join" }>) => {
@@ -82,6 +83,7 @@ export const handlers = {
     data.wolves = players.filter((p) => e.wolves.includes(p.id));
     camera.position.x = center.x;
     camera.position.y = center.y;
+    applyZoom();
   },
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");

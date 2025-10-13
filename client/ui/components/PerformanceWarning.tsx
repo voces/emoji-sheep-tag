@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { renderer } from "../../graphics/three.ts";
+import { isSoftwareRenderer } from "../../util/gpu.ts";
 
 const DISMISSED_KEY = "emoji-sheep-tag-gpu-warning-dismissed";
 
@@ -22,18 +23,15 @@ const useGPUDetection = (): GPUInfo | null => {
       const rendererInfo = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
       const vendorInfo = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
 
-      const isSoftwareRenderer =
-        /swiftshader|llvmpipe|mesa|software|microsoft basic/i.test(
-          rendererInfo,
-        );
+      const softwareRenderer = isSoftwareRenderer();
 
       setGpuInfo({
         renderer: rendererInfo,
         vendor: vendorInfo,
-        isSoftwareRenderer,
+        isSoftwareRenderer: softwareRenderer,
       });
 
-      if (isSoftwareRenderer) console.warn("⚠️ Software rendering detected!");
+      if (softwareRenderer) console.warn("⚠️ Software rendering detected!");
     }
   }, []);
 

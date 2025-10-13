@@ -31,6 +31,8 @@ export const start = (
     lobby.status === "playing"
   ) return;
 
+  if (lobby.players.size === 1) practice = true;
+
   console.log(new Date(), "Round started in lobby", lobby.name);
 
   lobby.status = "playing";

@@ -1,15 +1,8 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useCallback } from "react";
-import { styled } from "styled-components";
 import { type AudioSettings, audioSettingsVar } from "@/vars/audioSettings.ts";
-import { VStack } from "@/components/layout/Layout.tsx";
 import { Slider } from "@/components/forms/Slider.tsx";
-
-const AudioContainer = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.lg};
-  max-height: 100%;
-  padding-right: ${({ theme }) => theme.spacing.lg};
-`;
+import { SettingsPanelContainer, SettingsPanelTitle } from "./commonStyles.tsx";
 
 export const Audio = () => {
   const audioSettings = useReactiveVar(audioSettingsVar) as AudioSettings;
@@ -30,29 +23,38 @@ export const Audio = () => {
     audioSettingsVar({ ...audioSettingsVar(), ambience: value });
   }, []);
 
+  const formatPercent = useCallback(
+    (value: number) => `${Math.round(value * 100)}%`,
+    [],
+  );
+
   return (
-    <AudioContainer>
-      <h3>Volume Settings</h3>
+    <SettingsPanelContainer>
+      <SettingsPanelTitle>Volume Settings</SettingsPanelTitle>
       <Slider
         label="Master Volume"
         value={audioSettings.master}
         onChange={handleMasterChange}
+        formatValue={formatPercent}
       />
       <Slider
         label="Sound Effects"
         value={audioSettings.sfx}
         onChange={handleSfxChange}
+        formatValue={formatPercent}
       />
       <Slider
         label="User Interface"
         value={audioSettings.ui}
         onChange={handleUiChange}
+        formatValue={formatPercent}
       />
       <Slider
         label="Ambience"
         value={audioSettings.ambience}
         onChange={handleAmbienceChange}
+        formatValue={formatPercent}
       />
-    </AudioContainer>
+    </SettingsPanelContainer>
   );
 };
