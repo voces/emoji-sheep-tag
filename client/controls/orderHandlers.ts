@@ -11,6 +11,7 @@ import { MouseButtonEvent } from "../mouse.ts";
 import { getLocalPlayer } from "@/vars/players.ts";
 import { isEnemy, testClassification } from "@/shared/api/unit.ts";
 import { Classification } from "@/shared/data.ts";
+import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 
 let activeOrder:
   | { order: string; variant: CursorVariant; aoe: number }
@@ -40,12 +41,16 @@ export const cancelOrder = (
   }
 };
 
-export const handleSmartTarget = (e: MouseButtonEvent) => {
+export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
   const target = e.intersects.first();
   const localPlayer = getLocalPlayer();
   const selections = selection.clone().filter((s) =>
     s.owner === localPlayer?.id
   );
+
+  // Check if clicking on the only selected unit
+  const clickingOnlySelectedUnit = target && selections.size === 1 &&
+    target.selected && selections.first()?.id === target.id;
 
   const orders: Array<readonly [Entity, UnitDataActionTarget]> = [];
 
@@ -86,6 +91,14 @@ export const handleSmartTarget = (e: MouseButtonEvent) => {
     })[0];
 
     if (action) orders.push([entity, action] as const);
+  }
+
+  // If no orders found and clicking on the only selected unit, retry as ground click
+  if (!orders.length && clickingOnlySelectedUnit) {
+    return handleSmartTarget({
+      ...e,
+      intersects: new ExtendedSet(),
+    } as MouseButtonEvent);
   }
 
   if (!orders.length) return false;

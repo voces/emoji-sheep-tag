@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { send } from "../../../client.ts";
@@ -13,19 +13,52 @@ const ChatContainer = styled.div`
   pointer-events: none;
 `;
 
-const ChatMessage = styled.div`
-  opacity: 1;
-  animation: fadeOut 3s ease forwards;
-  animation-delay: 7s;
+const ChatMessage = styled.div<{
+  $showChat: string;
+  $messageAge: number;
+  $isNew: boolean;
+}>`
+  ${({ $showChat, $messageAge, $isNew }) => {
+    const isOpen = $showChat === "open" || $showChat === "dismissed";
+    const ageInSeconds = $messageAge / 1000;
 
-  @keyframes fadeOut {
-    from {
-      opacity: 1;
+    if ($isNew) {
+      // New message - start visible (browser will paint this first)
+      return `
+        opacity: 1;
+      `;
+    } else if (isOpen) {
+      // Chat is open - ensure visible, fade in quickly
+      return `
+        opacity: 1;
+        transition: opacity 0.125s ease;
+        transition-delay: 0s;
+      `;
+    } else if (ageInSeconds < 7) {
+      // Message is fresh - calculate remaining delay before fade
+      const remainingDelay = Math.max(0, 7 - ageInSeconds);
+      return `
+        opacity: 0;
+        transition: opacity 3s ease;
+        transition-delay: ${remainingDelay}s;
+      `;
+    } else if (ageInSeconds < 10) {
+      // Message is fading - calculate remaining fade
+      const remainingFade = Math.max(0.5, 3 - (ageInSeconds - 7));
+      return `
+        opacity: 0;
+        transition: opacity ${remainingFade}s ease;
+        transition-delay: 0s;
+      `;
+    } else {
+      // Message is old (>10s) - fade out quickly
+      return `
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        transition-delay: 0s;
+      `;
     }
-    to {
-      opacity: 0;
-    }
-  }
+  }};
 `;
 
 const ChatInput = styled.input<{ $state: string }>`
@@ -77,6 +110,8 @@ export const Chat = () => {
   const showChatBox = useReactiveVar(showChatBoxVar);
   const chatValue = useReactiveVar(chatValueVar);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const seenMessagesRef = useRef<Set<string>>(new Set());
+  const [, forceUpdate] = useState({});
 
   useEffect(() => {
     if (showChatBox === "open") inputRef.current?.focus();
@@ -95,15 +130,32 @@ export const Chat = () => {
     }
   }, [showChatBox]);
 
+  // Detect new messages and trigger a re-render on next frame
+  useEffect(() => {
+    const newMessages = chatLog.filter((log) =>
+      !seenMessagesRef.current.has(log.id)
+    );
+    if (newMessages.length > 0) {
+      newMessages.forEach((log) => seenMessagesRef.current.add(log.id));
+      requestAnimationFrame(() => forceUpdate({}));
+    }
+  }, [chatLog]);
+
   const now = Date.now();
 
   return (
     <ChatContainer>
-      {chatLog.filter((log) => now - log.timestamp < 10_000).map((log) => (
-        <ChatMessage key={log.id}>
-          <ColorMarkdown text={log.message} />
-        </ChatMessage>
-      ))}
+      {chatLog.filter((log) => showChatBox || (now - log.timestamp < 10_000))
+        .map((log) => (
+          <ChatMessage
+            key={log.id}
+            $showChat={showChatBox}
+            $messageAge={now - log.timestamp}
+            $isNew={!seenMessagesRef.current.has(log.id)}
+          >
+            <ColorMarkdown text={log.message} />
+          </ChatMessage>
+        ))}
       <ChatInput
         autoFocus
         $state={showChatBox}

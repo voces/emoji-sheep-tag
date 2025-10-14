@@ -70,9 +70,6 @@ const tweenPath = (e: Entity, delta: number): number => {
 
 app.addSystem({
   props: ["order"],
-  onChange: (e) => {
-    if (e.order?.type !== "attack" && e.swing) delete e.swing;
-  },
   updateEntity: (e, delta) => {
     let loops = 1000;
     while ((e.order || e.queue?.length) && delta > 0) {

@@ -9,7 +9,7 @@ import { getSheep } from "./sheep.ts";
 import { distributeEquitably } from "../util/equitableDistribution.ts";
 import { newUnit, orderAttack } from "../api/unit.ts";
 import { Entity } from "@/shared/types.ts";
-import { newGoldText } from "../api/floatingText.ts";
+import { debouncedGoldText } from "../api/floatingText.ts";
 import { findPlayerUnit, getPlayerUnits } from "./playerEntities.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { isPractice } from "../api/st.ts";
@@ -93,12 +93,7 @@ const onSheepDeath = (sheep: Entity) => {
       lobbyContext.current.settings.income.wolves;
     grantPlayerGold(wolf.owner, bounty);
     const wolfUnit = findPlayerUnit(wolf.owner, (fn) => fn.prefab === "wolf");
-    if (wolfUnit?.position) {
-      newGoldText(
-        { x: wolfUnit.position.x, y: wolfUnit.position.y + 0.5 },
-        bounty,
-      );
-    }
+    if (wolfUnit) debouncedGoldText(wolfUnit, bounty);
   }
 
   if (isPractice()) {
@@ -145,12 +140,7 @@ addSystem((app) => ({
         const bounty = unit.bounty *
           lobbyContext.current.settings.income.wolves;
         grantPlayerGold(killer.owner, bounty);
-        if (killer.position) {
-          newGoldText(
-            { x: killer.position.x, y: killer.position.y + 0.5 },
-            bounty,
-          );
-        }
+        debouncedGoldText(killer, bounty);
       }
     }
 

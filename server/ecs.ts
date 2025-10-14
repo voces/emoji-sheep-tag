@@ -97,23 +97,16 @@ export const newEcs = () => {
       // Guards per (entity, system) pair - persists across the entire flush
       const changeGuards = new Map<string, ReturnType<typeof makeLoopGuard>>();
 
-      // Track "progress" per outer cycle: how many changes/callbacks we actually applied
-      let appliedThisCycle = 0;
-
       // Outer drainer
       while (app.callbackQueue.length || app.entityChangeQueue.size) {
         guardFlush(
           `callbacks=${app.callbackQueue.length} entities=${app.entityChangeQueue.size}`,
         );
 
-        const beforeCallbacks = app.callbackQueue.length;
-        const beforeEntities = app.entityChangeQueue.size;
-
         // Entity queue drainer
         while (app.entityChangeQueue.size) {
           const [entity, changes] = app.entityChangeQueue.entries().next()
             .value!;
-          const beforeChanges = changes.size;
 
           // Get or create guard for this entity (persists across re-queues)
           if (!entityGuards.has(entity.id)) {
@@ -162,16 +155,6 @@ export const newEcs = () => {
               system.entities.add(entity);
               system.onAdd?.(entity);
             }
-
-            appliedThisCycle++;
-          }
-
-          // No-progress detector for per-entity loop:
-          // if we did not reduce `changes.size`, we’re stuck in a self-replenishing loop.
-          if (changes.size >= beforeChanges) {
-            throw new Error(
-              `[loop-stall] changes did not shrink for entity; size=${changes.size}`,
-            );
           }
 
           app.entityChangeQueue.delete(entity);
@@ -181,22 +164,7 @@ export const newEcs = () => {
         if (app.callbackQueue.length) {
           const cb = app.callbackQueue.shift()!;
           cb();
-          appliedThisCycle++;
         }
-
-        // Outer no-progress detector:
-        // if neither queue shrank AND we didn't apply anything, we're spinning.
-        if (
-          app.callbackQueue.length >= beforeCallbacks &&
-          app.entityChangeQueue.size >= beforeEntities &&
-          appliedThisCycle === 0
-        ) {
-          throw new Error(
-            `[loop-stall] flush made no progress (callbacks=${app.callbackQueue.length}, entities=${app.entityChangeQueue.size})`,
-          );
-        }
-
-        appliedThisCycle = 0; // reset for next outer cycle
       }
 
       app.flushScheduled = false;

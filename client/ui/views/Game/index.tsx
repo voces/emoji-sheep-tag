@@ -16,13 +16,13 @@ const TopRight = styled(HStack)`
 
 export const Game = () => (
   <>
+    <Chat />
     <Avatars />
     <TopRight>
       <Gold />
       <Timers />
       <Editor />
     </TopRight>
-    <Chat />
     <ActionBar />
   </>
 );

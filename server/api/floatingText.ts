@@ -1,4 +1,6 @@
 import { addEntity } from "@/shared/api/entity.ts";
+import { Entity } from "@/shared/types.ts";
+import { appContext } from "@/shared/context.ts";
 
 export const newFloatingText = (
   position: { x: number; y: number },
@@ -39,3 +41,33 @@ export const newGoldText = (
     speed: 1.5,
     owner,
   });
+
+// Debounced gold text helper that accumulates amounts per entity
+const pendingGoldTexts = new Map<Entity, number>();
+let isScheduled = false;
+
+export const debouncedGoldText = (entity: Entity, amount: number) => {
+  if (!entity.position) return;
+
+  // Accumulate the amount for this entity
+  const current = pendingGoldTexts.get(entity) ?? 0;
+  pendingGoldTexts.set(entity, current + amount);
+
+  // Schedule flush if not already scheduled
+  if (!isScheduled) {
+    isScheduled = true;
+    appContext.current.enqueue(() => {
+      // Create gold text for all pending entities
+      for (const [e, total] of pendingGoldTexts.entries()) {
+        if (e.position) {
+          newGoldText(
+            { x: e.position.x, y: e.position.y + 0.5 },
+            total,
+          );
+        }
+      }
+      pendingGoldTexts.clear();
+      isScheduled = false;
+    });
+  }
+};

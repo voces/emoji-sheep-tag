@@ -66,11 +66,12 @@ const getMaterial = memoize((
 export const loadSvg = (
   svg: string,
   scale: number,
-  { count = 0, layer, yOffset = 0, xOffset = 0 }: {
+  { count = 0, layer, yOffset = 0, xOffset = 0, facingOffset }: {
     count?: number;
     layer?: number;
     yOffset?: number;
     xOffset?: number;
+    facingOffset?: number;
   } = {},
 ) => {
   const name = Object.entries(svgs).find((e) => e[1] === svg)?.[0];
@@ -128,6 +129,14 @@ export const loadSvg = (
     }
   }
 
+  if (facingOffset) {
+    for (const c of group.children) {
+      if (c instanceof Mesh && c.geometry instanceof BufferGeometry) {
+        c.geometry.rotateZ(facingOffset);
+      }
+    }
+  }
+
   // Center geometry with optional X and Y offsets
   const offset = new Vector3();
   new Box3().setFromObject(group)
@@ -139,11 +148,11 @@ export const loadSvg = (
   offset.y += yOffset;
   offset.x += xOffset;
 
-  group.children.forEach((c) =>
-    c instanceof Mesh && c.geometry instanceof BufferGeometry
-      ? c.geometry.translate(offset.x, offset.y, 0)
-      : null
-  );
+  for (const c of group.children) {
+    if (c instanceof Mesh && c.geometry instanceof BufferGeometry) {
+      c.geometry.translate(offset.x, offset.y, 0);
+    }
+  }
 
   // Make instanced
   const igroup = new InstancedGroup(group, count, name);

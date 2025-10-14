@@ -26,6 +26,7 @@ import {
   selectEntity,
   selectPrimaryUnit,
 } from "./api/selection.ts";
+import { applyZoom } from "./api/player.ts";
 import { getEntitiesInRect } from "./systems/kd.ts";
 import {
   closeAllMenus,
@@ -434,7 +435,6 @@ const handleUIShortcuts = (
   ) {
     e.preventDefault();
     selectPrimaryUnit();
-    return true;
   }
 
   if (
@@ -445,7 +445,6 @@ const handleUIShortcuts = (
   ) {
     e.preventDefault();
     selectAllMirrors();
-    return true;
   }
 
   if (
@@ -456,7 +455,16 @@ const handleUIShortcuts = (
   ) {
     e.preventDefault();
     selectAllFoxes();
-    return true;
+  }
+
+  if (
+    checkShortcut(shortcuts.misc.applyZoom, e.code) &&
+    showChatBoxVar() !== "open" &&
+    showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    e.preventDefault();
+    applyZoom();
   }
 
   return false;
@@ -607,7 +615,11 @@ globalThis.addEventListener("wheel", (e) => {
     if (camera.position.z === settings.spiritZoom) labels.push("spirit");
     if (camera.position.z === 9) labels.push("default");
 
-    const labelText = labels.length > 0 ? ` (${labels.join(", ")})` : "";
+    const labelText = labels.length === 4
+      ? ` (default)`
+      : labels.length > 0
+      ? ` (${labels.join(", ")})`
+      : "";
 
     addChatMessage(`Zoom set to ${camera.position.z}${labelText}.`);
   }, 250);

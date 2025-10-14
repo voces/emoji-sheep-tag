@@ -6,6 +6,9 @@ import { lobbyContext } from "../contexts.ts";
 import { send } from "../lobbyApi.ts";
 import { colors } from "@/shared/data.ts";
 import { setSome } from "../util/set.ts";
+import { addPlayerToPracticeGame } from "../api/player.ts";
+import { appContext } from "@/shared/context.ts";
+import { flushUpdates } from "../updates.ts";
 
 export const zJoinLobby = z.object({
   type: z.literal("joinLobby"),
@@ -29,16 +32,16 @@ export const joinLobby = (
   // Add to lobby
   client.lobby = lobby;
   lobbyContext.with(lobby, () => {
-    lobby!.settings.teams.set(client, "pending");
+    lobby.settings.teams.set(client, "pending");
     client.color = colors.find((c) =>
-      !setSome(lobby!.players, (p) => p.color === c)
+      !setSome(lobby.players, (p) => p.color === c)
     ) ?? client.color;
     client.sheepCount = Math.max(
-      ...Array.from(lobby!.players, (p) => p.sheepCount),
+      ...Array.from(lobby.players, (p) => p.sheepCount),
     );
     send({
       type: "join",
-      status: lobby!.status,
+      status: lobby.status,
       players: [{
         id: client.id,
         name: client.name,
@@ -49,54 +52,57 @@ export const joinLobby = (
       }],
       updates: [],
       lobbySettings: {
-        sheep: lobby!.settings.sheep === "auto" ? 1 : lobby!.settings.sheep,
-        autoSheep: lobby!.settings.sheep === "auto",
-        time: lobby!.settings.time === "auto" ? 60 : lobby!.settings.time,
-        autoTime: lobby!.settings.time === "auto",
-        startingGold: lobby!.settings.startingGold,
-        income: lobby!.settings.income,
+        sheep: lobby.settings.sheep === "auto" ? 1 : lobby.settings.sheep,
+        autoSheep: lobby.settings.sheep === "auto",
+        time: lobby.settings.time === "auto" ? 60 : lobby.settings.time,
+        autoTime: lobby.settings.time === "auto",
+        startingGold: lobby.settings.startingGold,
+        income: lobby.settings.income,
       },
     });
-    lobby!.players.add(client);
-    console.log(
-      new Date(),
-      "Client",
-      client.id,
-      "joined lobby",
-      lobby!.name,
-    );
-  });
+    lobby.players.add(client);
+    console.log(new Date(), "Client", client.id, "joined lobby", lobby.name);
 
-  // Update lobby list for hub
-  broadcastLobbyList();
+    // Update lobby list for hub
+    broadcastLobbyList();
 
-  // Send full lobby state to joining client
-  lobbyContext.with(lobby, () => {
+    // Send full lobby state to joining client
     client.send({
       type: "join",
-      status: lobby!.status,
+      status: lobby.status,
       players: Array.from(
-        lobby!.players,
+        lobby.players,
         (p) => ({
           id: p.id,
           name: p.name,
           color: p.color,
-          team: lobby!.settings.teams.get(p) ?? "pending",
+          team: lobby.settings.teams.get(p) ?? "pending",
           local: p === client ? true : undefined,
-          host: lobby!.host === p,
+          host: lobby.host === p,
           sheepCount: p.sheepCount,
         }),
       ),
-      updates: Array.from(lobby!.round?.ecs.entities ?? []),
-      rounds: lobby!.rounds,
+      updates: Array.from(lobby.round?.ecs.entities ?? []),
+      rounds: lobby.rounds,
       lobbySettings: {
-        sheep: lobby!.settings.sheep === "auto" ? 1 : lobby!.settings.sheep,
-        autoSheep: lobby!.settings.sheep === "auto",
-        time: lobby!.settings.time === "auto" ? 60 : lobby!.settings.time,
-        autoTime: lobby!.settings.time === "auto",
-        startingGold: lobby!.settings.startingGold,
-        income: lobby!.settings.income,
+        sheep: lobby.settings.sheep === "auto" ? 1 : lobby.settings.sheep,
+        autoSheep: lobby.settings.sheep === "auto",
+        time: lobby.settings.time === "auto" ? 60 : lobby.settings.time,
+        autoTime: lobby.settings.time === "auto",
+        startingGold: lobby.settings.startingGold,
+        income: lobby.settings.income,
       },
     });
+
+    // If joining an ongoing practice game, add player to sheep team and spawn units
+    if (lobby.round?.practice && lobby.round) {
+      appContext.with(lobby.round.ecs, () => {
+        appContext.current.batch(() => {
+          addPlayerToPracticeGame(client);
+        });
+      });
+    }
+
+    flushUpdates();
   });
 };
