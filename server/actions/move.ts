@@ -1,7 +1,9 @@
-import { Point } from "@/shared/pathing/math.ts";
+import { distanceBetweenPoints, Point } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { orderMove } from "../api/unit.ts";
 import { lookup } from "../systems/lookup.ts";
+import { isPractice } from "../api/st.ts";
+import { updatePathing } from "../systems/pathing.ts";
 
 export const handleMove = (
   unit: Entity,
@@ -20,6 +22,18 @@ export const handleMove = (
     ? lookup(orderTarget)
     : orderTarget;
   if (!target) return;
+
+  if (isPractice() && unit.position) {
+    const targetPosition = "x" in target ? target : target.position;
+    if (
+      targetPosition &&
+      distanceBetweenPoints(unit.position, targetPosition) > 20
+    ) {
+      unit.position = { x: targetPosition.x, y: targetPosition.y };
+      updatePathing(unit);
+      return;
+    }
+  }
 
   orderMove(unit, target, queue);
 };

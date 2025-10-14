@@ -27,7 +27,6 @@
   - Switch
   - Bulldog
   - Kat'ma
-- Practice teleport
 
 # Perf
 

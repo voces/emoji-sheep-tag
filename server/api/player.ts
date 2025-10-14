@@ -3,6 +3,7 @@ import { newUnit } from "./unit.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { center } from "@/shared/map.ts";
 import type { Client } from "../client.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 /**
  * Gets a player entity by their ID
@@ -90,7 +91,7 @@ export const addPlayerToPracticeGame = (client: Client) => {
   const lobby = lobbyContext.current;
   if (!lobby?.round?.practice || client.playerEntity) return;
 
-  client.playerEntity = lobby.round.ecs.addEntity({
+  client.playerEntity = addEntity({
     name: client.name,
     owner: client.id,
     playerColor: client.color,
