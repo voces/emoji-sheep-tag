@@ -198,6 +198,22 @@ export const items: Record<string, Item> = {
       soundOnCastStart: "jarOpen1",
     }],
   },
+  locateSheep: {
+    id: "locateSheep",
+    name: "Locate Sheep",
+    description: "Reveals the location of all sheep.",
+    icon: "location",
+    gold: 40,
+    binding: ["KeyT"],
+    charges: 1,
+    actions: [{
+      name: "Locate Sheep",
+      type: "auto",
+      order: "locateSheep",
+      icon: "location",
+      binding: ["KeyT"],
+    }],
+  },
 };
 
 type DataEntity = Pick<

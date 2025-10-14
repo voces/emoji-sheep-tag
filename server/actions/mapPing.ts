@@ -16,9 +16,6 @@ export const mapPing = (
 ) => {
   if (!client.lobby?.round) return;
 
-  // const playerTeam = client.playerEntity.team;
-  // if (!playerTeam) return;
-
   const prev = findLastPlayerUnit(client.id, (e) => e.prefab === "indicator");
   if (prev) removeEntity(prev);
 
