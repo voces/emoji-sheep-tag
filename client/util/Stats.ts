@@ -119,15 +119,15 @@ const newStats = () => {
 
   let beginTime = (performance || Date).now(), prevTime = beginTime, frames = 0;
 
-  const fpsPanel = addPanel(newPanel("FPS", "#0ff", "#002"));
   const msPanel = addPanel(newPanel("MS", "#0f0", "#020"));
+  const fpsPanel = addPanel(newPanel("FPS", "#0ff", "#002"));
   let memPanel: ReturnType<typeof newPanel> | undefined;
 
   if (self.performance && "memory" in self.performance) {
     memPanel = addPanel(newPanel("MB", "#f08", "#201"));
   }
 
-  showPanel(1);
+  showPanel(0);
 
   const end = () => {
     frames++;

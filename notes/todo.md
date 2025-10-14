@@ -6,7 +6,8 @@
   - Auras?
     - Like team items, but don't like them being required...
   - Scythe?
-  - Sheep
+- Structures
+  - Frost
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
 - Max 24 players
@@ -20,8 +21,6 @@
 - Cannot remove something from selection
 - Multiple terrains
   - Editor actually changes pathing map
-- FPS display (display user FPS)
-- Ping display (display user ping)
 - Modes
   - President
   - Switch

@@ -2,10 +2,12 @@ import { makeVar } from "@/hooks/useVar.tsx";
 import { z } from "zod";
 
 const gameplaySettingsSchema = z.object({
-  clearOrderOnRightClick: z.boolean().catch(true),
   sheepZoom: z.number().min(1).max(50).catch(9),
   wolfZoom: z.number().min(1).max(50).catch(9),
   spiritZoom: z.number().min(1).max(50).catch(9),
+  clearOrderOnRightClick: z.boolean().catch(true),
+  showPing: z.boolean().catch(false),
+  showFps: z.boolean().catch(false),
 });
 
 export type GameplaySettings = z.infer<typeof gameplaySettingsSchema>;

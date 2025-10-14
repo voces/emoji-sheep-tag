@@ -6,6 +6,7 @@ import { Avatars } from "./Avatars.tsx";
 import { Timers } from "./Timers.tsx";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { Editor } from "./Editor/index.tsx";
+import { SimpleStats } from "./SimpleStats.tsx";
 
 const TopRight = styled(HStack)`
   position: fixed;
@@ -17,6 +18,7 @@ const TopRight = styled(HStack)`
 export const Game = () => (
   <>
     <Chat />
+    <SimpleStats />
     <Avatars />
     <TopRight>
       <Gold />

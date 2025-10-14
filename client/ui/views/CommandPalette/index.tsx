@@ -14,6 +14,7 @@ import { getLocalPlayer } from "@/vars/players.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { loadLocal } from "../../../local.ts";
 import { useExportMap } from "./useExportMap.ts";
+import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -107,6 +108,7 @@ const highlightText = (text: string, query: string) => {
 
 export const CommandPalette = () => {
   const showCommandPalette = useReactiveVar(showCommandPaletteVar);
+  const gameplaySettings = useReactiveVar(gameplaySettingsVar);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [focused, setFocused] = useState<string | undefined>();
@@ -131,6 +133,30 @@ export const CommandPalette = () => {
       name: "Open settings",
       description: "Open setting menu",
       callback: () => showSettingsVar(true),
+    },
+    {
+      name: `${gameplaySettings.showPing ? "Hide" : "Show"} ping`,
+      description: `${
+        gameplaySettings.showPing ? "Hide" : "Show"
+      } network latency indicator`,
+      callback: () => {
+        gameplaySettingsVar({
+          ...gameplaySettings,
+          showPing: !gameplaySettings.showPing,
+        });
+      },
+    },
+    {
+      name: `${gameplaySettings.showFps ? "Hide" : "Show"} FPS`,
+      description: `${
+        gameplaySettings.showFps ? "Hide" : "Show"
+      } frames per second counter`,
+      callback: () => {
+        gameplaySettingsVar({
+          ...gameplaySettings,
+          showFps: !gameplaySettings.showFps,
+        });
+      },
     },
     {
       name: "Cancel round",
@@ -201,7 +227,13 @@ export const CommandPalette = () => {
         else localStorage.removeItem("debug-pathing");
       },
     },
-  ], [flags.debug, flags.debugStats, flags.debugPathing]);
+  ], [
+    flags.debug,
+    flags.debugStats,
+    flags.debugPathing,
+    gameplaySettings.showPing,
+    gameplaySettings.showFps,
+  ]);
 
   const filteredCommands = useMemoWithPrevious<CommandOption[]>((prev) => {
     if (prompt) return prev ?? [];

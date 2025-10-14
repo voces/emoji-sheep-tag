@@ -2,7 +2,6 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { styled } from "styled-components";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
-import { VStack } from "@/components/layout/Layout.tsx";
 import { SettingsPanelContainer, SettingsPanelTitle } from "./commonStyles.tsx";
 import { Slider } from "@/components/forms/Slider.tsx";
 import { camera } from "../../../graphics/three.ts";
@@ -24,23 +23,6 @@ export const Gameplay = () => {
   return (
     <SettingsPanelContainer>
       <SettingsPanelTitle>Gameplay Settings</SettingsPanelTitle>
-      <VStack>
-        <SettingRow>
-          <Checkbox
-            id="clear-order-on-right-click"
-            checked={settings.clearOrderOnRightClick}
-            onChange={(e) =>
-              gameplaySettingsVar({
-                ...settings,
-                clearOrderOnRightClick: e.currentTarget.checked,
-              })}
-          />
-          <SettingLabel htmlFor="clear-order-on-right-click">
-            Clear order on right click
-          </SettingLabel>
-        </SettingRow>
-      </VStack>
-
       <Slider
         label="Sheep Zoom"
         value={settings.sheepZoom}
@@ -74,6 +56,51 @@ export const Gameplay = () => {
           camera.position.z = value;
         }}
       />
+
+      <SettingRow>
+        <Checkbox
+          id="clear-order-on-right-click"
+          checked={settings.clearOrderOnRightClick}
+          onChange={(e) =>
+            gameplaySettingsVar({
+              ...settings,
+              clearOrderOnRightClick: e.currentTarget.checked,
+            })}
+        />
+        <SettingLabel htmlFor="clear-order-on-right-click">
+          Clear order on right click
+        </SettingLabel>
+      </SettingRow>
+
+      <SettingRow>
+        <Checkbox
+          id="show-ping"
+          checked={settings.showPing}
+          onChange={(e) =>
+            gameplaySettingsVar({
+              ...settings,
+              showPing: e.currentTarget.checked,
+            })}
+        />
+        <SettingLabel htmlFor="show-ping">
+          Show ping
+        </SettingLabel>
+      </SettingRow>
+
+      <SettingRow>
+        <Checkbox
+          id="show-fps"
+          checked={settings.showFps}
+          onChange={(e) =>
+            gameplaySettingsVar({
+              ...settings,
+              showFps: e.currentTarget.checked,
+            })}
+        />
+        <SettingLabel htmlFor="show-fps">
+          Show FPS
+        </SettingLabel>
+      </SettingRow>
     </SettingsPanelContainer>
   );
 };
