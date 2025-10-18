@@ -30,7 +30,7 @@ app.addSystem({
         progress = easeInQuad(easingProgress);
         break;
       case "ease-out":
-        progress = easeOutQuad(easingProgress);
+        progress = 1 - easeOutQuad(easingProgress);
         break;
       case "ease-in-out":
         // Ease from 0 -> 1 -> 0 (pulse/wave effect)

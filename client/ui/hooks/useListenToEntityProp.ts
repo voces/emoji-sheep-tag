@@ -12,10 +12,10 @@ const useThrottle = <T>(
 
   const throttledCallback = (value: T) => {
     pendingValue = value;
-    hasPendingUpdate = true;
 
-    // Throttle: only schedule if not already scheduled
+    // Throttle: execute immediately if not already scheduled, otherwise queue
     if (timeoutId === undefined) {
+      callback(value);
       timeoutId = setTimeout(() => {
         if (hasPendingUpdate) {
           callback(pendingValue!);
@@ -23,6 +23,8 @@ const useThrottle = <T>(
         }
         timeoutId = undefined;
       }, delay);
+    } else {
+      hasPendingUpdate = true;
     }
   };
 

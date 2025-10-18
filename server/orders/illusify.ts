@@ -29,10 +29,11 @@ export const illusifyOrder = {
     unit.isMirror = true;
 
     appContext.current.enqueue(() => {
-      // Remove the illusify action after use
+      // Remove the illusify action and all upgrade actions after use
       if (unit.actions) {
         unit.actions = unit.actions.filter((action) =>
-          !(action.type === "auto" && action.order === "illusify")
+          !(action.type === "auto" && action.order === "illusify") &&
+          action.type !== "upgrade"
         );
       }
     });
