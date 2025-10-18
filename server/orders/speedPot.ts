@@ -33,7 +33,8 @@ export const speedPotOrder = {
       buffs.push({
         remainingDuration: action.buffDuration,
         movementSpeedMultiplier: action.movementSpeedMultiplier,
-        icon: "purplePotion",
+        model: "rune2",
+        modelOffset: { x: -0.2, y: 0.4 },
       });
     }
 

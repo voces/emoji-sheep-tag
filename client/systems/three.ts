@@ -67,6 +67,9 @@ import attackGround from "../assets/attackGround.svg" with { type: "text" };
 import totem from "../assets/totem.svg" with { type: "text" };
 import shield from "../assets/shield.svg" with { type: "text" };
 import wind from "../assets/wind.svg" with { type: "text" };
+import sparkle from "../assets/sparkle.svg" with { type: "text" };
+import rune from "../assets/rune.svg" with { type: "text" };
+import rune2 from "../assets/rune2.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -128,6 +131,8 @@ export const svgs: Record<string, string> = {
   totem,
   shield,
   wind,
+  rune,
+  rune2,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -173,6 +178,9 @@ const collections: Record<string, InstancedGroup | undefined> = {
   // SFX elements (highest z-order, always on top)
   shield: loadSvg(shield, 1, { layer: 2 }),
   wind: loadSvg(wind, 1, { layer: 2 }),
+  sparkle: loadSvg(sparkle, 1, { layer: 2 }),
+  rune: loadSvg(rune, 0.4, { layer: 2 }),
+  rune2: loadSvg(rune2, 0.05, { layer: 2 }),
   fire: loadSvg(fire, 1, { layer: 2 }),
   claw: loadSvg(claw, 0.05, { layer: 2 }),
   dash: loadSvg(dash, 0.1, { layer: 2 }),

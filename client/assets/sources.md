@@ -57,6 +57,9 @@
 - Attack ground: sword + self made
 - https://www.svgrepo.com/svg/535627/shield-half
 - https://www.svgrepo.com/svg/496751/wind-2
+- https://www.svgrepo.com/svg/323309/sparkles
+- https://www.svgrepo.com/svg/171830/symbol
+- https://www.svgrepo.com/svg/107670/symbol
 
 # Audio
 

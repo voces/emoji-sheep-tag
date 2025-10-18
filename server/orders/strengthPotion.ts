@@ -39,7 +39,8 @@ export const strengthPotionOrder = {
       remainingDuration: action.buffDuration,
       damageMultiplier: action.damageMultiplier,
       consumeOnAttack: true,
-      icon: "pinkPotion",
+      model: "rune",
+      modelOffset: { x: 0.2, y: 0.4 },
     };
 
     // Add buff to entity

@@ -1,5 +1,6 @@
 import { Point } from "@/shared/pathing/math.ts";
 import { addEntity } from "@/shared/api/entity.ts";
+import { Entity } from "@/shared/types.ts";
 
 export const newSfx = (
   position: Point,
@@ -8,6 +9,7 @@ export const newSfx = (
   duration = 1,
   easing?: "ease-in" | "ease-out" | "ease-in-out",
   easingDuration = duration,
+  extra?: Partial<Entity>,
 ) =>
   addEntity({
     id: `sfx-${Date.now()}-${Math.random()}`,
@@ -30,4 +32,5 @@ export const newSfx = (
       progress: easing === "ease-out" ? 1 : 0,
     }),
     isDoodad: true,
+    ...extra,
   });

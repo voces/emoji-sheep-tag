@@ -9,7 +9,6 @@ import { useTheme } from "styled-components";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
 import { styled } from "styled-components";
 import { Entity } from "../../../ecs.ts";
-import { buffs } from "@/shared/data.ts";
 
 const MiniIconWrapper = styled.div`
   display: grid;
@@ -38,37 +37,20 @@ const Inventory = ({ items }: { items: ReadonlyArray<Item> }) => (
   </MiniIconWrapper>
 );
 
-const Buffs = ({ entityBuffs }: { entityBuffs: ReadonlyArray<Buff> }) => {
-  const nonExpiringBuffs = entityBuffs.filter((buff) => {
-    if (buff.expiration) return false;
-    // Only show buffs that have an icon or model defined
-    if (buff.icon) return true;
-    if (!buff.auraBuff) return false;
-    const buffDef = buffs[buff.auraBuff];
-    return buffDef?.icon !== undefined || buffDef?.model !== undefined;
-  });
-
-  return (
-    <MiniIconWrapper>
-      {nonExpiringBuffs.map((buff, i) => {
-        // Try to find the buff definition to get icon/name
-        const buffId = buff.auraBuff;
-        const buffDef = buffId ? buffs[buffId] : undefined;
-        const name = buffId ?? "Buff";
-        const icon = buff.icon ?? buffDef?.icon ?? buffDef?.model ?? "buff";
-
-        return (
-          <Command
-            key={i}
-            name={name}
-            icon={icon}
-            hideTooltip
-          />
-        );
-      })}
-    </MiniIconWrapper>
-  );
-};
+const Buffs = ({ entityBuffs }: { entityBuffs: ReadonlyArray<Buff> }) => (
+  <MiniIconWrapper>
+    {entityBuffs.filter((b) => !b.expiration && (b.icon || b.model)).map(
+      (buff, i) => (
+        <Command
+          key={i}
+          name=""
+          icon={buff.icon ?? buff.model ?? ""}
+          hideTooltip
+        />
+      ),
+    )}
+  </MiniIconWrapper>
+);
 
 export const Avatar = ({ entity }: { entity: Entity }) => {
   const localPlayer = useLocalPlayer();
