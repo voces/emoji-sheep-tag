@@ -167,10 +167,15 @@ const isNotSpirit = (entity: Entity) => {
   return true;
 };
 
+const defaultClassificationsFlat = [
+  Object.values(defaultClassifications).flat(),
+];
+
 export const testClassification = (
   source: Entity,
   target: Entity,
-  classifications: ReadonlyArray<ReadonlyArray<Classification>> = [],
+  classifications: ReadonlyArray<ReadonlyArray<Classification>> =
+    defaultClassificationsFlat,
 ): boolean => {
   // if (!classifications?.length) return true;
 

@@ -4,7 +4,7 @@ import { addSystem } from "@/shared/context.ts";
 
 addSystem(() => {
   const idleCheck = (e: SystemEntity<"attack" | "position">) => {
-    if (e.order || e.queue?.length) return;
+    if (e.order || e.queue?.length || typeof e.progress === "number") return;
 
     const target = acquireTarget(e);
     // TODO: return to pos?

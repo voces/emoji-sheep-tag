@@ -200,6 +200,7 @@ import("./systems/pathing.ts");
 import("./systems/pathing.ts");
 import("./systems/playerEntities.ts");
 import("./systems/playerEntities.ts");
+import("./systems/projectile.ts");
 import("./systems/queues.ts");
 import("./systems/regen.ts");
 import("./orders/index.ts");

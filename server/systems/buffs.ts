@@ -8,15 +8,22 @@ addSystem((app) => ({
 
     // Check for expiring buffs before updating
     const expiringBuffs = entity.buffs.filter(
-      (buff) => buff.expiration && buff.remainingDuration - delta <= 0,
+      (buff) =>
+        buff.expiration && typeof buff.remainingDuration === "number" &&
+        buff.remainingDuration - delta <= 0,
     );
 
     const updatedBuffs = entity.buffs
-      .map((buff) => ({
-        ...buff,
-        remainingDuration: buff.remainingDuration - delta,
-      }))
-      .filter((buff) => buff.remainingDuration > 0);
+      .map((buff) => (typeof buff.remainingDuration === "number"
+        ? {
+          ...buff,
+          remainingDuration: buff.remainingDuration - delta,
+        }
+        : buff)
+      )
+      .filter((buff) =>
+        typeof buff.remainingDuration !== "number" || buff.remainingDuration > 0
+      );
 
     if (updatedBuffs.length === 0) (entity as Entity).buffs = null;
     else entity.buffs = updatedBuffs;

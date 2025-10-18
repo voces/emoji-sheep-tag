@@ -50,6 +50,7 @@
 - https://www.svgrepo.com/svg/277706/potion
 - https://www.svgrepo.com/svg/57987/joystick
 - https://www.svgrepo.com/svg/395592/eye
+- Watchtower: self made
 
 # Audio
 

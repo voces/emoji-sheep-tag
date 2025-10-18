@@ -11,6 +11,8 @@ export const actionToShortcutKey = (
     ? `purchase-${action.itemId}`
     : action.type === "menu"
     ? action.name.toLowerCase().replace(/\s+/g, "-")
+    : action.type === "upgrade"
+    ? `upgrade-${action.prefab}`
     : action.order;
 
   return menuContext ? `${menuContext}.${baseKey}` : baseKey;

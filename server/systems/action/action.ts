@@ -8,6 +8,7 @@ import { advanceWalk } from "./advanceWalk.ts";
 import { advanceAttack } from "./advanceAttack.ts";
 import { advanceAttackMove } from "./advanceAttackMove.ts";
 import { addSystem } from "@/shared/context.ts";
+import { beginUpgrade } from "./beginUpgrade.ts";
 
 addSystem({
   props: ["order"],
@@ -77,6 +78,9 @@ addSystem({
         case "build":
           delta = advanceBuild(e, delta);
           break;
+        case "upgrade":
+          beginUpgrade(e);
+          return;
         case "walk":
           delta = advanceWalk(e, delta);
           break;

@@ -1,11 +1,11 @@
-import { Buff, Entity, Order } from "@/shared/types.ts";
+import { Buff, Order } from "@/shared/types.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { OrderDefinition } from "./types.ts";
 
-export const strengthPotionOrder: OrderDefinition = {
+export const strengthPotionOrder = {
   id: "strengthPotion",
 
-  onIssue: (unit: Entity, _, queue) => {
+  onIssue: (unit, _, queue) => {
     const action = findActionByOrder(unit, "strengthPotion");
     if (!action || action.type !== "auto" || !action.buffDuration) {
       return "failed";
@@ -44,4 +44,4 @@ export const strengthPotionOrder: OrderDefinition = {
     // Add buff to entity
     unit.buffs = [...(unit.buffs || []), strengthBuff];
   },
-};
+} satisfies OrderDefinition;

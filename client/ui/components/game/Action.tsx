@@ -25,6 +25,14 @@ export const Action = ({ action, current, entity }: {
     disabled = disabled || (goldCost > 0 && playerGold < goldCost);
   }
 
+  // Check if action is disabled during construction
+  const isConstructing = typeof entity.progress === "number";
+  const canExecuteWhileConstructing = "canExecuteWhileConstructing" in action &&
+    action.canExecuteWhileConstructing === true;
+  if (isConstructing && !canExecuteWhileConstructing) {
+    disabled = true;
+  }
+
   switch (action.type) {
     case "auto":
     case "target":
@@ -52,6 +60,22 @@ export const Action = ({ action, current, entity }: {
           icon={action.icon ?? prefabs[action.unitType]?.model ??
             action.unitType}
           iconScale={prefabs[action.unitType]?.modelScale}
+          binding={action.binding}
+          pressed={current}
+          disabled={disabled}
+          goldCost={action.goldCost}
+          manaCost={manaCost}
+          count={action.count}
+        />
+      );
+    case "upgrade":
+      return (
+        <Command
+          name={action.name}
+          description={action.description}
+          icon={action.icon ?? prefabs[action.prefab]?.model ??
+            action.prefab}
+          iconScale={prefabs[action.prefab]?.modelScale}
           binding={action.binding}
           pressed={current}
           disabled={disabled}

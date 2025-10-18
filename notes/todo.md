@@ -8,11 +8,13 @@
   - Scythe?
 - Structures
   - Frost
+  - Aura
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
 - Max 24 players
 - Allow custom action menus
 - Can hear through fog
+- Cannot select into fog
 - Pathing falls over with lots of foxes
   - Falls over when spam clicking movement orders
 - Image tell (already have, make more obvious?)

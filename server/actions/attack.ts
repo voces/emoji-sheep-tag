@@ -7,6 +7,7 @@ export const handleAttack = (
   unit: Entity,
   orderTarget: string | Point | undefined,
   queue = false,
+  isGroundAttack = false,
 ) => {
   if (!unit.attack || !unit.position) return;
 
@@ -15,5 +16,5 @@ export const handleAttack = (
     : orderTarget;
   if (!target) return;
 
-  orderAttack(unit, target, queue);
+  orderAttack(unit, target, queue, isGroundAttack);
 };

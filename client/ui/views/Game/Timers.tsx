@@ -41,7 +41,7 @@ export const Timers = () => {
     <TimersContainer>
       {timers.map((t) => {
         const buff = t.buffs?.find((b) => b.expiration);
-        if (!buff) return null;
+        if (!buff || !buff.remainingDuration) return null;
         return (
           <Timer key={t.id}>
             <span>{buff.expiration}</span>

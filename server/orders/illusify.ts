@@ -1,16 +1,10 @@
-import { Entity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { appContext } from "@/shared/context.ts";
 
 export const illusifyOrder = {
   id: "illusify",
 
-  canExecute: (unit: Entity) => {
-    // Can only illusify if the unit has a tilemap
-    return !!unit.tilemap;
-  },
-
-  onIssue: (unit: Entity, _, queue) => {
+  onIssue: (unit, _, queue) => {
     if (!unit.tilemap) return "failed";
     if (queue) {
       unit.queue = [...unit.queue ?? [], {
@@ -23,7 +17,7 @@ export const illusifyOrder = {
     return "immediate";
   },
 
-  onCastComplete: (unit: Entity) => {
+  onCastComplete: (unit) => {
     if (!unit.tilemap || !unit.position) return false;
 
     // Replace all tiles with 16 (passable tile)

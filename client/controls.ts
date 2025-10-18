@@ -516,6 +516,20 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
     }
   }
 
+  // Check if action is disabled during construction
+  units = units.filter((unit) => {
+    const isConstructing = typeof unit.progress === "number";
+    if (!isConstructing) return true;
+    const canExecute = "canExecuteWhileConstructing" in action &&
+      action.canExecuteWhileConstructing === true;
+    return canExecute;
+  });
+
+  if (units.length === 0 && unitsTotal > 0) {
+    playSound("ui", pick("error1"), { volume: 0.3 });
+    return;
+  }
+
   switch (action.type) {
     case "auto":
       handleAutoAction(action, units, queue);
@@ -523,10 +537,19 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
     case "build":
       createBlueprint(action.unitType, mouse.world.x, mouse.world.y);
       break;
+    case "upgrade":
+      send({
+        type: "upgrade",
+        units: units.map((u) => u.id),
+        prefab: action.prefab,
+        queue,
+      });
+      break;
     case "target":
       setActiveOrder(
         action.order,
-        action.order === "attack" || action.order === "meteor"
+        action.order === "attack" || action.order === "attack-ground" ||
+          action.order === "meteor"
           ? "enemy"
           : "ally",
         action.aoe ?? 0,
@@ -556,7 +579,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
 };
 
 const handleAutoAction = (
-  action: { order: string },
+  action: Extract<UnitDataAction, { type: "auto" }>,
   units: Entity[],
   queue?: boolean,
 ) => {
@@ -581,6 +604,7 @@ const handleAutoAction = (
     type: "unitOrder",
     order: action.order,
     units: units.map((u) => u.id),
+    prefab: action.prefab,
     queue,
   });
 };

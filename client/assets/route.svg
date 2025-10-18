@@ -1,35 +1,18 @@
-<?xml
-  version="1.0"
-  encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-<svg
-  fill="#000000"
-  viewBox="0 0 24 24"
-  id="up-right-direction-2"
-  data-name="Line Color"
-  xmlns="http://www.w3.org/2000/svg"
-  class="icon line-color"
->
-  <line
-    id="primary"
-    x1="4.5"
-    y1="19.5"
-    x2="15.74"
-    y2="8.26"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17.006 17.006">
+  <path
     fill="none"
-    stroke="#ffffff"
+    stroke="#fff"
     stroke-linecap="round"
     stroke-linejoin="round"
     stroke-width="2"
-  >
-  </line>
+    d="M16.006 16.006 4.766 4.766"
+  />
   <path
-    id="secondary"
-    d="M18.54,4.52l-3.68.73a1,1,0,0,0-.59,1.54l2.94,2.94a1,1,0,0,0,1.54-.59l.73-3.68A.77.77,0,0,0,18.54,4.52Z"
     fill="none"
     stroke="#2ca9bc"
     stroke-linecap="round"
     stroke-linejoin="round"
     stroke-width="2"
-  >
-  </path>
+    d="m1.966 1.026 3.68.73a1 1 0 0 1 .59 1.54l-2.94 2.94a1 1 0 0 1-1.54-.59l-.73-3.68a.77.77 0 0 1 .94-.94Z"
+  />
 </svg>

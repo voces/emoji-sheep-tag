@@ -1,11 +1,11 @@
-import { Entity, Order } from "@/shared/types.ts";
+import { Order } from "@/shared/types.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { OrderDefinition } from "./types.ts";
 
-export const manaPotionOrder: OrderDefinition = {
+export const manaPotionOrder = {
   id: "manaPotion",
 
-  onIssue: (unit: Entity, _, queue) => {
+  onIssue: (unit, _, queue) => {
     const action = findActionByOrder(unit, "manaPotion");
     if (!action || action.type !== "auto") return "failed";
 
@@ -27,4 +27,4 @@ export const manaPotionOrder: OrderDefinition = {
       unit.mana = Math.min(unit.mana + action.manaRestore, unit.maxMana);
     }
   },
-};
+} satisfies OrderDefinition;

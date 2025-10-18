@@ -32,6 +32,7 @@ import {
 import { joinLobby, zJoinLobby } from "./actions/joinLobby.ts";
 import { createLobby, zCreateLobby } from "./actions/createLobby.ts";
 import { joinHub, leaveHub, serializeLobbyList } from "./hub.ts";
+import { upgrade, zUpgrade } from "./actions/upgrade.ts";
 
 export type SocketEventMap = {
   close: unknown;
@@ -125,6 +126,7 @@ export class Client {
 const zClientToServerMessage = z.discriminatedUnion("type", [
   zStart,
   zBuild,
+  zUpgrade,
   zOrderEvent,
   zPing,
   zMapPing,
@@ -145,6 +147,7 @@ export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
 const actions = {
   start,
   build,
+  upgrade,
   unitOrder,
   ping,
   mapPing,

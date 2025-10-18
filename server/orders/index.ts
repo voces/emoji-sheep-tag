@@ -11,6 +11,7 @@ import { manaPotionOrder } from "./manaPotion.ts";
 import { sentryOrder } from "./sentry.ts";
 import { illusifyOrder } from "./illusify.ts";
 import { locateSheepOrder } from "./locateSheep.ts";
+import { cancelUpgradeOrder } from "./cancelUpgrade.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -37,6 +38,7 @@ registerOrder(manaPotionOrder);
 registerOrder(sentryOrder);
 registerOrder(illusifyOrder);
 registerOrder(locateSheepOrder);
+registerOrder(cancelUpgradeOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);

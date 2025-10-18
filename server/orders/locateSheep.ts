@@ -1,4 +1,4 @@
-import { Entity, Order } from "@/shared/types.ts";
+import { Order } from "@/shared/types.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { OrderDefinition } from "./types.ts";
 import { getSheep } from "../systems/sheep.ts";
@@ -6,10 +6,10 @@ import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { timeout } from "../api/timing.ts";
 import { getPlayer } from "../api/player.ts";
 
-export const locateSheepOrder: OrderDefinition = {
+export const locateSheepOrder = {
   id: "locateSheep",
 
-  onIssue: (unit: Entity, _, queue) => {
+  onIssue: (unit, _, queue) => {
     const action = findActionByOrder(unit, "locateSheep");
     if (!action || action.type !== "auto") return "failed";
 
@@ -57,4 +57,4 @@ export const locateSheepOrder: OrderDefinition = {
       timeout(() => removeEntity(pingEntity), 10);
     }
   },
-};
+} satisfies OrderDefinition;

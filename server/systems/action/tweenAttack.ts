@@ -8,9 +8,33 @@ import { handleBlockedPath } from "./pathRetry.ts";
 
 export const tweenAttack = (e: Entity, delta: number) => {
   if (
-    !e.position || !e.attack || !e.order || !("targetId" in e.order) ||
-    !e.order.targetId
-  ) return delta;
+    !e.position || !e.attack || !e.order ||
+    (e.order.type !== "attack" && e.order.type !== "attackMove")
+  ) {
+    return delta;
+  }
+
+  // Ground attack (only for attack orders with target but no targetId)
+  if (
+    e.order.type === "attack" && "target" in e.order && e.order.target &&
+    !("targetId" in e.order)
+  ) {
+    if (e.swing) return tweenSwing(e, delta);
+
+    if (!e.attackCooldownRemaining) {
+      e.swing = {
+        remaining: Math.max(e.attack.backswing, e.attack.damagePoint),
+        source: e.position,
+        target: e.order.target,
+      };
+      return delta;
+    }
+
+    return 0;
+  }
+
+  // Entity attack (for both attack and attackMove orders with targetId)
+  if (!("targetId" in e.order)) return delta;
 
   const target = lookup(e.order.targetId);
   if (!target?.position) return delta;

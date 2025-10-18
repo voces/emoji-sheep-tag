@@ -1,4 +1,4 @@
-import { Entity, Item, UnitDataAction } from "./types.ts";
+import { Buff, Entity, Item, UnitDataAction } from "./types.ts";
 
 export const classificationGroups = {
   alliance: ["ally", "enemy", "neutral"],
@@ -73,6 +73,7 @@ const selfDestruct: UnitDataAction = {
   icon: "collision",
   binding: ["KeyX"],
   allowAllies: true,
+  canExecuteWhileConstructing: true,
 };
 
 export const items: Record<string, Item> = {
@@ -216,6 +217,14 @@ export const items: Record<string, Item> = {
   },
 };
 
+export const buffs: Record<string, Buff> = {
+  frostEffect: {
+    remainingDuration: 5,
+    movementSpeedMultiplier: 0.85,
+    attackSpeedMultiplier: 0.95,
+  },
+};
+
 type DataEntity = Pick<
   Entity,
   | "name"
@@ -240,6 +249,7 @@ type DataEntity = Pick<
   | "sightRadius"
   | "blocksLineOfSight"
   | "actions"
+  | "buffs"
   | "completionTime"
   | "isDoodad"
   //
@@ -363,13 +373,14 @@ export const prefabs: Record<string, DataEntity> = {
       cooldown: 1.2,
       backswing: 0.15,
       damagePoint: 0.3,
+      model: "claw",
     },
     actions: [
       {
         name: "Attack",
         type: "target",
         order: "attack",
-        icon: "claw",
+        icon: "sword",
         targeting: [["other"]],
         aoe: 0,
         binding: ["KeyA"],
@@ -380,6 +391,8 @@ export const prefabs: Record<string, DataEntity> = {
       hold,
       {
         name: "Mirror Image",
+        description:
+          "Creates a mirror image of your wolf which is capable of blocking the sheep and dealing minor damage to structures. Dispels all buffs.",
         type: "auto",
         order: "mirrorImage",
         icon: "wolf",
@@ -450,13 +463,14 @@ export const prefabs: Record<string, DataEntity> = {
       cooldown: 0.8,
       backswing: 0.10,
       damagePoint: 0.2,
+      model: "claw",
     },
     actions: [
       {
         name: "Attack",
         type: "target",
         order: "attack",
-        icon: "claw",
+        icon: "sword",
         targeting: [["other"]],
         aoe: 0,
         binding: ["KeyA"],
@@ -485,6 +499,14 @@ export const prefabs: Record<string, DataEntity> = {
       iconEffect: "mirror",
       goldCost: 12,
       binding: ["KeyS"],
+    }, {
+      name: "Upgrade to Frost Castle",
+      description:
+        "Upgrades the hut to a Frost Castle, which is capable of firing frost orbs as wolves.",
+      type: "upgrade",
+      prefab: "frostCastle",
+      goldCost: 30,
+      binding: ["KeyF"],
     }, selfDestruct],
     bounty: 1,
   },
@@ -578,6 +600,53 @@ export const prefabs: Record<string, DataEntity> = {
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
     bounty: 3,
+  },
+  frostCastle: {
+    name: "Frost Castle",
+    model: "castle",
+    sightRadius: 6,
+    radius: 0.5,
+    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    maxHealth: 200,
+    completionTime: 5,
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
+    actions: [
+      {
+        name: "Attack",
+        type: "target",
+        order: "attack",
+        icon: "sword",
+        targeting: [["unit", "ward"]],
+        aoe: 0,
+        binding: ["KeyA"],
+        smart: { enemy: 0 },
+      },
+      {
+        name: "Attack Ground",
+        type: "target",
+        order: "attack-ground",
+        icon: "attackGround",
+        targeting: [["other"]],
+        aoe: 1,
+        binding: ["KeyG"],
+        smart: { ground: 0 },
+      },
+      stop,
+      selfDestruct,
+    ],
+    bounty: 4,
+    attack: {
+      damage: 5,
+      range: 5,
+      rangeMotionBuffer: 1,
+      cooldown: 2.75,
+      backswing: 0.1,
+      damagePoint: 0.2,
+      projectileSpeed: 8,
+      model: "frostOrb",
+      targetsAllowed: [["unit", "ward"]],
+    },
+    buffs: [{ impartedBuffOnAttack: "frostEffect" }],
   },
   fence: {
     name: "Fence",

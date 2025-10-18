@@ -1,4 +1,4 @@
-import { Entity, Order } from "@/shared/types.ts";
+import { Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { damageEntity, newUnit } from "../api/unit.ts";
 import { lookup } from "../systems/lookup.ts";
@@ -15,7 +15,6 @@ import { colorName } from "@/shared/api/player.ts";
 export const saveOrder = {
   id: "save",
 
-  // Called when the order is initiated (sets up the order on the unit)
   onIssue: (unit, target, queue) => {
     if (typeof target !== "string") return "failed";
 
@@ -38,8 +37,7 @@ export const saveOrder = {
     return "ordered";
   },
 
-  // Called when the cast completes (spawn units, create effects, etc)
-  onCastComplete: (unit: Entity) => {
+  onCastComplete: (unit) => {
     if (unit.order?.type !== "cast") return;
 
     const target = unit.order.targetId

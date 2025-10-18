@@ -1,6 +1,6 @@
 import { afterEach } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { newUnit } from "../../api/unit.ts";
+import { newUnit, orderAttack } from "../../api/unit.ts";
 import { cleanupTest, it } from "../../testing/setup.ts";
 import { yieldFor } from "../../testing/yieldFor.ts";
 
@@ -39,5 +39,89 @@ it(
     console.warn = originalWarn;
 
     expect(loopWarningCount).toBe(0);
+  },
+);
+
+it(
+  "wolf should attack-move to a point and acquire targets along the way",
+  { wolves: ["player-1"], sheep: ["player-0"] },
+  function* () {
+    const wolf = newUnit("player-1", "wolf", 40, 30);
+    const hut = newUnit("player-0", "hut", 50, 30);
+
+    // Issue attack-move command to a point past the hut
+    orderAttack(wolf, { x: 55, y: 30 });
+
+    // Wolf should have attackMove order
+    expect(wolf.order?.type).toBe("attackMove");
+
+    // Wait for wolf to acquire the hut as a target
+    yield* yieldFor(() => {
+      expect(wolf.order?.type).toBe("attackMove");
+      expect("targetId" in wolf.order! && wolf.order.targetId).toBe(hut.id);
+    }, { timeout: 5 });
+
+    // Wait for hut to be destroyed
+    yield* yieldFor(() => {
+      expect(hut.health).toBe(0);
+    }, { timeout: 10 });
+  },
+);
+
+it(
+  "wolf should directly attack a targeted enemy",
+  { wolves: ["player-1"], sheep: ["player-0"] },
+  function* () {
+    const wolf = newUnit("player-1", "wolf", 40, 30);
+    const hut = newUnit("player-0", "hut", 41, 30);
+
+    // Directly attack the hut
+    orderAttack(wolf, hut);
+
+    // Wolf should have attack order with targetId
+    expect(wolf.order?.type).toBe("attack");
+    expect("targetId" in wolf.order! && wolf.order.targetId).toBe(hut.id);
+
+    // Wait for hut to be destroyed
+    yield* yieldFor(() => {
+      expect(hut.health).toBe(0);
+    }, { timeout: 10 });
+  },
+);
+
+it(
+  "frost castle should create ground attack order",
+  { wolves: ["player-1"], sheep: ["player-0"] },
+  () => {
+    const castle = newUnit("player-1", "frostCastle", 40, 30);
+
+    // Attack ground within range (castle range is 5) - use isGroundAttack=true
+    const result = orderAttack(castle, { x: 43, y: 30 }, false, true);
+
+    // Order should be successfully created
+    expect(result).toBe(true);
+
+    // Castle should have attack order with target (ground, not targetId)
+    expect(castle.order?.type).toBe("attack");
+    expect("target" in castle.order!).toBe(true);
+    expect("targetId" in castle.order!).toBe(false);
+    if ("target" in castle.order!) {
+      expect(castle.order.target).toEqual({ x: 43, y: 30 });
+    }
+  },
+);
+
+it(
+  "frost castle should do nothing when using regular attack on ground with no enemies",
+  { wolves: ["player-1"], sheep: ["player-0"] },
+  () => {
+    const castle = newUnit("player-1", "frostCastle", 40, 30);
+
+    // Use regular attack on empty ground
+    const result = orderAttack(castle, { x: 43, y: 30 }, false, false);
+
+    // Order should not be created (no valid target found)
+    expect(result).toBe(false);
+    expect(castle.order).toBeUndefined();
   },
 );

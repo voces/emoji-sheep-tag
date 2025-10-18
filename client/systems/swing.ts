@@ -6,6 +6,9 @@ const updateSwing = (e: SystemEntity<"swing">) => {
   const existing = swings.get(e);
   if (existing) app.removeEntity(existing);
 
+  // Only render swing if there's no projectile and attack has a model
+  if (!e.attack?.model || e.attack.projectileSpeed) return;
+
   const direction = Math.atan2(
     e.swing.target.y - e.swing.source.y,
     e.swing.target.x - e.swing.source.x,
@@ -13,7 +16,7 @@ const updateSwing = (e: SystemEntity<"swing">) => {
 
   const swing = app.addEntity({
     id: `swing-${crypto.randomUUID()}`,
-    prefab: "claw",
+    prefab: e.attack.model,
     position: {
       x: e.swing.source.x + 0.75 * Math.cos(direction),
       y: e.swing.source.y + 0.75 * Math.sin(direction),

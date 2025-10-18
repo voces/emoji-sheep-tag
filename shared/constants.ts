@@ -12,3 +12,5 @@ export const PATHING_WALK_IGNORE_DISTANCE = 2;
 export const PATHING_WALK_ANGLE_DIFFERENCE = Math.PI / 2;
 
 export const SHOP_INTERACTION_RANGE = 2;
+
+export const UPGRADE_REFUND_RATE = 0.9;

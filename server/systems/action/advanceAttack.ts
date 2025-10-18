@@ -14,6 +14,16 @@ export const advanceAttack = (e: Entity, delta: number): number => {
     return delta;
   }
 
+  // Ground attack
+  if ("target" in e.order && e.order.target) return tweenAttack(e, delta);
+
+  // Entity attack
+  if (!("targetId" in e.order)) {
+    if (e.swing) delete e.swing;
+    delete e.order;
+    return delta;
+  }
+
   const target = lookup(e.order.targetId);
 
   if (!target || !target.position || target.health === 0) {

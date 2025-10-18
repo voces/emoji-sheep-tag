@@ -16,6 +16,7 @@ export const zOrderEvent = z.object({
   order: z.string(),
   target: z.union([zPoint, z.string()]).optional(),
   queue: z.boolean().optional(),
+  prefab: z.string().optional(),
 });
 
 export const unitOrder = (
@@ -45,6 +46,20 @@ export const unitOrder = (
       continue;
     }
 
+    // Check if action can execute during construction
+    const isConstructing = typeof unit.progress === "number";
+    if (isConstructing) {
+      const canExecute = "canExecuteWhileConstructing" in action &&
+        action.canExecuteWhileConstructing === true;
+      if (!canExecute) {
+        console.warn("Cannot execute action during construction", {
+          unitId: unit.id,
+          order,
+        });
+        continue;
+      }
+    }
+
     // Handle the action based on order type
 
     // Check if this order is handled by the new registry system
@@ -54,7 +69,7 @@ export const unitOrder = (
 
       // Generic mana validation for all orders with mana costs
       const action = findActionByOrder(unit, order);
-      if (action && action.type === "auto" && action.manaCost) {
+      if (action && "manaCost" in action && action.manaCost) {
         const manaCost = action.manaCost;
         if (manaCost > 0 && (unit.mana ?? 0) < manaCost) {
           console.warn(`Cannot execute order ${order} for unit ${unit.id}`);
@@ -68,14 +83,14 @@ export const unitOrder = (
       const issueResult = orderDef.onIssue(unit, target, queue);
 
       if (issueResult === "immediate") {
-        if (!precast(unit, false, order)) continue;
+        if (!precast(unit, action)) continue;
 
         orderDef?.onCastStart?.(unit);
 
         // NOTE: remaining is ignored, so cast completes immediately after it starts
         orderDef.onCastComplete?.(unit);
 
-        postCast(unit, itemWithAction, order);
+        postCast(unit, itemWithAction, action);
       }
     } else {
       // Fall back to legacy handlers
@@ -84,7 +99,10 @@ export const unitOrder = (
           handleMove(unit, target, queue);
           break;
         case "attack":
-          handleAttack(unit, target, queue);
+          handleAttack(unit, target, queue, false);
+          break;
+        case "attack-ground":
+          handleAttack(unit, target, queue, true);
           break;
         case "stop":
           if (!queue) {

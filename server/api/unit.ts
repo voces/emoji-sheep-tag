@@ -13,12 +13,12 @@ import {
   updatePathing,
   withPathingMap,
 } from "../systems/pathing.ts";
-import { items, prefabs } from "@/shared/data.ts";
+import { buffs, items, prefabs } from "@/shared/data.ts";
 import { findAction } from "../util/actionLookup.ts";
 import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
 import { deductPlayerGold, getPlayerGold } from "./player.ts";
-import { addEntity } from "@/shared/api/entity.ts";
+import { addEntity, mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
 import { newSfx } from "./sfx.ts";
@@ -190,8 +190,7 @@ export const acquireTarget = (e: Entity) => {
     .filter((e2) =>
       e2.position &&
       isEnemy(e, e2) &&
-      (!e2.targetedAs ||
-        testClassification(e, e2, [["enemy"]]))
+      testClassification(e, e2, e.attack?.targetsAllowed)
     )
     .map((e2) => [e2, distanceBetweenPoints(pos, e2.position!)] as const)
     .sort((a, b) => {
@@ -206,6 +205,7 @@ export const orderAttack = (
   attacker: Entity,
   target: Entity | Point,
   queue = false,
+  isGroundAttack = false,
 ): boolean => {
   updatePathing(attacker, 1);
   if (!attacker.attack || !attacker.position) return false;
@@ -213,7 +213,7 @@ export const orderAttack = (
   if ("id" in target) {
     if (
       !target.position ||
-      !testClassification(attacker, target, [["other"]])
+      !testClassification(attacker, target, attacker.attack.targetsAllowed)
     ) return false;
 
     // If within attack range..
@@ -222,15 +222,67 @@ export const orderAttack = (
       return true;
     }
 
-    // If not in range and no movement, abort
-    if (!attacker.movementSpeed) return false;
+    // If not in range and no movement, play error sound and abort
+    if (!attacker.movementSpeed) {
+      if (attacker.position) {
+        playSoundAt(attacker.position, "error1");
+      }
+      return false;
+    }
 
     processOrder(attacker, { type: "attack", targetId: target.id }, queue);
     return true;
   }
 
-  // TODO: check if nearby target in range
-  if (!attacker.movementSpeed) return false;
+  // Ground attack or point target
+  if (!attacker.movementSpeed) {
+    // For stationary units with ground target
+    if (
+      distanceBetweenPoints(attacker.position, target) > attacker.attack.range
+    ) {
+      // Out of range - do nothing
+      return false;
+    }
+
+    // If this is a ground attack command, attack the ground
+    if (isGroundAttack) {
+      processOrder(attacker, { type: "attack", target }, queue);
+      return true;
+    }
+
+    // For regular attack command, find a targetable unit in range of the attacker
+    const entitiesInRange = getEntitiesInRange(
+      attacker.position.x,
+      attacker.position.y,
+      attacker.attack.range,
+    );
+
+    // Find closest valid target
+    const attackData = attacker.attack;
+    const validTarget = entitiesInRange
+      .filter((e) =>
+        e.position &&
+        isEnemy(attacker, e) &&
+        testClassification(attacker, e, attackData.targetsAllowed) &&
+        canSwing(attacker, e)
+      )
+      .sort((a, b) =>
+        distanceBetweenPoints(attacker.position!, a.position!) -
+        distanceBetweenPoints(attacker.position!, b.position!)
+      )[0];
+
+    if (validTarget) {
+      processOrder(
+        attacker,
+        { type: "attack", targetId: validTarget.id },
+        queue,
+      );
+      return true;
+    }
+
+    // No valid target found, do nothing
+    return false;
+  }
 
   processOrder(attacker, { type: "attackMove", target }, queue);
   return true;
@@ -281,6 +333,23 @@ export const orderBuild = (
   ) return false;
 
   processOrder(builder, { type: "build", x, y, unitType: type }, queue);
+  return true;
+};
+
+export const orderUpgrade = (
+  unit: Entity,
+  prefabId: string,
+  queue = false,
+): boolean => {
+  if (!unit.owner || !unit.position) return false;
+
+  const action = findAction(
+    unit,
+    (a) => a.type === "upgrade" && a.prefab === prefabId,
+  );
+  if (!action) return false;
+
+  processOrder(unit, { type: "upgrade", prefab: prefabId }, queue);
   return true;
 };
 
@@ -405,8 +474,38 @@ const applyDamageModifiers = (
   attacker: Entity,
   target: Entity,
 ): number =>
-  damage * (target.progress ? 2 : 1) *
+  damage * (typeof target.progress === "number" ? 2 : 1) *
   (attacker.isMirror ? target.tilemap ? 0.24 : 0.001 : 1);
+
+/**
+ * Applies buffs from source entities to a target and consumes buffs marked as consumeOnAttack
+ * @param sources Entities whose buffs should be checked (e.g., attacker, projectile)
+ * @param target Entity that should receive imparted buffs
+ */
+export const applyAndConsumeBuffs = (
+  sources: ReadonlyArray<Entity>,
+  target: Entity,
+): void => {
+  for (const source of sources) {
+    if (!source.buffs) continue;
+
+    // Apply buffs to target
+    for (const buff of source.buffs) {
+      if (buff.impartedBuffOnAttack) {
+        target.buffs = [
+          ...(target.buffs ?? []),
+          buffs[buff.impartedBuffOnAttack],
+        ];
+      }
+    }
+
+    // Consume buffs from source
+    const updatedBuffs = source.buffs.filter((buff) => !buff.consumeOnAttack);
+    if (updatedBuffs.length !== source.buffs.length) {
+      source.buffs = updatedBuffs.length ? updatedBuffs : null;
+    }
+  }
+};
 
 /**
  * Damages one entity from another, handling mitigation and amplification
@@ -437,4 +536,23 @@ export const damageEntity = (
   if (attacker.buffs) {
     attacker.buffs = attacker.buffs.filter((buff) => !buff.consumeOnAttack);
   }
+};
+
+export const changePrefab = (
+  e: Entity,
+  prefabId: string,
+  { health = "proportional" }: { health?: "proportional" | "retain" } = {},
+) => {
+  const hpPercentage = e.maxHealth && e.health ? e.health / e.maxHealth : 1;
+
+  const prev = mergeEntityWithPrefab({ id: e.id, prefab: e.prefab });
+  const next = mergeEntityWithPrefab({ id: e.id, prefab: prefabId });
+
+  if (health === "proportional") {
+    if (next.maxHealth) next.health = next.maxHealth * hpPercentage;
+  } else if (health === "retain") next.health = prev.health;
+
+  for (const key in prev) if (!(key in next)) delete e[key as keyof Entity];
+
+  Object.assign(e, next);
 };

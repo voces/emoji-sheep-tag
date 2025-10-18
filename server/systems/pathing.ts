@@ -32,29 +32,34 @@ export const calcPath = (
   if (typeof target === "string") {
     const targetEntity = lookup(target);
     if (!targetEntity?.position) return [];
-    const path = pathingMap().path(
-      entity,
-      targetEntity as TargetEntity,
-      {
-        distanceFromTarget: (mode === "attack"
-          ? Math.max(
-            0,
-            (distanceFromTarget ?? entity.attack?.range ?? 0) -
-              (targetEntity.order?.type === "walk"
-                ? (targetEntity.movementSpeed ?? 0) * 0.2
-                : 0),
-          )
-          : distanceFromTarget),
-        removeMovingEntities,
-      },
-    ).slice(1);
 
-    if (
-      path.at(-1)?.x === entity.position.x &&
-      path.at(-1)?.y === entity.position.y
-    ) path.pop();
+    try {
+      const path = pathingMap().path(
+        entity,
+        targetEntity as TargetEntity,
+        {
+          distanceFromTarget: (mode === "attack"
+            ? Math.max(
+              0,
+              (distanceFromTarget ?? entity.attack?.range ?? 0) -
+                (targetEntity.order?.type === "walk"
+                  ? (targetEntity.movementSpeed ?? 0) * 0.2
+                  : 0),
+            )
+            : distanceFromTarget),
+          removeMovingEntities,
+        },
+      ).slice(1);
 
-    return path;
+      if (
+        path.at(-1)?.x === entity.position.x &&
+        path.at(-1)?.y === entity.position.y
+      ) path.pop();
+
+      return path;
+    } catch {
+      return [];
+    }
   }
 
   const path = pathingMap().path(
@@ -131,11 +136,35 @@ addSystem((app) => {
   };
 });
 
-addSystem({
-  props: ["tilemap"],
-  onChange: (e) => {
-    if (!e.position) return;
-    pathingMap().removeEntity(e);
-    pathingMap().addEntity(e as PathingEntity);
-  },
+const tilemapsEqual = (
+  a: Entity["tilemap"],
+  b: Entity["tilemap"],
+): boolean => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.top === b.top &&
+    a.left === b.left &&
+    a.height === b.height &&
+    a.width === b.width &&
+    a.map.length === b.map.length &&
+    a.map.every((v, i) => v === b.map[i]);
+};
+
+addSystem(() => {
+  const tilemaps = new WeakMap<Entity, Entity["tilemap"]>();
+
+  return {
+    props: ["tilemap"],
+    onAdd: (e) => {
+      tilemaps.set(e, e.tilemap);
+    },
+    onChange: (e) => {
+      if (!e.position) return;
+      const prev = tilemaps.get(e);
+      if (tilemapsEqual(prev, e.tilemap)) return;
+      tilemaps.set(e, e.tilemap);
+      pathingMap().removeEntity(e);
+      pathingMap().addEntity(e as PathingEntity);
+    },
+  };
 });

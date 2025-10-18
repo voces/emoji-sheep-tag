@@ -1,24 +1,41 @@
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { lookup } from "../lookup.ts";
-import { computeUnitAttackSpeed, damageEntity } from "../../api/unit.ts";
+import {
+  applyAndConsumeBuffs,
+  computeUnitAttackSpeed,
+  damageEntity,
+} from "../../api/unit.ts";
 import { newFloatingText } from "../../api/floatingText.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 export const tweenSwing = (e: Entity, delta: number): number => {
   if (!e.swing || !e.attack) return delta;
 
-  const targetId = e.order && "targetId" in e.order
-    ? e.order.targetId
-    : undefined;
-  if (!targetId) return delta;
+  // Determine if this is ground attack or entity attack
+  let target: Entity | undefined;
+  let targetPosition: { x: number; y: number } | undefined;
 
-  const target = lookup(targetId);
-  if (!target?.position) return delta;
+  if (e.order && (e.order.type === "attack" || e.order.type === "attackMove")) {
+    if ("targetId" in e.order) {
+      target = lookup(e.order.targetId);
+      targetPosition = target?.position;
+    } else if ("target" in e.order) {
+      targetPosition = e.order.target;
+    }
+  }
 
-  // Abort swing if cannot reach target anymore (but only during backswing)
+  if (!targetPosition) return delta;
+
+  // For ranged attacks (with projectileSpeed), don't abort during backswing
+  const isRangedAttack = !!e.attack.projectileSpeed;
+
+  // Abort swing if cannot reach target anymore (but only during backswing for melee, and only for entity attacks)
   if (
+    !isRangedAttack &&
+    target &&
     e.swing.remaining > e.attack.backswing &&
-    distanceBetweenPoints(target.position, e.swing.target) >
+    distanceBetweenPoints(targetPosition, e.swing.target) >
       e.attack.rangeMotionBuffer
   ) {
     delete e.swing;
@@ -38,9 +55,28 @@ export const tweenSwing = (e: Entity, delta: number): number => {
     const swingTarget = e.swing.target;
     delete e.swing;
 
-    // Miss if target too far
+    // For ranged attacks, spawn a projectile
+    if (isRangedAttack && e.position && e.attack.projectileSpeed) {
+      addEntity({
+        position: { x: e.position.x, y: e.position.y },
+        isDoodad: true,
+        model: e.attack.model,
+        buffs: e.buffs,
+        projectile: {
+          attackerId: e.id,
+          target: { x: targetPosition.x, y: targetPosition.y },
+          speed: e.attack.projectileSpeed,
+          splashRadius: e.attack.rangeMotionBuffer,
+        },
+      });
+
+      return delta;
+    }
+
+    // For melee attacks, check for miss (only for entity attacks)
     if (
-      distanceBetweenPoints(target.position, swingTarget) >
+      target &&
+      distanceBetweenPoints(targetPosition, swingTarget) >
         e.attack.rangeMotionBuffer
     ) {
       if (e.position) {
@@ -52,13 +88,10 @@ export const tweenSwing = (e: Entity, delta: number): number => {
       return delta;
     }
 
-    // Otherwise damage target
-    if (target.health) damageEntity(e, target);
-
-    // Consume buffs that are marked as consumeOnAttack
-    if (e.buffs) {
-      const updatedBuffs = e.buffs.filter((buff) => !buff.consumeOnAttack);
-      e.buffs = updatedBuffs.length ? null : updatedBuffs;
+    // Otherwise damage target (melee, entity attacks only)
+    if (target?.health) {
+      damageEntity(e, target);
+      applyAndConsumeBuffs([e], target);
     }
   }
 

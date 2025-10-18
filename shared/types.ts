@@ -23,10 +23,16 @@ export type Order = Readonly<
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
     readonly lastRepath?: number;
   } | {
+    readonly type: "upgrade";
+    readonly prefab: string;
+  } | {
     readonly type: "attack";
     readonly targetId: string;
     readonly path?: ReadonlyArray<{ x: number; y: number }>;
     readonly lastRepath?: number;
+  } | {
+    readonly type: "attack";
+    readonly target: Readonly<Point>;
   } | {
     readonly type: "hold";
   } | {
@@ -63,12 +69,13 @@ export type Item = {
 };
 
 export type Buff = {
-  readonly remainingDuration: number;
+  readonly remainingDuration?: number;
   readonly attackSpeedMultiplier?: number;
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
   readonly damageMultiplier?: number;
   readonly consumeOnAttack?: boolean;
+  readonly impartedBuffOnAttack?: string;
   readonly expiration?: string;
   readonly progressEasing?: {
     readonly type: "ease-in" | "ease-out" | "ease-in-out";
@@ -98,56 +105,76 @@ export type UnitDataActionTarget = {
   readonly allowAllies?: boolean;
 };
 
-export type UnitDataAction = {
+export type UnitDataActionUpgrade = {
   readonly name: string;
-  readonly type: "build";
-  readonly unitType: string;
+  readonly type: "upgrade";
+  readonly prefab: string;
   readonly description?: string;
   readonly icon?: string;
   readonly binding?: ReadonlyArray<string>;
-  readonly manaCost?: number;
   readonly goldCost?: number;
   readonly castDuration?: number;
   readonly allowAllies?: boolean;
-} | {
-  readonly name: string;
-  readonly type: "auto";
-  readonly order: string;
-  readonly description?: string;
-  readonly icon?: string;
-  readonly iconEffect?: IconEffect;
-  readonly binding?: ReadonlyArray<string>;
-  readonly manaCost?: number;
-  readonly goldCost?: number;
-  readonly castDuration?: number;
-  readonly buffDuration?: number;
-  readonly attackSpeedMultiplier?: number;
-  readonly movementSpeedBonus?: number;
-  readonly movementSpeedMultiplier?: number;
-  readonly damageMultiplier?: number;
-  readonly manaRestore?: number;
-  readonly soundOnCastStart?: string;
-  readonly allowAllies?: boolean;
-} | {
-  readonly name: string;
-  readonly type: "purchase";
-  readonly itemId: string;
-  readonly goldCost: number;
-  readonly description?: string;
-  readonly icon?: string;
-  readonly binding?: ReadonlyArray<string>;
-  readonly manaCost?: number;
-  readonly castDuration?: number;
-  readonly allowAllies?: boolean;
-} | {
-  readonly name: string;
-  readonly type: "menu";
-  readonly icon?: string;
-  readonly actions: ReadonlyArray<UnitDataAction>;
-  readonly description?: string;
-  readonly binding?: ReadonlyArray<string>;
-  readonly allowAllies?: boolean;
-} | UnitDataActionTarget;
+};
+
+export type UnitDataAction =
+  | {
+    readonly name: string;
+    readonly type: "build";
+    readonly unitType: string;
+    readonly description?: string;
+    readonly icon?: string;
+    readonly binding?: ReadonlyArray<string>;
+    readonly manaCost?: number;
+    readonly goldCost?: number;
+    readonly castDuration?: number;
+    readonly allowAllies?: boolean;
+  }
+  | UnitDataActionUpgrade
+  | {
+    readonly name: string;
+    readonly type: "auto";
+    readonly order: string;
+    readonly description?: string;
+    readonly icon?: string;
+    readonly iconEffect?: IconEffect;
+    readonly binding?: ReadonlyArray<string>;
+    readonly manaCost?: number;
+    readonly goldCost?: number;
+    readonly castDuration?: number;
+    readonly buffDuration?: number;
+    readonly attackSpeedMultiplier?: number;
+    readonly movementSpeedBonus?: number;
+    readonly movementSpeedMultiplier?: number;
+    readonly damageMultiplier?: number;
+    readonly manaRestore?: number;
+    readonly soundOnCastStart?: string;
+    readonly allowAllies?: boolean;
+    readonly prefab?: string;
+    readonly canExecuteWhileConstructing?: boolean;
+  }
+  | {
+    readonly name: string;
+    readonly type: "purchase";
+    readonly itemId: string;
+    readonly goldCost: number;
+    readonly description?: string;
+    readonly icon?: string;
+    readonly binding?: ReadonlyArray<string>;
+    readonly manaCost?: number;
+    readonly castDuration?: number;
+    readonly allowAllies?: boolean;
+  }
+  | {
+    readonly name: string;
+    readonly type: "menu";
+    readonly icon?: string;
+    readonly actions: ReadonlyArray<UnitDataAction>;
+    readonly description?: string;
+    readonly binding?: ReadonlyArray<string>;
+    readonly allowAllies?: boolean;
+  }
+  | UnitDataActionTarget;
 
 export type Entity = {
   id: string;
@@ -167,7 +194,7 @@ export type Entity = {
    */
   type?: "cosmetic" | "static" | "dynamic";
 
-  model?: string;
+  model?: string | null;
   modelScale?: number | null;
   vertexColor?: number | null;
   playerColor?: string | null;
@@ -185,7 +212,7 @@ export type Entity = {
   facing?: number | null;
 
   // Data
-  health?: number;
+  health?: number | null;
   maxHealth?: number;
   healthRegen?: number;
   mana?: number;
@@ -224,11 +251,20 @@ export type Entity = {
     readonly backswing: number;
     /** Seconds between an attack starting and damage occurring */
     readonly damagePoint: number;
-  };
+    readonly projectileSpeed?: number;
+    readonly model?: string;
+    readonly targetsAllowed?: ReadonlyArray<ReadonlyArray<Classification>>;
+  } | null;
   swing?: {
     readonly remaining: number;
     readonly source: { readonly x: number; readonly y: number };
     readonly target: { readonly x: number; readonly y: number };
+  } | null;
+  projectile?: {
+    readonly attackerId: string;
+    readonly target: { readonly x: number; readonly y: number };
+    readonly speed: number;
+    readonly splashRadius: number;
   } | null;
   attackCooldownRemaining?: number | null;
   lastAttacker?: string | null;

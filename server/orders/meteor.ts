@@ -9,10 +9,6 @@ import { testClassification } from "@/shared/api/unit.ts";
 export const meteorOrder = {
   id: "meteor",
 
-  canExecute: (unit) => {
-    return !!(unit.owner && unit.position);
-  },
-
   onIssue: (unit, target, queue) => {
     if (typeof target === "string") target = lookup(target)?.position;
     if (!target) return "failed";
@@ -34,7 +30,6 @@ export const meteorOrder = {
   },
 
   onCastComplete: (unit) => {
-    // This is called when we reach the target location
     if (unit.order?.type !== "cast" || unit.order.orderId !== "meteor") return;
 
     const target = unit.order.target;

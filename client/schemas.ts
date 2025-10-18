@@ -30,9 +30,18 @@ const zOrder = z.union([
     path: zPoint.array().readonly().optional(),
   }),
   z.object({
+    type: z.literal("upgrade"),
+    prefab: z.string(),
+  }),
+  z.object({
     type: z.literal("attack"),
     targetId: z.string(),
     path: zPoint.array().readonly().optional(),
+    lastRepath: z.number().optional(),
+  }),
+  z.object({
+    type: z.literal("attack"),
+    target: zPoint,
   }),
   z.object({ type: z.literal("hold") }),
   z.object({
@@ -92,6 +101,17 @@ const zBaseAction = z.discriminatedUnion("type", [
   }),
   z.object({
     name: z.string(),
+    type: z.literal("upgrade"),
+    description: z.string().optional(),
+    icon: z.string().optional(),
+    prefab: z.string(),
+    binding: z.array(z.string()).readonly().optional(),
+    goldCost: z.number().optional(),
+    castDuration: z.number().optional(),
+    allowAllies: z.boolean().optional(),
+  }),
+  z.object({
+    name: z.string(),
     type: z.literal("auto"),
     description: z.string().optional(),
     icon: z.string().optional(),
@@ -109,6 +129,7 @@ const zBaseAction = z.discriminatedUnion("type", [
     manaRestore: z.number().optional(),
     soundOnCastStart: z.string().optional(),
     allowAllies: z.boolean().optional(),
+    canExecuteWhileConstructing: z.boolean().optional(),
   }),
   z.object({
     name: z.string(),
@@ -182,12 +203,13 @@ const zItem = z.object({
 });
 
 const zBuff = z.object({
-  remainingDuration: z.number(),
+  remainingDuration: z.number().optional(),
   attackSpeedMultiplier: z.number().optional(),
   movementSpeedBonus: z.number().optional(),
   movementSpeedMultiplier: z.number().optional(),
   damageMultiplier: z.number().optional(),
   consumeOnAttack: z.boolean().optional(),
+  impartedBuffOnAttack: z.string().optional(),
   expiration: z.string().optional(),
   progressEasing: z.object({
     type: z.enum(["ease-in", "ease-out", "ease-in-out"]),
@@ -208,7 +230,7 @@ export const zUpdate = z.object({
     z.literal("static"),
     z.literal("dynamic"),
   ]).optional(),
-  health: z.number().optional(),
+  health: z.number().nullable().optional(),
   maxHealth: z.number().optional(),
   healthRegen: z.number().optional(),
   mana: z.number().optional(),
@@ -240,11 +262,21 @@ export const zUpdate = z.object({
     cooldown: z.number(),
     damagePoint: z.number(),
     backswing: z.number(),
-  }).optional(),
+    projectileSpeed: z.number().optional(),
+    model: z.string().optional(),
+    targetsAllowed: z.array(z.array(zClassification).readonly()).readonly()
+      .optional(),
+  }).nullable().optional(),
   swing: z.object({
     remaining: z.number(),
     source: z.object({ x: z.number(), y: z.number() }),
     target: z.object({ x: z.number(), y: z.number() }),
+  }).nullable().optional(),
+  projectile: z.object({
+    attackerId: z.string(),
+    target: z.object({ x: z.number(), y: z.number() }),
+    speed: z.number(),
+    splashRadius: z.number(),
   }).nullable().optional(),
   attackCooldownRemaining: z.number().nullable().optional(),
   lastAttacker: z.string().nullable().optional(),
@@ -279,7 +311,7 @@ export const zUpdate = z.object({
   queue: zOrder.array().readonly().nullable().optional(),
 
   // Art
-  model: z.string().optional(),
+  model: z.string().nullable().optional(),
   modelScale: z.number().nullable().optional(),
   vertexColor: z.number().nullable().optional(),
   playerColor: z.string().nullable().optional(),

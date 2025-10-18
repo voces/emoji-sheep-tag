@@ -119,6 +119,13 @@ export const CommandPalette = () => {
 
   const commands = useMemo((): Command[] => [
     {
+      name: "Cancel round",
+      description: "Cancels the current round",
+      valid: () =>
+        stateVar() === "playing" && !!getLocalPlayer()?.host && !editorVar(),
+      callback: () => send({ type: "cancel" }),
+    },
+    {
       name: "Open editor",
       description: "Opens the map editor",
       valid: () => flags.debug && !editorVar() && stateVar() === "menu",
@@ -157,13 +164,6 @@ export const CommandPalette = () => {
           showFps: !gameplaySettings.showFps,
         });
       },
-    },
-    {
-      name: "Cancel round",
-      description: "Cancels the current round",
-      valid: () =>
-        stateVar() === "playing" && !!getLocalPlayer()?.host && !editorVar(),
-      callback: () => send({ type: "cancel" }),
     },
     {
       name: `${flags.debug ? "Disable" : "Enable"} debugging`,

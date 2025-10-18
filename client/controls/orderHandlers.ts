@@ -55,7 +55,15 @@ export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
   const orders: Array<readonly [Entity, UnitDataActionTarget]> = [];
 
   for (const entity of selections) {
+    // Skip if entity is constructing and action doesn't allow it
+    const isConstructing = typeof entity.progress === "number";
+
     const action = entity.actions?.filter((a): a is UnitDataActionTarget => {
+      if (isConstructing) {
+        const canExecute = "canExecuteWhileConstructing" in a &&
+          a.canExecuteWhileConstructing === true;
+        if (!canExecute) return false;
+      }
       return a.type === "target" &&
         (target
           ? testClassification(entity, target, a.targeting)
@@ -152,14 +160,27 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
 
   const orderToExecute = activeOrder.order;
   const target = e.intersects.first();
-  const unitsWithTarget = selection.filter((entity) =>
-    hasAction(
+  const unitsWithTarget = selection.filter((entity) => {
+    // Skip if entity is constructing
+    const isConstructing = typeof entity.progress === "number";
+    if (isConstructing) {
+      const action = entity.actions?.find((a) =>
+        a.type === "target" && a.order === orderToExecute
+      );
+      if (action) {
+        const canExecute = "canExecuteWhileConstructing" in action &&
+          action.canExecuteWhileConstructing === true;
+        if (!canExecute) return false;
+      }
+    }
+
+    return hasAction(
       entity,
       (a) =>
         a.type === "target" && a.order === orderToExecute &&
         !!target && testClassification(entity, target, a.targeting),
-    )
-  );
+    );
+  });
 
   if (target && unitsWithTarget.size) {
     if (orderToExecute === "attack") {
@@ -175,15 +196,29 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
     });
   }
 
-  const unitsWithoutTarget = selection.filter((entity) =>
-    !unitsWithTarget.has(entity) &&
-    hasAction(
+  const unitsWithoutTarget = selection.filter((entity) => {
+    if (unitsWithTarget.has(entity)) return false;
+
+    // Skip if entity is constructing
+    const isConstructing = typeof entity.progress === "number";
+    if (isConstructing) {
+      const action = entity.actions?.find((a) =>
+        a.type === "target" && a.order === orderToExecute
+      );
+      if (action) {
+        const canExecute = "canExecuteWhileConstructing" in action &&
+          action.canExecuteWhileConstructing === true;
+        if (!canExecute) return false;
+      }
+    }
+
+    return hasAction(
       entity,
       (a) =>
         a.type === "target" && a.order === orderToExecute &&
         typeof a.aoe === "number",
-    )
-  );
+    );
+  });
 
   if (unitsWithoutTarget.size) {
     if (orderToExecute === "attack") {

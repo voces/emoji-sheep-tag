@@ -4,7 +4,7 @@ import { app } from "../ecs.ts";
 app.addSystem({
   props: ["health", "tilemap", "position"],
   onRemove: (e) => {
-    if (!e.position || !isStructure(e)) return;
+    if (!e.position || !isStructure(e) || e.health === null) return;
 
     app.addEntity({
       id: `kaboom-${crypto.randomUUID()}`,

@@ -54,7 +54,19 @@ export const advanceBuild = (e: Entity, delta: number): number => {
 addSystem({
   props: ["progress", "completionTime"],
   updateEntity: (e, delta) => {
-    if (e.progress + delta >= 1) return delete (e as Entity).progress;
+    if (e.progress + delta >= 1) {
+      delete (e as Entity).progress;
+      if (
+        e.actions?.some((a) =>
+          a.type === "auto" && a.order === "cancel-upgrade"
+        )
+      ) {
+        e.actions = e.actions.filter((a) =>
+          a.type !== "auto" || a.order !== "cancel-upgrade"
+        );
+      }
+      return;
+    }
     e.progress += delta / e.completionTime;
   },
 });

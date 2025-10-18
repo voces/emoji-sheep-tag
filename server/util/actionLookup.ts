@@ -59,7 +59,8 @@ export function findActionByOrder(
     entity,
     (action) =>
       (action.type === "auto" && action.order === order) ||
-      (action.type === "target" && action.order === order),
+      (action.type === "target" && action.order === order) ||
+      (action.type === "upgrade" && action.prefab === order),
   );
 }
 
@@ -76,7 +77,8 @@ export function findActionAndItem(
     for (const action of entity.actions) {
       if (
         (action.type === "auto" && action.order === order) ||
-        (action.type === "target" && action.order === order)
+        (action.type === "target" && action.order === order) ||
+        (action.type === "upgrade" && action.prefab === order)
       ) {
         return { action };
       }
@@ -88,7 +90,8 @@ export function findActionAndItem(
         for (const subAction of action.actions) {
           if (
             (subAction.type === "auto" && subAction.order === order) ||
-            (subAction.type === "target" && subAction.order === order)
+            (subAction.type === "target" && subAction.order === order) ||
+            (subAction.type === "upgrade" && subAction.prefab === order)
           ) {
             return { action: subAction };
           }
@@ -104,7 +107,8 @@ export function findActionAndItem(
         for (const itemAction of item.actions) {
           if (
             (itemAction.type === "auto" && itemAction.order === order) ||
-            (itemAction.type === "target" && itemAction.order === order)
+            (itemAction.type === "target" && itemAction.order === order) ||
+            (itemAction.type === "upgrade" && itemAction.prefab === order)
           ) {
             return { action: itemAction, item };
           }

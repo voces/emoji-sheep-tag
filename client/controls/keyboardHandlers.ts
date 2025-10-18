@@ -18,6 +18,8 @@ export const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
       return b.type === "auto" && a.order === b.order;
     case "build":
       return b.type === "build" && a.unitType === b.unitType;
+    case "upgrade":
+      return b.type === "upgrade" && a.prefab === b.prefab;
     case "target":
       return b.type === "target" && a.order === b.order;
     case "purchase":

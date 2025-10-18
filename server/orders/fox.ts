@@ -1,5 +1,5 @@
 import { DEFAULT_FACING } from "@/shared/constants.ts";
-import { Entity, Order } from "@/shared/types.ts";
+import { Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
@@ -7,14 +7,7 @@ import { findActionByOrder } from "../util/actionLookup.ts";
 export const foxOrder = {
   id: "fox",
 
-  // Check if the unit can execute this order
-  canExecute: (unit: Entity) => {
-    // Must have owner and position
-    return !!(unit.owner && unit.position);
-  },
-
-  // Called when the order is initiated (sets up the order on the unit)
-  onIssue: (unit: Entity, _, queue) => {
+  onIssue: (unit, _, queue) => {
     const action = findActionByOrder(unit, "fox");
     const castDuration =
       (action?.type === "auto" ? action.castDuration : undefined) ?? 0.3;
@@ -33,8 +26,7 @@ export const foxOrder = {
     return "ordered";
   },
 
-  // Called when the cast completes (spawn fox)
-  onCastComplete: (unit: Entity) => {
+  onCastComplete: (unit) => {
     if (!unit.owner || !unit.position) return false;
 
     const action = findActionByOrder(unit, "fox");

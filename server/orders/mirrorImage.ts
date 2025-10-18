@@ -1,5 +1,5 @@
 import { DEFAULT_FACING, MIRROR_SEPARATION } from "@/shared/constants.ts";
-import { Entity, Order, SystemEntity } from "@/shared/types.ts";
+import { Order, SystemEntity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { pathingMap, updatePathing } from "../systems/pathing.ts";
@@ -11,14 +11,7 @@ import { appContext } from "@/shared/context.ts";
 export const mirrorImageOrder = {
   id: "mirrorImage",
 
-  // Check if the unit can execute this order
-  canExecute: (unit: Entity) => {
-    // Must have position for positioning calculations
-    return !!unit.position;
-  },
-
-  // Called when the order is initiated (sets up the order on the unit)
-  onIssue: (unit: Entity, _, queue) => {
+  onIssue: (unit, _, queue) => {
     if (!unit.position) return "failed";
 
     const action = findActionByOrder(unit, "mirrorImage");
@@ -42,8 +35,7 @@ export const mirrorImageOrder = {
     return "ordered";
   },
 
-  // Called when the cast starts (order-specific side effects like clearing old state)
-  onCastStart: (unit: Entity) => {
+  onCastStart: (unit) => {
     // Clear existing mirrors
     if (unit.mirrors) {
       for (const mirrorId of unit.mirrors) {
@@ -54,8 +46,7 @@ export const mirrorImageOrder = {
     }
   },
 
-  // Called when the cast completes (spawn units, create effects, etc)
-  onCastComplete: (unit: Entity) => {
+  onCastComplete: (unit) => {
     if (
       unit.order?.type !== "cast" || unit.order.orderId !== "mirrorImage" ||
       !unit.position || !unit.prefab || !unit.owner || !unit.radius
@@ -96,6 +87,8 @@ export const mirrorImageOrder = {
     // Ensure real is updated
     appContext.current.enqueue(() => {
       if (!unit.owner || !unit.prefab) return;
+
+      unit.buffs = null;
 
       const mirror = newUnit(unit.owner, unit.prefab, pos2.x, pos2.y);
 

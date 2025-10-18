@@ -1,10 +1,10 @@
-import { Entity, Order } from "@/shared/types.ts";
+import { Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { Point } from "@/shared/pathing/math.ts";
 
-export const sentryOrder: OrderDefinition = {
+export const sentryOrder = {
   id: "sentry",
 
   onIssue: (unit, target, queue) => {
@@ -29,7 +29,7 @@ export const sentryOrder: OrderDefinition = {
     return "ordered";
   },
 
-  onCastComplete: (unit: Entity) => {
+  onCastComplete: (unit) => {
     if (unit.order?.type !== "cast" || !unit.order.target) return;
 
     if (!unit.owner) return;
@@ -37,4 +37,4 @@ export const sentryOrder: OrderDefinition = {
     const { x, y } = unit.order.target;
     newUnit(unit.owner, "sentry", x, y);
   },
-};
+} satisfies OrderDefinition;

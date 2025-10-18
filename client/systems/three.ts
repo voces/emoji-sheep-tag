@@ -60,6 +60,10 @@ import bluePotion from "../assets/blue-potion.svg" with { type: "text" };
 import sentry from "../assets/sentry.svg" with { type: "text" };
 import watchtower from "../assets/watchtower.svg" with { type: "text" };
 import bite from "../assets/bite.svg" with { type: "text" };
+import castle from "../assets/castle.svg" with { type: "text" };
+import frostOrb from "../assets/frostOrb.svg" with { type: "text" };
+import sword from "../assets/sword.svg" with { type: "text" };
+import attackGround from "../assets/attackGround.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -115,6 +119,9 @@ export const svgs: Record<string, string> = {
   sentry,
   watchtower,
   bite,
+  castle,
+  sword,
+  attackGround,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -143,6 +150,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   house: loadSvg(house, 3.4),
   watchtower: loadSvg(watchtower, 0.06),
   divinity: loadSvg(divinity, 1),
+  castle: loadSvg(castle, 0.7),
   // shop: loadSvg(shop, 1),
   fox: loadSvg(fox, 1.8),
   wolf: loadSvg(wolf, 2),
@@ -165,6 +173,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   gravity: loadSvg(gravity, 2, { layer: 2 }),
   collision: loadSvg(collision, 2, { layer: 2 }),
   meteor: loadSvg(meteor, 0.5, { layer: 2 }),
+  frostOrb: loadSvg(frostOrb, 0.4, { layer: 2 }),
   square: loadSvg(square, 1, { layer: 2 }),
 };
 Object.assign(globalThis, { collections });
@@ -461,4 +470,46 @@ app.addSystem({
   },
   onChange: onPositionOrRotationChange,
   onRemove: (e) => collections[e.model ?? e.prefab!]?.delete(e.id),
+});
+
+const prevModel = new WeakMap<Entity, string>();
+app.addSystem({
+  props: ["prefab"],
+  onAdd: (e) => {
+    const collection = e.model ?? e.prefab;
+    if (collection) prevModel.set(e, collection);
+  },
+  onChange: (e) => {
+    const next = e.model ?? e.prefab;
+    const prev = prevModel.get(e);
+    if (prev !== next) {
+      collections[prev ?? ""]?.delete(e.id);
+      prevModel.set(e, next);
+      if (e.position) onPositionOrRotationChange(e as SystemEntity<"position">);
+    }
+  },
+  onRemove: (e) => {
+    const collection = e.model ?? e.prefab;
+    if (!collection) prevModel.delete(e);
+  },
+});
+app.addSystem({
+  props: ["model"],
+  onAdd: (e) => {
+    const collection = e.model ?? e.prefab;
+    if (collection) prevModel.set(e, collection);
+  },
+  onChange: (e) => {
+    const next = e.model ?? e.prefab;
+    const prev = prevModel.get(e);
+    if (prev !== next) {
+      collections[prev ?? ""]?.delete(e.id);
+      prevModel.set(e, next);
+      if (e.position) onPositionOrRotationChange(e as SystemEntity<"position">);
+    }
+  },
+  onRemove: (e) => {
+    const collection = e.model ?? e.prefab;
+    if (!collection) prevModel.delete(e);
+  },
 });
