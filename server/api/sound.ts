@@ -10,6 +10,10 @@ export const playSoundAt = (
     id: `sound-${Date.now()}-${Math.random()}`,
     position: { x: position.x, y: position.y },
     sounds: { birth: [soundName] },
-    buffs: [{ remainingDuration: maxDuration, expiration: "Sound" }],
+    buffs: [{
+      remainingDuration: maxDuration,
+      totalDuration: maxDuration,
+      expiration: "Sound",
+    }],
     isDoodad: true,
   });

@@ -111,4 +111,38 @@ describe("swing system", () => {
     );
     expect(swingVisuals.length).toBe(1);
   });
+
+  it("should remove swing visual when attacker entity is removed", () => {
+    // Create an attacking unit with a swing
+    const attacker = newUnit("player-1", "wolf", 5, 5);
+    const target = newUnit("player-2", "sheep", 6, 5);
+
+    attacker.order = { type: "attack", targetId: target.id };
+    attacker.swing = {
+      remaining: 0.5,
+      source: { x: 5, y: 5 },
+      target: { x: 6, y: 5 },
+    };
+
+    // Give the system time to create the swing visual
+    app.update(0);
+
+    // Verify swing visual was created
+    const swingVisuals = Array.from(app.entities).filter((e) =>
+      e.prefab === "claw"
+    );
+    expect(swingVisuals.length).toBe(1);
+
+    // Remove the attacker entity (e.g., mirror timed out)
+    app.removeEntity(attacker);
+
+    // Update to trigger cleanup
+    app.update(0);
+
+    // Verify swing visual was also removed
+    const remainingSwingVisuals = Array.from(app.entities).filter((e) =>
+      e.prefab === "claw"
+    );
+    expect(remainingSwingVisuals.length).toBe(0);
+  });
 });

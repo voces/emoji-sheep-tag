@@ -6,6 +6,29 @@ import {
   getMenuShortcutKeys,
 } from "../../util/actionToShortcutKey.ts";
 
+// Find all prefabs that can be upgraded to, and map them to their source prefabs
+const getUpgradeTargets = (): Map<string, string[]> => {
+  const upgradeTargets = new Map<string, string[]>();
+
+  for (const [prefabId, prefab] of Object.entries(prefabs)) {
+    if (prefab.actions) {
+      for (const action of prefab.actions) {
+        if (action.type === "upgrade") {
+          const targetPrefab = action.prefab;
+          if (!upgradeTargets.has(targetPrefab)) {
+            upgradeTargets.set(targetPrefab, []);
+          }
+          upgradeTargets.get(targetPrefab)!.push(prefabId);
+        }
+      }
+    }
+  }
+
+  return upgradeTargets;
+};
+
+const upgradeTargets = getUpgradeTargets();
+
 const localStorageShortcuts = (() => {
   try {
     return JSON.parse(localStorage.getItem("shortcuts") ?? "") as unknown;
@@ -55,6 +78,8 @@ export const defaultBindings: Shortcuts = {
       Object.fromEntries(
         [
           ...d.actions!.map((a) => [actionToShortcutKey(a), a.binding ?? []]),
+          // Add cancel-upgrade entry if this prefab can be upgraded to
+          ...(upgradeTargets.has(u) ? [["cancel-upgrade", ["Backquote"]]] : []),
           // Add menu shortcuts as nested entries
           ...d.actions!
             .filter((a) => a.type === "menu")
@@ -118,6 +143,13 @@ export const createInitialShortcuts = (): Shortcuts => ({
               pluckShortcut(`${u}.${actionToShortcutKey(a)}`) ?? a.binding ??
                 [],
             ]),
+            // Add cancel-upgrade entry if this prefab can be upgraded to
+            ...(upgradeTargets.has(u)
+              ? [[
+                "cancel-upgrade",
+                pluckShortcut(`${u}.cancel-upgrade`) ?? ["Backquote"],
+              ]]
+              : []),
             // Add menu shortcuts as nested entries
             ...d.actions!
               .filter((a) => a.type === "menu")
@@ -176,6 +208,8 @@ export const getActionDisplayName = (
 ): string => {
   if (section === "misc") {
     return miscNames[key as keyof typeof miscNames] || key;
+  } else if (key === "cancel-upgrade") {
+    return "Cancel upgrade";
   } else if (key.startsWith("purchase-")) {
     const itemId = key.replace("purchase-", "");
     return `Purchase ${items[itemId]?.name ?? itemId}`;

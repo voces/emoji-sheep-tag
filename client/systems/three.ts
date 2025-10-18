@@ -64,6 +64,9 @@ import castle from "../assets/castle.svg" with { type: "text" };
 import frostOrb from "../assets/frostOrb.svg" with { type: "text" };
 import sword from "../assets/sword.svg" with { type: "text" };
 import attackGround from "../assets/attackGround.svg" with { type: "text" };
+import totem from "../assets/totem.svg" with { type: "text" };
+import shield from "../assets/shield.svg" with { type: "text" };
+import wind from "../assets/wind.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -122,6 +125,9 @@ export const svgs: Record<string, string> = {
   castle,
   sword,
   attackGround,
+  totem,
+  shield,
+  wind,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -159,11 +165,14 @@ const collections: Record<string, InstancedGroup | undefined> = {
   // Trees (should render in front of structures)
   windmill: loadSvg(windmill, 0.24, { layer: 2, yOffset: 0.1, xOffset: -0.1 }),
   tree: loadSvg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
+  totem: loadSvg(totem, 0.18, { yOffset: 0.12 }),
 
   // Temple stacks on things, we want it visible, always
   hinduTemple: loadSvg(hinduTemple, 1.75),
 
   // SFX elements (highest z-order, always on top)
+  shield: loadSvg(shield, 1, { layer: 2 }),
+  wind: loadSvg(wind, 1, { layer: 2 }),
   fire: loadSvg(fire, 1, { layer: 2 }),
   claw: loadSvg(claw, 0.05, { layer: 2 }),
   dash: loadSvg(dash, 0.1, { layer: 2 }),

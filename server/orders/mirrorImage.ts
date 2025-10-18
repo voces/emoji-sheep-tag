@@ -130,6 +130,7 @@ export const mirrorImageOrder = {
       if (lifetime) {
         mirror.buffs = [{
           remainingDuration: lifetime,
+          totalDuration: lifetime,
           expiration: "MirrorImage",
         }];
       }

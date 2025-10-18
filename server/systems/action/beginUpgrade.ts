@@ -19,7 +19,7 @@ export const beginUpgrade = (e: Entity) => {
   if (!action) return;
 
   let goldCost: number | undefined = undefined;
-  if (e.owner && "goldCost" in action && typeof action.goldCost === "number") {
+  if (e.owner && action.goldCost) {
     goldCost = action.goldCost;
     if (getPlayerGold(e.owner) < action.goldCost) return;
     else deductPlayerGold(e.owner, action.goldCost);

@@ -223,6 +223,20 @@ export const buffs: Record<string, Buff> = {
     movementSpeedMultiplier: 0.85,
     attackSpeedMultiplier: 0.95,
   },
+  totemMovementAura: {
+    movementSpeedMultiplier: 1.04,
+    model: "wind",
+    modelOffset: { y: 0.35 },
+    modelScale: 0.6,
+  },
+  totemHealthRegenAura: {
+    healthRegen: 2,
+  },
+  totemDamageMitigationAura: {
+    damageMitigation: 0.3,
+    model: "shield",
+    modelOffset: { x: 0.1, y: 0.2 },
+  },
 };
 
 type DataEntity = Pick<
@@ -288,6 +302,15 @@ export const prefabs: Record<string, DataEntity> = {
         goldCost: 4,
       },
       {
+        name: "Build Totem",
+        description:
+          "Provides auras to nearby allies: +3% movement speed, +1 HP/s regen, and 15% damage mitigation for structures.",
+        type: "build",
+        unitType: "totem",
+        binding: ["KeyA"],
+        goldCost: 40,
+      },
+      {
         name: "Build Wide Hut",
         type: "build",
         unitType: "wideHut",
@@ -348,7 +371,7 @@ export const prefabs: Record<string, DataEntity> = {
         range: 0,
         castDuration: 0.5,
         smart: { spirit: 0, ward: 0 },
-        binding: ["KeyA"],
+        binding: ["KeyB"],
       },
     ],
     maxHealth: 20,
@@ -534,6 +557,30 @@ export const prefabs: Record<string, DataEntity> = {
     actions: [selfDestruct],
     bounty: 1,
   },
+  totem: {
+    name: "Totem",
+    sightRadius: 4,
+    radius: 0.5,
+    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    maxHealth: 200,
+    completionTime: 10,
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
+    actions: [selfDestruct],
+    bounty: 2,
+    buffs: [{
+      radius: 7,
+      auraBuff: "totemMovementAura",
+      targetsAllowed: [["unit", "ally"]],
+    }, {
+      radius: 7,
+      auraBuff: "totemHealthRegenAura",
+      targetsAllowed: [["ally"]],
+    }, {
+      radius: 7,
+      auraBuff: "totemDamageMitigationAura",
+      targetsAllowed: [["structure", "ally"]],
+    }],
+  },
   wideHut: {
     name: "Wide Hut",
     model: "hut",
@@ -622,7 +669,7 @@ export const prefabs: Record<string, DataEntity> = {
         smart: { enemy: 0 },
       },
       {
-        name: "Attack Ground",
+        name: "Attack ground",
         type: "target",
         order: "attack-ground",
         icon: "attackGround",

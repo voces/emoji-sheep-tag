@@ -1,5 +1,5 @@
 import { OrderDefinition } from "./types.ts";
-import { changePrefab } from "../api/unit.ts";
+import { changePrefab, refundEntity } from "../api/unit.ts";
 
 export const cancelUpgradeOrder = {
   id: "cancel-upgrade",
@@ -27,6 +27,7 @@ export const cancelUpgradeOrder = {
       return false;
     }
 
+    refundEntity(unit);
     changePrefab(unit, cancelAction.prefab);
 
     if (typeof unit.progress === "number") delete unit.progress;

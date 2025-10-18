@@ -118,12 +118,6 @@ export const unitOrder = (
             unit.order = { type: "hold" };
           }
           break;
-        case "selfDestruct":
-          // TODO: queue, but right now things that support self destruct can't
-          // do anything else, so queueing does nothing
-          unit.lastAttacker = null;
-          unit.health = 0;
-          break;
         default:
           console.warn("Unhandled order type", { order, units, target });
           continue;

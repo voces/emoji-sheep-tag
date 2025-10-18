@@ -116,6 +116,7 @@ export const start = (
           buffs: [{
             expiration: "Time until wolves spawn:",
             remainingDuration: 1.8,
+            totalDuration: 1.8,
           }],
         });
       }
@@ -143,6 +144,7 @@ export const start = (
             buffs: [{
               expiration: "Time until sheep win:",
               remainingDuration: timeToWin,
+              totalDuration: timeToWin,
             }],
           });
 

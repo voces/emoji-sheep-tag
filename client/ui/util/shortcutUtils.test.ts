@@ -72,4 +72,33 @@ describe("shortcutUtils", () => {
       }
     });
   });
+
+  describe("cancel-upgrade shortcuts", () => {
+    it("should add cancel-upgrade entry for frost castle", () => {
+      // Frost castle can be upgraded to from hut
+      const frostCastleShortcuts = defaultBindings["frostCastle"];
+
+      expect(frostCastleShortcuts["cancel-upgrade"]).toEqual(["Backquote"]);
+    });
+
+    it("should add cancel-upgrade entry in createInitialShortcuts", () => {
+      const shortcuts = createInitialShortcuts();
+      const frostCastleShortcuts = shortcuts["frostCastle"];
+
+      expect(frostCastleShortcuts["cancel-upgrade"]).toEqual(["Backquote"]);
+    });
+
+    it("should display correct name for cancel-upgrade", () => {
+      expect(getActionDisplayName("cancel-upgrade", "frostCastle")).toBe(
+        "Cancel upgrade",
+      );
+    });
+
+    it("should not add cancel-upgrade for units that cannot be upgraded to", () => {
+      // Wolf cannot be upgraded to
+      const wolfShortcuts = defaultBindings["wolf"];
+
+      expect(wolfShortcuts["cancel-upgrade"]).toBeUndefined();
+    });
+  });
 });

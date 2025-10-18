@@ -15,9 +15,9 @@ import {
 } from "../systems/pathing.ts";
 import { buffs, items, prefabs } from "@/shared/data.ts";
 import { findAction } from "../util/actionLookup.ts";
-import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
+import { BUILD_REFUND_RATE, FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
-import { deductPlayerGold, getPlayerGold } from "./player.ts";
+import { deductPlayerGold, getPlayerGold, grantPlayerGold } from "./player.ts";
 import { addEntity, mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
@@ -35,14 +35,22 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
 
   const p = pathingMap();
 
+  const goldCost = findAction(
+    builder,
+    (a) => a.type === "build" && a.unitType === type,
+  )?.goldCost;
+
   const temp = tempUnit(
     builder.owner!,
     type,
     x,
     y,
-    prefabs[type].completionTime
-      ? { progress: INITIAL_BUILDING_PROGRESS }
-      : undefined,
+    {
+      gold: goldCost ? goldCost * BUILD_REFUND_RATE : undefined,
+      progress: prefabs[type].completionTime
+        ? INITIAL_BUILDING_PROGRESS
+        : undefined,
+    },
   );
   if (!isPathingEntity(temp)) {
     deductBuildGold(builder, type);
@@ -473,9 +481,20 @@ const applyDamageModifiers = (
   damage: number,
   attacker: Entity,
   target: Entity,
-): number =>
-  damage * (typeof target.progress === "number" ? 2 : 1) *
-  (attacker.isMirror ? target.tilemap ? 0.24 : 0.001 : 1);
+): number => {
+  let finalDamage = damage *
+    (typeof target.progress === "number" ? 2 : 1) *
+    (attacker.isMirror ? target.tilemap ? 0.24 : 0.001 : 1);
+
+  // Apply damage mitigation from buffs
+  if (target.buffs) {
+    for (const buff of target.buffs) {
+      if (buff.damageMitigation) finalDamage *= 1 - buff.damageMitigation;
+    }
+  }
+
+  return finalDamage;
+};
 
 /**
  * Applies buffs from source entities to a target and consumes buffs marked as consumeOnAttack
@@ -555,4 +574,35 @@ export const changePrefab = (
   for (const key in prev) if (!(key in next)) delete e[key as keyof Entity];
 
   Object.assign(e, next);
+};
+
+/**
+ * Refunds gold for entities that are being destroyed while upgrading or under construction
+ * @param entity The entity being destroyed
+ * @returns true if a refund was granted
+ */
+export const refundEntity = (entity: Entity): boolean => {
+  if (!entity.owner) return false;
+
+  // Check if entity is upgrading and has a cancel-upgrade action
+  if (entity.progress) {
+    const cancelUpgradeAction = findAction(
+      entity,
+      (a) => a.type === "auto" && a.order === "cancel-upgrade",
+    );
+
+    if (cancelUpgradeAction) {
+      // Refund the cancel-upgrade cost (negative refund = deduction)
+      if (cancelUpgradeAction.goldCost) {
+        deductPlayerGold(entity.owner, cancelUpgradeAction.goldCost);
+        return true;
+      }
+    } else if (entity.gold) {
+      // Refund construction cost if entity is under construction
+      grantPlayerGold(entity.owner, entity.gold);
+      return true;
+    }
+  }
+
+  return false;
 };

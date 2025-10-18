@@ -74,13 +74,23 @@ export type Buff = {
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
   readonly damageMultiplier?: number;
+  readonly healthRegen?: number;
+  readonly damageMitigation?: number;
   readonly consumeOnAttack?: boolean;
   readonly impartedBuffOnAttack?: string;
   readonly expiration?: string;
+  readonly totalDuration?: number;
   readonly progressEasing?: {
     readonly type: "ease-in" | "ease-out" | "ease-in-out";
     readonly duration: number;
   };
+  readonly radius?: number;
+  readonly auraBuff?: string;
+  readonly targetsAllowed?: ReadonlyArray<ReadonlyArray<Classification>>;
+  readonly icon?: string;
+  readonly model?: string;
+  readonly modelOffset?: { readonly x?: number; readonly y?: number };
+  readonly modelScale?: number;
 };
 
 type IconEffect = "mirror";
@@ -99,6 +109,7 @@ export type UnitDataActionTarget = {
   readonly binding?: ReadonlyArray<string>;
   readonly smart?: { [key in Classification | "ground"]?: number };
   readonly manaCost?: number;
+  readonly goldCost?: number;
   readonly castDuration?: number;
   readonly range?: number;
   readonly damage?: number;
@@ -173,6 +184,7 @@ export type UnitDataAction =
     readonly description?: string;
     readonly binding?: ReadonlyArray<string>;
     readonly allowAllies?: boolean;
+    readonly goldCost?: number;
   }
   | UnitDataActionTarget;
 

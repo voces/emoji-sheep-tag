@@ -159,6 +159,7 @@ const zBaseAction = z.discriminatedUnion("type", [
       z.number(),
     ).optional(),
     manaCost: z.number().optional(),
+    goldCost: z.number().optional(),
     castDuration: z.number().optional(),
     range: z.number().optional(),
     damage: z.number().optional(),
@@ -185,6 +186,7 @@ const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
       description: z.string().optional(),
       binding: z.array(z.string()).readonly().optional(),
       allowAllies: z.boolean().optional(),
+      goldCost: z.number().optional(),
     }),
   ])
 );
@@ -208,13 +210,27 @@ const zBuff = z.object({
   movementSpeedBonus: z.number().optional(),
   movementSpeedMultiplier: z.number().optional(),
   damageMultiplier: z.number().optional(),
+  healthRegen: z.number().optional(),
+  damageMitigation: z.number().optional(),
   consumeOnAttack: z.boolean().optional(),
   impartedBuffOnAttack: z.string().optional(),
   expiration: z.string().optional(),
+  totalDuration: z.number().optional(),
   progressEasing: z.object({
     type: z.enum(["ease-in", "ease-out", "ease-in-out"]),
     duration: z.number(),
   }).optional(),
+  radius: z.number().optional(),
+  auraBuff: z.string().optional(),
+  targetsAllowed: zClassification.array().readonly().array().readonly()
+    .optional(),
+  icon: z.string().optional(),
+  model: z.string().optional(),
+  modelOffset: z.object({
+    x: z.number().optional(),
+    y: z.number().optional(),
+  }).optional(),
+  modelScale: z.number().optional(),
 });
 
 export const zUpdate = z.object({

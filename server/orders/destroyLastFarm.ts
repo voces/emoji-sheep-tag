@@ -2,6 +2,7 @@ import { OrderDefinition } from "./types.ts";
 import { findLastPlayerUnit } from "../systems/playerEntities.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 import { isStructure } from "@/shared/api/unit.ts";
+import { refundEntity } from "../api/unit.ts";
 
 export const destroyLastFarmOrder = {
   id: "destroyLastFarm",
@@ -26,6 +27,7 @@ export const destroyLastFarmOrder = {
       (entity) => !!entity.position && isStructure(entity),
     );
     if (lastFarm) {
+      refundEntity(lastFarm);
       lastFarm.lastAttacker = null;
       if (typeof lastFarm.health === "number") lastFarm.health = 0;
       removeEntity(lastFarm);

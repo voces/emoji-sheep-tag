@@ -12,6 +12,7 @@ import { sentryOrder } from "./sentry.ts";
 import { illusifyOrder } from "./illusify.ts";
 import { locateSheepOrder } from "./locateSheep.ts";
 import { cancelUpgradeOrder } from "./cancelUpgrade.ts";
+import { selfDestructOrder } from "./selfDestruct.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -39,6 +40,7 @@ registerOrder(sentryOrder);
 registerOrder(illusifyOrder);
 registerOrder(locateSheepOrder);
 registerOrder(cancelUpgradeOrder);
+registerOrder(selfDestructOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);

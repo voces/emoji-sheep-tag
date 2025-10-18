@@ -16,9 +16,7 @@ export const postCast = (
         entity,
         entity.order?.type === "cast" ? entity.order.orderId : "",
       );
-    if (a && "goldCost" in a && a.goldCost) {
-      deductPlayerGold(entity.owner, a.goldCost);
-    }
+    if (a?.goldCost) deductPlayerGold(entity.owner, a.goldCost);
   }
 
   return true;

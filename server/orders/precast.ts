@@ -16,7 +16,7 @@ export const precast = (
   if (!a) return false;
 
   // Check gold cost (validation only, actual consumption happens in postCast)
-  if ("goldCost" in a && a.goldCost && entity.owner) {
+  if (a.goldCost && entity.owner) {
     if (getPlayerGold(entity.owner) < a.goldCost) return false;
   }
 

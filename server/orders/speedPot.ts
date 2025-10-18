@@ -33,6 +33,7 @@ export const speedPotOrder = {
       buffs.push({
         remainingDuration: action.buffDuration,
         movementSpeedMultiplier: action.movementSpeedMultiplier,
+        icon: "purplePotion",
       });
     }
 
@@ -40,13 +41,6 @@ export const speedPotOrder = {
       buffs.push({
         remainingDuration: action.buffDuration,
         attackSpeedMultiplier: action.attackSpeedMultiplier,
-      });
-    }
-
-    if (action.movementSpeedBonus) {
-      buffs.push({
-        remainingDuration: action.buffDuration,
-        movementSpeedBonus: action.movementSpeedBonus,
       });
     }
 

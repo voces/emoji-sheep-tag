@@ -6,6 +6,7 @@ export const SettingsPanelContainer = styled(VStack)`
   max-height: 100%;
   overflow: auto;
   padding-right: ${({ theme }) => theme.spacing.lg};
+  padding-bottom: ${({ theme }) => theme.spacing.lg};
 `;
 
 export const SettingsPanelTitle = styled.h3`

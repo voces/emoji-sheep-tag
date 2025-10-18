@@ -6,6 +6,16 @@ addSystem((app) => ({
   updateEntity: (entity, delta) => {
     if (!entity.buffs || entity.buffs.length === 0) return;
 
+    // Initialize healthRegen to 0 if any buff provides healthRegen and entity doesn't have it
+    if (entity.healthRegen === undefined) {
+      for (const buff of entity.buffs) {
+        if (buff.healthRegen) {
+          entity.healthRegen = 0;
+          break;
+        }
+      }
+    }
+
     // Check for expiring buffs before updating
     const expiringBuffs = entity.buffs.filter(
       (buff) =>

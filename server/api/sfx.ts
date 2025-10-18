@@ -16,6 +16,7 @@ export const newSfx = (
     facing,
     buffs: [{
       remainingDuration: duration,
+      totalDuration: duration,
       expiration: "SFX",
       ...(easing && {
         progressEasing: {

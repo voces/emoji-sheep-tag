@@ -25,6 +25,7 @@ export const newFloatingText = (
       completionTime: duration,
       buffs: [{
         remainingDuration: duration,
+        totalDuration: duration,
         expiration: "Floating Text",
       }],
     }),

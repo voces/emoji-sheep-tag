@@ -40,7 +40,11 @@ export const foxOrder = {
     // Get lifetime duration from the action definition
     const lifetime = action.type === "auto" ? action.buffDuration : undefined;
     if (lifetime) {
-      fox.buffs = [{ remainingDuration: lifetime, expiration: "Fox" }];
+      fox.buffs = [{
+        remainingDuration: lifetime,
+        totalDuration: lifetime,
+        expiration: "Fox",
+      }];
     }
   },
 } satisfies OrderDefinition;

@@ -1,10 +1,12 @@
-import { app, Entity, SystemEntity } from "../ecs.ts";
+import { addEntity, removeEntity } from "@/shared/api/entity.ts";
+import { Entity, SystemEntity } from "../ecs.ts";
+import { addSystem } from "@/shared/context.ts";
 
 const swings = new Map<Entity, Entity>();
 
 const updateSwing = (e: SystemEntity<"swing">) => {
   const existing = swings.get(e);
-  if (existing) app.removeEntity(existing);
+  if (existing) removeEntity(existing);
 
   // Only render swing if there's no projectile and attack has a model
   if (!e.attack?.model || e.attack.projectileSpeed) return;
@@ -14,7 +16,7 @@ const updateSwing = (e: SystemEntity<"swing">) => {
     e.swing.target.x - e.swing.source.x,
   );
 
-  const swing = app.addEntity({
+  const swing = addEntity({
     id: `swing-${crypto.randomUUID()}`,
     prefab: e.attack.model,
     position: {
@@ -27,14 +29,14 @@ const updateSwing = (e: SystemEntity<"swing">) => {
   swings.set(e, swing);
 };
 
-app.addSystem({
+addSystem({
   props: ["swing"],
   onAdd: updateSwing,
   onChange: updateSwing,
   onRemove: (e) => {
     const swing = swings.get(e);
     if (!swing) return;
-    app.removeEntity(swing);
+    removeEntity(swing);
     swings.delete(e);
   },
 });

@@ -188,6 +188,7 @@ export const newEcs = () => {
 import("./systems/clearFlags.ts");
 
 import("./systems/action/action.ts");
+import("./systems/auras.ts");
 import("./systems/autoAttack.ts");
 import("./systems/buffs.ts");
 import("./systems/death.ts");

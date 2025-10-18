@@ -51,6 +51,12 @@
 - https://www.svgrepo.com/svg/57987/joystick
 - https://www.svgrepo.com/svg/395592/eye
 - Watchtower: self made
+- Castle: self made
+- https://www.svgrepo.com/svg/276072/sword
+- https://www.svgrepo.com/svg/170104/totem
+- Attack ground: sword + self made
+- https://www.svgrepo.com/svg/535627/shield-half
+- https://www.svgrepo.com/svg/496751/wind-2
 
 # Audio
 

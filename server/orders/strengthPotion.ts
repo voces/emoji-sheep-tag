@@ -39,6 +39,7 @@ export const strengthPotionOrder = {
       remainingDuration: action.buffDuration,
       damageMultiplier: action.damageMultiplier,
       consumeOnAttack: true,
+      icon: "pinkPotion",
     };
 
     // Add buff to entity

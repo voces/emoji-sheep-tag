@@ -1,0 +1,82 @@
+import { addEntity, removeEntity } from "@/shared/api/entity.ts";
+import { Entity, SystemEntity } from "../ecs.ts";
+import { Buff } from "@/shared/types.ts";
+import { addSystem } from "@/shared/context.ts";
+
+// Track buff model entities for each host entity and buff model
+const buffModels = new Map<Entity, Map<string, Entity>>();
+
+const updateBuffModels = (e: SystemEntity<"buffs" | "position">) => {
+  if (!e.position) return;
+
+  const currentModels = buffModels.get(e) ?? new Map();
+  const newModels = new Map<string, Entity>();
+
+  // Get all unique models from buffs with their offsets
+  const modelData = new Map<string, Buff>();
+  if (e.buffs) {
+    for (const buff of e.buffs) {
+      if (buff.model && !modelData.has(buff.model)) {
+        modelData.set(buff.model, buff);
+      }
+    }
+  }
+
+  // Get host entity scale (default to 1 if not set)
+  const hostScale = e.modelScale ?? 1;
+
+  // Create or reuse entities for each model
+  for (const [model, buff] of modelData) {
+    // Calculate final scale by multiplying host scale with buff's modelScale
+    const buffScale = buff.modelScale ?? 1;
+    const finalScale = hostScale * buffScale;
+
+    const offsetX = (buff.modelOffset?.x ?? 0) * hostScale;
+    const offsetY = (buff.modelOffset?.y ?? 0) * hostScale;
+    const position = {
+      x: e.position.x + offsetX,
+      y: e.position.y + offsetY,
+    };
+
+    const existing = currentModels.get(model);
+    if (existing) {
+      // Update position, modelScale, and owner of existing model
+      existing.position = position;
+      existing.modelScale = finalScale;
+      if (e.owner !== undefined) existing.owner = e.owner;
+      newModels.set(model, existing);
+    } else {
+      // Create new model entity
+      const modelEntity = addEntity({
+        prefab: model,
+        position,
+        modelScale: finalScale,
+        owner: e.owner,
+        isDoodad: true,
+      });
+      newModels.set(model, modelEntity);
+    }
+  }
+
+  // Remove models that are no longer needed
+  for (const [model, entity] of currentModels) {
+    if (!newModels.has(model)) removeEntity(entity);
+  }
+
+  // Update tracking
+  if (newModels.size > 0) buffModels.set(e, newModels);
+  else buffModels.delete(e);
+};
+
+addSystem({
+  props: ["buffs", "position"],
+  onAdd: updateBuffModels,
+  onChange: updateBuffModels,
+  onRemove: (e) => {
+    const models = buffModels.get(e);
+    if (!models) return;
+
+    for (const entity of models.values()) removeEntity(entity);
+    buffModels.delete(e);
+  },
+});
