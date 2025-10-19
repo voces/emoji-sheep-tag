@@ -426,6 +426,16 @@ export const prefabs: Record<string, DataEntity> = {
         buffDuration: 45,
       },
       {
+        name: "Swap",
+        description: "Swap positions with your mirror image.",
+        type: "auto",
+        order: "swap",
+        icon: "swap",
+        binding: ["KeyS"],
+        manaCost: 40,
+        castDuration: 1.5,
+      },
+      {
         name: "Place Sentry",
         description: "Places a Sentry Ward which can watch for sheep.",
         type: "target",

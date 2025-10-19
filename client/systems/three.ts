@@ -70,6 +70,7 @@ import wind from "../assets/wind.svg" with { type: "text" };
 import sparkle from "../assets/sparkle.svg" with { type: "text" };
 import rune from "../assets/rune.svg" with { type: "text" };
 import rune2 from "../assets/rune2.svg" with { type: "text" };
+import swap from "../assets/swap.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -133,6 +134,7 @@ export const svgs: Record<string, string> = {
   wind,
   rune,
   rune2,
+  swap,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -181,6 +183,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   sparkle: loadSvg(sparkle, 1, { layer: 2 }),
   rune: loadSvg(rune, 0.4, { layer: 2 }),
   rune2: loadSvg(rune2, 0.05, { layer: 2 }),
+  swap: loadSvg(swap, 0.1, { layer: 2 }),
   fire: loadSvg(fire, 1, { layer: 2 }),
   claw: loadSvg(claw, 0.05, { layer: 2 }),
   dash: loadSvg(dash, 0.1, { layer: 2 }),
@@ -392,7 +395,7 @@ app.addSystem({
   props: ["order", "position"],
   onChange: (e) => {
     if (e.order.type === "cast" && e.order.orderId === "mirrorImage") {
-      wasCastingMirror.set(e, e.order.remaining + 0.1);
+      wasCastingMirror.set(e, e.order.remaining + 0.15);
     }
   },
   updateEntity: (e) => {

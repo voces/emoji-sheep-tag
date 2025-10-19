@@ -60,6 +60,7 @@
 - https://www.svgrepo.com/svg/323309/sparkles
 - https://www.svgrepo.com/svg/171830/symbol
 - https://www.svgrepo.com/svg/107670/symbol
+- https://www.svgrepo.com/svg/231645/swap
 
 # Audio
 

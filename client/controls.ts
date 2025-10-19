@@ -239,6 +239,8 @@ mouse.addEventListener("mouseButtonUp", (e) => {
     for (const entity of entitiesInRect) {
       if (entity.isDoodad && !editorVar()) continue;
       if (entity.id === "selection-rectangle") continue;
+      // Skip entities hidden by fog
+      if ((entity as Entity).hiddenByFog) continue;
 
       if (entity.owner === localPlayerId) {
         if (isStructure(entity)) controllableEntities.push(entity);

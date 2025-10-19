@@ -592,7 +592,8 @@ const handleEntityVisibility = (entity: SystemEntity<"position">) => {
   // These entities are always visible
   if (
     entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
-    entity.id.startsWith("blueprint-")
+    entity.id.startsWith("blueprint-") ||
+    entity.id === "selection-rectangle"
   ) return;
   // Skip allied entities
   if (isAlliedWithLocalPlayer(entity)) {
@@ -609,6 +610,7 @@ const handleEntityVisibility = (entity: SystemEntity<"position">) => {
 
   // Mark as ever seen if currently visible
   if (visible) everSeen.add(entity.id);
+  else if (entity.selected) delete entity.selected;
 
   // For units, hide when not visible
   if (!isStructure(entity)) {
