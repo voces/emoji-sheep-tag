@@ -4,10 +4,34 @@ import {
   classificationGroups,
   defaultClassifications,
 } from "../data.ts";
-import { Entity } from "../types.ts";
+import { Buff, Entity } from "../types.ts";
 import { absurd } from "../util/absurd.ts";
 import { getPlayerTeam } from "./player.ts";
 import { mergeEntityWithPrefab } from "./entity.ts";
+
+/**
+ * Iterates over all buffs on an entity, including both direct buffs and buffs from inventory items.
+ * Yields each buff for processing.
+ */
+export function* iterateBuffs(entity: Entity): Generator<Buff> {
+  // Yield direct buffs
+  if (entity.buffs) {
+    for (const buff of entity.buffs) {
+      yield buff;
+    }
+  }
+
+  // Yield buffs from inventory items
+  if (entity.inventory) {
+    for (const item of entity.inventory) {
+      if (item.buffs) {
+        for (const buff of item.buffs) {
+          yield buff;
+        }
+      }
+    }
+  }
+}
 
 export const tempUnit = (
   owner: string,
@@ -38,15 +62,13 @@ export const computeUnitMovementSpeed = (unit: Entity): number => {
     }
   }
 
-  // Add flat bonuses and multipliers from buffs
-  if (unit.buffs) {
-    for (const buff of unit.buffs) {
-      if (buff.movementSpeedBonus) {
-        flatSpeedBonus += buff.movementSpeedBonus;
-      }
-      if (buff.movementSpeedMultiplier) {
-        speedMultiplier *= buff.movementSpeedMultiplier;
-      }
+  // Add flat bonuses and multipliers from buffs (including item buffs)
+  for (const buff of iterateBuffs(unit)) {
+    if (buff.movementSpeedBonus) {
+      flatSpeedBonus += buff.movementSpeedBonus;
+    }
+    if (buff.movementSpeedMultiplier) {
+      speedMultiplier *= buff.movementSpeedMultiplier;
     }
   }
 

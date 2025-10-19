@@ -32,6 +32,7 @@ export const speedPotOrder = {
     if (action.movementSpeedMultiplier) {
       buffs.push({
         remainingDuration: action.buffDuration,
+        totalDuration: action.buffDuration,
         movementSpeedMultiplier: action.movementSpeedMultiplier,
         model: "rune2",
         modelOffset: { x: -0.2, y: 0.4 },
@@ -41,11 +42,14 @@ export const speedPotOrder = {
     if (action.attackSpeedMultiplier) {
       buffs.push({
         remainingDuration: action.buffDuration,
+        totalDuration: action.buffDuration,
         attackSpeedMultiplier: action.attackSpeedMultiplier,
       });
     }
 
     // Add buffs to entity
     if (buffs.length > 0) unit.buffs = [...(unit.buffs || []), ...buffs];
+
+    return true;
   },
 } satisfies OrderDefinition;

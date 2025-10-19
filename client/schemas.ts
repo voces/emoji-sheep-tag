@@ -212,6 +212,8 @@ const zBuff = z.object({
   damageMultiplier: z.number().optional(),
   healthRegen: z.number().optional(),
   damageMitigation: z.number().optional(),
+  bountyMultiplier: z.number().optional(),
+  bountyBonus: z.number().optional(),
   consumeOnAttack: z.boolean().optional(),
   impartedBuffOnAttack: z.string().optional(),
   expiration: z.string().optional(),

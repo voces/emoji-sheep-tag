@@ -215,6 +215,18 @@ export const items: Record<string, Item> = {
       binding: ["KeyT"],
     }],
   },
+  scythe: {
+    id: "scythe",
+    name: "Scythe",
+    description: "Increases gold bounty from kills.",
+    icon: "scythe",
+    gold: 110,
+    binding: ["KeyY"],
+    buffs: [{
+      bountyMultiplier: 2,
+      bountyBonus: 1,
+    }],
+  },
 };
 
 export const buffs: Record<string, Buff> = {
@@ -431,7 +443,7 @@ export const prefabs: Record<string, DataEntity> = {
         type: "auto",
         order: "swap",
         icon: "swap",
-        binding: ["KeyS"],
+        binding: ["KeyW"],
         manaCost: 40,
         castDuration: 1.5,
       },

@@ -66,6 +66,7 @@ export type Item = {
   readonly movementSpeedBonus?: number;
   readonly charges?: number;
   readonly actions?: ReadonlyArray<UnitDataAction>;
+  readonly buffs?: ReadonlyArray<Buff>;
 };
 
 export type Buff = {
@@ -76,6 +77,8 @@ export type Buff = {
   readonly damageMultiplier?: number;
   readonly healthRegen?: number;
   readonly damageMitigation?: number;
+  readonly bountyMultiplier?: number;
+  readonly bountyBonus?: number;
   readonly consumeOnAttack?: boolean;
   readonly impartedBuffOnAttack?: string;
   readonly expiration?: string;

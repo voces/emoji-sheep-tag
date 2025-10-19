@@ -5,7 +5,6 @@
   - Cloak
   - Auras?
     - Like team items, but don't like them being required...
-  - Scythe?
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
 - Max 24 players

@@ -1,4 +1,9 @@
-import { isEnemy, tempUnit, testClassification } from "@/shared/api/unit.ts";
+import {
+  isEnemy,
+  iterateBuffs,
+  tempUnit,
+  testClassification,
+} from "@/shared/api/unit.ts";
 import {
   canSwing,
   distanceBetweenPoints,
@@ -435,12 +440,10 @@ export const computeUnitDamage = (unit: Entity): number => {
     }
   }
 
-  // Apply damage multipliers from buffs
-  if (unit.buffs) {
-    for (const buff of unit.buffs) {
-      if (buff.damageMultiplier) {
-        totalDamage *= buff.damageMultiplier;
-      }
+  // Apply damage multipliers from buffs (including item buffs)
+  for (const buff of iterateBuffs(unit)) {
+    if (buff.damageMultiplier) {
+      totalDamage *= buff.damageMultiplier;
     }
   }
 
@@ -462,12 +465,10 @@ export const computeUnitAttackSpeed = (unit: Entity): number => {
     }
   }
 
-  // Apply attack speed bonuses from buffs
-  if (unit.buffs) {
-    for (const buff of unit.buffs) {
-      if (buff.attackSpeedMultiplier) {
-        speedMultiplier *= buff.attackSpeedMultiplier;
-      }
+  // Apply attack speed bonuses from buffs (including item buffs)
+  for (const buff of iterateBuffs(unit)) {
+    if (buff.attackSpeedMultiplier) {
+      speedMultiplier *= buff.attackSpeedMultiplier;
     }
   }
 
@@ -486,11 +487,9 @@ const applyDamageModifiers = (
     (typeof target.progress === "number" ? 2 : 1) *
     (attacker.isMirror ? target.tilemap ? 0.24 : 0.001 : 1);
 
-  // Apply damage mitigation from buffs
-  if (target.buffs) {
-    for (const buff of target.buffs) {
-      if (buff.damageMitigation) finalDamage *= 1 - buff.damageMitigation;
-    }
+  // Apply damage mitigation from buffs (including item buffs)
+  for (const buff of iterateBuffs(target)) {
+    if (buff.damageMitigation) finalDamage *= 1 - buff.damageMitigation;
   }
 
   return finalDamage;

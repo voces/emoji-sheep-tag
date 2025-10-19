@@ -16,7 +16,7 @@ import { isPractice } from "../api/st.ts";
 import { getTeams } from "@/shared/systems/teams.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { newSfx } from "../api/sfx.ts";
-import { isEnemy } from "@/shared/api/unit.ts";
+import { isEnemy, iterateBuffs } from "@/shared/api/unit.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
 import { colorName } from "@/shared/api/player.ts";
 
@@ -137,8 +137,29 @@ addSystem((app) => ({
     if (unit.bounty && unit.lastAttacker) {
       const killer = lookup(unit.lastAttacker);
       if (killer?.owner && isEnemy(killer, unit)) {
-        const bounty = unit.bounty *
+        let bounty = unit.bounty *
           lobbyContext.current.settings.income.wolves;
+
+        // Apply bounty multiplier and bonus from killer's buffs and item buffs (e.g., Scythe)
+        // Formula: bounty * multiplier + bonus (so 2x+1 means bounty * 2 + 1)
+        // Examples: 1 bounty with 2x+1 → 3, 2 bounty with 2x+1 → 5
+        let totalBountyMultiplier = 0;
+        let totalBountyBonus = 0;
+
+        // Add bounty multipliers and bonuses from all buffs (direct + item buffs)
+        for (const buff of iterateBuffs(killer)) {
+          if (buff.bountyMultiplier) {
+            totalBountyMultiplier += buff.bountyMultiplier;
+          }
+          if (buff.bountyBonus) {
+            totalBountyBonus += buff.bountyBonus;
+          }
+        }
+
+        if (totalBountyMultiplier > 0 || totalBountyBonus > 0) {
+          bounty = bounty * totalBountyMultiplier + totalBountyBonus;
+        }
+
         grantPlayerGold(killer.owner, bounty);
         debouncedGoldText(killer, bounty);
       }

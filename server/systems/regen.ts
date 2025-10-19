@@ -1,4 +1,5 @@
 import { addSystem } from "@/shared/context.ts";
+import { iterateBuffs } from "@/shared/api/unit.ts";
 
 addSystem({
   props: ["mana", "maxMana", "manaRegen"],
@@ -15,13 +16,11 @@ addSystem({
   updateEntity: (e, delta) => {
     if (e.health <= 0) return;
 
-    // Calculate total health regen including buff bonuses
+    // Calculate total health regen including buff bonuses (from direct buffs and item buffs)
     let totalHealthRegen = e.healthRegen;
-    if (e.buffs) {
-      for (const buff of e.buffs) {
-        if (buff.healthRegen) {
-          totalHealthRegen += buff.healthRegen;
-        }
+    for (const buff of iterateBuffs(e)) {
+      if (buff.healthRegen) {
+        totalHealthRegen += buff.healthRegen;
       }
     }
 

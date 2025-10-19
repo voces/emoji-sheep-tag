@@ -11,6 +11,11 @@ export const manaPotionOrder = {
     const action = findActionByOrder(unit, "manaPotion");
     if (!action || action.type !== "auto") return "failed";
 
+    // Don't use mana potion if already at full mana
+    if (unit.mana !== undefined && unit.maxMana !== undefined) {
+      if (unit.mana >= unit.maxMana) return "failed";
+    }
+
     const order: Order = { type: "cast", orderId: "manaPotion", remaining: 0 };
 
     if (queue) {

@@ -1,24 +1,23 @@
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
-import { Entity, SystemEntity } from "../ecs.ts";
+import { Entity } from "../ecs.ts";
 import { Buff } from "@/shared/types.ts";
 import { addSystem } from "@/shared/context.ts";
+import { iterateBuffs } from "@/shared/api/unit.ts";
 
 // Track buff model entities for each host entity and buff model
 const buffModels = new Map<Entity, Map<string, Entity>>();
 
-const updateBuffModels = (e: SystemEntity<"buffs" | "position">) => {
+const updateBuffModels = (e: Entity) => {
   if (!e.position) return;
 
   const currentModels = buffModels.get(e) ?? new Map();
   const newModels = new Map<string, Entity>();
 
-  // Get all unique models from buffs with their offsets
+  // Get all unique models from buffs (direct buffs and item buffs) with their offsets
   const modelData = new Map<string, Buff>();
-  if (e.buffs) {
-    for (const buff of e.buffs) {
-      if (buff.model && !modelData.has(buff.model)) {
-        modelData.set(buff.model, buff);
-      }
+  for (const buff of iterateBuffs(e)) {
+    if (buff.model && !modelData.has(buff.model)) {
+      modelData.set(buff.model, buff);
     }
   }
 
@@ -68,15 +67,26 @@ const updateBuffModels = (e: SystemEntity<"buffs" | "position">) => {
   else buffModels.delete(e);
 };
 
+const removeBuffModels = (e: Entity) => {
+  const models = buffModels.get(e);
+  if (!models) return;
+
+  for (const entity of models.values()) removeEntity(entity);
+  buffModels.delete(e);
+};
+
+// System for entities with buffs
 addSystem({
   props: ["buffs", "position"],
   onAdd: updateBuffModels,
   onChange: updateBuffModels,
-  onRemove: (e) => {
-    const models = buffModels.get(e);
-    if (!models) return;
+  onRemove: removeBuffModels,
+});
 
-    for (const entity of models.values()) removeEntity(entity);
-    buffModels.delete(e);
-  },
+// System for entities with inventory (for item buff models)
+addSystem({
+  props: ["inventory", "position"],
+  onAdd: updateBuffModels,
+  onChange: updateBuffModels,
+  onRemove: removeBuffModels,
 });
