@@ -191,24 +191,12 @@ const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
   ])
 );
 
-const zItem = z.object({
-  id: z.string(),
-  name: z.string(),
-  icon: z.string().optional(),
-  gold: z.number(),
-  binding: z.string().array().readonly(),
-  damage: z.number().optional(),
-  attackSpeedMultiplier: z.number().optional(),
-  movementSpeedBonus: z.number().optional(),
-  charges: z.number().optional(),
-  actions: z.array(zAction).readonly().optional(),
-});
-
 const zBuff = z.object({
   remainingDuration: z.number().optional(),
   attackSpeedMultiplier: z.number().optional(),
   movementSpeedBonus: z.number().optional(),
   movementSpeedMultiplier: z.number().optional(),
+  damageBonus: z.number().optional(),
   damageMultiplier: z.number().optional(),
   healthRegen: z.number().optional(),
   damageMitigation: z.number().optional(),
@@ -216,6 +204,10 @@ const zBuff = z.object({
   bountyBonus: z.number().optional(),
   consumeOnAttack: z.boolean().optional(),
   impartedBuffOnAttack: z.string().optional(),
+  splashDamage: z.number().optional(),
+  splashRadius: z.number().optional(),
+  splashTargets: zClassification.array().readonly().array().readonly()
+    .optional(),
   expiration: z.string().optional(),
   totalDuration: z.number().optional(),
   progressEasing: z.object({
@@ -233,6 +225,17 @@ const zBuff = z.object({
     y: z.number().optional(),
   }).optional(),
   modelScale: z.number().optional(),
+});
+
+const zItem = z.object({
+  id: z.string(),
+  name: z.string(),
+  icon: z.string().optional(),
+  gold: z.number(),
+  binding: z.string().array().readonly(),
+  charges: z.number().optional(),
+  actions: z.array(zAction).readonly().optional(),
+  buffs: z.array(zBuff).readonly().optional(),
 });
 
 export const zUpdate = z.object({

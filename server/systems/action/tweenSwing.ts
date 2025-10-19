@@ -61,7 +61,7 @@ export const tweenSwing = (e: Entity, delta: number): number => {
         position: { x: e.position.x, y: e.position.y },
         isDoodad: true,
         model: e.attack.model,
-        buffs: e.buffs,
+        buffs: e.buffs, // TODO: No? Apply buffs from attackerId, though
         projectile: {
           attackerId: e.id,
           target: { x: targetPosition.x, y: targetPosition.y },
@@ -88,9 +88,10 @@ export const tweenSwing = (e: Entity, delta: number): number => {
       return delta;
     }
 
-    // Otherwise damage target (melee, entity attacks only)
-    if (target?.health) {
-      damageEntity(e, target);
+    if (target) {
+      // Otherwise damage target (melee, entity attacks only)
+      if (target.health) damageEntity(e, target);
+
       applyAndConsumeBuffs([e], target);
     }
   }

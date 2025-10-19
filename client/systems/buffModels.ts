@@ -8,7 +8,7 @@ import { iterateBuffs } from "@/shared/api/unit.ts";
 const buffModels = new Map<Entity, Map<string, Entity>>();
 
 const updateBuffModels = (e: Entity) => {
-  if (!e.position) return;
+  if (!e.position || e.projectile) return;
 
   const currentModels = buffModels.get(e) ?? new Map();
   const newModels = new Map<string, Entity>();

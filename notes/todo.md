@@ -1,7 +1,6 @@
 - Login system
 - Invis Farm?
 - Items
-  - Splash
   - Cloak
   - Auras?
     - Like team items, but don't like them being required...

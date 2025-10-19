@@ -30,7 +30,7 @@ describe("computeUnitMovementSpeed", () => {
         name: "Boots +30",
         gold: 50,
         binding: ["KeyB"],
-        movementSpeedBonus: 0.3,
+        buffs: [{ movementSpeedBonus: 0.3 }],
       }],
     };
 
@@ -46,13 +46,13 @@ describe("computeUnitMovementSpeed", () => {
         name: "Boots +30",
         gold: 50,
         binding: ["KeyB"],
-        movementSpeedBonus: 0.3,
+        buffs: [{ movementSpeedBonus: 0.3 }],
       }, {
         id: "boots2",
         name: "Fast Boots +20",
         gold: 40,
         binding: ["KeyF"],
-        movementSpeedBonus: 0.2,
+        buffs: [{ movementSpeedBonus: 0.2 }],
       }],
     };
 
@@ -68,13 +68,13 @@ describe("computeUnitMovementSpeed", () => {
         name: "Claws +20",
         gold: 60,
         binding: ["KeyC"],
-        damage: 20,
+        buffs: [{ damageBonus: 20 }],
       }, {
         id: "boots",
         name: "Boots +30",
         gold: 50,
         binding: ["KeyB"],
-        movementSpeedBonus: 0.3,
+        buffs: [{ movementSpeedBonus: 0.3 }],
       }],
     };
 
@@ -108,7 +108,7 @@ describe("computeUnitMovementSpeed", () => {
         name: "Boots +25",
         gold: 45,
         binding: ["KeyB"],
-        movementSpeedBonus: 0.25,
+        buffs: [{ movementSpeedBonus: 0.25 }],
       }],
     };
 
@@ -137,7 +137,7 @@ describe("computeUnitMovementSpeed", () => {
         name: "Boots",
         gold: 50,
         binding: ["KeyB"],
-        movementSpeedBonus: 0.3, // Flat bonus +0.3
+        buffs: [{ movementSpeedBonus: 0.3 }], // Flat bonus +0.3
       }],
       buffs: [{
         remainingDuration: 10,
@@ -145,8 +145,8 @@ describe("computeUnitMovementSpeed", () => {
       }],
     };
 
-    // (2.0 + 0.3) * 1.15 = 2.3 * 1.15 = 2.645
-    expect(computeUnitMovementSpeed(unit)).toBeCloseTo(2.645);
+    // 2.0 * 1.15 + 0.3 = 2.3 + 0.3 = 2.6
+    expect(computeUnitMovementSpeed(unit)).toBeCloseTo(2.6);
   });
 
   it("should handle multiple multipliers multiplicatively", () => {
@@ -179,7 +179,7 @@ describe("computeUnitMovementSpeed", () => {
       }],
     };
 
-    // (2.0 + 0.5) * 1.2 = 2.5 * 1.2 = 3.0
-    expect(computeUnitMovementSpeed(unit)).toBe(3.0);
+    // 2.0 * 1.2 + 0.5 = 2.4 + 0.5 = 2.9
+    expect(computeUnitMovementSpeed(unit)).toBe(2.9);
   });
 });

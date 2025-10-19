@@ -83,7 +83,22 @@ export const items: Record<string, Item> = {
     icon: "claw2",
     gold: 180,
     binding: ["KeyC"],
-    damage: 20,
+    buffs: [{ damageBonus: 20 }],
+  },
+  echoFang: {
+    id: "echoFang",
+    name: "Echo Fang",
+    description:
+      "Adds +5 damage and creates a splash that deals +15 damage to enemy structures within 1.25 units.",
+    icon: "fangs",
+    gold: 250,
+    binding: ["KeyE"],
+    buffs: [{
+      damageBonus: 5,
+      splashDamage: 15,
+      splashRadius: 1.25,
+      splashTargets: [["enemy", "structure"]],
+    }],
   },
   foxToken: {
     id: "foxToken",
@@ -104,7 +119,7 @@ export const items: Record<string, Item> = {
   strengthPotion: {
     id: "strengthPotion",
     name: "Potion of Strength",
-    description: "Next attack deals 1000% damage (10x)",
+    description: "Next attack deals 2000% damage (20x)",
     icon: "pinkPotion",
     gold: 35,
     binding: ["KeyG"],
@@ -117,25 +132,27 @@ export const items: Record<string, Item> = {
       binding: ["KeyG"],
       castDuration: 0.2,
       buffDuration: 300,
-      damageMultiplier: 10.0,
+      damageMultiplier: 20,
       soundOnCastStart: "jarOpen1",
     }],
   },
   swiftness: {
     id: "swiftness",
     name: "Swift Claws +15%",
+    description: "Increases attack speed by 15%.",
     icon: "claw",
     gold: 110,
     binding: ["KeyV"],
-    attackSpeedMultiplier: 1.15,
+    buffs: [{ attackSpeedMultiplier: 1.15 }],
   },
   boots: {
     id: "boots",
     name: "Boots +30",
+    description: "Increases movement speed by 30.",
     icon: "runningShoes",
     gold: 110,
     binding: ["KeyB"],
-    movementSpeedBonus: 0.3,
+    buffs: [{ movementSpeedBonus: 0.3 }],
   },
   speedPot: {
     id: "speedPot",
@@ -316,7 +333,7 @@ export const prefabs: Record<string, DataEntity> = {
       {
         name: "Build Totem",
         description:
-          "Provides auras to nearby allies: +3% movement speed, +1 HP/s regen, and 15% damage mitigation for structures.",
+          "Provides auras to nearby allies: +4% movement speed, +2 HP/s regen, and 30% damage mitigation for structures.",
         type: "build",
         unitType: "totem",
         binding: ["KeyA"],

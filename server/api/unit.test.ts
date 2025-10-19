@@ -122,7 +122,7 @@ describe("computeUnitDamage", () => {
     const unit = newUnit("test-owner", "wolf", 10, 10);
     unit.inventory = [
       items.claw,
-      { ...items.claw, id: "claw2", damage: 15 }, // Second claw with different damage
+      { ...items.claw, id: "claw2", buffs: [{ damageBonus: 15 }] }, // Second claw with different damage
     ];
     yield;
     expect(computeUnitDamage(unit)).toBe(105); // 70 + 20 + 15
@@ -169,7 +169,7 @@ describe("computeUnitAttackSpeed", () => {
         {
           ...items.swiftness,
           id: "swiftness2",
-          attackSpeedMultiplier: 1.2,
+          buffs: [{ attackSpeedMultiplier: 1.2 }],
         }, // 1.2x
       ];
       yield;

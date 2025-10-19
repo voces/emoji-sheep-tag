@@ -64,10 +64,10 @@ const handleAuraUpdate = (entity: Entity) => {
       );
 
       if (existingAuraBuffIndex !== undefined && existingAuraBuffIndex >= 0) {
-        // Aura is being reapplied - remove any linger duration
+        // Aura is being reapplied - remove any linger duration if it exists
         const existingAuraBuff = target.buffs![existingAuraBuffIndex];
         if (existingAuraBuff.remainingDuration !== undefined) {
-          // Replace with a new buff without the duration
+          // Replace with a new buff without the duration (only update if duration exists)
           const { remainingDuration: _removed, ...buffWithoutDuration } =
             existingAuraBuff;
           target.buffs = [
@@ -76,6 +76,7 @@ const handleAuraUpdate = (entity: Entity) => {
             ...target.buffs!.slice(existingAuraBuffIndex + 1),
           ];
         }
+        // If no remainingDuration, buff is already correct - no update needed (referential stability)
       } else {
         // Add the aura buff to the target (with auraBuff marker for tracking)
         const existingBuffs = target.buffs ?? [];

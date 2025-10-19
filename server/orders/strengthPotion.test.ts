@@ -76,7 +76,7 @@ describe("strengthPotion integration", () => {
 
       // Wolf should have strength buff
       expect(wolf.buffs).toHaveLength(1);
-      expect(wolf.buffs![0].damageMultiplier).toBe(10.0);
+      expect(wolf.buffs![0].damageMultiplier).toBe(20.0);
       expect(wolf.buffs![0].consumeOnAttack).toBe(true);
       expect(wolf.buffs![0].remainingDuration).toBeCloseTo(300, 0);
     });
@@ -94,14 +94,14 @@ describe("strengthPotion integration", () => {
       // Add strength buff directly for testing damage calculation
       wolf.buffs = [{
         remainingDuration: 10,
-        damageMultiplier: 10.0,
+        damageMultiplier: 20.0,
         consumeOnAttack: true,
       }];
 
       // Create target sheep
       const sheep = newUnit("sheep-player", "sheep", 6, 5);
-      sheep.health = 1000; // High health to survive the attack
-      sheep.maxHealth = 1000;
+      sheep.health = 2000; // High health to survive the attack (wolf deals 70*20=1400)
+      sheep.maxHealth = 2000;
 
       yield;
 
@@ -111,8 +111,8 @@ describe("strengthPotion integration", () => {
       // Wolf attacks sheep
       damageEntity(wolf, sheep);
 
-      // Damage should be multiplied by 10 (1000% damage)
-      const expectedDamage = wolfBaseDamage * 10;
+      // Damage should be multiplied by 20 (2000% damage)
+      const expectedDamage = wolfBaseDamage * 20;
       const actualDamage = originalSheepHealth - sheep.health;
 
       expect(actualDamage).toBe(expectedDamage);
@@ -130,14 +130,14 @@ describe("strengthPotion integration", () => {
       wolf.inventory = [items.claw]; // +20 damage
       wolf.buffs = [{
         remainingDuration: 10,
-        damageMultiplier: 10.0,
+        damageMultiplier: 20.0,
         consumeOnAttack: true,
       }];
 
       // Create target sheep
       const sheep = newUnit("sheep-player", "sheep", 6, 5);
-      sheep.health = 1000;
-      sheep.maxHealth = 1000;
+      sheep.health = 2000; // High health to survive the attack (wolf deals 70*20+20=1420)
+      sheep.maxHealth = 2000;
 
       yield;
 
@@ -148,8 +148,8 @@ describe("strengthPotion integration", () => {
       // Wolf attacks sheep
       damageEntity(wolf, sheep);
 
-      // Damage should be (base + item bonus) * multiplier
-      const expectedDamage = (wolfBaseDamage + clawDamage) * 10;
+      // Damage should be base * multiplier + item bonus
+      const expectedDamage = wolfBaseDamage * 20 + clawDamage;
       const actualDamage = originalSheepHealth - sheep.health;
 
       expect(actualDamage).toBe(expectedDamage);
@@ -173,8 +173,8 @@ describe("strengthPotion integration", () => {
 
       // Create target sheep
       const sheep = newUnit("sheep-player", "sheep", 6, 5);
-      sheep.health = 1000;
-      sheep.maxHealth = 1000;
+      sheep.health = 2000;
+      sheep.maxHealth = 2000;
 
       yield;
 
@@ -198,7 +198,7 @@ describe("strengthPotion integration", () => {
       wolf.buffs = [
         {
           remainingDuration: 300,
-          damageMultiplier: 10.0,
+          damageMultiplier: 20.0,
           consumeOnAttack: true,
         },
         {
@@ -210,8 +210,8 @@ describe("strengthPotion integration", () => {
 
       // Create target sheep
       const sheep = newUnit("sheep-player", "sheep", 6, 5);
-      sheep.health = 1000;
-      sheep.maxHealth = 1000;
+      sheep.health = 2000;
+      sheep.maxHealth = 2000;
 
       yield;
 
@@ -240,8 +240,8 @@ describe("strengthPotion integration", () => {
 
       // Create target sheep
       const sheep = newUnit("sheep-player", "sheep", 6, 5);
-      sheep.health = 1000;
-      sheep.maxHealth = 1000;
+      sheep.health = 2000; // High health to survive multiple attacks (wolf deals 70*20=1400)
+      sheep.maxHealth = 2000;
 
       yield;
 
@@ -261,13 +261,13 @@ describe("strengthPotion integration", () => {
       // Potion consumed, buff applied
       expect(wolf.inventory).toHaveLength(0);
       expect(wolf.buffs).toHaveLength(1);
-      expect(wolf.buffs![0].damageMultiplier).toBe(10.0);
+      expect(wolf.buffs![0].damageMultiplier).toBe(20.0);
 
       // Step 2: Attack with buffed damage directly
       damageEntity(wolf, sheep);
 
       // Step 3: Verify enhanced damage and buff consumption
-      const expectedDamage = wolfBaseDamage * 10;
+      const expectedDamage = wolfBaseDamage * 20;
       const actualDamage = originalSheepHealth - sheep.health;
 
       expect(actualDamage).toBe(expectedDamage);

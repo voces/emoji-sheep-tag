@@ -72,6 +72,7 @@ import rune from "../assets/rune.svg" with { type: "text" };
 import rune2 from "../assets/rune2.svg" with { type: "text" };
 import swap from "../assets/swap.svg" with { type: "text" };
 import scythe from "../assets/scythe.svg" with { type: "text" };
+import fangs from "../assets/fangs.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -137,6 +138,7 @@ export const svgs: Record<string, string> = {
   rune2,
   swap,
   scythe,
+  fangs,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

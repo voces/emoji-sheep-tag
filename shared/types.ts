@@ -61,9 +61,6 @@ export type Item = {
   readonly icon?: string;
   readonly gold: number;
   readonly binding: ReadonlyArray<string>;
-  readonly damage?: number;
-  readonly attackSpeedMultiplier?: number;
-  readonly movementSpeedBonus?: number;
   readonly charges?: number;
   readonly actions?: ReadonlyArray<UnitDataAction>;
   readonly buffs?: ReadonlyArray<Buff>;
@@ -74,6 +71,7 @@ export type Buff = {
   readonly attackSpeedMultiplier?: number;
   readonly movementSpeedBonus?: number;
   readonly movementSpeedMultiplier?: number;
+  readonly damageBonus?: number;
   readonly damageMultiplier?: number;
   readonly healthRegen?: number;
   readonly damageMitigation?: number;
@@ -81,6 +79,9 @@ export type Buff = {
   readonly bountyBonus?: number;
   readonly consumeOnAttack?: boolean;
   readonly impartedBuffOnAttack?: string;
+  readonly splashDamage?: number;
+  readonly splashRadius?: number;
+  readonly splashTargets?: ReadonlyArray<ReadonlyArray<Classification>>;
   readonly expiration?: string;
   readonly totalDuration?: number;
   readonly progressEasing?: {

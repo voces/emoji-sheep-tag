@@ -433,17 +433,16 @@ export const computeUnitDamage = (unit: Entity): number => {
 
   let totalDamage = unit.attack.damage;
 
-  // Add damage bonuses from items in inventory
-  if (unit.inventory) {
-    for (const item of unit.inventory) {
-      if (item.damage) totalDamage += item.damage;
-    }
-  }
-
-  // Apply damage multipliers from buffs (including item buffs)
+  // Apply multipliers first, then add bonuses from buffs (including item buffs)
   for (const buff of iterateBuffs(unit)) {
     if (buff.damageMultiplier) {
       totalDamage *= buff.damageMultiplier;
+    }
+  }
+
+  for (const buff of iterateBuffs(unit)) {
+    if (buff.damageBonus) {
+      totalDamage += buff.damageBonus;
     }
   }
 
@@ -455,15 +454,6 @@ export const computeUnitDamage = (unit: Entity): number => {
  */
 export const computeUnitAttackSpeed = (unit: Entity): number => {
   let speedMultiplier = 1.0;
-
-  // Apply attack speed bonuses from items in inventory
-  if (unit.inventory) {
-    for (const item of unit.inventory) {
-      if (item.attackSpeedMultiplier) {
-        speedMultiplier *= item.attackSpeedMultiplier;
-      }
-    }
-  }
 
   // Apply attack speed bonuses from buffs (including item buffs)
   for (const buff of iterateBuffs(unit)) {
@@ -505,10 +495,32 @@ export const applyAndConsumeBuffs = (
   target: Entity,
 ): void => {
   for (const source of sources) {
-    if (!source.buffs) continue;
+    // Apply splash damage from buffs (including item buffs)
+    for (const buff of iterateBuffs(source)) {
+      if (
+        buff.splashDamage && buff.splashRadius && buff.splashTargets &&
+        target.position
+      ) {
+        const nearbyEntities = getEntitiesInRange(
+          target.position.x,
+          target.position.y,
+          buff.splashRadius,
+        );
 
-    // Apply buffs to target
-    for (const buff of source.buffs) {
+        for (const splashTarget of nearbyEntities) {
+          if (!testClassification(source, splashTarget, buff.splashTargets)) {
+            continue;
+          }
+
+          if (splashTarget.health) {
+            damageEntity(source, splashTarget, buff.splashDamage, true);
+          }
+        }
+      }
+    }
+
+    // Apply buffs to target (from all buffs including item buffs)
+    for (const buff of iterateBuffs(source)) {
       if (buff.impartedBuffOnAttack) {
         target.buffs = [
           ...(target.buffs ?? []),
@@ -517,10 +529,35 @@ export const applyAndConsumeBuffs = (
       }
     }
 
-    // Consume buffs from source
-    const updatedBuffs = source.buffs.filter((buff) => !buff.consumeOnAttack);
-    if (updatedBuffs.length !== source.buffs.length) {
-      source.buffs = updatedBuffs.length ? updatedBuffs : null;
+    // Consume buffs from source (direct buffs only)
+    if (source.buffs) {
+      const updatedBuffs = source.buffs.filter((buff) => !buff.consumeOnAttack);
+      if (updatedBuffs.length !== source.buffs.length) {
+        source.buffs = updatedBuffs.length ? updatedBuffs : null;
+      }
+    }
+
+    // Consume buffs from inventory items
+    if (source.inventory) {
+      let inventoryChanged = false;
+      const updatedInventory = source.inventory.map((item) => {
+        if (!item.buffs) return item;
+
+        const updatedItemBuffs = item.buffs.filter((buff) =>
+          !buff.consumeOnAttack
+        );
+        if (updatedItemBuffs.length !== item.buffs.length) {
+          inventoryChanged = true;
+          return updatedItemBuffs.length > 0
+            ? { ...item, buffs: updatedItemBuffs }
+            : item; // Keep item even if no buffs remain
+        }
+        return item;
+      });
+
+      if (inventoryChanged) {
+        source.inventory = updatedInventory;
+      }
     }
   }
 };

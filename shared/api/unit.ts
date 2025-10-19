@@ -53,15 +53,6 @@ export const computeUnitMovementSpeed = (unit: Entity): number => {
   let flatSpeedBonus = 0;
   let speedMultiplier = 1.0;
 
-  // Add flat bonuses from items
-  if (unit.inventory) {
-    for (const item of unit.inventory) {
-      if (item.movementSpeedBonus) {
-        flatSpeedBonus += item.movementSpeedBonus;
-      }
-    }
-  }
-
   // Add flat bonuses and multipliers from buffs (including item buffs)
   for (const buff of iterateBuffs(unit)) {
     if (buff.movementSpeedBonus) {
@@ -72,8 +63,8 @@ export const computeUnitMovementSpeed = (unit: Entity): number => {
     }
   }
 
-  // Apply flat bonuses first, then multipliers
-  return (baseSpeed + flatSpeedBonus) * speedMultiplier;
+  // Apply multipliers first, then add flat bonuses
+  return baseSpeed * speedMultiplier + flatSpeedBonus;
 };
 
 const classificationToGroup = {} as {
