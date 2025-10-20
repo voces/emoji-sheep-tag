@@ -24,7 +24,7 @@ describe("swing system", () => {
 
     // Verify swing visual was created
     const swingVisuals = Array.from(app.entities).filter((e) =>
-      e.prefab === "claw"
+      e.model === "claw"
     );
     expect(swingVisuals.length).toBe(1);
 
@@ -36,7 +36,7 @@ describe("swing system", () => {
 
     // Verify swing visual was also removed
     const remainingSwingVisuals = Array.from(app.entities).filter((e) =>
-      e.prefab === "claw"
+      e.model === "claw"
     );
     expect(remainingSwingVisuals.length).toBe(0);
   });
@@ -58,7 +58,7 @@ describe("swing system", () => {
 
     // Verify swing visual was created
     const swingVisuals = Array.from(app.entities).filter((e) =>
-      e.prefab === "claw"
+      e.model === "claw"
     );
     expect(swingVisuals.length).toBe(1);
     const firstSwing = swingVisuals[0];
@@ -67,7 +67,7 @@ describe("swing system", () => {
     attacker.swing = {
       remaining: 0.3,
       source: { x: 5, y: 5 },
-      target: { x: 7, y: 5 },
+      target: { x: 7, y: 6 },
     };
 
     // Update to trigger the onChange handler
@@ -75,7 +75,7 @@ describe("swing system", () => {
 
     // Verify old swing visual was removed and new one created
     const updatedSwingVisuals = Array.from(app.entities).filter((e) =>
-      e.prefab === "claw"
+      e.model === "claw"
     );
     expect(updatedSwingVisuals.length).toBe(1);
     expect(updatedSwingVisuals[0]).not.toBe(firstSwing);
@@ -91,7 +91,7 @@ describe("swing system", () => {
     // No swing visual yet
     app.update(0);
     const initialVisuals = Array.from(app.entities).filter((e) =>
-      e.prefab === "claw"
+      e.model === "claw"
     );
     expect(initialVisuals.length).toBe(0);
 
@@ -107,7 +107,7 @@ describe("swing system", () => {
 
     // Swing visual should now exist
     const swingVisuals = Array.from(app.entities).filter((e) =>
-      e.prefab === "claw"
+      e.model === "claw"
     );
     expect(swingVisuals.length).toBe(1);
   });
@@ -129,7 +129,7 @@ describe("swing system", () => {
 
     // Verify swing visual was created
     const swingVisuals = Array.from(app.entities).filter((e) =>
-      e.prefab === "claw"
+      e.model === "claw"
     );
     expect(swingVisuals.length).toBe(1);
 

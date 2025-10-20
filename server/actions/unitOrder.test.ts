@@ -663,11 +663,11 @@ describe("unitOrder timed entities", () => {
       return mirrors;
     });
 
-    // Check that mirror has the correct buff duration (45 seconds from action definition)
+    // Check that mirror has the correct buff duration (60 seconds from action definition)
     for (const mirror of mirrors) {
       expect(mirror.buffs).toBeDefined();
       expect(mirror.buffs!.length).toBe(1);
-      expect(mirror.buffs![0].remainingDuration).toBe(45);
+      expect(mirror.buffs![0].remainingDuration).toBe(60);
       expect(mirror.buffs![0].expiration).toBe("MirrorImage");
     }
   });

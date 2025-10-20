@@ -26,7 +26,7 @@ const updateSwing = (e: SystemEntity<"swing">) => {
   if (!e.attack?.model || e.attack.projectileSpeed) return;
 
   const swing = addEntity({
-    prefab: e.attack.model,
+    model: e.attack.model,
     position: { x, y },
     facing: direction + Math.PI,
     isDoodad: true,
