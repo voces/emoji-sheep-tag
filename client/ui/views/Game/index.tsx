@@ -18,8 +18,8 @@ const TopRight = styled(HStack)`
 export const Game = () => (
   <>
     <Chat />
-    <SimpleStats />
     <Avatars />
+    <SimpleStats />
     <TopRight>
       <Gold />
       <Timers />

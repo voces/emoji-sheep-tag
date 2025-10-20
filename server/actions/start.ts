@@ -8,6 +8,7 @@ import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
 import { center, generateDoodads } from "@/shared/map.ts";
+import { TICK_RATE } from "@/shared/constants.ts";
 import { appContext } from "@/shared/context.ts";
 import { getSheepSpawn } from "../st/getSheepSpawn.ts";
 import { addEntity } from "@/shared/api/entity.ts";
@@ -59,7 +60,7 @@ export const start = (
   lobby.round.clearInterval = interval(() => {
     ecs.tick++;
     ecs.update();
-  }, 0.05);
+  }, TICK_RATE);
 
   const withContexts = (fn: () => void) =>
     lobbyContext.with(lobby, () => appContext.with(ecs, fn));

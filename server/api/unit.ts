@@ -513,7 +513,7 @@ export const applyAndConsumeBuffs = (
           }
 
           if (splashTarget.health) {
-            damageEntity(source, splashTarget, buff.splashDamage, true);
+            damageEntity(source, splashTarget, buff.splashDamage, false);
           }
         }
       }

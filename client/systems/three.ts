@@ -73,6 +73,8 @@ import rune2 from "../assets/rune2.svg" with { type: "text" };
 import swap from "../assets/swap.svg" with { type: "text" };
 import scythe from "../assets/scythe.svg" with { type: "text" };
 import fangs from "../assets/fangs.svg" with { type: "text" };
+import direCollar from "../assets/direCollar.svg" with { type: "text" };
+import crimsonArc from "../assets/crimsonArc.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -139,6 +141,7 @@ export const svgs: Record<string, string> = {
   swap,
   scythe,
   fangs,
+  direCollar,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -189,6 +192,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   rune2: loadSvg(rune2, 0.05, { layer: 2 }),
   swap: loadSvg(swap, 0.1, { layer: 2 }),
   fire: loadSvg(fire, 1, { layer: 2 }),
+  crimsonArc: loadSvg(crimsonArc, 0.1, { layer: 2 }),
   claw: loadSvg(claw, 0.05, { layer: 2 }),
   dash: loadSvg(dash, 0.1, { layer: 2 }),
   flag: loadSvg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),

@@ -204,4 +204,5 @@ import("./systems/playerEntities.ts");
 import("./systems/projectile.ts");
 import("./systems/queues.ts");
 import("./systems/regen.ts");
+import("./systems/tickDamage.ts");
 import("./orders/index.ts");

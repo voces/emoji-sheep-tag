@@ -62,6 +62,7 @@
 - https://www.svgrepo.com/svg/107670/symbol
 - https://www.svgrepo.com/svg/231645/swap
 - https://www.svgrepo.com/svg/191980/scythe-agriculture
+- Dire Collar: self made
 
 # Audio
 

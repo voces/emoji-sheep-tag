@@ -1,7 +1,6 @@
 - Login system
 - Invis Farm?
 - Items
-  - Cloak
   - Auras?
     - Like team items, but don't like them being required...
 - Pointer lock setting
@@ -21,6 +20,7 @@
   - Switch
   - Bulldog
   - Kat'ma
+- Minimap
 
 # Perf
 

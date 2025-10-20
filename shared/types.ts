@@ -91,10 +91,17 @@ export type Buff = {
   readonly radius?: number;
   readonly auraBuff?: string;
   readonly targetsAllowed?: ReadonlyArray<ReadonlyArray<Classification>>;
+  readonly tickDamage?: number;
+  readonly tickInterval?: number;
   readonly icon?: string;
   readonly model?: string;
   readonly modelOffset?: { readonly x?: number; readonly y?: number };
   readonly modelScale?: number;
+  readonly particleRate?: number;
+  readonly particleOffsetRange?: number;
+  readonly particleMinOffsetRange?: number;
+  readonly particleScaleRange?: number;
+  readonly particleLifetime?: number;
 };
 
 type IconEffect = "mirror";

@@ -12,6 +12,7 @@ import "./systems/fire.ts";
 import "./systems/swing.ts";
 import "./systems/projectile.ts";
 import "./systems/buffModels.ts";
+import "./systems/buffParticles.ts";
 import "./systems/kaboom.ts";
 import "./systems/easing.ts";
 import "./systems/indicators.ts";

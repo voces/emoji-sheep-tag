@@ -218,6 +218,8 @@ const zBuff = z.object({
   auraBuff: z.string().optional(),
   targetsAllowed: zClassification.array().readonly().array().readonly()
     .optional(),
+  tickDamage: z.number().optional(),
+  tickInterval: z.number().optional(),
   icon: z.string().optional(),
   model: z.string().optional(),
   modelOffset: z.object({
@@ -225,6 +227,11 @@ const zBuff = z.object({
     y: z.number().optional(),
   }).optional(),
   modelScale: z.number().optional(),
+  particleRate: z.number().optional(),
+  particleOffsetRange: z.number().optional(),
+  particleMinOffsetRange: z.number().optional(),
+  particleScaleRange: z.number().optional(),
+  particleLifetime: z.number().optional(),
 });
 
 const zItem = z.object({

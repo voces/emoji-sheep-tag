@@ -1,5 +1,8 @@
 export const DEFAULT_FACING = 0;
 
+/** Game tick rate in seconds (50ms per tick) */
+export const TICK_RATE = 0.05;
+
 /** ±60° */
 export const MAX_ATTACK_ANGLE = Math.PI / 3;
 

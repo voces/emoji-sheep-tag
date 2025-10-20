@@ -1,4 +1,4 @@
-import * as THREE from "three";
+import { Mesh } from "three";
 
 export interface SvgOptions {
   scale?: number;
@@ -10,7 +10,7 @@ export interface SvgOptions {
 }
 
 export const meshToSvg = (
-  mesh: THREE.Mesh,
+  mesh: Mesh,
   options: SvgOptions = {},
 ): string => {
   const scale = options.scale ?? 100;

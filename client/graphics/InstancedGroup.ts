@@ -16,6 +16,7 @@ import {
 } from "three";
 import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
+import { editorVar } from "@/vars/editor.ts";
 
 const dummy = new Object3D();
 const dummyColor = new Color();
@@ -186,6 +187,9 @@ export class InstancedGroup extends Group {
   }
 
   private updateBvhInstance(index: number, matrix: Matrix4) {
+    // Skip BVH updates for layer 2 (doodads) - they don't need raycasting
+    if (this.layers.mask & 4 && !editorVar()) return;
+
     // Check if we should remove or add/update in BVH
     // Detect if matrix is "infinite" - typically you'd check elements or the position
     if (!this.isFiniteMatrix(matrix)) {

@@ -49,7 +49,11 @@ export const manaPotionOrder = {
             0.5,
             "ease-in-out",
             0.5,
-            { vertexColor: 0x34a5e9 },
+            {
+              vertexColor: 0x34a5e9,
+              modelScale: 0.5 + Math.random() ** 2,
+              facing: Math.random() * Math.PI * 2,
+            },
           );
         },
         0.1,

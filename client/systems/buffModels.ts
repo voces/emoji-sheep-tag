@@ -16,7 +16,7 @@ const updateBuffModels = (e: Entity) => {
   // Get all unique models from buffs (direct buffs and item buffs) with their offsets
   const modelData = new Map<string, Buff>();
   for (const buff of iterateBuffs(e)) {
-    if (buff.model && !modelData.has(buff.model)) {
+    if (buff.model && !buff.particleRate && !modelData.has(buff.model)) {
       modelData.set(buff.model, buff);
     }
   }
