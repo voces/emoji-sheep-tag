@@ -282,6 +282,7 @@ export const zUpdate = z.object({
   isTimer: z.boolean().optional(),
   isFloatingText: z.boolean().optional(),
   teamScoped: z.boolean().optional(),
+  unique: z.boolean().optional(),
 
   attack: z.object({
     damage: z.number(),

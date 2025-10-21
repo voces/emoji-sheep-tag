@@ -52,7 +52,9 @@ const Buffs = ({ entityBuffs }: { entityBuffs: ReadonlyArray<Buff> }) => (
   </MiniIconWrapper>
 );
 
-export const Avatar = ({ entity }: { entity: Entity }) => {
+export const Avatar = (
+  { entity, count }: { entity: Entity; count?: number },
+) => {
   const localPlayer = useLocalPlayer();
   const theme = useTheme();
   useListenToEntityProps(entity, [
@@ -105,6 +107,7 @@ export const Avatar = ({ entity }: { entity: Entity }) => {
         icon={entity.icon ?? entity.model ?? entity.prefab}
         iconProps={iconProps}
         hideTooltip
+        count={count}
       />
       <HStack $gap="xs">
         {hasHealth && (

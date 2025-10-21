@@ -40,7 +40,7 @@ export const beginUpgrade = (e: Entity) => {
     type: "auto",
     order: "cancel-upgrade",
     name: "Cancel upgrade",
-    icon: "stop",
+    icon: "cancel",
     prefab: prevPrefab,
     binding: ["Backquote"],
     goldCost: goldCost ? -goldCost * UPGRADE_REFUND_RATE : undefined,

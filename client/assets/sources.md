@@ -63,6 +63,8 @@
 - https://www.svgrepo.com/svg/231645/swap
 - https://www.svgrepo.com/svg/191980/scythe-agriculture
 - Dire Collar: self made
+- Pause: self made
+- https://www.svgrepo.com/svg/474763/cancel
 
 # Audio
 

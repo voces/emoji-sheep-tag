@@ -75,6 +75,8 @@ import scythe from "../assets/scythe.svg" with { type: "text" };
 import fangs from "../assets/fangs.svg" with { type: "text" };
 import direCollar from "../assets/direCollar.svg" with { type: "text" };
 import crimsonArc from "../assets/crimsonArc.svg" with { type: "text" };
+import pause from "../assets/pause.svg" with { type: "text" };
+import cancel from "../assets/cancel.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -142,6 +144,8 @@ export const svgs: Record<string, string> = {
   scythe,
   fangs,
   direCollar,
+  pause,
+  cancel,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

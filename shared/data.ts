@@ -62,7 +62,7 @@ const back: UnitDataAction = {
   name: "Back",
   type: "auto",
   order: "back",
-  icon: "stop",
+  icon: "cancel",
   binding: ["Backquote"],
 };
 
@@ -288,47 +288,51 @@ export const buffs: Record<string, Buff> = {
   },
 };
 
-type DataEntity = Pick<
-  Entity,
-  | "name"
-  | "type"
-  //
-  | "model"
-  | "modelScale"
-  | "vertexColor"
-  | "alpha"
-  | "sounds"
-  //
-  | "facing"
-  //
-  | "maxHealth"
-  | "healthRegen"
-  | "mana"
-  | "maxMana"
-  | "manaRegen"
-  //
-  | "movementSpeed"
-  | "turnSpeed"
-  | "sightRadius"
-  | "blocksLineOfSight"
-  | "actions"
-  | "buffs"
-  | "completionTime"
-  | "isDoodad"
-  //
-  | "attack"
-  | "targetedAs"
-  //
-  | "radius"
-  | "pathing"
-  | "requiresPathing"
-  | "tilemap"
-  | "requiresTilemap"
-  //
-  | "inventory"
-  //
-  | "bounty"
->;
+type DataEntity =
+  & Pick<
+    Entity,
+    | "name"
+    | "type"
+    //
+    | "model"
+    | "modelScale"
+    | "vertexColor"
+    | "alpha"
+    | "sounds"
+    //
+    | "facing"
+    //
+    | "maxHealth"
+    | "healthRegen"
+    | "mana"
+    | "maxMana"
+    | "manaRegen"
+    //
+    | "movementSpeed"
+    | "turnSpeed"
+    | "sightRadius"
+    | "blocksLineOfSight"
+    | "actions"
+    | "buffs"
+    | "completionTime"
+    | "isDoodad"
+    //
+    | "attack"
+    | "targetedAs"
+    //
+    | "radius"
+    | "pathing"
+    | "requiresPathing"
+    | "tilemap"
+    | "requiresTilemap"
+    //
+    | "inventory"
+    //
+    | "bounty"
+  >
+  & {
+    unique?: boolean;
+  };
 
 export const prefabs: Record<string, DataEntity> = {
   sheep: {
@@ -428,6 +432,7 @@ export const prefabs: Record<string, DataEntity> = {
   },
   wolf: {
     name: "Wolf",
+    unique: true,
     inventory: [],
     movementSpeed: 3.1,
     turnSpeed: 10,

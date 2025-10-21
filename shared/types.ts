@@ -327,6 +327,9 @@ export type Entity = {
   // Fog of war
   blocksLineOfSight?: number; // Number of height levels this blocks vision
 
+  // Grouping
+  unique?: boolean;
+
   // Orders
   order?: Order | null;
   queue?: ReadonlyArray<Order> | null;
