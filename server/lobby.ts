@@ -17,7 +17,11 @@ type LobbySettings = {
   //  * - `"bulldog"`: sheep must reach the end
   //  * - `"team_bulldog"`: all sheep must reach the end
   //  */
-  // mode: "survival";
+  mode: "survival" | "vip";
+  /**
+   * Health multiplier for sheep structures in VIP mode (0.01-10)
+   */
+  vipHandicap: number;
   // /**
   //  * Uses a smart algorithm to rotate sheep and wolves
   //  */
@@ -47,6 +51,7 @@ type Round = {
   clearInterval: () => void;
   practice: boolean;
   editor: boolean;
+  vip?: string;
 };
 
 export type Lobby = {
@@ -77,6 +82,8 @@ export const newLobby = (host?: Client) => {
     name: generateLobbyName(),
     settings: {
       teams: new Map(),
+      mode: "survival",
+      vipHandicap: 0.8,
       sheep: "auto",
       time: "auto",
       startingGold: { sheep: 0, wolves: 0 },

@@ -14,6 +14,8 @@ describe("Lobby Settings UI", () => {
   beforeEach(() => {
     // Set up initial lobby settings
     lobbySettingsVar({
+      mode: "survival",
+      vipHandicap: 0.8,
       sheep: 2,
       autoSheep: false,
       time: 300,
@@ -27,6 +29,8 @@ describe("Lobby Settings UI", () => {
     // Clean up players state
     playersVar([]);
     lobbySettingsVar({
+      mode: "survival",
+      vipHandicap: 0.8,
       sheep: 0,
       autoSheep: true,
       time: 0,
@@ -197,6 +201,8 @@ describe("Lobby Settings UI", () => {
 
     // Update lobby settings (simulating server message)
     lobbySettingsVar({
+      mode: "survival",
+      vipHandicap: 0.8,
       sheep: 2,
       autoSheep: false,
       time: 300,

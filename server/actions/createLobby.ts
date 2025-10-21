@@ -44,6 +44,8 @@ export const createLobby = (
       updates: [],
       rounds: lobby.rounds,
       lobbySettings: {
+        mode: "survival",
+        vipHandicap: lobby.settings.vipHandicap,
         sheep: lobby.settings.sheep === "auto" ? 1 : lobby.settings.sheep,
         autoSheep: lobby.settings.sheep === "auto",
         time: lobby.settings.time === "auto" ? 60 : lobby.settings.time,

@@ -27,7 +27,18 @@ export const mergeEntityWithPrefab = (
     entity = { ...entity, health: prefabData.maxHealth };
   }
 
-  return { ...prefabData, ...entity };
+  const merged = { ...prefabData, ...entity };
+
+  // Apply handicap to maxHealth if present
+  if (merged.handicap && merged.maxHealth) {
+    merged.maxHealth *= merged.handicap;
+    // Only set health to maxHealth if health wasn't already set
+    if (typeof merged.health !== "number") {
+      merged.health = merged.maxHealth;
+    }
+  }
+
+  return merged;
 };
 
 export const addEntity = (entity: Partial<Entity>) =>

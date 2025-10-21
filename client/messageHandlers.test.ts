@@ -13,6 +13,8 @@ import { generateDoodads } from "@/shared/map.ts";
 
 // Common test objects
 const DEFAULT_LOBBY_SETTINGS = {
+  mode: "survival" as const,
+  vipHandicap: 0.8,
   sheep: 1,
   autoSheep: false,
   time: 300,
@@ -223,6 +225,8 @@ describe("nameChange", () => {
       }],
       updates: [],
       lobbySettings: {
+        mode: "survival",
+        vipHandicap: 0.8,
         sheep: 1,
         autoSheep: false,
         time: 300,
@@ -363,6 +367,8 @@ describe("stop", () => {
       }],
       updates: [],
       lobbySettings: {
+        mode: "survival",
+        vipHandicap: 0.8,
         sheep: 1,
         autoSheep: false,
         time: 300,
@@ -420,6 +426,8 @@ describe("updates", () => {
       players: [],
       updates: [],
       lobbySettings: {
+        mode: "survival",
+        vipHandicap: 0.8,
         sheep: 0,
         autoSheep: true,
         time: 300,
@@ -564,6 +572,8 @@ describe("leave", () => {
       }],
       updates: [],
       lobbySettings: {
+        mode: "survival",
+        vipHandicap: 0.8,
         sheep: 1,
         autoSheep: false,
         time: 300,
@@ -609,6 +619,8 @@ describe("leave", () => {
       }],
       updates: [],
       lobbySettings: {
+        mode: "survival",
+        vipHandicap: 0.8,
         sheep: 1,
         autoSheep: false,
         time: 300,
@@ -696,6 +708,8 @@ describe("lobbySettings", () => {
   it("updates lobby settings", () => {
     handlers.lobbySettings({
       type: "lobbySettings",
+      mode: "survival",
+      vipHandicap: 0.8,
       sheep: 2,
       autoSheep: false,
       time: 300,
@@ -712,6 +726,8 @@ describe("lobbySettings", () => {
   it("overwrites existing settings", () => {
     handlers.lobbySettings({
       type: "lobbySettings",
+      mode: "survival",
+      vipHandicap: 0.8,
       sheep: 2,
       autoSheep: false,
       time: 300,
@@ -722,6 +738,8 @@ describe("lobbySettings", () => {
 
     handlers.lobbySettings({
       type: "lobbySettings",
+      mode: "vip",
+      vipHandicap: 0.5,
       sheep: 3,
       autoSheep: true,
       time: 400,

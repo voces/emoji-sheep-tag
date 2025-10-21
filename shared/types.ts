@@ -246,6 +246,7 @@ export type Entity = {
   isPlayer?: boolean;
   team?: "sheep" | "wolf";
   gold?: number;
+  handicap?: number;
 
   movementSpeed?: number;
   /** Radians per second */

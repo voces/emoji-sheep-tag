@@ -76,10 +76,11 @@ export const sendPlayerGold = (
  * @param playerId The player's ID
  */
 export const spawnPracticeUnits = (playerId: string) => {
-  newUnit(playerId, "sheep", ...getSheepSpawn());
+  const sheep = newUnit(playerId, "sheep", ...getSheepSpawn());
   newUnit(playerId, "spirit", ...getSpiritSpawn());
   const wolf = newUnit(playerId, "wolf", center.x, center.y);
   if (wolf.manaRegen) wolf.manaRegen *= 10;
+  return sheep;
 };
 
 /**

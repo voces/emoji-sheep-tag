@@ -146,9 +146,9 @@ export const leave = (client?: Client) => {
     // End round if team now empty (but not in practice mode)
     if (!lobby.round.practice) {
       if (
-        lobby.round.sheep.size === 0 ||
-        lobby.round.wolves.size === 0
-      ) endRound();
+        lobby.round.sheep.size === 0 || lobby.round.wolves.size === 0 ||
+        lobby.round.vip === client.id
+      ) endRound(Date.now() - lobby.round.start < 10_000);
     }
   }
 

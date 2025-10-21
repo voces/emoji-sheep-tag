@@ -22,7 +22,12 @@ import { buffs, items, prefabs } from "@/shared/data.ts";
 import { findAction } from "../util/actionLookup.ts";
 import { BUILD_REFUND_RATE, FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
-import { deductPlayerGold, getPlayerGold, grantPlayerGold } from "./player.ts";
+import {
+  deductPlayerGold,
+  getPlayer,
+  getPlayerGold,
+  grantPlayerGold,
+} from "./player.ts";
 import { addEntity, mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
@@ -45,6 +50,9 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
     (a) => a.type === "build" && a.unitType === type,
   )?.goldCost;
 
+  // Get handicap from owner's player entity
+  const ownerEntity = getPlayer(builder.owner);
+
   const temp = tempUnit(
     builder.owner!,
     type,
@@ -55,8 +63,10 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
       progress: prefabs[type].completionTime
         ? INITIAL_BUILDING_PROGRESS
         : undefined,
+      handicap: ownerEntity?.handicap,
     },
   );
+
   if (!isPathingEntity(temp)) {
     deductBuildGold(builder, type);
     return p.withoutEntity(builder, () => app.addEntity(temp));
@@ -128,8 +138,13 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
   return temp;
 };
 
-export const newUnit = (owner: string, type: string, x: number, y: number) =>
-  addEntity(tempUnit(owner, type, x, y));
+export const newUnit = (
+  owner: string,
+  type: string,
+  x: number,
+  y: number,
+  extra?: Partial<Entity>,
+) => addEntity(tempUnit(owner, type, x, y, extra));
 
 const processOrder = (entity: Entity, order: Order, queue: boolean) => {
   if (queue) entity.queue = [...entity.queue ?? [], order];
@@ -601,7 +616,14 @@ export const changePrefab = (
   const hpPercentage = e.maxHealth && e.health ? e.health / e.maxHealth : 1;
 
   const prev = mergeEntityWithPrefab({ id: e.id, prefab: e.prefab });
-  const next = mergeEntityWithPrefab({ id: e.id, prefab: prefabId });
+
+  // Pass handicap from owner's player entity to mergeEntityWithPrefab
+  const ownerEntity = e.owner ? getPlayer(e.owner) : undefined;
+  const next = mergeEntityWithPrefab({
+    id: e.id,
+    prefab: prefabId,
+    handicap: ownerEntity?.handicap,
+  });
 
   if (health === "proportional") {
     if (next.maxHealth) next.health = next.maxHealth * hpPercentage;

@@ -61,9 +61,13 @@ const onSheepDeath = (sheep: Entity) => {
     entity.health = 0;
   }
 
-  const isLastSheep = !getSheep().some((u) => u.health);
+  const lobby = lobbyContext.current;
 
-  if (isLastSheep && !isPractice()) return onLose();
+  const roundOver = lobby.settings.mode === "vip"
+    ? lobby.round?.vip === sheep.owner
+    : !getSheep().some((u) => u.health);
+
+  if (roundOver && !isPractice()) return onLose();
 
   const killingPlayerId = lookup(sheep.lastAttacker)?.owner;
   const killingPlayer = getPlayer(killingPlayerId);
@@ -71,7 +75,7 @@ const onSheepDeath = (sheep: Entity) => {
   const victimPlayer = getPlayer(sheep.owner);
 
   // Send kill message only if not the last sheep
-  if (!isLastSheep && !isPractice() && killingPlayer && victimPlayer) {
+  if (!roundOver && !isPractice() && killingPlayer && victimPlayer) {
     send({
       type: "chat",
       message: `${
@@ -103,7 +107,17 @@ const onSheepDeath = (sheep: Entity) => {
       if (attacker) orderAttack(attacker, newSheep);
     }
   } else {
-    newUnit(sheep.owner, "spirit", ...getSpiritSpawn());
+    const location: [number, number] = lobby.settings.mode === "vip"
+      ? [sheep.position?.x ?? 0, sheep.position?.y ?? 0]
+      : getSpiritSpawn();
+    newUnit(
+      sheep.owner,
+      "spirit",
+      ...location,
+      lobby.settings.mode === "vip"
+        ? { requiresPathing: 0, blocksPathing: 0, facing: sheep.facing }
+        : undefined,
+    );
 
     const dyingSheepGold = getPlayer(sheep.owner)?.gold ?? 0;
     if (dyingSheepGold > 0) {

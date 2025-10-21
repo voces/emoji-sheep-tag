@@ -77,6 +77,7 @@ import direCollar from "../assets/direCollar.svg" with { type: "text" };
 import crimsonArc from "../assets/crimsonArc.svg" with { type: "text" };
 import pause from "../assets/pause.svg" with { type: "text" };
 import cancel from "../assets/cancel.svg" with { type: "text" };
+import vip from "../assets/vip.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -146,6 +147,7 @@ export const svgs: Record<string, string> = {
   direCollar,
   pause,
   cancel,
+  vip,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -197,6 +199,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   swap: loadSvg(swap, 0.1, { layer: 2 }),
   fire: loadSvg(fire, 1, { layer: 2 }),
   crimsonArc: loadSvg(crimsonArc, 0.1, { layer: 2 }),
+  vip: loadSvg(vip, 0.03, { layer: 2 }),
   claw: loadSvg(claw, 0.05, { layer: 2 }),
   dash: loadSvg(dash, 0.1, { layer: 2 }),
   flag: loadSvg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),

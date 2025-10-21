@@ -9,6 +9,7 @@ import { setSome } from "../util/set.ts";
 import { addPlayerToPracticeGame } from "../api/player.ts";
 import { appContext } from "@/shared/context.ts";
 import { flushUpdates } from "../updates.ts";
+import { serializeLobbySettings } from "./lobbySettings.ts";
 
 export const zJoinLobby = z.object({
   type: z.literal("joinLobby"),
@@ -51,14 +52,7 @@ export const joinLobby = (
         sheepCount: client.sheepCount,
       }],
       updates: [],
-      lobbySettings: {
-        sheep: lobby.settings.sheep === "auto" ? 1 : lobby.settings.sheep,
-        autoSheep: lobby.settings.sheep === "auto",
-        time: lobby.settings.time === "auto" ? 60 : lobby.settings.time,
-        autoTime: lobby.settings.time === "auto",
-        startingGold: lobby.settings.startingGold,
-        income: lobby.settings.income,
-      },
+      lobbySettings: serializeLobbySettings(lobby, 1),
     });
     lobby.players.add(client);
     console.log(new Date(), "Client", client.id, "joined lobby", lobby.name);
@@ -84,14 +78,7 @@ export const joinLobby = (
       ),
       updates: Array.from(lobby.round?.ecs.entities ?? []),
       rounds: lobby.rounds,
-      lobbySettings: {
-        sheep: lobby.settings.sheep === "auto" ? 1 : lobby.settings.sheep,
-        autoSheep: lobby.settings.sheep === "auto",
-        time: lobby.settings.time === "auto" ? 60 : lobby.settings.time,
-        autoTime: lobby.settings.time === "auto",
-        startingGold: lobby.settings.startingGold,
-        income: lobby.settings.income,
-      },
+      lobbySettings: serializeLobbySettings(lobby),
     });
 
     // If joining an ongoing practice game, add player to sheep team and spawn units

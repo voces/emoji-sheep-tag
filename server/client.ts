@@ -173,6 +173,8 @@ const serializeLobbySettings = (
     ? idealSheep
     : Math.min(Math.max(lobby.settings.sheep, 1), Math.max(players - 1, 1));
   return {
+    mode: lobby.settings.mode,
+    vipHandicap: lobby.settings.vipHandicap,
     sheep,
     autoSheep: lobby.settings.sheep === "auto",
     time: lobby.settings.time === "auto"

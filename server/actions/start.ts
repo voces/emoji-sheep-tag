@@ -15,6 +15,7 @@ import { addEntity } from "@/shared/api/entity.ts";
 import { draftTeams, getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
 import { endRound } from "../lobbyApi.ts";
 import { spawnPracticeUnits } from "../api/player.ts";
+import { Entity } from "@/shared/types.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -103,11 +104,28 @@ export const start = (
     timeout(() => {
       const lobby2 = lobbyContext.current;
       if (!lobby2.round) return;
+      const sheepPool: Entity[] = [];
       for (const owner of sheep) {
         if (practice) {
-          spawnPracticeUnits(owner.id);
+          sheepPool.push(spawnPracticeUnits(owner.id));
         } else {
-          newUnit(owner.id, "sheep", ...getSheepSpawn());
+          sheepPool.push(newUnit(owner.id, "sheep", ...getSheepSpawn()));
+        }
+      }
+
+      if (lobby.settings.mode === "vip") {
+        const vip = sheepPool[Math.floor(Math.random() * sheepPool.length)];
+        vip.buffs = [...(vip.buffs ?? []), {
+          model: "vip",
+          modelOffset: { y: 0.5 },
+        }];
+        if (lobby.round) lobby.round.vip = vip.owner;
+
+        // Apply handicap to all non-VIP sheep players
+        for (const player of sheep) {
+          if (player.id !== vip.owner && player.playerEntity) {
+            player.playerEntity.handicap = lobby.settings.vipHandicap;
+          }
         }
       }
 
@@ -125,16 +143,15 @@ export const start = (
       timeout(() => {
         const lobby = lobbyContext.current;
         if (!lobby.round) return;
+
         if (!practice) {
+          lobby.round.start = Date.now();
+
           for (const owner of wolves) {
             newUnit(owner.id, "wolf", center.x, center.y);
           }
-        }
 
-        if (!practice) {
-          if (wolves.size) {
-            playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
-          }
+          playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
 
           const timeToWin = lobby.settings.time === "auto"
             ? getIdealTime(lobby.players.size, sheep.size)

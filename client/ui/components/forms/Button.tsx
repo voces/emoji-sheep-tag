@@ -6,6 +6,7 @@ export const Button = styled.button`
   color: ${({ theme }) => theme.colors.border};
   padding: 0 ${({ theme }) => theme.spacing.md};
   cursor: pointer;
+  outline: none;
 
   &:hover:not([disabled]),
   &.hover:not([disabled]) {

@@ -269,6 +269,7 @@ export const zUpdate = z.object({
   isPlayer: z.boolean().optional(),
   team: z.union([z.literal("sheep"), z.literal("wolf")]).optional(),
   gold: z.number().optional(),
+  handicap: z.number().optional(),
 
   position: zPoint.optional(),
   movementSpeed: z.number().optional(),
@@ -385,6 +386,8 @@ const zRound = z.object({
 });
 
 const zLobbySettings = z.object({
+  mode: z.union([z.literal("survival"), z.literal("vip")]),
+  vipHandicap: z.number(),
   sheep: z.number(),
   autoSheep: z.boolean(),
   time: z.number(),

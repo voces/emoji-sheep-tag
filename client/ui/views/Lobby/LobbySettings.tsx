@@ -38,6 +38,40 @@ const SettingsLabel = styled.label`
   font-weight: bold;
 `;
 
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 2px;
+  overflow: hidden;
+`;
+
+const ModeButton = styled(Button)<{ $active: boolean }>`
+  flex: 1;
+  border-radius: 0;
+  border: none;
+  background: ${({ $active, theme }) =>
+    $active
+      ? theme.colors.body
+      : `hsl(from ${theme.colors.body} h s calc(l - 20))`};
+
+  &:not(:last-child) {
+    border-right: 1px solid ${({ theme }) => theme.colors.border};
+  }
+
+  &:hover:not([disabled]) {
+    background: ${({ theme }) => theme.colors.body};
+    box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
+  }
+
+  &:disabled {
+    background: ${({ $active, theme }) =>
+      $active
+        ? `hsl(from ${theme.colors.body} h s calc(l - 20))`
+        : `hsl(from ${theme.colors.body} h s calc(l - 30))`};
+  }
+`;
+
 export const LobbySettings = () => {
   const localPlayer = useLocalPlayer();
   const lobbySettings = useReactiveVar(lobbySettingsVar);
@@ -51,6 +85,45 @@ export const LobbySettings = () => {
         <SettingsHeader>
           Game Settings
         </SettingsHeader>
+
+        <SettingsRow>
+          <SettingsLabel htmlFor="mode">
+            Mode
+          </SettingsLabel>
+          <ButtonGroup>
+            <ModeButton
+              type="button"
+              $active={lobbySettings.mode === "survival"}
+              onClick={() => send({ type: "lobbySettings", mode: "survival" })}
+              disabled={!localPlayer?.host}
+            >
+              Survival
+            </ModeButton>
+            <ModeButton
+              type="button"
+              $active={lobbySettings.mode === "vip"}
+              onClick={() => send({ type: "lobbySettings", mode: "vip" })}
+              disabled={!localPlayer?.host}
+            >
+              VIP
+            </ModeButton>
+          </ButtonGroup>
+        </SettingsRow>
+
+        {lobbySettings.mode === "vip" && (
+          <NumericSettingInput
+            id="vip-handicap"
+            label="Guard Handicap"
+            value={lobbySettings.vipHandicap}
+            min={0.01}
+            max={10}
+            step={0.01}
+            defaultValue="0.75"
+            disabled={!localPlayer?.host}
+            onChange={(value) =>
+              send({ type: "lobbySettings", vipHandicap: value })}
+          />
+        )}
 
         <NumericSettingInput
           id="sheep"

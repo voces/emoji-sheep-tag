@@ -30,7 +30,7 @@ export const Avatars = () => {
     }
 
     return grouped;
-  }, [selection.size]);
+  }, [Array.from(selection).map((e) => e.id).join("|")]);
 
   if (!selection.size) return null;
 

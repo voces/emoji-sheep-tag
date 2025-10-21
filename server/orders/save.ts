@@ -11,6 +11,7 @@ import { getPlayer, grantPlayerGold } from "../api/player.ts";
 import { newGoldText } from "../api/floatingText.ts";
 import { send } from "../lobbyApi.ts";
 import { colorName } from "@/shared/api/player.ts";
+import { lobbyContext } from "../contexts.ts";
 
 export const saveOrder = {
   id: "save",
@@ -59,7 +60,19 @@ export const saveOrder = {
       if (target.owner) {
         const spawn = isPractice()
           ? newUnit(target.owner, "spirit", ...getSpiritSpawn())
-          : newUnit(target.owner, "sheep", ...getSheepSpawn());
+          : newUnit(
+            target.owner,
+            "sheep",
+            ...(lobbyContext.current.settings.mode === "vip"
+              ? [target.position?.x ?? 0, target.position?.y ?? 0] as [
+                number,
+                number,
+              ]
+              : getSheepSpawn()),
+            lobbyContext.current.settings.mode === "vip"
+              ? { facing: target.facing }
+              : undefined,
+          );
 
         grantPlayerGold(target.owner, 20);
         if (spawn.position) {

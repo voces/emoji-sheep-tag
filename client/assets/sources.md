@@ -65,6 +65,7 @@
 - Dire Collar: self made
 - Pause: self made
 - https://www.svgrepo.com/svg/474763/cancel
+- https://www.svgrepo.com/svg/489938/vip
 
 # Audio
 

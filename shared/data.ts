@@ -92,7 +92,7 @@ export const items: Record<string, Item> = {
       "Adds +5 damage and creates a splash that deals +15 damage to nearby enemy structures.",
     icon: "fangs",
     gold: 250,
-    binding: ["KeyE"],
+    binding: ["KeyA"],
     buffs: [{
       damageBonus: 5,
       splashDamage: 15,
@@ -323,6 +323,7 @@ type DataEntity =
     | "radius"
     | "pathing"
     | "requiresPathing"
+    | "blocksPathing"
     | "tilemap"
     | "requiresTilemap"
     //
@@ -485,7 +486,7 @@ export const prefabs: Record<string, DataEntity> = {
         type: "auto",
         order: "swap",
         icon: "swap",
-        binding: ["KeyW"],
+        binding: ["KeyA"],
         manaCost: 40,
         castDuration: 1.5,
       },
@@ -532,6 +533,7 @@ export const prefabs: Record<string, DataEntity> = {
     sightRadius: 3,
     radius: 0.125,
     pathing: 8,
+    blocksPathing: 0,
     actions: [move, stop],
     targetedAs: ["spirit"],
     sounds: { what: ["spirit1", "spirit2", "spirit3"] },
@@ -787,6 +789,8 @@ export const prefabs: Record<string, DataEntity> = {
     sightRadius: 8,
     radius: 0.25,
     pathing: 16,
+    requiresPathing: 0,
+    blocksPathing: 0,
     maxHealth: 5,
     targetedAs: ["ward"],
     bounty: 4,
