@@ -113,23 +113,23 @@ export const start = (
         }
       }
 
-      if (lobby.settings.mode === "vip") {
-        const vip = sheepPool[Math.floor(Math.random() * sheepPool.length)];
-        vip.buffs = [...(vip.buffs ?? []), {
-          model: "vip",
-          modelOffset: { y: 0.5 },
-        }];
-        if (lobby.round) lobby.round.vip = vip.owner;
+      if (!practice) {
+        if (lobby.settings.mode === "vip") {
+          const vip = sheepPool[Math.floor(Math.random() * sheepPool.length)];
+          vip.buffs = [...(vip.buffs ?? []), {
+            model: "vip",
+            modelOffset: { y: 0.5 },
+          }];
+          if (lobby.round) lobby.round.vip = vip.owner;
 
-        // Apply handicap to all non-VIP sheep players
-        for (const player of sheep) {
-          if (player.id !== vip.owner && player.playerEntity) {
-            player.playerEntity.handicap = lobby.settings.vipHandicap;
+          // Apply handicap to all non-VIP sheep players
+          for (const player of sheep) {
+            if (player.id !== vip.owner && player.playerEntity) {
+              player.playerEntity.handicap = lobby.settings.vipHandicap;
+            }
           }
         }
-      }
 
-      if (!practice) {
         addEntity({
           isTimer: true,
           buffs: [{
