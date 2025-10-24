@@ -107,6 +107,14 @@ export const LobbySettings = () => {
             >
               VIP
             </ModeButton>
+            <ModeButton
+              type="button"
+              $active={lobbySettings.mode === "switch"}
+              onClick={() => send({ type: "lobbySettings", mode: "switch" })}
+              disabled={!localPlayer?.host}
+            >
+              Switch
+            </ModeButton>
           </ButtonGroup>
         </SettingsRow>
 

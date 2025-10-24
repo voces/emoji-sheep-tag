@@ -12,12 +12,14 @@ import { generateLobbyName } from "./util/lobbyNames.ts";
 
 type LobbySettings = {
   teams: Map<Client, Team>;
-  // /**
-  //  * - `"survival"`: classic ST
-  //  * - `"bulldog"`: sheep must reach the end
-  //  * - `"team_bulldog"`: all sheep must reach the end
-  //  */
-  mode: "survival" | "vip";
+  /**
+   * - `"survival"`: classic ST - sheep must survive until time runs out
+   * - `"vip"`: one random sheep is VIP, wolves win if VIP dies
+   * - `"switch"`: when a sheep dies, attacker becomes sheep, victim becomes wolf
+   * - `"bulldog"`: sheep must reach the end
+   * - `"katma"`: all sheep must reach the end
+   */
+  mode: "survival" | "vip" | "switch";
   /**
    * Health multiplier for sheep structures in VIP mode (0.01-10)
    */

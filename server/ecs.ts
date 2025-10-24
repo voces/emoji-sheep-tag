@@ -205,4 +205,5 @@ import("./systems/projectile.ts");
 import("./systems/queues.ts");
 import("./systems/regen.ts");
 import("./systems/tickDamage.ts");
+import("./systems/sheepTime.ts");
 import("./orders/index.ts");

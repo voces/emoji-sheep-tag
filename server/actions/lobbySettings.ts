@@ -8,7 +8,8 @@ import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
 // C->S
 export const zLobbySettings = z.object({
   type: z.literal("lobbySettings"),
-  mode: z.union([z.literal("survival"), z.literal("vip")]).optional(),
+  mode: z.union([z.literal("survival"), z.literal("vip"), z.literal("switch")])
+    .optional(),
   vipHandicap: z.number().min(0.01).max(10).transform((v) =>
     Math.round(v * 100) / 100
   ).optional(),

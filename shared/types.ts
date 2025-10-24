@@ -247,6 +247,7 @@ export type Entity = {
   team?: "sheep" | "wolf";
   gold?: number;
   handicap?: number;
+  sheepTime?: number;
 
   movementSpeed?: number;
   /** Radians per second */

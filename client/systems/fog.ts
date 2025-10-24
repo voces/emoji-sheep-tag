@@ -24,6 +24,11 @@ import { addSystem } from "@/shared/context.ts";
 import { getEntitiesInRange } from "./kd.ts";
 import { getPlayerTeam } from "@/shared/api/player.ts";
 
+const alwaysVisible = (entity: Entity) =>
+  entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
+  entity.id.startsWith("blueprint-") ||
+  entity.id === "selection-rectangle";
+
 type Cell = {
   visible: Set<Entity>;
   isVisible: boolean; // Cache for visible.size > 0
@@ -453,6 +458,12 @@ class VisibilityGrid {
     return entities;
   }
 
+  getVisionProvidingEntities(): Entity[] {
+    // Return a copy to avoid concurrent modification issues when caller
+    // modifies visibility during iteration
+    return Array.from(this.entityToCells.keys());
+  }
+
   reset() {
     // Clear all visibility tracking
     this.entityToCells.clear();
@@ -538,6 +549,7 @@ const entityOldPositions = new WeakMap<Entity, { x: number; y: number }>();
 addSystem({
   props: ["position"],
   onAdd: (entity) => {
+    if (alwaysVisible(entity)) return;
     addEntityToGrid(entity);
     entityOldPositions.set(entity, {
       x: entity.position.x,
@@ -545,6 +557,7 @@ addSystem({
     });
   },
   onChange: (entity) => {
+    if (alwaysVisible(entity)) return;
     // Remove from old position
     const oldPos = entityOldPositions.get(entity);
     if (oldPos) {
@@ -573,6 +586,7 @@ addSystem({
     });
   },
   onRemove: (entity) => {
+    if (alwaysVisible(entity)) return;
     removeEntityFromGrid(entity);
     entityOldPositions.delete(entity);
   },
@@ -589,12 +603,7 @@ export const resetFog = () => {
 
 // System to hide enemy units in fog (but keep structures visible once seen)
 const handleEntityVisibility = (entity: SystemEntity<"position">) => {
-  // These entities are always visible
-  if (
-    entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
-    entity.id.startsWith("blueprint-") ||
-    entity.id === "selection-rectangle"
-  ) return;
+  if (alwaysVisible(entity)) return;
   // Skip allied entities
   if (isAlliedWithLocalPlayer(entity)) {
     if (entity.hiddenByFog) delete entity.hiddenByFog;

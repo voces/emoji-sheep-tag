@@ -14,11 +14,12 @@ import { findPlayerUnit, getPlayerUnits } from "./playerEntities.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { isPractice } from "../api/st.ts";
 import { getTeams } from "@/shared/systems/teams.ts";
-import { addEntity } from "@/shared/api/entity.ts";
+import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { newSfx } from "../api/sfx.ts";
-import { isEnemy, iterateBuffs } from "@/shared/api/unit.ts";
+import { isEnemy, isStructure, iterateBuffs } from "@/shared/api/unit.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
 import { colorName } from "@/shared/api/player.ts";
+import { center } from "@/shared/map.ts";
 
 const onLose = () =>
   timeout(() => {
@@ -53,15 +54,97 @@ const onLose = () =>
     }, 250);
   }, 0.05);
 
+const handleSwitchDeath = (sheep: Entity) => {
+  if (!sheep.owner) return;
+
+  const lobby = lobbyContext.current;
+  const killingPlayerId = lookup(sheep.lastAttacker)?.owner;
+  if (!killingPlayerId) return;
+  const killingPlayer = getPlayer(killingPlayerId);
+  const victimPlayer = getPlayer(sheep.owner);
+
+  const attackerClient = Array.from(lobby.players).find((c) =>
+    c.id === killingPlayerId
+  );
+  const victimClient = Array.from(lobby.players).find((c) =>
+    c.id === sheep.owner
+  );
+
+  if (!attackerClient || !victimClient || !lobby.round) return;
+
+  // Switch the attacker to sheep team
+  lobby.round.sheep.add(attackerClient);
+  lobby.round.wolves.delete(attackerClient);
+
+  if (killingPlayer && lobby.settings.startingGold.sheep) {
+    killingPlayer.team = "sheep";
+    grantPlayerGold(killingPlayerId, lobby.settings.startingGold.sheep);
+  }
+
+  // Remove all attacker's wolves and foxes
+  for (const entity of getPlayerUnits(killingPlayerId)) {
+    if (entity.prefab === "wolf" || entity.prefab === "fox") {
+      removeEntity(entity);
+    }
+  }
+
+  // Spawn new sheep for attacker at victim's location
+  newUnit(
+    killingPlayerId,
+    "sheep",
+    sheep.position?.x ?? 0,
+    sheep.position?.y ?? 0,
+  );
+
+  // Switch the victim to wolf team
+  lobby.round.wolves.add(victimClient);
+  lobby.round.sheep.delete(victimClient);
+
+  if (victimPlayer && lobby.settings.startingGold.wolves) {
+    victimPlayer.team = "wolf";
+    grantPlayerGold(victimClient.id, lobby.settings.startingGold.wolves);
+  }
+
+  // Spawn wolf for victim at center
+  newUnit(victimClient.id, "wolf", center.x, center.y);
+
+  // Send switch message
+  if (killingPlayer && victimPlayer) {
+    send({
+      type: "chat",
+      message: `${
+        colorName({
+          color: killingPlayer.playerColor ?? "#ffffff",
+          name: killingPlayer.name ?? "<unknown>",
+        })
+      } killed ${
+        colorName({
+          color: victimPlayer.playerColor ?? "#ffffff",
+          name: victimPlayer.name ?? "<unknown>",
+        })
+      }`,
+    });
+  }
+
+  // Remove all victims's structures
+  for (const entity of getPlayerUnits(sheep.owner)) {
+    if (isStructure(entity)) entity.health = 0;
+  }
+};
+
 const onSheepDeath = (sheep: Entity) => {
+  const lobby = lobbyContext.current;
+
+  if (lobby.settings.mode === "switch" && !isPractice()) {
+    return handleSwitchDeath(sheep);
+  }
+
   if (!sheep.owner) return;
 
   for (const entity of getPlayerUnits(sheep.owner)) {
     if (entity.prefab === "sheep" || !entity.health) continue;
     entity.health = 0;
   }
-
-  const lobby = lobbyContext.current;
 
   const roundOver = lobby.settings.mode === "vip"
     ? lobby.round?.vip === sheep.owner

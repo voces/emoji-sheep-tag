@@ -18,6 +18,7 @@ import "./systems/easing.ts";
 import "./systems/indicators.ts";
 import "./systems/mirrors.ts";
 import "./systems/playerEntityReferences.ts";
+import "./systems/teams.ts";
 import "./systems/fog.ts";
 import "./systems/floatingText.ts";
 import "@/shared/systems/kd.ts";

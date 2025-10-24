@@ -153,23 +153,25 @@ export const start = (
 
           playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
 
-          const timeToWin = lobby.settings.time === "auto"
-            ? getIdealTime(lobby.players.size, sheep.size)
-            : lobby.settings.time;
+          if (lobby.settings.mode !== "switch") {
+            const timeToWin = lobby.settings.time === "auto"
+              ? getIdealTime(lobby.players.size, sheep.size)
+              : lobby.settings.time;
 
-          addEntity({
-            isTimer: true,
-            buffs: [{
-              expiration: "Time until sheep win:",
-              remainingDuration: timeToWin,
-              totalDuration: timeToWin,
-            }],
-          });
+            addEntity({
+              isTimer: true,
+              buffs: [{
+                expiration: "Time until sheep win:",
+                remainingDuration: timeToWin,
+                totalDuration: timeToWin,
+              }],
+            });
 
-          timeout(() => {
-            send({ type: "chat", message: "Sheep win!" });
-            endRound();
-          }, timeToWin);
+            timeout(() => {
+              send({ type: "chat", message: "Sheep win!" });
+              endRound();
+            }, timeToWin);
+          }
         }
       }, practice ? 0 : 1.8);
     }, practice ? 0 : 0.3);
