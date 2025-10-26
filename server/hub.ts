@@ -1,6 +1,7 @@
 import type { Client } from "./client.ts";
 import { ServerToClientMessage } from "../client/client.ts";
 import { lobbies } from "./lobby.ts";
+import { colors } from "@/shared/data.ts";
 
 // Set of clients in hub (lobby browser, not in any lobby)
 export const hubClients = new Set<Client>();
@@ -19,7 +20,8 @@ export const serializeLobbyList = () =>
     name: lobby.name!,
     playerCount: lobby.players.size,
     status: lobby.status,
-  }));
+    isOpen: lobby.players.size < colors.length,
+  })).sort((a, b) => b.playerCount - a.playerCount);
 
 /** Send updated lobby list to all hub clients */
 export const broadcastLobbyList = () => {

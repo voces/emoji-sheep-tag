@@ -1,6 +1,8 @@
 import { styled } from "styled-components";
 import { useState } from "react";
 import { colors } from "@/shared/data.ts";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
+import { playersVar } from "@/vars/players.ts";
 
 const Wrapper = styled.div`
   width: 1cap;
@@ -32,14 +34,18 @@ const PickerCard = styled.div`
   z-index: 1;
 `;
 
-const Color = styled.span<{ $color: string; $selected: boolean }>`
+const Color = styled.span<
+  { $color: string; $selected: boolean; $disabled: boolean }
+>`
   background-color: ${({ $color }) => $color};
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px solid ${({ $disabled, theme }) =>
+    $disabled ? "transparent" : theme.colors.border};
   box-shadow: ${({ $selected, theme }) =>
     $selected ? `${theme.colors.shadow} 1px 1px` : "none"};
 
   &.hover {
-    box-shadow: ${({ theme }) => theme.colors.border} 1px 1px;
+    box-shadow: ${({ theme, $disabled }) =>
+      $disabled ? "none" : `${theme.colors.border} 1px 1px`};
   }
 `;
 
@@ -51,6 +57,9 @@ export const ColorPicker = (
   },
 ) => {
   const [visible, setVisible] = useState(false);
+  const players = useReactiveVar(playersVar);
+  const takenColors = new Set(players.map((p) => p.color));
+
   return (
     <div style={{ position: "relative" }}>
       <Wrapper
@@ -59,17 +68,23 @@ export const ColorPicker = (
       />
       {visible && (
         <PickerCard onClick={(e) => e.stopPropagation()}>
-          {colors.map((c) => (
-            <Color
-              key={c}
-              $color={c}
-              $selected={c === value}
-              onClick={() => {
-                onChange(c);
-                setVisible(false);
-              }}
-            />
-          ))}
+          {colors.map((c) => {
+            const isTaken = takenColors.has(c) && c !== value;
+            return (
+              <Color
+                key={c}
+                $color={c}
+                $selected={c === value}
+                $disabled={isTaken}
+                onClick={() => {
+                  if (!isTaken) {
+                    onChange(c);
+                    setVisible(false);
+                  }
+                }}
+              />
+            );
+          })}
         </PickerCard>
       )}
     </div>

@@ -10,6 +10,7 @@ import { addPlayerToPracticeGame } from "../api/player.ts";
 import { appContext } from "@/shared/context.ts";
 import { flushUpdates } from "../updates.ts";
 import { serializeLobbySettings } from "./lobbySettings.ts";
+import { initializePlayer } from "../st/roundHelpers.ts";
 
 export const zJoinLobby = z.object({
   type: z.literal("joinLobby"),
@@ -27,6 +28,14 @@ export const joinLobby = (
     return;
   }
 
+  // Check if lobby is full (limited by available colors)
+  if (lobby.players.size >= colors.length) {
+    console.error(
+      `Lobby ${lobbyName} is full (${colors.length}/${colors.length} players)`,
+    );
+    return;
+  }
+
   // Remove from hub
   leaveHub(client);
 
@@ -37,6 +46,12 @@ export const joinLobby = (
     client.color = colors.find((c) =>
       !setSome(lobby.players, (p) => p.color === c)
     ) ?? client.color;
+
+    // Initialize the player in the smart drafting algorithm
+    const allPlayerIds = Array.from(lobby.players, (p) => p.id);
+    initializePlayer(client.id, allPlayerIds);
+
+    // Set display sheepCount to match others
     client.sheepCount = Math.max(
       ...Array.from(lobby.players, (p) => p.sheepCount),
     );

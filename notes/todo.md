@@ -5,7 +5,6 @@
     - Like team items, but don't like them being required...
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
-- Max 24 players
 - Allow custom action menus
 - Can hear through fog
 - Pathing falls over with lots of foxes
@@ -16,8 +15,6 @@
 - Multiple terrains
   - Editor actually changes pathing map
 - Modes
-  - President
-  - Switch
   - Bulldog
   - Kat'ma
 - Minimap

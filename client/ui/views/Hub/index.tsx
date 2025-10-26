@@ -5,6 +5,7 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { lobbiesVar } from "@/vars/lobbies.ts";
 import { Button } from "@/components/forms/Button.tsx";
 import { send } from "../../../messaging.ts";
+import { colors } from "@/shared/data.ts";
 
 const HubMain = styled(Positional)`
   position: absolute;
@@ -44,11 +45,14 @@ export const Hub = () => {
             <div>
               <span>{l.name}</span>{" "}
               <Hint>
-                {`(${l.playerCount} player${l.playerCount > 1 ? "s" : ""})`}
+                {!l.isOpen
+                  ? `(${l.playerCount}/${colors.length} - Full)`
+                  : `(${l.playerCount} player${l.playerCount > 1 ? "s" : ""})`}
               </Hint>
             </div>
             <Button
               onClick={() => send({ type: "joinLobby", lobbyName: l.name })}
+              disabled={!l.isOpen}
             >
               Join
             </Button>

@@ -459,6 +459,7 @@ const zLobby = z.object({
   name: z.string(),
   playerCount: z.number(),
   status: z.union([z.literal("lobby"), z.literal("playing")]),
+  isOpen: z.boolean(),
 });
 
 export type Lobby = z.infer<typeof zLobby>;

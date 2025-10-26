@@ -71,7 +71,7 @@ export const NameInput = (
             if (e.key === "Escape") handleCancel();
           }}
           autoFocus
-          maxLength={20}
+          maxLength={16}
         />
       </InputWrapper>
     );

@@ -927,28 +927,28 @@ export const tileDefs = [
 ];
 
 export const colors: string[] = [
-  "#ff0303",
-  "#0042ff",
-  "#1ce6b9",
-  "#540081",
-  "#fffc01",
-  "#feba0e",
-  "#20c000",
-  "#e55bb0",
-  "#959697",
-  "#7ebff1",
-  "#106246",
-  "#4e2a04",
-  "#9c0000",
-  "#0000c3",
-  "#00ebff",
-  "#bd00ff",
-  "#ecce87",
-  "#f7a58b",
-  "#bfff81",
-  "#dbb8eb",
-  "#4f5055",
-  "#ecf0ff",
-  "#00781e",
-  "#a56f34",
+  "#ff0303", // red
+  "#0042ff", // blue
+  "#1ce6b9", // cyan
+  "#540081", // purple
+  "#fffc01", // yellow
+  "#feba0e", // orange
+  "#20c000", // green
+  "#e55bb0", // pink
+  "#959697", // gray
+  "#7ebff1", // light blue
+  "#106246", // teal
+  "#4e2a04", // brown
+  "#9e3432", // dark red
+  "#001c49", // navy
+  "#1ad3de", // turquoise
+  "#bd00ff", // magenta
+  "#acbd99", // sage
+  "#c67c77", // salmon
+  "#b1f98b", // lime
+  "#8083be", // periwinkle
+  "#5b4c53", // charcoal
+  "#ecf0ff", // white
+  "#168717", // forest green
+  "#8d8f17", // olive
 ];

@@ -1,5 +1,6 @@
 import { Client } from "../client.ts";
 import { Lobby } from "../lobby.ts";
+import { smart } from "../util/smart.ts";
 
 export const getIdealSheep = (players: number) =>
   Math.max(Math.floor((players - 1) / 2), 1);
@@ -29,7 +30,7 @@ export const getIdealTime = (players: number, sheep: number) => {
   const sFloor = 10; // smoothness; smaller = sharper clamp
   const floored = floor + sFloor * Math.log1p(Math.exp((raw - floor) / sFloor));
 
-  const cap = 1200; // seconds (tweak or remove if you don’t want a cap)
+  const cap = 1200; // seconds (tweak or remove if you don't want a cap)
   const sCap = 5; // smaller ~ closer to min(floored, cap)
   const capped = -sCap *
     Math.log(Math.exp(-floored / sCap) + Math.exp(-cap / sCap)); // softmin
@@ -37,22 +38,36 @@ export const getIdealTime = (players: number, sheep: number) => {
   return Math.round(capped / 30) * 30;
 };
 
+// Create a global smart drafter instance that persists across rounds
+const smartDrafter = smart();
+
 export const draftTeams = (lobby: Lobby, desiredSheep: number) => {
+  const allPlayers = Array.from(lobby.players);
+  const allPlayerIds = allPlayers.map((p) => p.id);
+
+  // Use smart algorithm to select sheep
+  const sheepIds = smartDrafter.draft(allPlayerIds, desiredSheep);
+
+  // Convert IDs back to Client objects
   const sheep = new Set<Client>();
   const wolves = new Set<Client>();
-  const pool = new Set(lobby.players);
-  while (pool.size > 0 && (sheep.size < desiredSheep)) {
-    const scLowest = Math.min(...Array.from(pool, (p) => p.sheepCount));
-    const scPool = Array.from(pool).filter((p) => p.sheepCount === scLowest);
-    while (scPool.length && (sheep.size < desiredSheep)) {
-      const i = Math.floor(Math.random() * scPool.length);
-      sheep.add(scPool[i]);
-      scPool[i].sheepCount++;
-      pool.delete(scPool[i]);
-      scPool.splice(i, 1);
+
+  for (const player of allPlayers) {
+    if (sheepIds.includes(player.id)) {
+      sheep.add(player);
+      player.sheepCount++;
+    } else {
+      wolves.add(player);
     }
   }
-  for (const p of pool) wolves.add(p);
 
   return { sheep, wolves };
+};
+
+export const undoDraft = () => {
+  smartDrafter.undo();
+};
+
+export const initializePlayer = (playerId: string, allPlayerIds?: string[]) => {
+  smartDrafter.initializePlayer(playerId, allPlayerIds);
 };

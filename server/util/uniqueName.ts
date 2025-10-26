@@ -12,8 +12,14 @@ export const generateUniqueName = (
   existingClients: Set<Client>,
   currentClient: Client,
 ): string => {
+  // Remove invisible characters (zero-width chars, directional marks, etc.)
+  const filteredBaseName = baseName.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, "");
+
+  // Truncate to 16 characters
+  const truncatedBaseName = filteredBaseName.slice(0, 16);
+
   // Remove any existing numbering from the base name to avoid double numbering
-  const cleanBaseName = baseName.replace(/\s*\(\d+\)$/, "");
+  const cleanBaseName = truncatedBaseName.replace(/\s*\(\d+\)$/, "");
 
   // Check if the base name is available
   const isNameTaken = (name: string) => {
