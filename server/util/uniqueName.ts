@@ -13,7 +13,10 @@ export const generateUniqueName = (
   currentClient: Client,
 ): string => {
   // Remove invisible characters (zero-width chars, directional marks, etc.)
-  const filteredBaseName = baseName.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, "");
+  const filteredBaseName = baseName.replace(
+    /[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g,
+    "",
+  );
 
   // Truncate to 16 characters
   const truncatedBaseName = filteredBaseName.slice(0, 16);

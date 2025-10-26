@@ -21,9 +21,9 @@ export const pathable = (
 
 app.addSystem({
   props: ["position", "radius"],
-  onAdd: (e) => !e.vertexColor && pathingMap.addEntity(e),
-  onChange: (e) => !e.vertexColor && pathingMap.updateEntity(e),
-  onRemove: (e) => pathingMap.removeEntity(e),
+  onAdd: (e) => e.type !== "cosmetic" && pathingMap.addEntity(e),
+  onChange: (e) => e.type !== "cosmetic" && pathingMap.updateEntity(e),
+  onRemove: (e) => e.type !== "cosmetic" && pathingMap.removeEntity(e),
 });
 
 app.addSystem({

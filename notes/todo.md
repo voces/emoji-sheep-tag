@@ -17,6 +17,7 @@
 - Modes
   - Bulldog
   - Kat'ma
+  - Vamp
 - Minimap
 
 # Perf
