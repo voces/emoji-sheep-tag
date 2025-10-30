@@ -8,6 +8,7 @@ export const sounds: Record<string, string> = {
     new URL("./assets/construction1.opus", import.meta.url).pathname,
   error1: new URL("./assets/error1.opus", import.meta.url).pathname,
   explosion1: new URL("./assets/explosion1.opus", import.meta.url).pathname,
+  frostburst1: new URL("./assets/frostburst1.opus", import.meta.url).pathname,
   growl1: new URL("./assets/growl1.opus", import.meta.url).pathname,
   growl2: new URL("./assets/growl2.opus", import.meta.url).pathname,
   growl3: new URL("./assets/growl3.opus", import.meta.url).pathname,

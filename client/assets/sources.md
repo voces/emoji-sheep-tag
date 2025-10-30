@@ -98,6 +98,7 @@
 - howl2: https://freesound.org/people/Robinhood76/sounds/66538/
 - poof1: https://freesound.org/people/AuDRoger/sounds/471204/
 - treefall1: https://freesound.org/people/newlocknew/sounds/626734/
+- frostburst1: https://freesound.org/people/FartCTO/sounds/789840/
 
 ## To consider
 

@@ -229,6 +229,7 @@ export type Entity = {
     birth?: ReadonlyArray<string>;
     death?: ReadonlyArray<string>;
     what?: ReadonlyArray<string>;
+    projectileHit?: ReadonlyArray<string>;
   };
 
   position?: { readonly x: number; readonly y: number };

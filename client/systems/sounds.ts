@@ -10,8 +10,13 @@ app.addSystem({
   },
   onRemove: (e) => {
     if (stateVar() !== "playing") return;
-    if (typeof e.health === "number" && typeof e.maxHealth === "number") {
-      playEntitySound(e, ["death"], { volume: e.tilemap ? 0.3 : 0.6 });
+    if (e.sounds?.death) {
+      if (
+        typeof e.health === "number" && typeof e.maxHealth === "number" ||
+        e.projectile
+      ) {
+        playEntitySound(e, ["death"], { volume: e.tilemap ? 0.3 : 0.6 });
+      }
     }
   },
 });

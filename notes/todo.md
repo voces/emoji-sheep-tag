@@ -9,6 +9,7 @@
 - Can hear through fog
 - Pathing falls over with lots of foxes
   - Falls over when spam clicking movement orders
+  - Per-player pathing calc limits?
 - Unit should have full orientation (not be symmetric) - wolf & fox
 - When changing zoom, blueprints
 - Cannot remove something from selection
@@ -19,6 +20,11 @@
   - Kat'ma
   - Vamp
 - Minimap
+- Invul/spell immunity
+- Frost sounds
+- Double click select
+- Selection hint
+- Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
 
 # Perf
 

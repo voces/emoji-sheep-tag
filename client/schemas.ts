@@ -355,6 +355,7 @@ export const zUpdate = z.object({
       z.literal("death"),
       z.literal("what"),
       z.literal("ackAttack"),
+      z.literal("projectileHit"),
     ]),
     z.array(z.string()).readonly(),
   ).optional(),

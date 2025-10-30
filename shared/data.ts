@@ -722,7 +722,11 @@ export const prefabs: Record<string, DataEntity> = {
     tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
     maxHealth: 200,
     completionTime: 5,
-    sounds: { birth: ["construction1"], death: ["explosion1"] },
+    sounds: {
+      birth: ["construction1"],
+      death: ["explosion1"],
+      projectileHit: ["frostburst1"],
+    },
     actions: [
       {
         name: "Attack",

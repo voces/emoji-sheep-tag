@@ -62,6 +62,9 @@ export const tweenSwing = (e: Entity, delta: number): number => {
         isDoodad: true,
         model: e.attack.model,
         buffs: e.buffs, // TODO: No? Apply buffs from attackerId, though
+        sounds: e.sounds?.projectileHit
+          ? { death: e.sounds.projectileHit }
+          : undefined,
         projectile: {
           attackerId: e.id,
           target: { x: targetPosition.x, y: targetPosition.y },
