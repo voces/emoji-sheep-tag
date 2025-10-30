@@ -24,3 +24,8 @@ export const computeBlueprintColor = (
 
   return tempColor1.getHex();
 };
+
+console.log(new Color(0x66757F).multiply(new Color(0xd5d5ff)).getHexString());
+console.log(new Color(0xffffff).multiply(new Color(0xd5d5ff)).getHexString());
+console.log(new Color(0xCCD6DD).multiply(new Color(0xd5d5ff)).getHexString());
+console.log(new Color(0x292F33).multiply(new Color(0xd5d5ff)).getHexString());

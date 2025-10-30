@@ -232,6 +232,7 @@ const zBuff = z.object({
   particleMinOffsetRange: z.number().optional(),
   particleScaleRange: z.number().optional(),
   particleLifetime: z.number().optional(),
+  preventsBuffs: z.string().array().readonly().optional(),
 });
 
 const zItem = z.object({

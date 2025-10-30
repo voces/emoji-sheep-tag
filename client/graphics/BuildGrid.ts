@@ -17,6 +17,7 @@ export class BuildGrid extends Group {
   }
 
   private validateGrid(
+    builder: Entity,
     x: number,
     y: number,
     width: number,
@@ -25,26 +26,30 @@ export class BuildGrid extends Group {
     top: number,
     map: readonly number[],
   ) {
-    // Fast path: directly check terrain tiles without entity manipulation
-    for (let cy = 0; cy < height; cy++) {
-      for (let cx = 0; cx < width; cx++) {
-        const worldX = x + left / 4 + cx / 4;
-        const worldY = y + top / 4 + cy / 4;
-        const pathing = map[cy * width + cx];
+    if (!isPathingEntity(builder)) return;
 
-        const cellPathable = pathingMap.terrainPathablePoint(
-          worldX,
-          worldY,
-          pathing,
-        );
+    // Wrap entire loop in withoutEntity to exclude builder from collision checks
+    pathingMap.withoutEntity(builder, () => {
+      for (let cy = 0; cy < height; cy++) {
+        for (let cx = 0; cx < width; cx++) {
+          const worldX = x + left / 4 + cx / 4;
+          const worldY = y + top / 4 + cy / 4;
+          const pathing = map[cy * width + cx];
 
-        if (cellPathable) {
-          this.grid!.setColor(cx, height - cy - 1, 0, 1, 0, 0.3);
-        } else {
-          this.grid!.setColor(cx, height - cy - 1, 1, 0, 0, 0.3);
+          const cellPathable = pathingMap.terrainPathablePoint(
+            worldX,
+            worldY,
+            pathing,
+          );
+
+          if (cellPathable) {
+            this.grid!.setColor(cx, height - cy - 1, 0, 1, 0, 0.3);
+          } else {
+            this.grid!.setColor(cx, height - cy - 1, 1, 0, 0, 0.3);
+          }
         }
       }
-    }
+    });
   }
 
   updateForBlueprint(
@@ -96,8 +101,8 @@ export class BuildGrid extends Group {
     this.position.x = x;
     this.position.y = y;
 
-    // Fast terrain-only checks - no debouncing needed
-    this.validateGrid(x, y, width, height, left, top, map);
+    // Validate with builder excluded from collision checks
+    this.validateGrid(builder, x, y, width, height, left, top, map);
 
     this.visible = true;
   }

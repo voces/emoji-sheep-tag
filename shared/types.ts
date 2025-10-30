@@ -102,6 +102,7 @@ export type Buff = {
   readonly particleMinOffsetRange?: number;
   readonly particleScaleRange?: number;
   readonly particleLifetime?: number;
+  readonly preventsBuffs?: ReadonlyArray<string>;
 };
 
 type IconEffect = "mirror";
@@ -308,6 +309,7 @@ export type Entity = {
    * 4 blight
    * 8 spirit
    * 16 reserved
+   * 32 solid
    */
   pathing?: Pathing;
   /** Override `pathing` for require checks. */

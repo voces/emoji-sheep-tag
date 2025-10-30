@@ -537,10 +537,19 @@ export const applyAndConsumeBuffs = (
     // Apply buffs to target (from all buffs including item buffs)
     for (const buff of iterateBuffs(source)) {
       if (buff.impartedBuffOnAttack) {
-        target.buffs = [
-          ...(target.buffs ?? []),
-          buffs[buff.impartedBuffOnAttack],
-        ];
+        const buffToApply = buffs[buff.impartedBuffOnAttack];
+
+        // Check if target has immunity to this buff
+        const hasImmunity = (target.buffs ?? []).some((targetBuff) =>
+          targetBuff.preventsBuffs?.includes(buff.impartedBuffOnAttack!)
+        );
+
+        if (!hasImmunity) {
+          target.buffs = [
+            ...(target.buffs ?? []),
+            buffToApply,
+          ];
+        }
       }
     }
 

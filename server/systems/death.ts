@@ -20,6 +20,7 @@ import { isEnemy, isStructure, iterateBuffs } from "@/shared/api/unit.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
 import { colorName } from "@/shared/api/player.ts";
 import { center } from "@/shared/map.ts";
+import { PATHING_NONE } from "@/shared/constants.ts";
 
 const onLose = () =>
   timeout(() => {
@@ -198,7 +199,11 @@ const onSheepDeath = (sheep: Entity) => {
       "spirit",
       ...location,
       lobby.settings.mode === "vip"
-        ? { requiresPathing: 0, blocksPathing: 0, facing: sheep.facing }
+        ? {
+          requiresPathing: PATHING_NONE,
+          blocksPathing: PATHING_NONE,
+          facing: sheep.facing,
+        }
         : undefined,
     );
 

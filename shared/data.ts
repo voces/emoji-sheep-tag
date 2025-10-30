@@ -1,3 +1,12 @@
+import {
+  PATHING_BLIGHT,
+  PATHING_BUILDABLE,
+  PATHING_NONE,
+  PATHING_RESERVED,
+  PATHING_SOLID,
+  PATHING_SPIRIT,
+  PATHING_WALKABLE,
+} from "./constants.ts";
 import { Buff, Entity, Item, UnitDataAction } from "./types.ts";
 
 export const classificationGroups = {
@@ -335,6 +344,107 @@ type DataEntity =
     unique?: boolean;
   };
 
+const b = PATHING_WALKABLE | PATHING_BUILDABLE | PATHING_SOLID;
+
+const tilemap2x2 = {
+  map: Array(4).fill(b),
+  top: -1,
+  left: -1,
+  width: 2,
+  height: 2,
+};
+
+const tilemap2x2None = {
+  map: Array(4).fill(PATHING_NONE),
+  top: -1,
+  left: -1,
+  width: 2,
+  height: 2,
+};
+
+const tilemap2x2Spirit = {
+  map: Array(4).fill(b | PATHING_SPIRIT),
+  top: -1,
+  left: -1,
+  width: 2,
+  height: 2,
+};
+
+const tilemap2x4 = {
+  map: Array(8).fill(b),
+  top: -1,
+  left: -2,
+  width: 4,
+  height: 2,
+};
+
+const tilemap4x4 = {
+  map: Array(16).fill(b),
+  top: -2,
+  left: -2,
+  width: 4,
+  height: 4,
+};
+
+const tilemap4x4Blight = {
+  map: Array(16).fill(PATHING_BLIGHT),
+  top: -2,
+  left: -2,
+  width: 4,
+  height: 4,
+};
+
+const tilemap6x6 = {
+  map: Array(36).fill(b),
+  top: -3,
+  left: -3,
+  width: 6,
+  height: 6,
+};
+
+const tilemap8x8 = {
+  map: Array(64).fill(b),
+  top: -4,
+  left: -4,
+  width: 8,
+  height: 8,
+};
+
+const tilemapHayBale = {
+  map: [
+    [0, 0, b, b, b, b, 0, 0, 0, 0],
+    [0, 0, b, b, b, b, 0, 0, 0, 0],
+    [b, b, b, b, b, b, b, b, 0, 0],
+    [b, b, b, b, b, b, b, b, 0, 0],
+    [b, b, b, b, b, b, b, b, b, b],
+    [b, b, b, b, b, b, b, b, b, b],
+    [0, 0, b, b, b, b, b, b, b, b],
+    [0, 0, b, b, b, b, b, b, b, b],
+    [0, 0, 0, 0, b, b, b, b, 0, 0],
+    [0, 0, 0, 0, b, b, b, b, 0, 0],
+  ]
+    .flat(),
+  top: -5,
+  left: -5,
+  width: 10,
+  height: 10,
+};
+
+const tilemapWindmill = {
+  map: [
+    [b, b, b, b, b, b, b, b],
+    [b, b, b, b, b, b, b, b],
+    [b, b, b, b, b, b, b, b],
+    [b, b, b, b, b, b, b, b],
+    [b, b, b, b, 0, 0, 0, 0],
+    [b, b, b, b, 0, 0, 0, 0],
+  ].flat(),
+  top: -3,
+  left: -4,
+  width: 8,
+  height: 6,
+};
+
 export const prefabs: Record<string, DataEntity> = {
   sheep: {
     name: "Sheep",
@@ -342,7 +452,7 @@ export const prefabs: Record<string, DataEntity> = {
     turnSpeed: 15,
     sightRadius: 6,
     radius: 0.25,
-    pathing: 1,
+    pathing: PATHING_WALKABLE,
     actions: [
       move,
       stop,
@@ -439,7 +549,7 @@ export const prefabs: Record<string, DataEntity> = {
     turnSpeed: 10,
     sightRadius: 9,
     radius: 0.5,
-    pathing: 1,
+    pathing: PATHING_WALKABLE,
     mana: 60,
     maxMana: 100,
     manaRegen: 1,
@@ -468,9 +578,20 @@ export const prefabs: Record<string, DataEntity> = {
       stop,
       hold,
       {
+        name: "Shadowstep",
+        description:
+          "Creates a short lived illusion of your wolf to dodge incoming attacks and confuse sheep.",
+        type: "auto",
+        order: "dodge",
+        icon: "wolfDodge",
+        binding: ["KeyD"],
+        manaCost: 5,
+        buffDuration: 0.35,
+      },
+      {
         name: "Mirror Image",
         description:
-          "Creates a mirror image of your wolf which is capable of blocking the sheep and dealing minor damage to structures. Dispels all buffs.",
+          "Creates a weak copy of your wolf which is capable of blocking the sheep and dealing minor damage to structures. Dispels all buffs.",
         type: "auto",
         order: "mirrorImage",
         icon: "wolf",
@@ -532,8 +653,8 @@ export const prefabs: Record<string, DataEntity> = {
     turnSpeed: 5,
     sightRadius: 3,
     radius: 0.125,
-    pathing: 8,
-    blocksPathing: 0,
+    pathing: PATHING_SPIRIT,
+    blocksPathing: PATHING_NONE,
     actions: [move, stop],
     targetedAs: ["spirit"],
     sounds: { what: ["spirit1", "spirit2", "spirit3"] },
@@ -544,7 +665,7 @@ export const prefabs: Record<string, DataEntity> = {
     turnSpeed: 8,
     sightRadius: 6,
     radius: 0.5,
-    pathing: 1,
+    pathing: PATHING_WALKABLE,
     attack: {
       damage: 20,
       range: 0.09, // Sheep between two huts is 0.25; this gives a bit of wiggle
@@ -574,7 +695,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Hut",
     sightRadius: 4,
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap4x4,
     maxHealth: 120,
     completionTime: 0.7,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
@@ -603,7 +724,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "House",
     sightRadius: 4,
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap4x4,
     maxHealth: 220, // Tuned to be 3 hit with 1 claw and 2 hit with 2 claws
     completionTime: 1.1,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
@@ -616,7 +737,7 @@ export const prefabs: Record<string, DataEntity> = {
     modelScale: 0.5,
     sightRadius: 4,
     radius: 0.25,
-    tilemap: { map: Array(4).fill(3), top: -1, left: -1, width: 2, height: 2 },
+    tilemap: tilemap2x2,
     maxHealth: 20,
     completionTime: 0.5,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
@@ -627,7 +748,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Totem",
     sightRadius: 4,
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap4x4,
     maxHealth: 200,
     completionTime: 10,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
@@ -653,7 +774,7 @@ export const prefabs: Record<string, DataEntity> = {
     modelScale: 1.5,
     sightRadius: 4,
     radius: 0.75,
-    tilemap: { map: Array(36).fill(3), top: -3, left: -3, width: 6, height: 6 },
+    tilemap: tilemap6x6,
     maxHealth: 140,
     completionTime: 1,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
@@ -666,7 +787,7 @@ export const prefabs: Record<string, DataEntity> = {
     modelScale: 2,
     sightRadius: 4,
     radius: 1,
-    tilemap: { map: Array(64).fill(3), top: -4, left: -4, width: 8, height: 8 },
+    tilemap: tilemap8x8,
     maxHealth: 200,
     completionTime: 1.5,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
@@ -678,14 +799,8 @@ export const prefabs: Record<string, DataEntity> = {
     model: "hinduTemple",
     sightRadius: 4,
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
-    requiresTilemap: {
-      map: Array(16).fill(4),
-      top: -2,
-      left: -2,
-      width: 4,
-      height: 4,
-    },
+    tilemap: tilemap4x4,
+    requiresTilemap: tilemap4x4Blight,
     maxHealth: 15,
     completionTime: 3,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
@@ -697,7 +812,7 @@ export const prefabs: Record<string, DataEntity> = {
     model: "divinity",
     sightRadius: 4,
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap4x4,
     maxHealth: 10,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
@@ -707,7 +822,7 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Watchtower",
     sightRadius: 14,
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap4x4,
     maxHealth: 200,
     completionTime: 3,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
@@ -719,7 +834,7 @@ export const prefabs: Record<string, DataEntity> = {
     model: "castle",
     sightRadius: 6,
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap4x4,
     maxHealth: 200,
     completionTime: 5,
     sounds: {
@@ -768,14 +883,8 @@ export const prefabs: Record<string, DataEntity> = {
   fence: {
     name: "Fence",
     radius: 0.25,
-    tilemap: { map: Array(4).fill(11), top: -1, left: -1, width: 2, height: 2 },
-    requiresTilemap: {
-      map: Array(4).fill(0),
-      top: -1,
-      left: -1,
-      width: 2,
-      height: 2,
-    },
+    tilemap: tilemap2x2Spirit,
+    requiresTilemap: tilemap2x2None,
     isDoodad: true,
     type: "static",
   },
@@ -784,7 +893,7 @@ export const prefabs: Record<string, DataEntity> = {
     maxHealth: 1,
     healthRegen: -4,
     radius: 0,
-    pathing: 0,
+    pathing: PATHING_NONE,
     movementSpeed: 5,
     sounds: { birth: ["explosion1"] },
   },
@@ -792,9 +901,9 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Sentry Ward",
     sightRadius: 8,
     radius: 0.25,
-    pathing: 16,
-    requiresPathing: 0,
-    blocksPathing: 0,
+    pathing: PATHING_RESERVED,
+    requiresPathing: PATHING_NONE,
+    blocksPathing: PATHING_NONE,
     maxHealth: 5,
     targetedAs: ["ward"],
     bounty: 4,
@@ -803,7 +912,7 @@ export const prefabs: Record<string, DataEntity> = {
   tree: {
     name: "Tree",
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap2x2,
     isDoodad: true,
     maxHealth: 25,
     targetedAs: ["tree"],
@@ -817,101 +926,70 @@ export const prefabs: Record<string, DataEntity> = {
   rock: {
     name: "Rock",
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap2x2,
     isDoodad: true,
     type: "static",
   },
   well: {
     name: "Well",
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap2x2,
     isDoodad: true,
     type: "static",
   },
   scarecrow: {
     name: "Scarecrow",
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap2x2,
     isDoodad: true,
     type: "static",
   },
   barrel: {
     name: "Barrel",
     radius: 0.5,
-    tilemap: { map: Array(16).fill(3), top: -2, left: -2, width: 4, height: 4 },
+    tilemap: tilemap2x2,
     isDoodad: true,
     type: "static",
   },
   windmill: {
     name: "Windmill",
     radius: 0.875,
-    tilemap: {
-      map: [
-        [3, 3, 3, 3, 3, 3, 3, 3],
-        [3, 3, 3, 3, 3, 3, 3, 3],
-        [3, 3, 3, 3, 3, 3, 3, 3],
-        [3, 3, 3, 3, 3, 3, 3, 3],
-        [3, 3, 3, 3, 0, 0, 0, 0],
-        [3, 3, 3, 3, 0, 0, 0, 0],
-      ].flat(),
-      top: -3,
-      left: -4,
-      width: 8,
-      height: 6,
-    },
+    tilemap: tilemapWindmill,
     isDoodad: true,
     type: "static",
   },
   derelictHouse: {
     name: "Derelict House",
     radius: 0.75,
-    tilemap: { map: Array(36).fill(3), top: -3, left: -3, width: 6, height: 6 },
+    tilemap: tilemap6x6,
     isDoodad: true,
     type: "static",
   },
   hayBale: {
     name: "Hay Bale",
     radius: 1,
-    tilemap: {
-      map: [
-        [0, 0, 3, 3, 3, 3, 0, 0, 0, 0],
-        [0, 0, 3, 3, 3, 3, 0, 0, 0, 0],
-        [3, 3, 3, 3, 3, 3, 3, 3, 0, 0],
-        [3, 3, 3, 3, 3, 3, 3, 3, 0, 0],
-        [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-        [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-        [0, 0, 3, 3, 3, 3, 3, 3, 3, 3],
-        [0, 0, 3, 3, 3, 3, 3, 3, 3, 3],
-        [0, 0, 0, 0, 3, 3, 3, 3, 0, 0],
-        [0, 0, 0, 0, 3, 3, 3, 3, 0, 0],
-      ]
-        .flat(),
-      top: -5,
-      left: -5,
-      width: 10,
-      height: 10,
-    },
+    tilemap: tilemapHayBale,
     isDoodad: true,
     type: "static",
   },
   wood: {
     name: "Wood",
     radius: 0.375,
-    tilemap: { map: Array(8).fill(3), top: -1, left: -2, width: 4, height: 2 },
+    tilemap: tilemap2x4,
     isDoodad: true,
     type: "static",
   },
   grass: {
     name: "Grass",
     radius: 0.125,
-    pathing: 0,
+    pathing: PATHING_NONE,
     isDoodad: true,
     type: "cosmetic",
   },
   flowers: {
     name: "Flowers",
     radius: 0.125,
-    pathing: 0,
+    pathing: PATHING_NONE,
     isDoodad: true,
     type: "cosmetic",
   },
@@ -919,15 +997,19 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Tile",
     model: "square",
     radius: 1,
-    tilemap: { map: Array(64).fill(3), top: -4, left: -4, width: 8, height: 8 },
+    tilemap: tilemap8x8,
     isDoodad: true,
   },
 };
 
 export const tileDefs = [
-  { name: "Grass", pathing: 8, color: 0x6caa00 },
-  { name: "Pen", pathing: 6, color: 0x4b3061 },
-  { name: "Water", pathing: 10, color: 0x385670 },
+  { name: "Grass", pathing: PATHING_SPIRIT, color: 0x6caa00 },
+  { name: "Pen", pathing: PATHING_BUILDABLE | PATHING_BLIGHT, color: 0x4b3061 },
+  {
+    name: "Water",
+    pathing: PATHING_BUILDABLE | PATHING_SPIRIT,
+    color: 0x385670,
+  },
 ];
 
 export const colors: string[] = [

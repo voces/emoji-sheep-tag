@@ -78,6 +78,7 @@ import crimsonArc from "../assets/crimsonArc.svg" with { type: "text" };
 import pause from "../assets/pause.svg" with { type: "text" };
 import cancel from "../assets/cancel.svg" with { type: "text" };
 import vip from "../assets/vip.svg" with { type: "text" };
+import wolfDodge from "../assets/wolf-dodge.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -148,6 +149,7 @@ export const svgs: Record<string, string> = {
   pause,
   cancel,
   vip,
+  wolfDodge,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {
@@ -170,7 +172,7 @@ const collections: Record<string, InstancedGroup | undefined> = {
   // tractor: loadSvg(tractor, 1, { layer: 2 }),
 
   // Basic units and structures
-  sentry: loadSvg(sentry, 0.12),
+  sentry: loadSvg(sentry, 0.03),
   sheep: loadSvg(sheep, 1),
   hut: loadSvg(hut, 2),
   house: loadSvg(house, 3.4),

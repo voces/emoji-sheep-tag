@@ -19,3 +19,11 @@ export const SHOP_INTERACTION_RANGE = 2;
 export const UPGRADE_REFUND_RATE = 0.85;
 
 export const BUILD_REFUND_RATE = 0.8;
+
+export const PATHING_NONE = 0;
+export const PATHING_WALKABLE = 1;
+export const PATHING_BUILDABLE = 2;
+export const PATHING_BLIGHT = 4;
+export const PATHING_SPIRIT = 8;
+export const PATHING_RESERVED = 16; // pathing is required for collision; this layer should only be used for this
+export const PATHING_SOLID = 32;

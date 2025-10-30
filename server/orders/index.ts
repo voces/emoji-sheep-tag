@@ -14,6 +14,7 @@ import { locateSheepOrder } from "./locateSheep.ts";
 import { cancelUpgradeOrder } from "./cancelUpgrade.ts";
 import { selfDestructOrder } from "./selfDestruct.ts";
 import { swapOrder } from "./swap.ts";
+import { dodgeOrder } from "./dodge.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -43,6 +44,7 @@ registerOrder(locateSheepOrder);
 registerOrder(cancelUpgradeOrder);
 registerOrder(selfDestructOrder);
 registerOrder(swapOrder);
+registerOrder(dodgeOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);

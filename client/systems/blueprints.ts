@@ -45,8 +45,8 @@ const entitiesFromQueue = (e: Entity) => {
         owner: e.owner,
         position: { x: o.x, y: o.y },
         vertexColor: playerColor
-          ? computeBlueprintColor(playerColor, 0x00ff)
-          : 0x00ff,
+          ? computeBlueprintColor(playerColor, 0x0000ff)
+          : 0x0000ff,
         alpha: 0.75,
         isDoodad: true,
       });

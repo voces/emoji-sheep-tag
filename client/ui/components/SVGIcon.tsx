@@ -1,8 +1,32 @@
 import { useEffect, useRef } from "react";
+import { styled } from "styled-components";
 import { Color } from "three";
 import { svgs } from "../../systems/three.ts";
 import { computeBlueprintColor } from "../../util/colorHelpers.ts";
 import { getPlayer } from "@/vars/players.ts";
+
+const SvgContainer = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  & > div {
+    width: 100%;
+    height: 100%;
+  }
+
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+`;
+
+const Overlay = styled.div`
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: multiply;
+`;
 
 export const SvgIcon = ({
   icon,
@@ -21,6 +45,13 @@ export const SvgIcon = ({
   useEffect(() => {
     if (!ref.current) return;
     ref.current.innerHTML = svgs[icon];
+
+    // Ensure SVG maintains aspect ratio
+    const svg = ref.current.querySelector("svg");
+    if (svg) {
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    }
+
     if (!color) return;
     ref.current.querySelectorAll("[data-player]").forEach((n) => {
       if (!(n instanceof SVGElement)) return;
@@ -35,7 +66,7 @@ export const SvgIcon = ({
   if (!(icon in svgs)) return null;
 
   return (
-    <div>
+    <SvgContainer>
       <div
         ref={ref}
         {...rest}
@@ -45,17 +76,8 @@ export const SvgIcon = ({
           ...rest.style,
         }}
       />
-      {overlayStyle && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            mixBlendMode: "multiply",
-            ...overlayStyle,
-          }}
-        />
-      )}
-    </div>
+      {overlayStyle && <Overlay style={overlayStyle} />}
+    </SvgContainer>
   );
 };
 
