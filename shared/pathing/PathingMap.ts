@@ -291,6 +291,31 @@ export class PathingMap {
     return true;
   }
 
+  /**
+   * Fast terrain-only check for a single point.
+   * Just checks if the terrain tile allows the given pathing type.
+   */
+  terrainPathablePoint(
+    xWorld: number,
+    yWorld: number,
+    pathing: Pathing,
+  ): boolean {
+    const xTile = this.xWorldToTile(xWorld);
+    const yTile = this.yWorldToTile(yWorld);
+
+    if (
+      xTile < 0 ||
+      yTile < 0 ||
+      xTile >= this.widthMap ||
+      yTile >= this.heightMap
+    ) {
+      return false;
+    }
+
+    const tile = this.getTile(xTile, yTile);
+    return tile.pathable(pathing);
+  }
+
   pathable(entity: PathingEntity, xWorld?: number, yWorld?: number): boolean {
     const position = entity.position;
     if (xWorld === undefined) xWorld = position.x;

@@ -21,8 +21,6 @@
   - Vamp
 - Minimap
 - Invul/spell immunity
-- Frost sounds
-- Double click select
 - Selection hint
 - Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
 

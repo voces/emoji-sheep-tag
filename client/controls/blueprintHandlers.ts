@@ -141,6 +141,28 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
 };
 
 let updateBlueprintInterval = 0;
+
+const validateBlueprintAtPosition = (
+  builder: Entity,
+  prefab: string,
+  x: number,
+  y: number,
+) => {
+  const isValid = canBuild(builder, prefab, x, y);
+
+  if (!blueprint) return;
+
+  const localPlayer = getLocalPlayer();
+  const playerColor = localPlayer?.color;
+  const targetColor = isValid ? 0x0000ff : 0xff0000;
+
+  if (blueprint.owner) {
+    blueprint.vertexColor = playerColor
+      ? computeBlueprintColor(playerColor, targetColor)
+      : targetColor;
+  }
+};
+
 export const updateBlueprint = (x: number, y: number) => {
   if (!blueprint) return;
 
@@ -172,6 +194,7 @@ export const updateBlueprint = (x: number, y: number) => {
     );
   }
 
+  // Start interval to revalidate pathing when units move through the area
   if (!updateBlueprintInterval) {
     updateBlueprintInterval = setInterval(() => {
       if (!blueprint?.position) {
@@ -184,18 +207,13 @@ export const updateBlueprint = (x: number, y: number) => {
     }, 250);
   }
 
-  const localPlayer = getLocalPlayer();
-  const playerColor = localPlayer?.color;
-  const targetColor =
-    canBuild(builder, blueprint.prefab, normalizedX, normalizedY)
-      ? 0x0000ff
-      : 0xff0000;
-
-  if (blueprint.owner) {
-    blueprint.vertexColor = playerColor
-      ? computeBlueprintColor(playerColor, targetColor)
-      : targetColor;
-  }
+  // Fast validation - no debouncing needed
+  validateBlueprintAtPosition(
+    builder,
+    blueprint.prefab,
+    normalizedX,
+    normalizedY,
+  );
 };
 
 export const cancelBlueprint = () => {

@@ -17,5 +17,6 @@
     "svgs",
     "tilemap",
     "tweening"
-  ]
+  ],
+  "chatgpt.commentCodeLensEnabled": true
 }

@@ -11,8 +11,10 @@ import { playersVar } from "@/vars/players.ts";
 // Import the functions we want to test
 import {
   clearSelection,
+  DOUBLE_CLICK_SELECTION_RADIUS,
   selectAllFoxes,
   selectAllMirrors,
+  selectEntitiesByPrefabInRadius,
   selectEntity,
   selectPrimaryUnit,
 } from "./selection.ts";
@@ -94,6 +96,88 @@ describe("selection handlers", () => {
 
       expect((unit1 as Entity).selected).toBe(true);
       expect((unit2 as Entity).selected).toBe(true);
+    });
+  });
+
+  describe("selectEntitiesByPrefabInRadius", () => {
+    it("should select nearby entities sharing the same prefab and owner", () => {
+      const origin = app.addEntity({
+        id: "sheep-1",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 0, y: 0 },
+      });
+      const inRange = app.addEntity({
+        id: "sheep-2",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 3, y: 4 }, // distance 5
+      });
+      app.addEntity({
+        id: "sheep-3",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 20, y: 20 }, // outside radius
+      });
+      app.addEntity({
+        id: "sheep-enemy",
+        prefab: "sheep",
+        owner: "player-2",
+        position: { x: 2, y: 2 },
+      });
+      app.addEntity({
+        id: "wolf-1",
+        prefab: "wolf",
+        owner: "player-1",
+        position: { x: 1, y: 1 },
+      });
+
+      selectEntitiesByPrefabInRadius(
+        origin,
+        DOUBLE_CLICK_SELECTION_RADIUS,
+        false,
+      );
+
+      const selectedIds = Array.from(selection, (e) => e.id);
+      expect(selectedIds).toContain(origin.id);
+      expect(selectedIds).toContain(inRange.id);
+      expect(selectedIds).not.toContain("sheep-3");
+      expect(selectedIds).not.toContain("sheep-enemy");
+      expect(selectedIds).not.toContain("wolf-1");
+    });
+
+    it("should add to selection when additive flag is true", () => {
+      const existing = app.addEntity({
+        id: "wolf-existing",
+        prefab: "wolf",
+        owner: "player-1",
+        position: { x: 50, y: 50 },
+      });
+      selectEntity(existing);
+
+      const origin = app.addEntity({
+        id: "sheep-1",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 0, y: 0 },
+      });
+      const neighbor = app.addEntity({
+        id: "sheep-2",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 2, y: 1 },
+      });
+
+      selectEntitiesByPrefabInRadius(
+        origin,
+        DOUBLE_CLICK_SELECTION_RADIUS,
+        true,
+      );
+
+      const selectedIds = Array.from(selection, (e) => e.id);
+      expect(selectedIds).toContain(existing.id);
+      expect(selectedIds).toContain(origin.id);
+      expect(selectedIds).toContain(neighbor.id);
     });
   });
 

@@ -1,7 +1,7 @@
 import { Grid } from "./Grid.ts";
 import { prefabs } from "@/shared/data.ts";
 import { Entity } from "../ecs.ts";
-import { pathable, pathingMap } from "../systems/pathing.ts";
+import { pathingMap } from "../systems/pathing.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
 import { Group } from "three";
 
@@ -14,6 +14,37 @@ export class BuildGrid extends Group {
   constructor() {
     super();
     this.visible = false;
+  }
+
+  private validateGrid(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    left: number,
+    top: number,
+    map: readonly number[],
+  ) {
+    // Fast path: directly check terrain tiles without entity manipulation
+    for (let cy = 0; cy < height; cy++) {
+      for (let cx = 0; cx < width; cx++) {
+        const worldX = x + left / 4 + cx / 4;
+        const worldY = y + top / 4 + cy / 4;
+        const pathing = map[cy * width + cx];
+
+        const cellPathable = pathingMap.terrainPathablePoint(
+          worldX,
+          worldY,
+          pathing,
+        );
+
+        if (cellPathable) {
+          this.grid!.setColor(cx, height - cy - 1, 0, 1, 0, 0.3);
+        } else {
+          this.grid!.setColor(cx, height - cy - 1, 1, 0, 0, 0.3);
+        }
+      }
+    }
   }
 
   updateForBlueprint(
@@ -65,34 +96,8 @@ export class BuildGrid extends Group {
     this.position.x = x;
     this.position.y = y;
 
-    // Check each cell
-    pathingMap.withoutEntity(builder, () => {
-      for (let cy = 0; cy < height; cy++) {
-        for (let cx = 0; cx < width; cx++) {
-          const worldX = x + left / 4 + cx / 4;
-          const worldY = y + top / 4 + cy / 4;
-
-          if (
-            pathable({
-              id: "sample",
-              position: { x: worldX, y: worldY },
-              radius: 0.125,
-              tilemap: {
-                map: [map[cy * width + cx]],
-                top: 0,
-                left: 0,
-                width: 1,
-                height: 1,
-              },
-            })
-          ) {
-            this.grid!.setColor(cx, height - cy - 1, 0, 1, 0, 0.3);
-          } else {
-            this.grid!.setColor(cx, height - cy - 1, 1, 0, 0, 0.3);
-          }
-        }
-      }
-    });
+    // Fast terrain-only checks - no debouncing needed
+    this.validateGrid(x, y, width, height, left, top, map);
 
     this.visible = true;
   }

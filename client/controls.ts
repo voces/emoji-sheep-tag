@@ -21,8 +21,10 @@ import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { isSoftwareRenderer } from "./util/gpu.ts";
 import {
   clearSelection,
+  DOUBLE_CLICK_SELECTION_RADIUS,
   selectAllFoxes,
   selectAllMirrors,
+  selectEntitiesByPrefabInRadius,
   selectEntity,
   selectPrimaryUnit,
 } from "./api/selection.ts";
@@ -92,6 +94,10 @@ let selectionEntity: Entity | null = null;
 // Middle-click camera panning state
 let panGrabPixels: { x: number; y: number } | null = null;
 
+const DOUBLE_CLICK_THRESHOLD_MS = 300;
+let lastEntityClickTime = 0;
+let lastClickedEntity: Entity | null = null;
+
 // Mouse event handlers
 mouse.addEventListener("mouseButtonDown", (e) => {
   // Handle focus/blur for UI elements
@@ -133,12 +139,38 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 const handleLeftClick = (e: MouseButtonEvent) => {
   const blueprint = getBlueprint();
 
-  if (blueprint) handleBlueprintClick(e);
-  else if (getActiveOrder()) {
+  if (blueprint) {
+    handleBlueprintClick(e);
+    lastClickedEntity = null;
+    lastEntityClickTime = 0;
+  } else if (getActiveOrder()) {
     if (!handleTargetOrder(e)) playSound("ui", pick("error1"), { volume: 0.3 });
+    lastClickedEntity = null;
+    lastEntityClickTime = 0;
   } else if (e.intersects.size) {
-    selectEntity(e.intersects.first()!, !addToSelection());
-  } else dragStart = { x: e.world.x, y: e.world.y };
+    const clickedEntity = e.intersects.first()!;
+    const now = performance.now();
+    const additive = addToSelection();
+    const isDoubleClick = clickedEntity === lastClickedEntity &&
+      now - lastEntityClickTime <= DOUBLE_CLICK_THRESHOLD_MS;
+
+    if (isDoubleClick) {
+      selectEntitiesByPrefabInRadius(
+        clickedEntity,
+        DOUBLE_CLICK_SELECTION_RADIUS,
+        additive,
+      );
+    } else {
+      selectEntity(clickedEntity, !additive);
+    }
+
+    lastEntityClickTime = now;
+    lastClickedEntity = clickedEntity;
+  } else {
+    dragStart = { x: e.world.x, y: e.world.y };
+    lastClickedEntity = null;
+    lastEntityClickTime = 0;
+  }
 };
 
 const handleBlueprintClick = (e: MouseButtonEvent) => {

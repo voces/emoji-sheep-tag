@@ -8,6 +8,35 @@ import {
 } from "../systems/autoSelect.ts";
 import { closeMenusForUnit } from "@/vars/menuState.ts";
 import { focusGroup } from "./camera.ts";
+import { getEntitiesInRange } from "../systems/kd.ts";
+
+export const DOUBLE_CLICK_SELECTION_RADIUS = 6;
+
+export const selectEntitiesByPrefabInRadius = (
+  origin: Entity,
+  radius: number,
+  additive: boolean,
+) => {
+  if (!origin.prefab || !origin.position) return;
+
+  const nearbyMatchingEntities = getEntitiesInRange(
+    origin.position.x,
+    origin.position.y,
+    radius,
+  ).map((entity) => entity as Entity).filter((entity) =>
+    !!entity.prefab &&
+    !!entity.position &&
+    entity.prefab === origin.prefab &&
+    entity.owner === origin.owner &&
+    !entity.hiddenByFog
+  );
+
+  if (!nearbyMatchingEntities.length) return;
+
+  if (!additive) clearSelection();
+
+  for (const entity of nearbyMatchingEntities) selectEntity(entity, false);
+};
 
 export const selectEntity = (entity: Entity, clearCurrentSelection = true) => {
   if (clearCurrentSelection) {
