@@ -20,7 +20,6 @@
   - Kat'ma
   - Vamp
 - Minimap
-- Invul/spell immunity
 - Selection hint
 - Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
 

@@ -5,9 +5,11 @@ import { prefabs } from "@/shared/data.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";
 import Collapse from "@/components/layout/Collapse.tsx";
 import {
+  type ConflictInfo,
   defaultBindings,
+  detectMenuConflicts,
   getActionDisplayName,
-  type Shortcuts,
+  isDefaultBinding,
 } from "@/util/shortcutUtils.ts";
 import { HoverHighlight, HStack, VStack } from "@/components/layout/Layout.tsx";
 import { Input } from "@/components/forms/Input.tsx";
@@ -40,6 +42,15 @@ const HeaderIcon = styled.span`
   width: 2ch;
 `;
 
+const ConflictWarning = styled.div`
+  color: ${({ theme }) => theme.colors.orange};
+  font-size: 0.85em;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 165, 0, 0.1);
+  border-radius: 2px;
+`;
+
 interface ShortcutRowProps {
   actionKey: string;
   shortcut: string[];
@@ -47,6 +58,7 @@ interface ShortcutRowProps {
   isNested?: boolean;
   section: string;
   onSetBinding: (key: string, binding: string[]) => void;
+  conflict?: ConflictInfo;
 }
 
 const ShortcutRow = ({
@@ -56,39 +68,60 @@ const ShortcutRow = ({
   isNested = false,
   section,
   onSetBinding,
-}: ShortcutRowProps) => (
-  <ShortcutRowContainer $isNested={isNested}>
-    <ShortcutLabel>
-      {getActionDisplayName(actionKey, section)}
-    </ShortcutLabel>
-    <ShortcutInputContainer>
-      <ShortcutInput
-        value={formatShortcut(shortcut)}
-        onChange={() => {}}
-        onKeyDown={(e) => {
-          onSetBinding(
-            fullKey,
-            Array.from(new Set([...Object.keys(keyboard), e.code])),
-          );
-          e.preventDefault();
-        }}
-      />
-      <Button
-        type="button"
-        onClick={() =>
-          onSetBinding(fullKey, defaultBindings[section]?.[fullKey] ?? [])}
-        aria-label="Reset hotkey"
-      >
-        ↺
-      </Button>
-    </ShortcutInputContainer>
-  </ShortcutRowContainer>
-);
+  conflict,
+}: ShortcutRowProps) => {
+  const isDefault = isDefaultBinding(
+    section,
+    fullKey,
+    shortcut,
+    defaultBindings,
+  );
+
+  return (
+    <VStack style={{ gap: "4px" }}>
+      <ShortcutRowContainer $isNested={isNested}>
+        <ShortcutLabel>
+          {getActionDisplayName(actionKey, section)}
+        </ShortcutLabel>
+        <ShortcutInputContainer>
+          <ShortcutInput
+            value={formatShortcut(shortcut)}
+            onChange={() => {}}
+            onKeyDown={(e) => {
+              onSetBinding(
+                fullKey,
+                Array.from(new Set([...Object.keys(keyboard), e.code])),
+              );
+              e.preventDefault();
+            }}
+          />
+          <Button
+            type="button"
+            onClick={() =>
+              onSetBinding(fullKey, defaultBindings[section]?.[fullKey] ?? [])}
+            aria-label="Reset hotkey"
+            disabled={isDefault}
+          >
+            ↺
+          </Button>
+        </ShortcutInputContainer>
+      </ShortcutRowContainer>
+      {conflict && (
+        <ConflictWarning>
+          ⚠ Conflicts with:{" "}
+          {conflict.conflictsWith.map((c) =>
+            getActionDisplayName(c.actionKey, section)
+          ).join(", ")}
+        </ConflictWarning>
+      )}
+    </VStack>
+  );
+};
 
 interface SettingsSectionProps {
   section: string;
   shortcuts: Record<string, string[]>;
-  setBinding: (shortcut: string, binding: string[]) => Shortcuts;
+  setBinding: (shortcut: string, binding: string[]) => void;
   defaultOpen?: boolean;
 }
 
@@ -115,6 +148,28 @@ export const SettingsSection = (
     }
   }
 
+  // Detect conflicts within top-level shortcuts and within each menu separately
+  // Skip conflict detection for misc section
+  const topLevelConflicts = section === "misc"
+    ? new Map<string, ConflictInfo>()
+    : detectMenuConflicts(topLevelShortcuts);
+
+  const menuConflicts: Record<string, Map<string, ConflictInfo>> = {};
+  if (section !== "misc") {
+    for (const [menuName, menuBindings] of Object.entries(menuShortcuts)) {
+      menuConflicts[menuName] = detectMenuConflicts(menuBindings);
+    }
+  }
+
+  // Check if there are any conflicts (top-level or menu-level)
+  const hasConflicts = topLevelConflicts.size > 0 ||
+    Object.values(menuConflicts).some((menuConflict) => menuConflict.size > 0);
+
+  // Check if there are any non-default bindings (overrides)
+  const hasOverrides = Object.entries(shortcuts).some(([key, binding]) =>
+    !isDefaultBinding(section, key, binding, defaultBindings)
+  );
+
   const handleSetBinding = (key: string, binding: string[]) => {
     setBinding(key, binding);
   };
@@ -134,23 +189,27 @@ export const SettingsSection = (
           isNested={false}
           section={section}
           onSetBinding={handleSetBinding}
+          conflict={topLevelConflicts.get(key)}
         />,
       );
 
       // If this is a menu action, add its subactions right after it
       if (menuShortcuts[key]) {
+        const menuConflictsForKey = menuConflicts[key] ?? new Map();
         for (
           const [actionKey, menuShortcut] of Object.entries(menuShortcuts[key])
         ) {
+          const menuFullKey = `${key}.${actionKey}`;
           result.push(
             <ShortcutRow
-              key={`${key}.${actionKey}`}
+              key={menuFullKey}
               actionKey={actionKey}
               shortcut={menuShortcut}
-              fullKey={`${key}.${actionKey}`}
+              fullKey={menuFullKey}
               isNested
               section={section}
               onSetBinding={handleSetBinding}
+              conflict={menuConflictsForKey.get(actionKey)}
             />,
           );
         }
@@ -167,6 +226,10 @@ export const SettingsSection = (
           {isOpen ? "▼" : "▶"}
         </HeaderIcon>
         {section === "misc" ? "Misc" : prefabs[section].name ?? section}
+        {hasOverrides && (
+          <span style={{ marginLeft: "8px", opacity: 0.6 }}>*</span>
+        )}
+        {hasConflicts && <span style={{ marginLeft: "8px" }}>⚠</span>}
       </HoverHighlight>
       <Collapse isOpen={isOpen}>
         <VStack>

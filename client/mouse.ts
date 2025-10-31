@@ -29,7 +29,7 @@ export class MouseEvent extends Event {
     this.intersects = new ExtendedSet(mouse.intersects);
     this.element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
     this.elements = document.elementsFromPoint(mouse.pixels.x, mouse.pixels.y);
-    this.queue = checkShortcut(shortcutsVar().misc.queueModifier);
+    this.queue = checkShortcut(shortcutsVar().misc.queueModifier) > 0;
   }
 }
 

@@ -48,9 +48,39 @@ describe("keyboard handlers", () => {
       expect(typeof checkShortcut).toBe("function");
     });
 
-    it("should return boolean for basic shortcut checks", () => {
+    it("should return match quality (number) for basic shortcut checks", () => {
       const result = checkShortcut(["KeyA"], "KeyA");
-      expect(typeof result).toBe("boolean");
+      expect(typeof result).toBe("number");
+    });
+
+    it("should return 0 for non-matching shortcuts", () => {
+      const result = checkShortcut(["KeyA"], "KeyB");
+      expect(result).toBe(0);
+    });
+
+    it("should return shortcut length for matching shortcuts", () => {
+      handleKeyDown("KeyA");
+      expect(checkShortcut(["KeyA"], "KeyA")).toBe(1);
+
+      handleKeyDown("ControlLeft");
+      expect(checkShortcut(["ControlLeft", "KeyA"], "KeyA")).toBe(2);
+
+      clearKeyboard();
+    });
+
+    it("should prefer longer matches over shorter ones", () => {
+      handleKeyDown("ControlLeft");
+      handleKeyDown("KeyB");
+
+      // Both shortcuts match, but Ctrl+B (2 keys) should have higher quality than B (1 key)
+      const shortMatch = checkShortcut(["KeyB"], "KeyB");
+      const longMatch = checkShortcut(["ControlLeft", "KeyB"], "KeyB");
+
+      expect(shortMatch).toBe(1);
+      expect(longMatch).toBe(2);
+      expect(longMatch).toBeGreaterThan(shortMatch);
+
+      clearKeyboard();
     });
   });
 

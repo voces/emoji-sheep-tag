@@ -57,6 +57,19 @@ export const miscNames = {
   applyZoom: "Apply zoom",
 };
 
+export const isDefaultBinding = (
+  section: string,
+  fullKey: string,
+  shortcut: string[],
+  defaults: Shortcuts,
+): boolean => {
+  const defaultBinding = defaults[section]?.[fullKey];
+  if (!defaultBinding) return false;
+
+  return shortcut.length === defaultBinding.length &&
+    shortcut.every((key, i) => key === defaultBinding[i]);
+};
+
 export const defaultBindings: Shortcuts = {
   misc: {
     openCommandPalette: ["Slash"],
@@ -247,4 +260,71 @@ export const getActionDisplayName = (
 
     return key;
   }
+};
+
+export type ConflictInfo = {
+  actionKey: string;
+  conflictsWith: Array<{ actionKey: string; fullKey: string }>;
+};
+
+export const detectConflicts = (
+  shortcuts: Record<string, string[]>,
+): Map<string, ConflictInfo> => {
+  const conflicts = new Map<string, ConflictInfo>();
+  const bindingMap = new Map<string, string[]>();
+
+  // Build a map of bindings to action keys
+  for (const [key, binding] of Object.entries(shortcuts)) {
+    if (binding.length === 0) continue;
+
+    const bindingStr = binding.join("+");
+    const existing = bindingMap.get(bindingStr) ?? [];
+    existing.push(key);
+    bindingMap.set(bindingStr, existing);
+  }
+
+  // Find conflicts
+  for (const [, keys] of bindingMap.entries()) {
+    if (keys.length > 1) {
+      for (const key of keys) {
+        const conflictsWith = keys
+          .filter((k) => k !== key)
+          .map((k) => ({ actionKey: k, fullKey: k }));
+        conflicts.set(key, { actionKey: key, conflictsWith });
+      }
+    }
+  }
+
+  return conflicts;
+};
+
+export const detectMenuConflicts = (
+  menuShortcuts: Record<string, string[]>,
+): Map<string, ConflictInfo> => {
+  const conflicts = new Map<string, ConflictInfo>();
+  const bindingMap = new Map<string, string[]>();
+
+  // Build a map of bindings to action keys within this menu
+  for (const [key, binding] of Object.entries(menuShortcuts)) {
+    if (binding.length === 0) continue;
+
+    const bindingStr = binding.join("+");
+    const existing = bindingMap.get(bindingStr) ?? [];
+    existing.push(key);
+    bindingMap.set(bindingStr, existing);
+  }
+
+  // Find conflicts within the menu
+  for (const [, keys] of bindingMap.entries()) {
+    if (keys.length > 1) {
+      for (const key of keys) {
+        const conflictsWith = keys
+          .filter((k) => k !== key)
+          .map((k) => ({ actionKey: k, fullKey: key }));
+        conflicts.set(key, { actionKey: key, conflictsWith });
+      }
+    }
+  }
+
+  return conflicts;
 };

@@ -34,11 +34,12 @@ export const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
 export const checkShortcut = (
   shortcut: readonly string[],
   currentKey?: string,
-) => {
+): number => {
   const normalizedShortcut = normalizeKeys(shortcut);
-  return (!currentKey ||
+  const matches = (!currentKey ||
     normalizedShortcut.includes(normalizeKey(currentKey))) &&
     normalizedShortcut.every((s) => normalizedKeyboard[s]);
+  return matches ? normalizedShortcut.length : 0;
 };
 
 export const findActionForShortcut = (
@@ -47,6 +48,7 @@ export const findActionForShortcut = (
 ): { units: Entity[]; action: UnitDataAction | undefined } => {
   const units: Entity[] = [];
   let action: UnitDataAction | undefined;
+  let bestMatchQuality = 0;
 
   const currentMenu = getCurrentMenu();
   const menuUnit = currentMenu ? lookup[currentMenu.unitId] : undefined;
@@ -55,11 +57,20 @@ export const findActionForShortcut = (
     // Check menu actions
     for (const a of currentMenu.action.actions) {
       if (!a.binding) continue;
-      if (
-        checkShortcut(a.binding, e.code) && (!action || isSameAction(action, a))
-      ) {
-        action = a;
-        units.push(menuUnit);
+      const matchQuality = checkShortcut(a.binding, e.code);
+      if (matchQuality) {
+        if (matchQuality > bestMatchQuality) {
+          // Better match found, replace
+          bestMatchQuality = matchQuality;
+          action = a;
+          units.length = 0;
+          units.push(menuUnit);
+        } else if (
+          matchQuality === bestMatchQuality && isSameAction(action!, a)
+        ) {
+          // Same quality and same action type
+          units.push(menuUnit);
+        }
       }
     }
   } else {
@@ -68,16 +79,26 @@ export const findActionForShortcut = (
       // Check unit's base actions
       if (entity.actions) {
         for (const a of entity.actions) {
-          if (
-            a.binding && checkShortcut(a.binding, e.code) &&
-            (!action || isSameAction(action, a))
-          ) {
-            const localPlayer = getLocalPlayer();
-            if (
-              localPlayer && canPlayerExecuteAction(localPlayer.id, entity, a)
-            ) {
-              action = a;
-              units.push(entity);
+          if (a.binding) {
+            const matchQuality = checkShortcut(a.binding, e.code);
+            if (matchQuality) {
+              const localPlayer = getLocalPlayer();
+              if (
+                localPlayer && canPlayerExecuteAction(localPlayer.id, entity, a)
+              ) {
+                if (matchQuality > bestMatchQuality) {
+                  // Better match found, replace
+                  bestMatchQuality = matchQuality;
+                  action = a;
+                  units.length = 0;
+                  units.push(entity);
+                } else if (
+                  matchQuality === bestMatchQuality && isSameAction(action!, a)
+                ) {
+                  // Same quality and same action type
+                  units.push(entity);
+                }
+              }
             }
           }
         }
@@ -98,12 +119,23 @@ export const findActionForShortcut = (
               const binding = prefabShortcuts?.[actionKey] ??
                 itemAction.binding;
 
-              if (
-                binding && checkShortcut(binding, e.code) &&
-                (!action || isSameAction(action, itemAction))
-              ) {
-                action = itemAction;
-                units.push(entity);
+              if (binding) {
+                const matchQuality = checkShortcut(binding, e.code);
+                if (matchQuality) {
+                  if (matchQuality > bestMatchQuality) {
+                    // Better match found, replace
+                    bestMatchQuality = matchQuality;
+                    action = itemAction;
+                    units.length = 0;
+                    units.push(entity);
+                  } else if (
+                    matchQuality === bestMatchQuality &&
+                    isSameAction(action!, itemAction)
+                  ) {
+                    // Same quality and same action type
+                    units.push(entity);
+                  }
+                }
               }
             }
           }

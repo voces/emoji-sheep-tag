@@ -250,7 +250,7 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
 };
 
 const addToSelection = () =>
-  checkShortcut(shortcutsVar().misc.addToSelectionModifier);
+  checkShortcut(shortcutsVar().misc.addToSelectionModifier) > 0;
 
 mouse.addEventListener("mouseButtonUp", (e) => {
   if (e.button === "middle") panGrabPixels = null;
@@ -521,7 +521,7 @@ const shouldSkipGameShortcuts = (e: KeyboardEvent): boolean => {
 };
 
 const handleAction = (action: UnitDataAction, units: Entity[]) => {
-  const queue = checkShortcut(shortcutsVar().misc.queueModifier);
+  const queue = checkShortcut(shortcutsVar().misc.queueModifier) > 0;
 
   if (!queue) cancelOrder();
   else queued.state = true;
