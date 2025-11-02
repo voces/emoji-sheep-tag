@@ -45,6 +45,7 @@ export const Overlay = styled.div`
     transparent
   );
   backdrop-filter: blur(3px);
+  pointer-events: auto;
 `;
 
 export const Positional = styled.div`

@@ -376,13 +376,27 @@ mouse.addEventListener("mouseMove", (e) => {
   }
 
   // Handle hover classes
+  // Find if there's an overlay in the element stack
+  const overlayIndex = e.elements.findIndex((el) =>
+    el instanceof HTMLElement && el.dataset.overlay === "true"
+  );
+
+  // Filter elements: if overlay exists, only keep elements before it (on top of overlay)
+  const hoverableElements = overlayIndex >= 0
+    ? e.elements.slice(0, overlayIndex)
+    : e.elements;
+
+  // Remove hover from elements no longer in the hoverable set
   for (const el of hovers) {
-    if (!e.elements.includes(el)) el?.classList.remove("hover");
+    if (!hoverableElements.includes(el)) el?.classList.remove("hover");
   }
-  for (const el of e.elements) {
+
+  // Add hover to new hoverable elements
+  for (const el of hoverableElements) {
     if (!hovers.includes(el)) el.classList.add("hover");
   }
-  hovers = e.elements;
+
+  hovers = hoverableElements;
 
   updateCursor(true);
 });

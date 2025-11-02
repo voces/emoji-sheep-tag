@@ -60,7 +60,7 @@ export const SettingsSection = ({
   );
   const hasNonDefaultMenus = sectionMenus.some((menu) => !isDefaultMenu(menu));
   const hasDeletedDefaultMenus =
-    menuManagement.getDeletedDefaultMenus().length > 0;
+    menuManagement.restoration.getDeleted().length > 0;
   const hasOverrides = hasBindingOverrides || hasNonDefaultMenus ||
     hasDeletedDefaultMenus;
 
@@ -79,18 +79,18 @@ export const SettingsSection = ({
         section={section}
         onSetBinding={handleSetBinding}
         conflict={topLevelConflicts.get(key)}
-        editingMenuId={menuManagement.editingMenuId}
+        editingMenuId={menuManagement.editing.form?.id ?? null}
         isInMenu={findMenuForAction(key, sectionMenus)}
         onAddToMenu={(actionKey) =>
-          menuManagement.editingMenuId &&
-          menuManagement.addActionToMenu(
-            menuManagement.editingMenuId,
+          menuManagement.editing.form?.id &&
+          menuManagement.actions.add(
+            menuManagement.editing.form.id,
             actionKey,
           )}
         onRemoveFromMenu={(actionKey) =>
-          menuManagement.editingMenuId &&
-          menuManagement.removeActionFromMenu(
-            menuManagement.editingMenuId,
+          menuManagement.editing.form?.id &&
+          menuManagement.actions.remove(
+            menuManagement.editing.form.id,
             actionKey,
           )}
       />
@@ -132,20 +132,20 @@ export const SettingsSection = ({
             section={section}
             onSetBinding={handleSetBinding}
             conflict={menuConflictsForKey.get(actionKey)}
-            editingMenuId={menuManagement.editingMenuId}
+            editingMenuId={menuManagement.editing.form?.id ?? null}
             isInMenu={menuKey.startsWith("menu-")
               ? menuKey.replace("menu-", "")
               : null}
             onAddToMenu={(actionKey) =>
-              menuManagement.editingMenuId &&
-              menuManagement.addActionToMenu(
-                menuManagement.editingMenuId,
+              menuManagement.editing.form?.id &&
+              menuManagement.actions.add(
+                menuManagement.editing.form.id,
                 actionKey,
               )}
             onRemoveFromMenu={(actionKey) =>
-              menuManagement.editingMenuId &&
-              menuManagement.removeActionFromMenu(
-                menuManagement.editingMenuId,
+              menuManagement.editing.form?.id &&
+              menuManagement.actions.remove(
+                menuManagement.editing.form.id,
                 actionKey,
               )}
           />,
@@ -178,25 +178,25 @@ export const SettingsSection = ({
             <HStack>
               <Button
                 type="button"
-                onClick={menuManagement.createMenu}
+                onClick={menuManagement.creation.createMenu}
                 style={{ marginTop: "8px", alignSelf: "flex-start" }}
               >
                 + Create Menu
               </Button>
-              {menuManagement.hasTopLevelBuildActions() && (
+              {menuManagement.creation.hasTopLevelBuildActions() && (
                 <Button
                   type="button"
-                  onClick={menuManagement.createBuildMenu}
+                  onClick={menuManagement.creation.createBuildMenu}
                   style={{ marginTop: "8px", alignSelf: "flex-start" }}
                 >
                   + Create Build Menu
                 </Button>
               )}
-              {menuManagement.getDeletedDefaultMenus().map((menu) => (
+              {menuManagement.restoration.getDeleted().map((menu) => (
                 <Button
                   key={menu.id}
                   type="button"
-                  onClick={() => menuManagement.restoreDefaultMenu(menu.id)}
+                  onClick={() => menuManagement.restoration.restore(menu.id)}
                   style={{ marginTop: "8px", alignSelf: "flex-start" }}
                 >
                   ↻ Restore {menu.name}

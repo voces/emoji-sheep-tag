@@ -1,6 +1,7 @@
 import { styled } from "styled-components";
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import { Button } from "@/components/forms/Button.tsx";
+import { Dialog } from "@/components/layout/Dialog.tsx";
 import type { MenuConfig } from "@/vars/menus.ts";
 import { bindingsEqual, type ConflictInfo } from "@/util/shortcutUtils.ts";
 import { ShortcutRow } from "./ShortcutRow.tsx";
@@ -14,17 +15,23 @@ const MenuActionsContainer = styled(VStack)`
 `;
 
 type MenuManagement = {
-  editingMenuId: string | null;
-  editMenuForm: MenuConfig | null;
-  startEditMenu: (menu: MenuConfig) => void;
-  saveEditMenu: () => void;
-  cancelEditMenu: () => void;
-  deleteMenu: (menuId: string) => void;
-  addActionToMenu: (menuId: string, actionKey: string) => void;
-  removeActionFromMenu: (menuId: string, actionKey: string) => void;
-  updateEditMenuForm: (updates: Partial<MenuConfig>) => void;
-  restoreDefaultMenu: (menuId: string) => void;
-  getDeletedDefaultMenus: () => MenuConfig[];
+  editing: {
+    form: MenuConfig | null;
+    start: (menu: MenuConfig) => void;
+    save: () => void;
+    cancel: () => void;
+    updateForm: (updates: Partial<MenuConfig>) => void;
+  };
+  deletion: {
+    menuToDelete: string | null;
+    deleteMenu: (menuId: string) => void;
+    confirm: () => void;
+    cancel: () => void;
+  };
+  actions: {
+    add: (menuId: string, actionKey: string) => void;
+    remove: (menuId: string, actionKey: string) => void;
+  };
 };
 
 type MenuDisplayProps = {
@@ -46,7 +53,7 @@ export const MenuDisplay = ({
   menuManagement,
   onSetBinding,
 }: MenuDisplayProps) => {
-  const isEditing = menuManagement.editingMenuId === menu.id;
+  const isEditing = menuManagement.editing.form?.id === menu.id;
 
   // Menu binding key and default binding
   const menuBindingKey = `menu-${menu.id}`;
@@ -69,7 +76,7 @@ export const MenuDisplay = ({
             <div style={{ flex: 1 }}>{menu.name}</div>
             <Button
               type="button"
-              onClick={() => menuManagement.startEditMenu(menu)}
+              onClick={() => menuManagement.editing.start(menu)}
             >
               Edit
             </Button>
@@ -88,13 +95,13 @@ export const MenuDisplay = ({
         </>
       )}
 
-      {menuManagement.editMenuForm && isEditing && (
+      {menuManagement.editing.form && isEditing && (
         <MenuEditor
-          menuForm={menuManagement.editMenuForm}
-          onUpdateForm={menuManagement.updateEditMenuForm}
-          onSave={menuManagement.saveEditMenu}
-          onCancel={menuManagement.cancelEditMenu}
-          onDelete={() => menuManagement.deleteMenu(menu.id)}
+          menuForm={menuManagement.editing.form}
+          onUpdateForm={menuManagement.editing.updateForm}
+          onSave={menuManagement.editing.save}
+          onCancel={menuManagement.editing.cancel}
+          onDelete={() => menuManagement.deletion.deleteMenu(menu.id)}
         />
       )}
 
@@ -126,24 +133,40 @@ export const MenuDisplay = ({
                 section={section}
                 onSetBinding={onSetBinding}
                 conflict={conflict}
-                editingMenuId={menuManagement.editingMenuId}
+                editingMenuId={menuManagement.editing.form?.id ?? null}
                 isInMenu={menu.id}
                 onAddToMenu={(actionKey) =>
-                  menuManagement.editingMenuId &&
-                  menuManagement.addActionToMenu(
-                    menuManagement.editingMenuId,
+                  menuManagement.editing.form?.id &&
+                  menuManagement.actions.add(
+                    menuManagement.editing.form.id,
                     actionKey,
                   )}
                 onRemoveFromMenu={(actionKey) =>
-                  menuManagement.editingMenuId &&
-                  menuManagement.removeActionFromMenu(
-                    menuManagement.editingMenuId,
+                  menuManagement.editing.form?.id &&
+                  menuManagement.actions.remove(
+                    menuManagement.editing.form.id,
                     actionKey,
                   )}
               />
             );
           })}
       </MenuActionsContainer>
+
+      {menuManagement.deletion.menuToDelete === menu.id && (
+        <Dialog>
+          <VStack>
+            <div>Delete this menu?</div>
+            <HStack>
+              <Button onClick={menuManagement.deletion.confirm}>
+                Delete
+              </Button>
+              <Button onClick={menuManagement.deletion.cancel}>
+                Cancel
+              </Button>
+            </HStack>
+          </VStack>
+        </Dialog>
+      )}
     </VStack>
   );
 };

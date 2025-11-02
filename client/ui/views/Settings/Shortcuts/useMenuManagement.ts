@@ -11,20 +11,19 @@ export const useMenuManagement = (
   menus: MenuConfig[],
   section: string,
 ) => {
-  const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
   const [editMenuForm, setEditMenuForm] = useState<MenuConfig | null>(null);
+  const [menuToDelete, setMenuToDelete] = useState<string | null>(null);
 
   const startEditMenu = (menu: MenuConfig) => {
-    setEditingMenuId(menu.id);
     setEditMenuForm(menu);
   };
 
   const saveEditMenu = () => {
-    if (!editingMenuId || !editMenuForm?.name) return;
+    if (!editMenuForm?.name) return;
     // Update name, description, and icon from the form
     menusVar(
       menus.map((m) =>
-        m.id === editingMenuId
+        m.id === editMenuForm.id
           ? {
             ...m,
             name: editMenuForm.name,
@@ -34,34 +33,38 @@ export const useMenuManagement = (
           : m
       ),
     );
-    setEditingMenuId(null);
     setEditMenuForm(null);
   };
 
   const cancelEditMenu = () => {
-    if (!editingMenuId) return;
+    if (!editMenuForm) return;
     // Restore the original menu state from editMenuForm
     menusVar(
-      menus.map((m) => m.id === editingMenuId ? editMenuForm as MenuConfig : m),
+      menus.map((m) => m.id === editMenuForm.id ? editMenuForm : m),
     );
-    setEditingMenuId(null);
     setEditMenuForm(null);
   };
 
   const deleteMenu = (menuId: string) => {
-    // TODO: use an Overlay + Card (maybe make a Dialog component that combines this?)
-    if (confirm("Delete this menu?")) {
-      setEditingMenuId(null);
-      setEditMenuForm(null);
-      menusVar(menus.filter((m) => m.id !== menuId));
-    }
+    setMenuToDelete(menuId);
+  };
+
+  const confirmDeleteMenu = () => {
+    if (!menuToDelete) return;
+    setEditMenuForm(null);
+    menusVar(menus.filter((m) => m.id !== menuToDelete));
+    setMenuToDelete(null);
+  };
+
+  const cancelDeleteMenu = () => {
+    setMenuToDelete(null);
   };
 
   const addActionToMenu = (menuId: string, actionKey: string) => {
     // Don't allow adding Back action
     if (actionKey === "back" || actionKey.startsWith("menu-back-")) return;
 
-    if (editingMenuId === menuId) {
+    if (editMenuForm?.id === menuId) {
       const menu = menus.find((m) => m.id === menuId);
       if (!menu) return;
 
@@ -81,7 +84,7 @@ export const useMenuManagement = (
     // Don't allow removing Back action
     if (actionKey === "back" || actionKey.startsWith("menu-back-")) return;
 
-    if (editingMenuId === menuId) {
+    if (editMenuForm?.id === menuId) {
       const menu = menus.find((m) => m.id === menuId);
       if (!menu) return;
 
@@ -206,19 +209,31 @@ export const useMenuManagement = (
   };
 
   return {
-    editingMenuId,
-    editMenuForm,
-    startEditMenu,
-    saveEditMenu,
-    cancelEditMenu,
-    deleteMenu,
-    addActionToMenu,
-    removeActionFromMenu,
-    createMenu,
-    updateEditMenuForm,
-    restoreDefaultMenu,
-    getDeletedDefaultMenus,
-    createBuildMenu,
-    hasTopLevelBuildActions,
+    editing: {
+      form: editMenuForm,
+      start: startEditMenu,
+      save: saveEditMenu,
+      cancel: cancelEditMenu,
+      updateForm: updateEditMenuForm,
+    },
+    deletion: {
+      menuToDelete,
+      deleteMenu,
+      confirm: confirmDeleteMenu,
+      cancel: cancelDeleteMenu,
+    },
+    actions: {
+      add: addActionToMenu,
+      remove: removeActionFromMenu,
+    },
+    creation: {
+      createMenu,
+      createBuildMenu,
+      hasTopLevelBuildActions,
+    },
+    restoration: {
+      restore: restoreDefaultMenu,
+      getDeleted: getDeletedDefaultMenus,
+    },
   };
 };

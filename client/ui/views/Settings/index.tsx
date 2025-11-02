@@ -2,18 +2,14 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useState } from "react";
 import { styled } from "styled-components";
 import { showSettingsVar } from "@/vars/showSettings.ts";
-import { HStack, Overlay, VStack } from "@/components/layout/Layout.tsx";
-import { Card } from "@/components/layout/Card.tsx";
+import { HStack, VStack } from "@/components/layout/Layout.tsx";
+import { Dialog } from "@/components/layout/Dialog.tsx";
 import { Button } from "@/components/forms/Button.tsx";
 import { Gameplay } from "./Gameplay.tsx";
 import { Shortcuts } from "./Shortcuts/Shortcuts.tsx";
 import { Audio } from "./Audio.tsx";
 
-const SettingsDialog = styled(Card)`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+const SettingsDialog = styled(Dialog)`
   width: 700px;
   max-width: calc(100% - 16px);
   height: 80vh;
@@ -88,46 +84,44 @@ export const Settings = () => {
   if (!showSettings) return null;
 
   return (
-    <Overlay>
-      <SettingsDialog>
-        <SettingsHeader>
-          <Header>Settings</Header>
-          <CloseButton
-            type="button"
-            onClick={() => showSettingsVar(false)}
-            title="Close settings"
+    <SettingsDialog>
+      <SettingsHeader>
+        <Header>Settings</Header>
+        <CloseButton
+          type="button"
+          onClick={() => showSettingsVar(false)}
+          title="Close settings"
+        >
+          ✕
+        </CloseButton>
+      </SettingsHeader>
+      <SettingsContent>
+        <TabsContainer>
+          <Tab
+            $active={activeTab === "gameplay"}
+            onClick={() => setActiveTab("gameplay")}
           >
-            ✕
-          </CloseButton>
-        </SettingsHeader>
-        <SettingsContent>
-          <TabsContainer>
-            <Tab
-              $active={activeTab === "gameplay"}
-              onClick={() => setActiveTab("gameplay")}
-            >
-              Gameplay
-            </Tab>
-            <Tab
-              $active={activeTab === "shortcuts"}
-              onClick={() => setActiveTab("shortcuts")}
-            >
-              Shortcuts
-            </Tab>
-            <Tab
-              $active={activeTab === "audio"}
-              onClick={() => setActiveTab("audio")}
-            >
-              Audio
-            </Tab>
-          </TabsContainer>
-          <TabContent>
-            {activeTab === "gameplay" && <Gameplay />}
-            {activeTab === "shortcuts" && <Shortcuts />}
-            {activeTab === "audio" && <Audio />}
-          </TabContent>
-        </SettingsContent>
-      </SettingsDialog>
-    </Overlay>
+            Gameplay
+          </Tab>
+          <Tab
+            $active={activeTab === "shortcuts"}
+            onClick={() => setActiveTab("shortcuts")}
+          >
+            Shortcuts
+          </Tab>
+          <Tab
+            $active={activeTab === "audio"}
+            onClick={() => setActiveTab("audio")}
+          >
+            Audio
+          </Tab>
+        </TabsContainer>
+        <TabContent>
+          {activeTab === "gameplay" && <Gameplay />}
+          {activeTab === "shortcuts" && <Shortcuts />}
+          {activeTab === "audio" && <Audio />}
+        </TabContent>
+      </SettingsContent>
+    </SettingsDialog>
   );
 };
