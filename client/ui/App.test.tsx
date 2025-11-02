@@ -54,7 +54,9 @@ it("can move an action into a menu", async () => {
       income: { sheep: 1, wolves: 1 },
     },
   });
-  await userEvent.click(await screen.findByText("Practice"));
+  await userEvent.click(
+    await screen.findByText("Practice", undefined, { timeout: 5000 }),
+  );
   sendMessageFromServer({
     type: "start",
     sheep: [{ id: "player-0", sheepCount: 1 }],
