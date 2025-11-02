@@ -97,6 +97,37 @@ describe("selection handlers", () => {
       expect((unit1 as Entity).selected).toBe(true);
       expect((unit2 as Entity).selected).toBe(true);
     });
+
+    it("should toggle selection when toggle is true and entity is selected", () => {
+      const unit1 = app.addEntity({
+        id: "unit-1",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 5, y: 5 },
+      });
+      const unit2 = app.addEntity({
+        id: "unit-2",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 10, y: 10 },
+      });
+
+      // Select both units
+      selectEntity(unit1);
+      selectEntity(unit2, false);
+      expect((unit1 as Entity).selected).toBe(true);
+      expect((unit2 as Entity).selected).toBe(true);
+
+      // Toggle unit1 off
+      selectEntity(unit1, false, true);
+      expect((unit1 as Entity).selected).toBeUndefined();
+      expect((unit2 as Entity).selected).toBe(true);
+
+      // Toggle unit1 back on
+      selectEntity(unit1, false, true);
+      expect((unit1 as Entity).selected).toBe(true);
+      expect((unit2 as Entity).selected).toBe(true);
+    });
   });
 
   describe("selectEntitiesByPrefabInRadius", () => {
@@ -178,6 +209,54 @@ describe("selection handlers", () => {
       expect(selectedIds).toContain(existing.id);
       expect(selectedIds).toContain(origin.id);
       expect(selectedIds).toContain(neighbor.id);
+    });
+
+    it("should toggle selection when toggle flag is true", () => {
+      const origin = app.addEntity({
+        id: "sheep-1",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 0, y: 0 },
+      });
+      app.addEntity({
+        id: "sheep-2",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 2, y: 1 },
+      });
+      app.addEntity({
+        id: "sheep-3",
+        prefab: "sheep",
+        owner: "player-1",
+        position: { x: 1, y: 2 },
+      });
+
+      // Select all sheep
+      selectEntitiesByPrefabInRadius(
+        origin,
+        DOUBLE_CLICK_SELECTION_RADIUS,
+        false,
+      );
+      expect(selection.size).toBe(3);
+
+      // Toggle them off (with additive=true and toggle=true)
+      // Since some entities are selected, should deselect all
+      selectEntitiesByPrefabInRadius(
+        origin,
+        DOUBLE_CLICK_SELECTION_RADIUS,
+        true,
+        true,
+      );
+      expect(selection.size).toBe(0);
+
+      // Toggle them back on (no entities are selected, so should select all)
+      selectEntitiesByPrefabInRadius(
+        origin,
+        DOUBLE_CLICK_SELECTION_RADIUS,
+        true,
+        true,
+      );
+      expect(selection.size).toBe(3);
     });
   });
 

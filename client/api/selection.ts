@@ -16,6 +16,7 @@ export const selectEntitiesByPrefabInRadius = (
   origin: Entity,
   radius: number,
   additive: boolean,
+  toggle = false,
 ) => {
   if (!origin.prefab || !origin.position) return;
 
@@ -35,10 +36,26 @@ export const selectEntitiesByPrefabInRadius = (
 
   if (!additive) clearSelection();
 
-  for (const entity of nearbyMatchingEntities) selectEntity(entity, false);
+  // When toggling, check if any of the nearby entities are selected
+  // If any are selected, deselect all. Otherwise, select all.
+  const shouldDeselect = toggle &&
+    nearbyMatchingEntities.some((e) => e.selected);
+
+  for (const entity of nearbyMatchingEntities) {
+    if (shouldDeselect && entity.selected) {
+      closeMenusForUnit(entity.id);
+      delete (entity as Entity).selected;
+    } else if (!shouldDeselect) {
+      entity.selected = true;
+    }
+  }
 };
 
-export const selectEntity = (entity: Entity, clearCurrentSelection = true) => {
+export const selectEntity = (
+  entity: Entity,
+  clearCurrentSelection = true,
+  toggle = false,
+) => {
   if (clearCurrentSelection) {
     // Close menus for units being deselected
     for (const deselectedEntity of selection) {
@@ -47,7 +64,13 @@ export const selectEntity = (entity: Entity, clearCurrentSelection = true) => {
       delete (deselectedEntity as Entity).selected;
     }
   }
-  entity.selected = true;
+
+  if (toggle && entity.selected) {
+    closeMenusForUnit(entity.id);
+    delete (entity as Entity).selected;
+  } else {
+    entity.selected = true;
+  }
 };
 
 export const selectAllFoxes = () => {

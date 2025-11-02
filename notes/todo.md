@@ -11,7 +11,6 @@
   - Per-player pathing calc limits?
 - Unit should have full orientation (not be symmetric) - wolf & fox
 - When changing zoom, blueprints
-- Cannot remove something from selection
 - Multiple terrains
   - Editor actually changes pathing map
 - Modes
@@ -21,7 +20,6 @@
 - Minimap
 - Selection hint
 - Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
-- User pings overwrite Sheep Locator
 
 # Perf
 

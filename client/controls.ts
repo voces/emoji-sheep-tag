@@ -159,9 +159,10 @@ const handleLeftClick = (e: MouseButtonEvent) => {
         clickedEntity,
         DOUBLE_CLICK_SELECTION_RADIUS,
         additive,
+        additive,
       );
     } else {
-      selectEntity(clickedEntity, !additive);
+      selectEntity(clickedEntity, !additive, additive);
     }
 
     lastEntityClickTime = now;
@@ -299,8 +300,9 @@ mouse.addEventListener("mouseButtonUp", (e) => {
 
     // Select all units within the rectangle
     if (toSelect.length > 0) {
-      if (!addToSelection()) clearSelection();
-      for (const unit of toSelect) selectEntity(unit, false);
+      const toggle = addToSelection();
+      if (!toggle) clearSelection();
+      for (const unit of toSelect) selectEntity(unit, false, toggle);
     }
 
     // Clean up selection rectangle

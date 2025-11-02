@@ -16,7 +16,10 @@ export const mapPing = (
 ) => {
   if (!client.lobby?.round) return;
 
-  const prev = findLastPlayerUnit(client.id, (e) => e.prefab === "indicator");
+  const prev = findLastPlayerUnit(
+    client.id,
+    (e) => e.prefab === "indicator" && !e.playerColor,
+  );
   if (prev) removeEntity(prev);
 
   const pingEntity = addEntity({
