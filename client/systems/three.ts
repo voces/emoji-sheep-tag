@@ -79,6 +79,7 @@ import pause from "../assets/pause.svg" with { type: "text" };
 import cancel from "../assets/cancel.svg" with { type: "text" };
 import vip from "../assets/vip.svg" with { type: "text" };
 import wolfDodge from "../assets/wolf-dodge.svg" with { type: "text" };
+import construction from "../assets/construction.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -150,6 +151,7 @@ export const svgs: Record<string, string> = {
   cancel,
   vip,
   wolfDodge,
+  construction,
 };
 
 const collections: Record<string, InstancedGroup | undefined> = {

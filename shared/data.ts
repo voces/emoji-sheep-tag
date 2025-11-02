@@ -67,14 +67,6 @@ const hold: UnitDataAction = {
   binding: ["KeyH"],
 };
 
-const back: UnitDataAction = {
-  name: "Back",
-  type: "auto",
-  order: "back",
-  icon: "cancel",
-  binding: ["Backquote"],
-};
-
 const selfDestruct: UnitDataAction = {
   name: "Self destruct",
   type: "auto",
@@ -624,23 +616,14 @@ export const prefabs: Record<string, DataEntity> = {
         range: 5,
         castDuration: 0.3,
       },
-      {
-        name: "Shop",
-        description: "View items available for purchase.",
-        type: "menu",
-        binding: ["KeyB"],
-        actions: [
-          back,
-          ...Object.values(items).map((item): UnitDataAction => ({
-            name: `Purchase ${item.name}`,
-            description: item.description,
-            type: "purchase",
-            itemId: item.id,
-            binding: item.binding,
-            goldCost: item.gold,
-          })),
-        ],
-      },
+      ...Object.values(items).map((item): UnitDataAction => ({
+        name: `Purchase ${item.name}`,
+        description: item.description,
+        type: "purchase",
+        itemId: item.id,
+        binding: item.binding,
+        goldCost: item.gold,
+      })),
     ],
     sounds: { what: ["growl1", "growl2", "growl4"], ackAttack: ["growl3"] },
   },
@@ -820,7 +803,7 @@ export const prefabs: Record<string, DataEntity> = {
   },
   watchtower: {
     name: "Watchtower",
-    sightRadius: 14,
+    sightRadius: 15,
     radius: 0.5,
     tilemap: tilemap4x4,
     maxHealth: 200,
@@ -912,7 +895,7 @@ export const prefabs: Record<string, DataEntity> = {
   tree: {
     name: "Tree",
     radius: 0.5,
-    tilemap: tilemap2x2,
+    tilemap: tilemap4x4,
     isDoodad: true,
     maxHealth: 25,
     targetedAs: ["tree"],
@@ -926,28 +909,28 @@ export const prefabs: Record<string, DataEntity> = {
   rock: {
     name: "Rock",
     radius: 0.5,
-    tilemap: tilemap2x2,
+    tilemap: tilemap4x4,
     isDoodad: true,
     type: "static",
   },
   well: {
     name: "Well",
     radius: 0.5,
-    tilemap: tilemap2x2,
+    tilemap: tilemap4x4,
     isDoodad: true,
     type: "static",
   },
   scarecrow: {
     name: "Scarecrow",
     radius: 0.5,
-    tilemap: tilemap2x2,
+    tilemap: tilemap4x4,
     isDoodad: true,
     type: "static",
   },
   barrel: {
     name: "Barrel",
     radius: 0.5,
-    tilemap: tilemap2x2,
+    tilemap: tilemap4x4,
     isDoodad: true,
     type: "static",
   },

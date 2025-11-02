@@ -5,7 +5,6 @@
     - Like team items, but don't like them being required...
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
-- Allow custom action menus
 - Can hear through fog
 - Pathing falls over with lots of foxes
   - Falls over when spam clicking movement orders
@@ -22,6 +21,7 @@
 - Minimap
 - Selection hint
 - Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
+- User pings overwrite Sheep Locator
 
 # Perf
 

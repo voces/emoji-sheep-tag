@@ -66,6 +66,8 @@
 - Pause: self made
 - https://www.svgrepo.com/svg/474763/cancel
 - https://www.svgrepo.com/svg/489938/vip
+- https://www.svgrepo.com/svg/429961/maintenance-repair-construction
+- Shadowstep: self made
 
 # Audio
 

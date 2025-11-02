@@ -2,7 +2,7 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useEffect, useState } from "react";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { SettingsSection } from "./SettingsSection.tsx";
-import { SettingsPanelContainer } from "./commonStyles.tsx";
+import { SettingsPanelContainer } from "../commonStyles.tsx";
 import {
   defaultBindings,
   getActionDisplayName,
@@ -12,17 +12,39 @@ import { styled } from "styled-components";
 import { Button } from "@/components/forms/Button.tsx";
 import { VStack } from "@/components/layout/Layout.tsx";
 import { prefabs } from "@/shared/data.ts";
+import { menusVar } from "@/vars/menus.ts";
 
 const filterNonDefaultBindings = (sections: typeof defaultBindings) => {
   const filtered: typeof defaultBindings = {};
+  const allMenus = menusVar();
 
   for (const [section, shortcuts] of Object.entries(sections)) {
     const defaultSection = defaultBindings[section];
     if (!defaultSection) continue;
 
     const nonDefaultShortcuts: Record<string, string[]> = {};
+    const sectionMenus = allMenus.filter((m) => m.prefabs.includes(section));
 
     for (const [key, binding] of Object.entries(shortcuts)) {
+      // Check if this is a menu binding key
+      if (key.startsWith("menu-")) {
+        // Find the menu config for this key
+        // Menu binding keys are "menu-{menuId}" where menuId could be "shop" or "menu-1762044747868"
+        const menuId = key.substring(5); // Remove "menu-" prefix
+        const menu = sectionMenus.find((m) => m.id === menuId);
+        if (menu) {
+          const defaultMenuBinding = menu.binding ?? [];
+          // Only persist if binding differs from menu's default
+          const isDefault = binding.length === defaultMenuBinding.length &&
+            binding.every((k, i) => k === defaultMenuBinding[i]);
+          if (!isDefault) {
+            nonDefaultShortcuts[key] = binding;
+          }
+        }
+        // If menu doesn't exist, don't persist this binding at all
+        continue;
+      }
+
       // Only persist if binding differs from default
       if (!isDefaultBinding(section, key, binding, defaultBindings)) {
         nonDefaultShortcuts[key] = binding;

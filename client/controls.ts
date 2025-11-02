@@ -388,7 +388,7 @@ mouse.addEventListener("mouseMove", (e) => {
 });
 
 // Keyboard event handlers
-globalThis.addEventListener("keydown", (e) => {
+document.addEventListener("keydown", (e) => {
   handleKeyDown(e.code);
 
   if (showSettingsVar()) return false;
@@ -526,7 +526,6 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   if (!queue) cancelOrder();
   else queued.state = true;
 
-  // Filter units by mana
   const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
   const unitsTotal = units.length;
   units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
@@ -536,7 +535,6 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
     return;
   }
 
-  // Check gold for build/purchase
   if (action.type === "build" || action.type === "purchase") {
     const goldCost = action.goldCost ?? 0;
     if (goldCost > 0 && units.length > 0) {
@@ -550,7 +548,6 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
     }
   }
 
-  // Check if action is disabled during construction
   units = units.filter((unit) => {
     const isConstructing = typeof unit.progress === "number";
     if (!isConstructing) return true;
@@ -599,17 +596,18 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
         itemId: action.itemId,
         queue,
       });
-      closeAllMenus();
       break;
     case "menu":
       playSound("ui", pick("click1", "click2", "click3", "click4"), {
         volume: 0.1,
       });
       openMenu(action, units[0].id);
-      break;
+      return;
     default:
       absurd(action);
   }
+
+  closeAllMenus();
 };
 
 const handleAutoAction = (
@@ -643,7 +641,7 @@ const handleAutoAction = (
   });
 };
 
-globalThis.addEventListener("keyup", (e) => {
+document.addEventListener("keyup", (e) => {
   handleKeyUp(e.code);
   if (
     queued.state &&

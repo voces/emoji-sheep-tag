@@ -1,19 +1,44 @@
 import { Entity } from "../ecs.ts";
 import { UnitDataAction } from "@/shared/types.ts";
+import { absurd } from "@/shared/util/absurd.ts";
+import type { MenuActionRef } from "@/vars/menus.ts";
+
+/**
+ * Converts a MenuActionRef to its shortcut key for filtering.
+ * This function exhaustively handles all MenuActionRef types.
+ */
+export const menuActionRefToKey = (ref: MenuActionRef): string => {
+  switch (ref.type) {
+    case "action":
+      return ref.actionKey;
+    case "purchase":
+      return `purchase-${ref.itemId}`;
+    default:
+      return absurd(ref);
+  }
+};
 
 export const actionToShortcutKey = (
   action: NonNullable<Entity["actions"]>[number],
   menuContext?: string,
-) => {
-  const baseKey = action.type === "build"
-    ? `build-${action.unitType}`
-    : action.type === "purchase"
-    ? `purchase-${action.itemId}`
-    : action.type === "menu"
-    ? action.name.toLowerCase().replace(/\s+/g, "-")
-    : action.type === "upgrade"
-    ? `upgrade-${action.prefab}`
-    : action.order;
+): string => {
+  const baseKey: string = (() => {
+    switch (action.type) {
+      case "build":
+        return `build-${action.unitType}`;
+      case "purchase":
+        return `purchase-${action.itemId}`;
+      case "menu":
+        return action.name.toLowerCase().replace(/\s+/g, "-");
+      case "upgrade":
+        return `upgrade-${action.prefab}`;
+      case "auto":
+      case "target":
+        return action.order;
+      default:
+        return absurd(action);
+    }
+  })();
 
   return menuContext ? `${menuContext}.${baseKey}` : baseKey;
 };

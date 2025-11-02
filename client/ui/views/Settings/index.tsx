@@ -6,7 +6,7 @@ import { HStack, Overlay, VStack } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
 import { Button } from "@/components/forms/Button.tsx";
 import { Gameplay } from "./Gameplay.tsx";
-import { Shortcuts } from "./Shortcuts.tsx";
+import { Shortcuts } from "./Shortcuts/Shortcuts.tsx";
 import { Audio } from "./Audio.tsx";
 
 const SettingsDialog = styled(Card)`

@@ -1,21 +1,27 @@
 import "@/client-testing/setup.ts";
-import { describe, it } from "@std/testing/bdd";
+import { afterEach, describe, it } from "@std/testing/bdd";
 import { render, screen } from "@testing-library/react";
 import { expect } from "@std/expect";
 import { ActionBar, selectionVar } from "./ActionBar.tsx";
 import { playersVar } from "@/vars/players.ts";
 import { menuStateVar } from "@/vars/menuState.ts";
 import { Wrapper } from "../../Wrapper.tsx";
+import { menusVar } from "@/vars/menus.ts";
+import { items } from "@/shared/data.ts";
+import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
+import {
+  createTestPlayer,
+  createTestSelection,
+} from "@/client-testing/test-helpers.ts";
 
 describe("ActionBar", () => {
+  afterEach(() => {
+    // Reset all vars to their initial state
+    __testing_reset_all_vars();
+  });
+
   it("should not render when no selection", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    playersVar([createTestPlayer()]);
     selectionVar(undefined);
 
     const { container } = render(<ActionBar />);
@@ -23,18 +29,14 @@ describe("ActionBar", () => {
   });
 
   it("should not render when selection is not owned by local player", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
-    selectionVar({
-      id: "unit-0",
-      owner: "player-1", // Different from local player
-      actions: [{ type: "auto", name: "Test", order: "some-order" }],
-    });
+    playersVar([createTestPlayer()]);
+    selectionVar(
+      createTestSelection({
+        id: "unit-0",
+        owner: "player-1", // Different from local player
+        actions: [{ type: "auto", name: "Test", order: "some-order" }],
+      }),
+    );
 
     const { container } = render(<ActionBar />);
     expect(container.firstChild).toBeNull();
@@ -347,5 +349,131 @@ describe("ActionBar", () => {
 
     const button = screen.getByLabelText("Buy Item");
     expect(button.getAttribute("aria-pressed")).toBe("false"); // Purchase actions are never current
+  });
+
+  it("should show purchase action at top-level when removed from menu", () => {
+    // Setup: Start with foxToken in the shop menu
+    menusVar([
+      {
+        id: "shop",
+        name: "Shop",
+        description: "View items available for purchase.",
+        icon: undefined,
+        binding: ["KeyB"],
+        prefabs: ["wolf"],
+        actions: [
+          { type: "action", actionKey: "back" },
+          ...Object.keys(items).map((itemId) => ({
+            type: "purchase" as const,
+            itemId,
+          })),
+        ],
+      },
+    ]);
+
+    playersVar([
+      createTestPlayer({ entity: { id: "player-entity", gold: 200 } }),
+    ]);
+
+    selectionVar(
+      createTestSelection({
+        actions: [
+          { type: "auto", name: "Stop", order: "stop" },
+          {
+            type: "purchase",
+            name: "Purchase Fox Token",
+            itemId: "foxToken",
+            goldCost: 140,
+            binding: [],
+          },
+        ],
+      }),
+    );
+
+    // Initially, foxToken is in the shop menu, so it shouldn't appear at top-level
+    const { rerender } = render(<ActionBar />, { wrapper: Wrapper });
+    expect(() => screen.getByLabelText("Purchase Fox Token")).toThrow();
+
+    // Now remove foxToken from the shop menu
+    menusVar([
+      {
+        id: "shop",
+        name: "Shop",
+        description: "View items available for purchase.",
+        icon: undefined,
+        binding: ["KeyB"],
+        prefabs: ["wolf"],
+        actions: [
+          { type: "action", actionKey: "back" },
+          // foxToken removed - all other items still present
+          ...Object.keys(items)
+            .filter((id) => id !== "foxToken")
+            .map((itemId) => ({
+              type: "purchase" as const,
+              itemId,
+            })),
+        ],
+      },
+    ]);
+
+    // Re-render to pick up the menu change
+    rerender(<ActionBar />);
+
+    // Now foxToken should appear at top-level since it's not in the menu anymore
+    expect(screen.getByLabelText("Purchase Fox Token")).toBeTruthy();
+  });
+
+  it("should hide non-purchase action at top-level when added to menu", () => {
+    // Setup: Start with swap NOT in any menu
+    menusVar([
+      {
+        id: "shop",
+        name: "Shop",
+        description: "View items available for purchase.",
+        icon: undefined,
+        binding: ["KeyB"],
+        prefabs: ["wolf"],
+        actions: [
+          { type: "action", actionKey: "back" },
+        ],
+      },
+    ]);
+
+    playersVar([createTestPlayer()]);
+
+    selectionVar(
+      createTestSelection({
+        actions: [
+          { type: "auto", name: "Stop", order: "stop" },
+          { type: "auto", name: "Swap", order: "swap", binding: ["KeyC"] },
+        ],
+      }),
+    );
+
+    // Initially, swap is NOT in the shop menu, so it should appear at top-level
+    const { rerender } = render(<ActionBar />, { wrapper: Wrapper });
+    expect(screen.getByLabelText("Swap")).toBeTruthy();
+
+    // Now add swap to the shop menu
+    menusVar([
+      {
+        id: "shop",
+        name: "Shop",
+        description: "View items available for purchase.",
+        icon: undefined,
+        binding: ["KeyB"],
+        prefabs: ["wolf"],
+        actions: [
+          { type: "action", actionKey: "back" },
+          { type: "action", actionKey: "swap" },
+        ],
+      },
+    ]);
+
+    // Re-render to pick up the menu change
+    rerender(<ActionBar />);
+
+    // Now swap should NOT appear at top-level (it's in the menu)
+    expect(() => screen.getByLabelText("Swap")).toThrow();
   });
 });

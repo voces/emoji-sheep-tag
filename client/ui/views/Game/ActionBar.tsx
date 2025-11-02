@@ -16,6 +16,12 @@ import { Action } from "@/components/game/Action.tsx";
 import { applyShortcutOverride } from "../../../util/applyShortcutOverrides.ts";
 import { Card } from "@/components/layout/Card.tsx";
 import { getExecutableActions } from "../../../util/allyPermissions.ts";
+import { MenuActionRef, MenuConfig, menusVar } from "@/vars/menus.ts";
+import { items, prefabs } from "@/shared/data.ts";
+import {
+  actionToShortcutKey,
+  menuActionRefToKey,
+} from "../../../util/actionToShortcutKey.ts";
 
 const ActionBarContainer = styled(Card)`
   position: fixed;
@@ -30,6 +36,85 @@ const ActionBarContainer = styled(Card)`
     display: none;
   }
 `;
+
+// Helper to convert menu config to UnitDataAction
+const convertMenuConfigToAction = (
+  config: MenuConfig,
+  allConfigs: MenuConfig[],
+  shortcuts: Record<string, Record<string, string[]>>,
+  section: string,
+): UnitDataAction & { type: "menu" } => {
+  const convertActionRef = (
+    ref: MenuActionRef | MenuConfig,
+  ): UnitDataAction => {
+    if ("id" in ref) {
+      // It's a nested menu config
+      return convertMenuConfigToAction(ref, allConfigs, shortcuts, section);
+    }
+    if (ref.type === "action") {
+      // Back action
+      if (ref.actionKey === "back") {
+        const actionKey = `menu-back-${config.id}`;
+        const binding = shortcuts[section]?.[actionKey] ?? ["Backquote"];
+        return {
+          name: "Back",
+          type: "auto",
+          order: "back",
+          icon: "cancel",
+          binding,
+        };
+      }
+      // Look up the action from the prefab
+      const prefab = prefabs[section];
+      const prefabAction = prefab?.actions?.find((a) =>
+        actionToShortcutKey(a) === ref.actionKey
+      );
+      if (prefabAction) {
+        // Get binding from shortcuts (using the action key, not menu-prefixed)
+        const binding = shortcuts[section]?.[ref.actionKey] ??
+          prefabAction.binding ?? [];
+        return {
+          ...prefabAction,
+          binding,
+        };
+      }
+      // Fallback if action not found
+      const actionKey = `menu-${config.id}.${ref.actionKey}`;
+      const binding = shortcuts[section]?.[actionKey] ?? [];
+      return {
+        name: ref.actionKey,
+        type: "auto",
+        order: ref.actionKey,
+        binding,
+      };
+    }
+    // Purchase action
+    const item = items[ref.itemId];
+    const actionKey = `menu-${config.id}.purchase-${ref.itemId}`;
+    const binding = shortcuts[section]?.[actionKey] ?? item.binding;
+    return {
+      name: `Purchase ${item.name}`,
+      description: item.description,
+      type: "purchase",
+      itemId: ref.itemId,
+      binding,
+      goldCost: item.gold,
+    };
+  };
+
+  // Apply shortcut override to menu itself
+  const menuBinding = shortcuts[section]?.[`menu-${config.id}`] ??
+    config.binding;
+
+  return {
+    name: config.name,
+    description: config.description,
+    type: "menu",
+    icon: config.icon,
+    binding: menuBinding,
+    actions: config.actions.map(convertActionRef),
+  };
+};
 
 export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
@@ -49,6 +134,7 @@ selection.addEventListener(
 export const ActionBar = () => {
   const selection = useReactiveVar(selectionVar);
   const shortcuts = useReactiveVar(shortcutsVar);
+  const menus = useReactiveVar(menusVar);
   useReactiveVar(menuStateVar);
   const currentMenu = getCurrentMenu();
   useListenToEntityProp(selection, "order");
@@ -66,6 +152,39 @@ export const ActionBar = () => {
   let displayActions: ReadonlyArray<
     React.ComponentProps<typeof Action>["action"]
   > = currentMenu ? currentMenu.action.actions : selection?.actions ?? [];
+
+  // Get actions that are referenced by menus for this prefab
+  const actionsInMenus = new Set<string>();
+  if (!currentMenu && selection?.prefab) {
+    const prefabMenus = menus.filter((menu) =>
+      menu.prefabs.includes(selection.prefab!)
+    );
+    for (const menu of prefabMenus) {
+      for (const action of menu.actions) {
+        // Skip nested menu configs (they don't represent individual actions to filter)
+        if ("type" in action) {
+          actionsInMenus.add(menuActionRefToKey(action));
+        }
+      }
+    }
+  }
+
+  // Filter out actions that are in menus
+  if (!currentMenu && actionsInMenus.size > 0) {
+    displayActions = displayActions.filter((action) =>
+      !actionsInMenus.has(actionToShortcutKey(action))
+    );
+  }
+
+  // Add configured menu actions for this prefab
+  if (!currentMenu && selection?.prefab) {
+    const menuActions = menus
+      .filter((menu) => menu.prefabs.includes(selection.prefab!))
+      .map((menu) =>
+        convertMenuConfigToAction(menu, menus, shortcuts, selection.prefab!)
+      );
+    displayActions = [...displayActions, ...menuActions];
+  }
 
   // Add item actions from inventory and apply shortcut overrides
   if (!currentMenu && selection?.inventory && !selection.isMirror) {

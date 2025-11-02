@@ -188,6 +188,7 @@ export type UnitDataAction =
     readonly castDuration?: number;
     readonly allowAllies?: boolean;
   }
+  // TODO: make this client-only
   | {
     readonly name: string;
     readonly type: "menu";

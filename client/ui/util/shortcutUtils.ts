@@ -5,6 +5,7 @@ import {
   actionToShortcutKey,
   getMenuShortcutKeys,
 } from "../../util/actionToShortcutKey.ts";
+import { menusVar } from "@/vars/menus.ts";
 
 // Find all prefabs that can be upgraded to, and map them to their source prefabs
 const getUpgradeTargets = (): Map<string, string[]> => {
@@ -57,17 +58,42 @@ export const miscNames = {
   applyZoom: "Apply zoom",
 };
 
+export const bindingsEqual = (a: string[], b: string[]): boolean =>
+  a.length === b.length && a.every((key, i) => key === b[i]);
+
 export const isDefaultBinding = (
   section: string,
   fullKey: string,
   shortcut: string[],
   defaults: Shortcuts,
 ): boolean => {
+  // Handle menu-specific Back action keys
+  if (fullKey.startsWith("menu-back-")) {
+    const defaultBackBinding = ["Backquote"];
+    return bindingsEqual(shortcut, defaultBackBinding);
+  }
+
+  // Handle menu binding keys (e.g., "menu-shop", "menu-menu-123")
+  if (fullKey.startsWith("menu-")) {
+    const menuId = fullKey.substring(5); // Remove "menu-" prefix
+    const allMenus = menusVar();
+    const menu = allMenus.find((m) =>
+      m.id === menuId && m.prefabs.includes(section)
+    );
+
+    if (!menu) {
+      // Menu doesn't exist for this section
+      return false;
+    }
+
+    const defaultMenuBinding = menu.binding ?? [];
+    return bindingsEqual(shortcut, defaultMenuBinding);
+  }
+
   const defaultBinding = defaults[section]?.[fullKey];
   if (!defaultBinding) return false;
 
-  return shortcut.length === defaultBinding.length &&
-    shortcut.every((key, i) => key === defaultBinding[i]);
+  return bindingsEqual(shortcut, defaultBinding);
 };
 
 export const defaultBindings: Shortcuts = {
@@ -121,6 +147,16 @@ export const defaultBindings: Shortcuts = {
 
               return shortcuts;
             }),
+          // Add shortcuts for item actions if this prefab has inventory
+          ...("inventory" in d
+            ? Object.values(items).flatMap((item) => {
+              if (!item.actions) return [];
+              return item.actions.map((itemAction) => [
+                actionToShortcutKey(itemAction),
+                itemAction.binding ?? [],
+              ]);
+            })
+            : []),
         ],
       ),
     ]),
@@ -145,73 +181,80 @@ export const createInitialShortcuts = (): Shortcuts => ({
     Object.entries(prefabs).filter(([, d]) => d.actions?.length)
       .map((
         [u, d],
-      ) => [
-        u,
-        Object.fromEntries(
-          [
-            ...d.actions!.map((
-              a,
-            ) => [
-              actionToShortcutKey(a),
-              pluckShortcut(`${u}.${actionToShortcutKey(a)}`) ?? a.binding ??
-                [],
-            ]),
-            // Add cancel-upgrade entry if this prefab can be upgraded to
-            ...(upgradeTargets.has(u)
-              ? [[
-                "cancel-upgrade",
-                pluckShortcut(`${u}.cancel-upgrade`) ?? ["Backquote"],
-              ]]
-              : []),
-            // Add menu shortcuts as nested entries
-            ...d.actions!
-              .filter((a) => a.type === "menu")
-              .flatMap((menuAction) => {
-                const menuName = actionToShortcutKey(menuAction);
-                const menuShortcuts = getMenuShortcutKeys(menuAction, menuName);
-                const storedSectionShortcuts = pluck(
-                  localStorageShortcuts,
-                  u,
-                  z.record(z.string(), zShortcut),
-                );
+      ) => {
+        return [
+          u,
+          Object.fromEntries(
+            [
+              ...d.actions!
+                .map((
+                  a,
+                ) => [
+                  actionToShortcutKey(a),
+                  pluckShortcut(`${u}.${actionToShortcutKey(a)}`) ??
+                    a.binding ??
+                    [],
+                ]),
+              // Add cancel-upgrade entry if this prefab can be upgraded to
+              ...(upgradeTargets.has(u)
+                ? [[
+                  "cancel-upgrade",
+                  pluckShortcut(`${u}.cancel-upgrade`) ?? ["Backquote"],
+                ]]
+                : []),
+              // Add menu shortcuts as nested entries
+              ...d.actions!
+                .filter((a) => a.type === "menu")
+                .flatMap((menuAction) => {
+                  const menuName = actionToShortcutKey(menuAction);
+                  const menuShortcuts = getMenuShortcutKeys(
+                    menuAction,
+                    menuName,
+                  );
+                  const storedSectionShortcuts = pluck(
+                    localStorageShortcuts,
+                    u,
+                    z.record(z.string(), zShortcut),
+                  );
 
-                const shortcuts = Object.entries(menuShortcuts).map(
-                  ([key, binding]) => {
-                    // For nested keys like "shop.back", we need to access the stored shortcuts differently
-                    // The key contains dots, so we need to access it directly from the section
-                    const storedBinding = storedSectionShortcuts?.[key];
+                  const shortcuts = Object.entries(menuShortcuts).map(
+                    ([key, binding]) => {
+                      // For nested keys like "shop.back", we need to access the stored shortcuts differently
+                      // The key contains dots, so we need to access it directly from the section
+                      const storedBinding = storedSectionShortcuts?.[key];
+                      return [
+                        key,
+                        storedBinding ?? binding,
+                      ];
+                    },
+                  );
+
+                  return shortcuts;
+                }),
+              // Add shortcuts for item actions if this prefab has inventory
+              ...("inventory" in d
+                ? Object.values(items).flatMap((item) => {
+                  if (!item.actions) return [];
+                  const storedSectionShortcuts = pluck(
+                    localStorageShortcuts,
+                    u,
+                    z.record(z.string(), zShortcut),
+                  );
+                  return item.actions.map((itemAction) => {
+                    const itemKey = actionToShortcutKey(itemAction);
+                    const storedBinding = storedSectionShortcuts?.[itemKey];
                     return [
-                      key,
-                      storedBinding ?? binding,
+                      itemKey,
+                      storedBinding ?? pluckShortcut(`${u}.${itemKey}`) ??
+                        itemAction.binding ?? [],
                     ];
-                  },
-                );
-
-                // Also add shortcuts for item actions from purchase actions
-                for (const subAction of menuAction.actions) {
-                  if (
-                    subAction.type === "purchase" && items[subAction.itemId]
-                  ) {
-                    const item = items[subAction.itemId];
-                    if (item.actions) {
-                      for (const itemAction of item.actions) {
-                        const itemKey = actionToShortcutKey(itemAction);
-                        const storedBinding = storedSectionShortcuts?.[itemKey];
-                        shortcuts.push([
-                          itemKey,
-                          storedBinding ?? pluckShortcut(`${u}.${itemKey}`) ??
-                            itemAction.binding ?? [],
-                        ]);
-                      }
-                    }
-                  }
-                }
-
-                return shortcuts;
-              }),
-          ],
-        ),
-      ]),
+                  });
+                })
+                : []),
+            ],
+          ),
+        ];
+      }),
   ),
 });
 
@@ -223,6 +266,27 @@ export const getActionDisplayName = (
     return miscNames[key as keyof typeof miscNames] || key;
   } else if (key === "cancel-upgrade") {
     return "Cancel upgrade";
+  } else if (key.startsWith("menu-back-")) {
+    return "Back";
+  } else if (key.startsWith("menu-")) {
+    // Handle menu-prefixed actions like "menu-shop.purchase-foxToken"
+    const dotIndex = key.indexOf(".");
+    if (dotIndex !== -1) {
+      const actionPart = key.substring(dotIndex + 1);
+      if (actionPart.startsWith("purchase-")) {
+        const itemId = actionPart.replace("purchase-", "");
+        return `Purchase ${items[itemId]?.name ?? itemId}`;
+      }
+      // For other menu actions, return the action part
+      return actionPart;
+    }
+    // Menu binding key (e.g., "menu-shop" or "menu-123123421")
+    // Try to find the menu name from menusVar
+    const menuId = key.replace("menu-", "");
+    const menus = menusVar();
+    const menu = menus.find((m) => m.id === menuId);
+    if (menu) return menu.name;
+    return key;
   } else if (key.startsWith("purchase-")) {
     const itemId = key.replace("purchase-", "");
     return `Purchase ${items[itemId]?.name ?? itemId}`;
@@ -232,6 +296,19 @@ export const getActionDisplayName = (
       actionToShortcutKey(a) === key
     );
     if (action) return action.name;
+
+    // Check if this is an item action (for prefabs with inventory)
+    if ("inventory" in (prefabs[section] || {})) {
+      for (const item of Object.values(items)) {
+        if (item.actions) {
+          for (const itemAction of item.actions) {
+            if (actionToShortcutKey(itemAction) === key) {
+              return itemAction.name;
+            }
+          }
+        }
+      }
+    }
 
     // For menu actions, find them in the menu's actions
     const menuAction = prefabs[section]?.actions?.find((a) =>

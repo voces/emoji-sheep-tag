@@ -28,6 +28,10 @@
   functionality, but rather focus on logic that can reasonably break
 - Prefer comprehensive mocking utilities with shared tooling over test-specific
   mocking
+- Only use describe blocks to segment related tests; do not use them
+  perfunctorily
+- Aim for test driven development. When fixing a bug, first try to reproduce it
+  with a test, then fix the bug
 
 # Workflow
 

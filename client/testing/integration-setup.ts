@@ -2,6 +2,7 @@ import "./setup.ts";
 import { afterEach, beforeEach } from "@std/testing/bdd";
 import { cleanup } from "@testing-library/react";
 import type { ClientToServerMessage } from "../../server/client.ts";
+import { ServerToClientMessage } from "../client.ts";
 
 // Test WebSocket server for messaging tests - fresh server per test for true isolation
 let testServer: Deno.HttpServer | undefined;
@@ -238,6 +239,11 @@ const stopTestServer = async () => {
     // Wait for port to be available again
     await waitForPortAvailable(TEST_PORT);
   }
+};
+
+export const sendMessageFromServer = (message: ServerToClientMessage) => {
+  const stringify = JSON.stringify(message);
+  for (const socket of activeWebSockets) socket.send(stringify);
 };
 
 beforeEach(async () => {
