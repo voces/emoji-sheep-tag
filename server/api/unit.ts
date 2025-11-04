@@ -22,12 +22,8 @@ import { buffs, items, prefabs } from "@/shared/data.ts";
 import { findAction } from "../util/actionLookup.ts";
 import { BUILD_REFUND_RATE, FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";
-import {
-  deductPlayerGold,
-  getPlayer,
-  getPlayerGold,
-  grantPlayerGold,
-} from "./player.ts";
+import { deductPlayerGold, getPlayerGold, grantPlayerGold } from "./player.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 import { addEntity, mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
@@ -144,7 +140,7 @@ export const newUnit = (
   x: number,
   y: number,
   extra?: Partial<Entity>,
-) => addEntity(tempUnit(owner, type, x, y, extra));
+): Entity => addEntity(tempUnit(owner, type, x, y, extra));
 
 const processOrder = (entity: Entity, order: Order, queue: boolean) => {
   if (queue) entity.queue = [...entity.queue ?? [], order];
@@ -627,7 +623,7 @@ export const changePrefab = (
   const prev = mergeEntityWithPrefab({ id: e.id, prefab: e.prefab });
 
   // Pass handicap from owner's player entity to mergeEntityWithPrefab
-  const ownerEntity = e.owner ? getPlayer(e.owner) : undefined;
+  const ownerEntity = getPlayer(e.owner);
   const next = mergeEntityWithPrefab({
     id: e.id,
     prefab: prefabId,

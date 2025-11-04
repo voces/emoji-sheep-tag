@@ -37,15 +37,8 @@ it(
     // Give wolf an attack order (manually, since we're testing the movement part)
     wolf.order = { type: "attack", targetId: sheep.id };
 
-    console.log("Initial wolf position:", wolf.position);
-    console.log("Initial wolf order:", wolf.order);
-    console.log("Wolf attack range:", wolf.attack?.range);
-
     // Wolf should start moving towards the sheep
     yield* yieldFor(0.5);
-
-    console.log("After 0.5s wolf position:", wolf.position);
-    console.log("After 0.5s wolf order:", wolf.order);
 
     // Wolf should have moved closer to sheep
     expect(wolf.position!.x).toBeGreaterThan(20);

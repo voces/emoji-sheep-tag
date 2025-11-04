@@ -13,7 +13,9 @@ export const cancel = (client: Client) => {
     // Undo the draft selection (this restores all smart algorithm state)
     undoDraft();
     // Also decrement display sheepCount on clients
-    for (const sheep of client.lobby.round.sheep) sheep.sheepCount--;
+    for (const p of client.lobby.players) {
+      if (p.team === "sheep") p.sheepCount--;
+    }
   }
   endRound(true);
 };

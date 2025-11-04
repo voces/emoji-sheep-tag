@@ -13,19 +13,19 @@ export const initApp = (app: App<Entity>) => {
   for (const hook of initHooks) hook(app);
 };
 
-export const addSystem = <K extends keyof Entity>(
+export const addSystem = <E extends Entity, K extends keyof E>(
   systemConfig:
-    | Partial<System<Entity, K>>
-    | ((game: App<Entity>) => Partial<System<Entity, K>>),
+    | Partial<System<E, K>>
+    | ((game: App<E>) => Partial<System<E, K>>),
 ) => {
   const trace = new Error("").stack;
   const name = trace?.split("\n")[2]?.trim() || "unknown";
   onInit((game) =>
     Object.assign(
       game.addSystem(
-        typeof systemConfig === "function"
-          ? systemConfig(game)
-          : { ...systemConfig },
+        (typeof systemConfig === "function"
+          ? systemConfig(game as unknown as App<E>)
+          : { ...systemConfig }) as Partial<System<Entity, keyof Entity>>,
       ),
       { trace, name },
     )

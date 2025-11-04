@@ -26,12 +26,13 @@ export const remove = (entity: Entity) => {
   } else updates[entity.id].__delete = true;
 };
 
-export const flushUpdates = () => {
-  const updatesArray = Object.entries(updates);
+export const flushUpdates = (sendData = true) => {
+  const updatesArray = Object.values(updates);
   if (updatesArray.length) {
-    send({ type: "updates", updates: Object.values(updates) });
+    if (sendData) send({ type: "updates", updates: updatesArray });
     updates = {};
   }
+  return updatesArray;
 };
 
 export const clearUpdatesCache = () => {

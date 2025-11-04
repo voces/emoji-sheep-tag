@@ -3,7 +3,7 @@ import { isAlly, isEnemy } from "@/shared/api/unit.ts";
 import { getActiveOrder, hasBlueprint } from "../controls.ts";
 import { Entity } from "../ecs.ts";
 import { mouse } from "../mouse.ts";
-import { getLocalPlayer } from "@/vars/players.ts";
+import { getLocalPlayer } from "../api/player.ts";
 import cursorSvg from "../assets/cursor.svg" with { type: "text" };
 import circleSvg from "../assets/circle.svg" with { type: "text" };
 import { camera, renderer } from "./three.ts";

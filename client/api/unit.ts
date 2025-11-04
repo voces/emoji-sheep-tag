@@ -2,7 +2,7 @@ import { tempUnit } from "@/shared/api/unit.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
 import { Entity } from "../ecs.ts";
 import { pathable, pathingMap } from "../systems/pathing.ts";
-import { getLocalPlayer } from "../ui/vars/players.ts";
+import { getLocalPlayer } from "./player.ts";
 
 export const canBuild = (
   builder: Entity,

@@ -1,7 +1,8 @@
 import { Fragment } from "react";
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { Player, playersVar, useLocalPlayer } from "@/vars/players.ts";
+import { Player } from "@/shared/api/player.ts";
+import { useLocalPlayer, usePlayers } from "@/hooks/usePlayers.ts";
 import { ColorPicker } from "@/components/forms/ColorPicker.tsx";
 import { NameInput } from "@/components/forms/NameInput.tsx";
 import { send } from "../../../client.ts";
@@ -10,6 +11,7 @@ import { formatDuration } from "@/util/formatDuration.ts";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 
 const PlayerRowContainer = styled(HStack)`
   align-items: center;
@@ -31,19 +33,19 @@ const PlayersCard = styled(Card)`
   flex: 1;
 `;
 
-const PlayerRow = ({ name, color, id }: Player) => {
+const PlayerRow = ({ name, playerColor, id }: Player) => {
   const localPlayer = useLocalPlayer();
   return (
     <PlayerRowContainer>
       <ColorPicker
-        value={color}
+        value={playerColor ?? "#FFFFFF"}
         onChange={(e) => {
           send({ type: "generic", event: { type: "colorChange", color: e } });
         }}
         readonly={id !== localPlayer?.id}
       />
       <NameInput
-        value={name}
+        value={name ?? ""}
         onChange={(e) => {
           send({ type: "generic", event: { type: "nameChange", name: e } });
         }}
@@ -54,7 +56,8 @@ const PlayerRow = ({ name, color, id }: Player) => {
 };
 
 export const Players = () => {
-  const players = useReactiveVar(playersVar);
+  const players = usePlayers();
+  useListenToEntities(players, ["playerColor", "name"]);
   const rounds = useReactiveVar(roundsVar);
   const { sheep } = useReactiveVar(lobbySettingsVar);
 

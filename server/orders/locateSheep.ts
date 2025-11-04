@@ -4,7 +4,7 @@ import { OrderDefinition } from "./types.ts";
 import { getSheep } from "../systems/sheep.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { timeout } from "../api/timing.ts";
-import { getPlayer } from "../api/player.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 export const locateSheepOrder = {
   id: "locateSheep",

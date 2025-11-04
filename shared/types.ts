@@ -247,10 +247,11 @@ export type Entity = {
 
   // Player data
   isPlayer?: boolean;
-  team?: "sheep" | "wolf";
+  team?: "pending" | "observer" | "sheep" | "wolf";
   gold?: number;
   handicap?: number;
   sheepTime?: number;
+  sheepCount?: number;
 
   movementSpeed?: number;
   /** Radians per second */

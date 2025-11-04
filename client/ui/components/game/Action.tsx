@@ -1,10 +1,10 @@
 import { Entity } from "../../../ecs.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { items, prefabs } from "@/shared/data.ts";
-import { getPlayer } from "@/vars/players.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { Command } from "./Command.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
+import { getPlayer } from "@/shared/api/player.ts";
 
 export const Action = ({ action, current, entity }: {
   action: UnitDataAction & { count?: number };
@@ -15,13 +15,13 @@ export const Action = ({ action, current, entity }: {
   const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
   let disabled = manaCost > 0 && (entity.mana ?? 0) < manaCost;
 
-  const owningPlayer = entity.owner ? getPlayer(entity.owner) : undefined;
+  const owningPlayer = getPlayer(entity.owner);
 
   // Check if action is disabled due to insufficient gold
   if (action.goldCost) {
     const goldCost = action.goldCost;
     // Find the owning player of the entity
-    const playerGold = owningPlayer?.entity?.gold ?? 0;
+    const playerGold = owningPlayer?.gold ?? 0;
     disabled = disabled || (goldCost > 0 && playerGold < goldCost);
   }
 

@@ -1,5 +1,5 @@
 import { DEFAULT_FACING, MIRROR_SEPARATION } from "@/shared/constants.ts";
-import { Order, SystemEntity } from "@/shared/types.ts";
+import { Entity, Order, SystemEntity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { pathingMap, updatePathing } from "../systems/pathing.ts";
@@ -90,7 +90,7 @@ export const mirrorImageOrder = {
 
       unit.buffs = null;
 
-      const mirror = newUnit(unit.owner, unit.prefab, pos2.x, pos2.y);
+      const mirror: Entity = newUnit(unit.owner, unit.prefab, pos2.x, pos2.y);
 
       // Whitelist only specific actions for mirrors
       mirror.actions = mirror.actions?.filter((a) =>

@@ -25,7 +25,7 @@ describe("joinLobby", () => {
       });
       newClient.id = "joining-player";
       newClient.name = "Joining Player";
-      newClient.color = "#00FF00";
+      newClient.playerColor = "#00FF00";
       clients.set("joining-player", newClient);
 
       // Add the client to the lobby's players set (joinLobby does this)
@@ -44,14 +44,10 @@ describe("joinLobby", () => {
         });
       });
 
-      // Check player entity was created
-      expect(newClient.playerEntity).toBeDefined();
-      expect(newClient.playerEntity?.team).toBe("sheep");
-      expect(newClient.playerEntity?.gold).toBe(100_000);
-      expect(newClient.playerEntity?.name).toBe("Joining Player");
-
-      // Check player was added to sheep team
-      expect(lobby.round!.sheep.has(newClient)).toBe(true);
+      // Check player properties were set
+      expect(newClient.team).toBe("sheep");
+      expect(newClient.gold).toBe(100_000);
+      expect(newClient.name).toBe("Joining Player");
 
       // Check units were spawned
       const units = Array.from(ecs.entities).filter((e) =>
@@ -90,7 +86,7 @@ describe("joinLobby", () => {
       });
       newClient.id = "joining-player";
       newClient.name = "Joining Player";
-      newClient.color = "#00FF00";
+      newClient.playerColor = "#00FF00";
       clients.set("joining-player", newClient);
 
       // Add the client to the lobby's players set
@@ -109,11 +105,8 @@ describe("joinLobby", () => {
         });
       });
 
-      // Should not create player entity since it's not practice mode
-      expect(newClient.playerEntity).toBeUndefined();
-
-      // Should not be added to sheep team
-      expect(lobby.round!.sheep.has(newClient)).toBe(false);
+      // Should not have team assigned since it's not practice mode
+      expect(newClient.team).toBeUndefined();
 
       // Should not have any units spawned
       const units = Array.from(ecs.entities).filter((e) =>
@@ -124,14 +117,20 @@ describe("joinLobby", () => {
   );
 
   it(
-    "should not add player twice if they already have a playerEntity",
+    "should not add player twice if they already have a team assigned",
     { sheep: ["existing-player"], gold: 0 },
     ({ lobby, clients, ecs }) => {
       // Set practice mode
       lobby.round!.practice = true;
 
       const existingClient = clients.get("existing-player")!;
-      const originalEntity = existingClient.playerEntity;
+      const originalTeam = existingClient.team;
+      const originalGold = existingClient.gold;
+
+      // Count entities before trying to add again
+      const unitsBefore = Array.from(ecs.entities).filter((e) =>
+        e.owner === "existing-player"
+      );
 
       // Try to add again
       lobbyContext.with(lobby, () => {
@@ -144,15 +143,16 @@ describe("joinLobby", () => {
         });
       });
 
-      // Should keep original entity
-      expect(existingClient.playerEntity).toBe(originalEntity);
+      // Should keep original team and gold
+      expect(existingClient.team).toBe(originalTeam);
+      expect(existingClient.gold).toBe(originalGold);
 
       // Count entities owned by existing-player (should still be just the original ones)
       const units = Array.from(ecs.entities).filter((e) =>
         e.owner === "existing-player"
       );
-      // Should have original sheep unit only (no duplicate practice units)
-      expect(units.length).toBe(1);
+      // Should have same number of units (no duplicate practice units)
+      expect(units.length).toBe(unitsBefore.length);
     },
   );
 });

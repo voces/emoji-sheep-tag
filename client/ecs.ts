@@ -85,15 +85,27 @@ onRender((delta, time) => app.update(delta, time));
 
 export const map: Record<string, Entity> = {};
 
-export const unloadEcs = () =>
+export const unloadEcs = (
+  { includePlayers = false }: { includePlayers?: boolean } = {},
+) =>
   app.batch(() => {
     const editor = editorVar();
     for (const entity of app.entities) {
-      if ((entity.type !== "cosmetic" && entity.type !== "static") || editor) {
+      if (entity.type === "cosmetic" || entity.type === "static") continue;
+      if (editor) continue;
+      if (entity.isPlayer) continue;
+
+      app.removeEntity(entity);
+      delete map[entity.id];
+    }
+    if (includePlayers) {
+      for (const entity of app.entities) {
+        if (!entity.isPlayer) continue;
+
         app.removeEntity(entity);
+        delete map[entity.id];
       }
     }
-    for (const key in map) delete map[key];
     resetFog();
   });
 

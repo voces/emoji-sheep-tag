@@ -8,7 +8,7 @@ import { newIndicator } from "../systems/indicators.ts";
 import { playEntitySound, playSound, playSoundAt } from "../api/sound.ts";
 import { pick } from "../util/pick.ts";
 import { MouseButtonEvent } from "../mouse.ts";
-import { getLocalPlayer } from "@/vars/players.ts";
+import { getLocalPlayer } from "../api/player.ts";
 import { isEnemy, testClassification } from "@/shared/api/unit.ts";
 import { Classification } from "@/shared/data.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";

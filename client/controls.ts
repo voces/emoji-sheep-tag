@@ -1,9 +1,9 @@
 import { mouse, MouseButtonEvent } from "./mouse.ts";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { send } from "./client.ts";
-import { app } from "./ecs.ts";
 import { Entity } from "./ecs.ts";
-import { getLocalPlayer, playersVar } from "@/vars/players.ts";
+import { addSystem, appContext } from "@/shared/context.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 import { selection } from "./systems/autoSelect.ts";
 import { camera, terrain } from "./graphics/three.ts";
 import { UnitDataAction } from "@/shared/types.ts";
@@ -28,7 +28,7 @@ import {
   selectEntity,
   selectPrimaryUnit,
 } from "./api/selection.ts";
-import { applyZoom } from "./api/player.ts";
+import { applyZoom, getLocalPlayer } from "./api/player.ts";
 import { getEntitiesInRect } from "./systems/kd.ts";
 import {
   closeAllMenus,
@@ -306,7 +306,7 @@ mouse.addEventListener("mouseButtonUp", (e) => {
     }
 
     // Clean up selection rectangle
-    app.removeEntity(selectionEntity);
+    appContext.current.removeEntity(selectionEntity);
     selectionEntity = null;
   }
   dragStart = null;
@@ -330,7 +330,7 @@ mouse.addEventListener("mouseMove", (e) => {
     if (deltaX > 0.01 || deltaY > 0.01 || selectionEntity) {
       if (!selectionEntity) {
         // Create the selection rectangle entity
-        selectionEntity = app.addEntity({
+        selectionEntity = appContext.current.addEntity({
           id: "selection-rectangle",
           model: "square",
           position: { x: 0, y: 0 },
@@ -554,8 +554,8 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   if (action.type === "build" || action.type === "purchase") {
     const goldCost = action.goldCost ?? 0;
     if (goldCost > 0 && units.length > 0) {
-      const owningPlayer = playersVar().find((p) => p.id === units[0].owner);
-      const playerGold = owningPlayer?.entity?.gold ?? 0;
+      const owningPlayer = getPlayer(units[0].owner);
+      const playerGold = owningPlayer?.gold ?? 0;
 
       if (playerGold < goldCost) {
         playSound("ui", pick("error1"), { volume: 0.3 });
@@ -700,7 +700,7 @@ globalThis.addEventListener("wheel", (e) => {
 // Camera panning
 let startPan: number | undefined;
 
-app.addSystem({
+addSystem({
   update: (delta, time) => {
     if (showSettingsVar() || document.activeElement !== document.body) {
       return false;
@@ -866,12 +866,14 @@ const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
   e.actions = newActions;
 };
 
-const unitsWithActions = app.addSystem({
+const entities = new Set<SystemEntity<"prefab" | "actions">>();
+addSystem({
+  entities,
   props: ["prefab", "actions"],
   onAdd: shortcutOverrides,
   onChange: shortcutOverrides,
 });
 
 shortcutsVar.subscribe(() => {
-  for (const e of unitsWithActions.entities) shortcutOverrides(e);
+  for (const e of entities) shortcutOverrides(e);
 });

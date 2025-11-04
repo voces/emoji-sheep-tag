@@ -1,15 +1,7 @@
 import z from "zod";
-import { zTeam } from "@/shared/zod.ts";
 import { Entity } from "@/shared/types.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() }).readonly();
-
-const zStart = z.object({
-  type: z.literal("start"),
-  sheep: z.object({ id: z.string(), sheepCount: z.number() }).array()
-    .readonly(),
-  wolves: z.string().array().readonly(),
-});
 
 const zOrder = z.union([
   z.object({
@@ -268,10 +260,16 @@ export const zUpdate = z.object({
 
   // Player data
   isPlayer: z.boolean().optional(),
-  team: z.union([z.literal("sheep"), z.literal("wolf")]).optional(),
+  team: z.union([
+    z.literal("pending"),
+    z.literal("observer"),
+    z.literal("sheep"),
+    z.literal("wolf"),
+  ]).optional(),
   gold: z.number().optional(),
   handicap: z.number().optional(),
   sheepTime: z.number().optional(),
+  sheepCount: z.number().optional(),
 
   position: zPoint.optional(),
   movementSpeed: z.number().optional(),
@@ -370,16 +368,9 @@ const zUpdates = z.object({
 
 export type Update = z.infer<typeof zUpdates>["updates"][number];
 
-const zColorChange = z.object({
-  type: z.literal("colorChange"),
-  id: z.string(),
-  color: z.string(),
-});
-
-const zNameChange = z.object({
-  type: z.literal("nameChange"),
-  id: z.string(),
-  name: z.string(),
+const zStart = z.object({
+  type: z.literal("start"),
+  updates: zUpdate.array().readonly().optional(),
 });
 
 const zRound = z.object({
@@ -389,6 +380,7 @@ const zRound = z.object({
 });
 
 const zLobbySettings = z.object({
+  host: z.string().nullable(),
   mode: z.union([z.literal("survival"), z.literal("vip"), z.literal("switch")]),
   vipHandicap: z.number(),
   sheep: z.number(),
@@ -410,33 +402,22 @@ export type LobbySettings = z.input<typeof zLobbySettings>;
 const zJoin = z.object({
   type: z.literal("join"),
   status: z.union([z.literal("lobby"), z.literal("playing")]),
-  players: z.object({
-    id: z.string(),
-    name: z.string(),
-    color: z.string(),
-    team: zTeam,
-    local: z.boolean().optional().default(false),
-    host: z.boolean().optional().default(false),
-    sheepCount: z.number(),
-  }).array().readonly(),
   updates: zUpdate.array().readonly(),
   rounds: zRound.array().readonly().optional(),
   lobbySettings: zLobbySettings,
+  localPlayer: z.string().optional(),
 });
 
 const zLeave = z.object({
   type: z.literal("leave"),
-  player: z.string(),
-  host: z.string().optional(),
+  updates: zUpdate.array().readonly(),
   lobbySettings: zLobbySettings,
 });
 
 const zStop = z.object({
   type: z.literal("stop"),
   // Sent if round canceled to revert sheepCount
-  players: z.object({ id: z.string(), sheepCount: z.number() }).array()
-    .readonly()
-    .optional(),
+  updates: zUpdate.array().readonly().optional(),
   // Sent if round not canceled
   round: zRound.optional(),
 });
@@ -474,8 +455,6 @@ const zHubState = z.object({
 export const zMessage = z.discriminatedUnion("type", [
   zStart,
   zUpdates,
-  zColorChange,
-  zNameChange,
   zJoin,
   zLeave,
   zStop,

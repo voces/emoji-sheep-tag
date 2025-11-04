@@ -2,6 +2,7 @@ import { makeVar } from "@/hooks/useVar.tsx";
 import { LobbySettings } from "../../schemas.ts";
 
 export const lobbySettingsVar = makeVar<LobbySettings>({
+  host: "",
   mode: "survival",
   vipHandicap: 0.8,
   sheep: 0,

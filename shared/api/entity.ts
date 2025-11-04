@@ -9,7 +9,7 @@ export const removeEntity = (entity: Entity) => {
 
 export const mergeEntityWithPrefab = (
   entity: Partial<Entity>,
-): Partial<Entity> => {
+): Partial<Entity> & { id: string } => {
   if (!entity.id) {
     entity = { ...entity, id: id(entity.prefab) };
   }
@@ -18,10 +18,10 @@ export const mergeEntityWithPrefab = (
     entity = { ...entity, health: entity.maxHealth };
   }
 
-  if (!entity.prefab) return entity;
+  if (!entity.prefab) return entity as Partial<Entity> & { id: string };
 
   const prefabData = prefabs[entity.prefab];
-  if (!prefabData) return entity;
+  if (!prefabData) return entity as Partial<Entity> & { id: string };
 
   if (typeof prefabData.maxHealth && typeof entity.health !== "number") {
     entity = { ...entity, health: prefabData.maxHealth };
@@ -38,8 +38,8 @@ export const mergeEntityWithPrefab = (
     }
   }
 
-  return merged;
+  return merged as Partial<Entity> & { id: string };
 };
 
-export const addEntity = (entity: Partial<Entity>) =>
+export const addEntity = (entity: Partial<Entity>): Entity =>
   appContext.current.addEntity(mergeEntityWithPrefab(entity));

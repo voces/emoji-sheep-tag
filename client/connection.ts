@@ -1,10 +1,10 @@
 import z from "zod";
-import { connectionStatusVar } from "@/vars/state.ts";
+import { connectionStatusVar, stateVar } from "@/vars/state.ts";
 import { LocalWebSocket } from "./local.ts";
 import { getStoredPlayerName } from "./util/playerPrefs.ts";
 import { handlers } from "./messageHandlers.ts";
 import { type ServerToClientMessage, zMessage } from "./schemas.ts";
-import { send as _send } from "./messaging.ts";
+import { unloadEcs } from "./ecs.ts";
 
 let ws: WebSocket | LocalWebSocket | undefined;
 let reconnectTimeout: number | undefined;
@@ -60,7 +60,12 @@ export const connect = () => {
   });
 
   ws.addEventListener("open", () => {
+    const prev = connectionStatusVar();
     connectionStatusVar("connected");
+    if (prev === "disconnected") {
+      stateVar("menu");
+      unloadEcs({ includePlayers: true });
+    }
   });
 
   ws.addEventListener("message", (e) => {

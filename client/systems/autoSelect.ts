@@ -1,10 +1,10 @@
-import { app, Entity, SystemEntity } from "../ecs.ts";
-import { isLocalPlayer } from "@/vars/players.ts";
+import { Entity, SystemEntity } from "../ecs.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
 import { camera } from "../graphics/three.ts";
-import { applyZoom } from "../api/player.ts";
+import { applyZoom, isLocalPlayer } from "../api/player.ts";
+import { addSystem } from "@/shared/context.ts";
 
 // X'd farms not removed from selection
 export const selection = new ExtendedSet<SystemEntity<"selected">>();
@@ -15,7 +15,7 @@ export const getPrimaryUnit = () => primary;
 export const foxes = new ExtendedSet<Entity>();
 export const mirrors = new ExtendedSet<Entity>();
 
-app.addSystem({
+addSystem({
   props: ["selected"],
   entities: selection,
   onRemove: () => {
@@ -34,7 +34,7 @@ app.addSystem({
 });
 
 // Auto select unit
-app.addSystem({
+addSystem({
   props: ["prefab", "owner"],
   onAdd: (e) => {
     if (!isLocalPlayer(e.owner)) return;

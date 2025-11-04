@@ -6,8 +6,8 @@ import {
 } from "../data.ts";
 import { Buff, Entity } from "../types.ts";
 import { absurd } from "../util/absurd.ts";
-import { getPlayerTeam } from "./player.ts";
 import { mergeEntityWithPrefab } from "./entity.ts";
+import { getPlayer } from "./player.ts";
 
 /**
  * Iterates over all buffs on an entity, including both direct buffs and buffs from inventory items.
@@ -80,6 +80,12 @@ for (const group in classificationGroups) {
   }
 }
 
+const simpleTeam = (team: Entity["team"]) => {
+  if (team === "sheep") return "sheep";
+  if (team === "wolf") return "wolf";
+  return "neutral";
+};
+
 export const isAlly = (source: Entity | string, target: Entity | string) => {
   if (typeof target !== "string") {
     if (target.targetedAs?.includes("ally")) return true;
@@ -89,9 +95,9 @@ export const isAlly = (source: Entity | string, target: Entity | string) => {
     ) return false;
   }
   const sourcePlayer = typeof source === "string" ? source : source.owner;
-  const sourceTeam = sourcePlayer ? getPlayerTeam(sourcePlayer) : "neutral";
+  const sourceTeam = simpleTeam(getPlayer(sourcePlayer)?.team);
   const targetPlayer = typeof target === "string" ? target : target.owner;
-  const targetTeam = targetPlayer ? getPlayerTeam(targetPlayer) : "neutral";
+  const targetTeam = simpleTeam(getPlayer(targetPlayer)?.team);
   return sourceTeam === targetTeam && sourceTeam !== "neutral";
 };
 
@@ -104,9 +110,9 @@ export const isEnemy = (source: Entity | string, target: Entity | string) => {
     ) return false;
   }
   const sourcePlayer = typeof source === "string" ? source : source.owner;
-  const sourceTeam = sourcePlayer ? getPlayerTeam(sourcePlayer) : "neutral";
+  const sourceTeam = simpleTeam(getPlayer(sourcePlayer)?.team);
   const targetPlayer = typeof target === "string" ? target : target.owner;
-  const targetTeam = targetPlayer ? getPlayerTeam(targetPlayer) : "neutral";
+  const targetTeam = simpleTeam(getPlayer(targetPlayer)?.team);
   return sourceTeam !== targetTeam && sourceTeam !== "neutral" &&
     targetTeam !== "neutral";
 };
@@ -120,10 +126,10 @@ export const isNeutral = (source: Entity | string, target: Entity | string) => {
     ) return false;
   }
   const sourcePlayer = typeof source === "string" ? source : source.owner;
-  const sourceTeam = sourcePlayer ? getPlayerTeam(sourcePlayer) : "neutral";
+  const sourceTeam = simpleTeam(getPlayer(sourcePlayer)?.team);
   if (sourceTeam === "neutral") return true;
   const targetPlayer = typeof target === "string" ? target : target.owner;
-  const targetTeam = targetPlayer ? getPlayerTeam(targetPlayer) : "neutral";
+  const targetTeam = simpleTeam(getPlayer(targetPlayer)?.team);
   return targetTeam === "neutral";
 };
 

@@ -12,10 +12,16 @@ import { TICK_RATE } from "@/shared/constants.ts";
 import { appContext } from "@/shared/context.ts";
 import { getSheepSpawn } from "../st/getSheepSpawn.ts";
 import { addEntity } from "@/shared/api/entity.ts";
-import { draftTeams, getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
+import {
+  draftTeams,
+  getIdealSheep,
+  getIdealTime,
+  undoDraft,
+} from "../st/roundHelpers.ts";
 import { endRound } from "../lobbyApi.ts";
 import { spawnPracticeUnits } from "../api/player.ts";
 import { Entity } from "@/shared/types.ts";
+import { flushUpdates } from "../updates.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -47,11 +53,10 @@ export const start = (
   const { sheep, wolves } = practice
     ? { sheep: new Set(lobby.players), wolves: new Set<Client>() }
     : draftTeams(lobby, desiredSheep);
+  if (lobby.settings.mode === "switch") undoDraft();
 
   const ecs = newEcs();
   lobby.round = {
-    sheep,
-    wolves,
     ecs,
     start: Date.now(),
     practice,
@@ -64,42 +69,28 @@ export const start = (
   }, TICK_RATE);
 
   const withContexts = (fn: () => void) =>
-    lobbyContext.with(lobby, () => appContext.with(ecs, fn));
+    lobbyContext.with(lobby, () => appContext.with(ecs, () => ecs.batch(fn)));
 
   withContexts(() => {
-    send({
-      type: "start",
-      sheep: Array.from(
-        sheep,
-        (c) => ({ id: c.id, sheepCount: c.sheepCount }),
-      ),
-      wolves: Array.from(wolves, (c) => c.id),
-    });
-
     // Don't need to pollute server with cosmetic entities
     generateDoodads(editor ? [] : ["static", "dynamic"]);
 
-    for (const player of sheep) {
-      player.playerEntity = ecs.addEntity({
-        name: player.name,
-        owner: player.id,
-        playerColor: player.color,
-        isPlayer: true,
-        team: "sheep",
-        gold: practice ? 100_000 : lobby.settings.startingGold.sheep,
-      });
+    for (const c of sheep) {
+      const player = ecs.addEntity(c);
+      player.team = "sheep";
+      player.gold = practice ? 100_000 : lobby.settings.startingGold.sheep;
+      if (lobby.settings.mode !== "switch") {
+        player.sheepCount = (player.sheepCount ?? 0) + 1;
+      }
     }
 
-    for (const player of wolves) {
-      player.playerEntity = ecs.addEntity({
-        name: player.name,
-        owner: player.id,
-        playerColor: player.color,
-        isPlayer: true,
-        team: "wolf",
-        gold: lobby.settings.startingGold.wolves,
-      });
+    for (const c of wolves) {
+      const player = ecs.addEntity(c);
+      player.team = "wolf";
+      player.gold = lobby.settings.startingGold.wolves;
     }
+
+    send({ type: "start", updates: flushUpdates(false) });
 
     timeout(() => {
       const lobby2 = lobbyContext.current;
@@ -124,8 +115,8 @@ export const start = (
 
           // Apply handicap to all non-VIP sheep players
           for (const player of sheep) {
-            if (player.id !== vip.owner && player.playerEntity) {
-              player.playerEntity.handicap = lobby.settings.vipHandicap;
+            if (player.id !== vip.owner) {
+              player.handicap = lobby.settings.vipHandicap;
             }
           }
         }

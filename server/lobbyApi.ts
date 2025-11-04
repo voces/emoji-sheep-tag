@@ -2,14 +2,16 @@ import { ServerToClientMessage } from "../client/client.ts";
 import { Client } from "./client.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { deleteLobby } from "./lobby.ts";
-import { clearUpdatesCache } from "./updates.ts";
+import { clearUpdatesCache, flushUpdates } from "./updates.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
 import { findPlayerUnit, getPlayerUnits } from "./systems/playerEntities.ts";
-import { getPlayer, sendPlayerGold } from "./api/player.ts";
+import { getPlayer } from "@/shared/api/player.ts";
+import { sendPlayerGold } from "./api/player.ts";
 import { getSheep } from "./systems/sheep.ts";
 import { distributeEquitably } from "./util/equitableDistribution.ts";
 import { isPractice } from "./api/st.ts";
 import { broadcastLobbyList, joinHub } from "./hub.ts";
+import type { Entity } from "@/shared/types.ts";
 
 export const endRound = (canceled = false) => {
   const lobby = lobbyContext.current;
@@ -17,8 +19,9 @@ export const endRound = (canceled = false) => {
   console.log(new Date(), "Round ended in lobby", lobby.name);
   lobby.round.clearInterval();
 
-  // Clean up player entity references
-  for (const player of lobby.players) player.playerEntity = undefined;
+  if (lobby.settings.mode === "vip") {
+    for (const p of lobby.players) p.handicap = undefined;
+  }
 
   // Don't want to clear the round in middle of a cycle
   queueMicrotask(() => {
@@ -27,18 +30,19 @@ export const endRound = (canceled = false) => {
   });
   lobby.status = "lobby";
   const round = {
-    sheep: Array.from(lobby.round.sheep, (p) => p.id),
-    wolves: Array.from(lobby.round.wolves, (p) => p.id),
+    sheep: Array.from(lobby.players).filter((p) => p.team === "sheep").map((
+      p,
+    ) => p.id),
+    wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((
+      p,
+    ) => p.id),
     duration: Date.now() - lobby.round.start,
   };
   if (!canceled && !lobby.round.practice) lobby.rounds.push(round);
   send({
     type: "stop",
-    players: canceled && !lobby.round.practice
-      ? Array.from(
-        lobby.players,
-        (p) => ({ id: p.id, sheepCount: p.sheepCount }),
-      )
+    updates: canceled && !lobby.round.practice
+      ? flushUpdates(false)
       : undefined,
     round: canceled || lobby.round.practice ? undefined : round,
   });
@@ -65,23 +69,20 @@ export const leave = (client?: Client) => {
 
   // Distribute gold to allies if player is leaving during a game (non-practice)
   if (
-    lobby.round && !isPractice() &&
-    (lobby.round.sheep.has(client) || lobby.round.wolves.has(client))
+    lobby.round && !isPractice() && client.team
   ) {
-    const isSheep = lobby.round.sheep.has(client);
     const leavingPlayerGold = getPlayer(client.id)?.gold ?? 0;
 
     if (leavingPlayerGold > 0) {
       // Get surviving allies from same team
-      let survivingAllies;
-      if (isSheep) {
+      let survivingAllies: Entity[] = [];
+      if (client.team === "sheep") {
         survivingAllies = Array.from(getSheep())
           .filter((s) => s.health && s.health > 0 && s.owner !== client.id);
-      } else {
+      } else if (client.team === "wolf") {
         // For wolves, find wolf units owned by players still in the wolves team
-        survivingAllies = [];
-        for (const wolfPlayer of lobby.round.wolves) {
-          if (wolfPlayer === client) continue;
+        for (const wolfPlayer of lobby.players) {
+          if (wolfPlayer === client || wolfPlayer.team !== "wolf") continue;
           const wolfUnit = findPlayerUnit(
             wolfPlayer.id,
             (e) => e.prefab === "wolf",
@@ -113,10 +114,10 @@ export const leave = (client?: Client) => {
     for (const entity of getPlayerUnits(client.id)) {
       lobby.round.ecs.removeEntity(entity);
     }
-    client.playerEntity = undefined;
   }
 
   lobby.players.delete(client);
+
   // Kill the lobby
   if (lobby.players.size === 0) return deleteLobby(lobby);
 
@@ -130,26 +131,24 @@ export const leave = (client?: Client) => {
   // Send leave event
   send({
     type: "leave",
-    player: client.id,
-    host: lobby.host?.id,
+    updates: lobby.round
+      ? flushUpdates(false)
+      : [{ id: client.id, __delete: true }],
     lobbySettings: serializeLobbySettings(lobby),
   });
 
-  // Make player leave lobby
-  if (
-    lobby.round &&
-    (lobby.round.sheep.has(client) || lobby.round?.wolves.has(client))
-  ) {
-    lobby.round.sheep.delete(client);
-    lobby.round.wolves.delete(client);
-
-    // End round if team now empty (but not in practice mode)
-    if (!lobby.round.practice) {
-      if (
-        lobby.round.sheep.size === 0 || lobby.round.wolves.size === 0 ||
-        lobby.round.vip === client.id
-      ) endRound(Date.now() - lobby.round.start < 10_000);
-    }
+  // End round if team now empty (but not in practice mode)
+  if (lobby.round && client.team && !lobby.round.practice) {
+    const sheep = Array.from(lobby.players).filter((p) =>
+      p.team === "sheep" && p !== client
+    );
+    const wolves = Array.from(lobby.players).filter((p) =>
+      p.team === "wolf" && p !== client
+    );
+    if (
+      sheep.length === 0 || wolves.length === 0 ||
+      lobby.round.vip === client.id
+    ) endRound(Date.now() - lobby.round.start < 10_000);
   }
 
   // Remove lobby reference and return client to hub

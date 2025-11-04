@@ -78,23 +78,44 @@ let clientIndex = 0;
 const allClients = new Set<Client>();
 export const getAllClients = () => allClients;
 
-export class Client {
+export class Client implements Entity {
+  // Entity properties
   id: string;
   name: string;
-  color: string;
+  playerColor: string;
+  isPlayer: true = true;
+  team?: "sheep" | "wolf";
+  gold?: number;
+  handicap?: number;
 
+  // Client-specific properties (not part of ECS)
+  // Note: socket and lobby are defined non-enumerable in constructor to prevent JSON serialization
+  socket!: Socket;
   lobby?: Lobby;
-  playerEntity?: Entity;
-
   sheepCount = 0;
 
-  constructor(readonly socket: Socket, providedName?: string) {
-    this.color = colors[0];
+  constructor(socket: Socket, providedName?: string) {
+    this.playerColor = colors[0];
     this.id = `player-${clientIndex++}`;
     this.name = providedName || `Player ${clientIndex}`;
 
     // Make name unique server-wide
     this.name = generateUniqueName(this.name, allClients, this);
+
+    // Make socket and lobby properties non-enumerable to prevent JSON serialization issues
+    Object.defineProperty(this, "socket", {
+      value: socket,
+      writable: false,
+      enumerable: false,
+      configurable: false,
+    });
+
+    Object.defineProperty(this, "lobby", {
+      value: undefined,
+      writable: true,
+      enumerable: false,
+      configurable: true,
+    });
 
     // Add to global client tracking
     allClients.add(this);
@@ -120,8 +141,6 @@ export class Client {
     }
   }
 }
-// type ClientInstance = InstanceType<typeof Client>;
-// export type { ClientInstance as Client };
 
 const zClientToServerMessage = z.discriminatedUnion("type", [
   zStart,
@@ -183,6 +202,7 @@ const serializeLobbySettings = (
     autoTime: lobby.settings.time === "auto",
     startingGold: lobby.settings.startingGold,
     income: lobby.settings.income,
+    host: lobby.host?.id ?? null,
   };
 };
 
@@ -205,21 +225,12 @@ export const handleSocket = (socket: Socket, url?: URL) => {
         client.send({
           type: "join",
           status: client.lobby.status,
-          players: Array.from(
-            client.lobby.players,
-            (p) => ({
-              id: p.id,
-              name: p.name,
-              color: p.color,
-              team: client.lobby!.settings.teams.get(client)! ?? "pending",
-              local: p === client ? true : undefined,
-              host: client.lobby?.host === p,
-              sheepCount: p.sheepCount,
-            }),
-          ),
-          updates: Array.from(client.lobby.round?.ecs.entities ?? []),
+          updates: client.lobby.round
+            ? Array.from(client.lobby.round.ecs.entities)
+            : Array.from(client.lobby.players),
           rounds: client.lobby.rounds,
           lobbySettings: serializeLobbySettings(client.lobby),
+          localPlayer: client.id,
         });
       } else {
         // Client in hub - send initial lobby list

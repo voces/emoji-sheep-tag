@@ -1,4 +1,3 @@
-import { Team } from "@/shared/zod.ts";
 import { type Client } from "./client.ts";
 import { Game } from "./ecs.ts";
 import { broadcastLobbyList } from "./hub.ts";
@@ -11,7 +10,6 @@ import { generateLobbyName } from "./util/lobbyNames.ts";
  */
 
 type LobbySettings = {
-  teams: Map<Client, Team>;
   /**
    * - `"survival"`: classic ST - sheep must survive until time runs out
    * - `"vip"`: one random sheep is VIP, wolves win if VIP dies
@@ -47,8 +45,6 @@ type LobbyStatus = "lobby" | "playing";
 
 type Round = {
   ecs: Game;
-  sheep: Set<Client>;
-  wolves: Set<Client>;
   start: number;
   clearInterval: () => void;
   practice: boolean;
@@ -83,7 +79,6 @@ export const newLobby = (host?: Client) => {
     host: host,
     name: generateLobbyName(),
     settings: {
-      teams: new Map(),
       mode: "survival",
       vipHandicap: 0.8,
       sheep: "auto",

@@ -2,9 +2,13 @@ import "@/client-testing/setup.ts";
 import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { app, map } from "./ecs.ts";
-import { getLocalPlayer, playersVar } from "@/vars/players.ts";
+import {
+  getPlayers,
+  getSheepPlayers,
+  getWolfPlayers,
+} from "@/shared/api/player.ts";
+import { getLocalPlayer } from "./api/player.ts";
 import { stateVar } from "@/vars/state.ts";
-import { data } from "./data.ts";
 import { handlers } from "./messageHandlers.ts";
 import { chatLogVar } from "@/vars/chat.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
@@ -21,6 +25,7 @@ const DEFAULT_LOBBY_SETTINGS = {
   autoTime: false,
   startingGold: { sheep: 25, wolves: 100 },
   income: { sheep: 1, wolves: 1 },
+  host: null,
 } as const;
 
 const EMPTY_LOBBY_SETTINGS = {
@@ -34,18 +39,16 @@ const createJoinMessage = (
 ) => ({
   type: "join" as const,
   status: "lobby" as const,
-  players: [],
   updates: [],
   lobbySettings: DEFAULT_LOBBY_SETTINGS,
   ...overrides,
 });
 
 const createLeaveMessage = (
-  player: string,
   overrides: Partial<Parameters<typeof handlers.leave>[0]> = {},
 ) => ({
   type: "leave" as const,
-  player,
+  updates: [],
   lobbySettings: DEFAULT_LOBBY_SETTINGS,
   ...overrides,
 });
@@ -53,46 +56,35 @@ const createLeaveMessage = (
 describe("join", () => {
   it("initial join (first player)", () => {
     handlers.join(createJoinMessage({
-      players: [{
-        id: "player-0",
-        name: "Player 0",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
-        local: true,
-        host: true,
-      }],
+      updates: [{ id: "player-0", isPlayer: true }],
+      localPlayer: "player-0",
+      lobbySettings: { ...DEFAULT_LOBBY_SETTINGS, host: "player-0" },
     }));
 
-    expect(playersVar()).toHaveLength(1);
-    expect(playersVar()[0].id).toBe("player-0");
-    expect(playersVar()[0].local).toBe(true);
-    expect(playersVar()[0].host).toBe(true);
+    expect(getPlayers().map((p) => p.id)).toEqual(["player-0"]);
     expect(getLocalPlayer()?.id).toBe("player-0");
+    expect(lobbySettingsVar()?.host).toBe("player-0");
     expect(chatLogVar()).toHaveLength(0);
   });
 
   it("initial join (as second player)", () => {
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "player-0",
+        isPlayer: true,
         name: "Player 0",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
-        host: true,
+        playerColor: "#FF0000",
       }, {
         id: "player-1",
+        isPlayer: true,
         name: "Player 1",
-        color: "#00FF00",
-        team: "wolf",
-        sheepCount: 0,
-        local: true,
+        playerColor: "#00FF00",
       }],
+      localPlayer: "player-1",
     }));
 
-    expect(playersVar()).toHaveLength(2);
-    expect(playersVar().map((p) => p.id)).toEqual(["player-0", "player-1"]);
+    expect(getPlayers()).toHaveLength(2);
+    expect(getPlayers().map((p) => p.id)).toEqual(["player-0", "player-1"]);
     expect(getLocalPlayer()?.id).toBe("player-1");
     expect(lobbySettingsVar()).toEqual(DEFAULT_LOBBY_SETTINGS);
     expect(chatLogVar()).toHaveLength(1);
@@ -103,29 +95,25 @@ describe("join", () => {
   it("another player joins our existing lobby", () => {
     // Setup existing lobby with us as first player
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "existing-player",
-        name: "Existing",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
-        local: true,
+        isPlayer: true,
       }],
+      localPlayer: "existing-player",
     }));
 
     // Another player joins
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "new-player",
+        isPlayer: true,
         name: "Newcomer",
-        color: "#00FF00",
-        team: "wolf",
-        sheepCount: 0,
+        playerColor: "#00FF00",
       }],
     }));
 
-    expect(playersVar()).toHaveLength(2);
-    expect(playersVar().map((p) => p.id)).toEqual([
+    expect(getPlayers()).toHaveLength(2);
+    expect(getPlayers().map((p) => p.id)).toEqual([
       "existing-player",
       "new-player",
     ]);
@@ -136,12 +124,9 @@ describe("join", () => {
   it("single player update (already known)", () => {
     // Setup initial lobby
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "existing-player",
-        name: "Existing",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
+        isPlayer: true,
       }],
     }));
 
@@ -149,122 +134,107 @@ describe("join", () => {
 
     // Try to join the same player again
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "existing-player",
-        name: "Existing Updated",
-        color: "#0000FF",
-        team: "wolf",
-        sheepCount: 5,
+        isPlayer: true,
       }],
       lobbySettings: EMPTY_LOBBY_SETTINGS,
     }));
 
-    expect(playersVar()).toHaveLength(1);
-    expect(playersVar()[0].name).toBe("Existing");
+    expect(getPlayers()).toHaveLength(1);
     expect(chatLogVar()).toHaveLength(initialChatCount);
   });
 });
 
-describe("colorChange", () => {
+describe("colorChange via updates", () => {
   it("updates player color", () => {
     // Setup player first
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "player-1",
+        isPlayer: true,
         name: "Test Player",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
+        playerColor: "#FF0000",
       }],
     }));
 
-    handlers.colorChange({
-      type: "colorChange",
-      id: "player-1",
-      color: "#00FF00",
+    handlers.updates({
+      type: "updates",
+      updates: [{
+        id: "player-1",
+        playerColor: "#00FF00",
+      }],
     });
 
-    expect(playersVar()[0].color).toBe("#00FF00");
-    expect(playersVar()[0].name).toBe("Test Player");
+    expect(getPlayers()[0].playerColor).toBe("#00FF00");
+    expect(getPlayers()[0].name).toBe("Test Player");
   });
 
   it("ignores unknown player", () => {
     // Setup player first
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "player-1",
-        name: "Test Player",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
+        isPlayer: true,
+        playerColor: "#FF0000",
       }],
     }));
 
-    handlers.colorChange({
-      type: "colorChange",
-      id: "unknown-player",
-      color: "#00FF00",
+    handlers.updates({
+      type: "updates",
+      updates: [{
+        id: "unknown-player",
+        playerColor: "#00FF00",
+      }],
     });
 
-    expect(playersVar()[0].color).toBe("#FF0000");
+    expect(getPlayers()[0].playerColor).toBe("#FF0000");
   });
 });
 
-describe("nameChange", () => {
+describe("nameChange via updates", () => {
   it("updates player name", () => {
     // Setup player first
-    handlers.join({
-      type: "join",
-      status: "lobby",
-      players: [{
+    handlers.join(createJoinMessage({
+      updates: [{
         id: "player-1",
+        isPlayer: true,
         name: "Old Name",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
+        playerColor: "#FF0000",
       }],
-      updates: [],
-      lobbySettings: {
-        mode: "survival",
-        vipHandicap: 0.8,
-        sheep: 1,
-        autoSheep: false,
-        time: 300,
-        autoTime: false,
-        startingGold: { sheep: 25, wolves: 100 },
-        income: { sheep: 1, wolves: 1 },
-      },
+    }));
+
+    handlers.updates({
+      type: "updates",
+      updates: [{
+        id: "player-1",
+        name: "New Name",
+      }],
     });
 
-    handlers.nameChange({
-      type: "nameChange",
-      id: "player-1",
-      name: "New Name",
-    });
-
-    expect(playersVar()[0].name).toBe("New Name");
-    expect(playersVar()[0].color).toBe("#FF0000");
+    expect(getPlayers()[0].name).toBe("New Name");
+    expect(getPlayers()[0].playerColor).toBe("#FF0000");
   });
 
   it("ignores unknown player", () => {
     // Setup player first
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "player-1",
+        isPlayer: true,
         name: "Test Player",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
       }],
     }));
 
-    handlers.nameChange({
-      type: "nameChange",
-      id: "unknown-player",
-      name: "New Name",
+    handlers.updates({
+      type: "updates",
+      updates: [{
+        id: "unknown-player",
+        name: "New Name",
+      }],
     });
 
-    expect(playersVar()[0].name).toBe("Test Player");
+    expect(getPlayers()[0].name).toBe("Test Player");
   });
 });
 
@@ -272,55 +242,44 @@ describe("start", () => {
   it("transitions to playing state and sets up game", () => {
     // Setup players in lobby first
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "sheep-1",
-        name: "Sheep Player",
-        color: "#FF0000",
+        isPlayer: true,
         team: "sheep",
-        sheepCount: 0,
       }, {
         id: "wolf-1",
-        name: "Wolf Player",
-        color: "#00FF00",
+        isPlayer: true,
         team: "wolf",
-        sheepCount: 0,
       }],
     }));
 
     handlers.start({
       type: "start",
-      sheep: [{ id: "sheep-1", sheepCount: 3 }],
-      wolves: ["wolf-1"],
+      updates: [{ id: "sheep-1", sheepCount: 3 }, {
+        id: "wolf-1",
+      }],
     });
 
     expect(stateVar()).toBe("playing");
-    expect(playersVar().find((p) => p.id === "sheep-1")?.sheepCount).toBe(3);
-    expect(data.sheep).toHaveLength(1);
-    expect(data.sheep[0].id).toBe("sheep-1");
-    expect(data.wolves).toHaveLength(1);
-    expect(data.wolves[0].id).toBe("wolf-1");
+    expect(getPlayers().find((p) => p.id === "sheep-1")?.sheepCount).toBe(3);
+    expect(getSheepPlayers().map((p) => p.id)).toEqual(["sheep-1"]);
+    expect(getWolfPlayers().map((p) => p.id)).toEqual(["wolf-1"]);
   });
 
   it("handles players not in sheep or wolves lists", () => {
     // Setup observer player
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "observer",
-        name: "Observer",
-        color: "#CCCCCC",
+        isPlayer: true,
         team: "observer",
-        sheepCount: 0,
       }],
     }));
 
-    handlers.start({
-      type: "start",
-      sheep: [],
-      wolves: [],
-    });
+    handlers.start({ type: "start" });
 
-    expect(data.sheep).toHaveLength(0);
-    expect(data.wolves).toHaveLength(0);
+    expect(getSheepPlayers()).toHaveLength(0);
+    expect(getWolfPlayers()).toHaveLength(0);
     expect(stateVar()).toBe("playing");
   });
 });
@@ -355,38 +314,23 @@ describe("stop", () => {
 
   it("updates players when provided", () => {
     // Setup player with sheep count
-    handlers.join({
-      type: "join",
-      status: "lobby",
-      players: [{
+    handlers.join(createJoinMessage({
+      updates: [{
         id: "player-1",
-        name: "Test",
-        color: "#FF0000",
-        team: "sheep",
+        isPlayer: true,
         sheepCount: 5,
       }],
-      updates: [],
-      lobbySettings: {
-        mode: "survival",
-        vipHandicap: 0.8,
-        sheep: 1,
-        autoSheep: false,
-        time: 300,
-        autoTime: false,
-        startingGold: { sheep: 25, wolves: 100 },
-        income: { sheep: 1, wolves: 1 },
-      },
-    });
+    }));
 
     handlers.stop({
       type: "stop",
-      players: [{
+      updates: [{
         id: "player-1",
         sheepCount: 0,
       }],
     });
 
-    expect(playersVar()[0].sheepCount).toBe(0);
+    expect(getPlayers()[0].sheepCount).toBe(0);
   });
 
   it("appends rounds when provided", () => {
@@ -420,22 +364,10 @@ describe("stop", () => {
 describe("updates", () => {
   it("creates new unit entity", () => {
     // Must be in playing state for unit updates
-    handlers.join({
-      type: "join",
+    handlers.join(createJoinMessage({
       status: "playing",
-      players: [],
-      updates: [],
-      lobbySettings: {
-        mode: "survival",
-        vipHandicap: 0.8,
-        sheep: 0,
-        autoSheep: true,
-        time: 300,
-        autoTime: false,
-        startingGold: { sheep: 25, wolves: 100 },
-        income: { sheep: 1, wolves: 1 },
-      },
-    });
+      lobbySettings: EMPTY_LOBBY_SETTINGS,
+    }));
 
     handlers.updates({
       type: "updates",
@@ -554,110 +486,62 @@ describe("updates", () => {
 describe("leave", () => {
   it("removes player and updates format", () => {
     // Setup players first
-    handlers.join({
-      type: "join",
-      status: "lobby",
-      players: [{
+    handlers.join(createJoinMessage({
+      updates: [{
         id: "player-1",
-        name: "Leaving Player",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
+        isPlayer: true,
       }, {
         id: "player-2",
-        name: "Staying Player",
-        color: "#00FF00",
-        team: "wolf",
-        sheepCount: 0,
+        isPlayer: true,
       }],
-      updates: [],
-      lobbySettings: {
-        mode: "survival",
-        vipHandicap: 0.8,
-        sheep: 1,
-        autoSheep: false,
-        time: 300,
-        autoTime: false,
-        startingGold: { sheep: 25, wolves: 100 },
-        income: { sheep: 1, wolves: 1 },
-      },
-    });
+    }));
 
-    const initialChatCount = chatLogVar().length;
-
-    handlers.leave(createLeaveMessage("player-1", {
+    handlers.leave(createLeaveMessage({
+      updates: [{ id: "player-1", __delete: true }],
       lobbySettings: EMPTY_LOBBY_SETTINGS,
     }));
 
-    expect(playersVar()).toHaveLength(1);
-    expect(playersVar()[0].id).toBe("player-2");
-    expect(chatLogVar()).toHaveLength(initialChatCount + 1);
-    expect(chatLogVar()[chatLogVar().length - 1].message).toContain(
-      "Leaving Player",
-    );
-    expect(chatLogVar()[chatLogVar().length - 1].message).toContain("left");
+    expect(getPlayers()).toHaveLength(1);
+    expect(getPlayers()[0].id).toBe("player-2");
   });
 
   it("transfers host to another player", () => {
     // Setup players with host
-    handlers.join({
-      type: "join",
-      status: "lobby",
-      players: [{
+    handlers.join(createJoinMessage({
+      updates: [{
         id: "host",
-        name: "Host Player",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
-        host: true,
+        isPlayer: true,
       }, {
         id: "player-2",
-        name: "Regular Player",
-        color: "#00FF00",
-        team: "wolf",
-        sheepCount: 0,
+        isPlayer: true,
       }],
-      updates: [],
-      lobbySettings: {
-        mode: "survival",
-        vipHandicap: 0.8,
-        sheep: 1,
-        autoSheep: false,
-        time: 300,
-        autoTime: false,
-        startingGold: { sheep: 25, wolves: 100 },
-        income: { sheep: 1, wolves: 1 },
-      },
-    });
-
-    handlers.leave(createLeaveMessage("host", {
-      host: "player-2",
-      lobbySettings: EMPTY_LOBBY_SETTINGS,
+      lobbySettings: { ...DEFAULT_LOBBY_SETTINGS, host: "host" },
     }));
 
-    expect(playersVar()).toHaveLength(1);
-    expect(playersVar()[0].id).toBe("player-2");
-    expect(playersVar()[0].host).toBe(true);
+    handlers.leave(createLeaveMessage({
+      updates: [{ id: "host", __delete: true }],
+      lobbySettings: { ...EMPTY_LOBBY_SETTINGS, host: "player-2" },
+    }));
+
+    expect(getPlayers()).toHaveLength(1);
+    expect(getPlayers()[0].id).toBe("player-2");
+    expect(lobbySettingsVar().host).toBe("player-2");
   });
 
   it("handles unknown player leaving", () => {
     // Setup player first
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "player-1",
-        name: "Test Player",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
+        isPlayer: true,
       }],
     }));
 
-    const initialChatCount = chatLogVar().length;
+    handlers.leave(createLeaveMessage({
+      updates: [{ id: "unknown-player", __delete: true }],
+    }));
 
-    handlers.leave(createLeaveMessage("unknown-player"));
-
-    expect(playersVar()).toHaveLength(1);
-    expect(chatLogVar()).toHaveLength(initialChatCount);
+    expect(getPlayers()).toHaveLength(1);
   });
 });
 
@@ -665,12 +549,11 @@ describe("chat", () => {
   it("adds player chat message with color", () => {
     // Setup player first
     handlers.join(createJoinMessage({
-      players: [{
+      updates: [{
         id: "player-1",
+        isPlayer: true,
         name: "Test Player",
-        color: "#FF0000",
-        team: "sheep",
-        sheepCount: 0,
+        playerColor: "#FF0000",
       }],
     }));
 
@@ -716,6 +599,7 @@ describe("lobbySettings", () => {
       autoTime: false,
       startingGold: { sheep: 50, wolves: 75 },
       income: { sheep: 1, wolves: 1 },
+      host: null,
     });
 
     expect(lobbySettingsVar().startingGold).toEqual({ sheep: 50, wolves: 75 });
@@ -734,6 +618,7 @@ describe("lobbySettings", () => {
       autoTime: false,
       startingGold: { sheep: 25, wolves: 100 },
       income: { sheep: 1, wolves: 1 },
+      host: "player-1",
     });
 
     handlers.lobbySettings({
@@ -746,10 +631,12 @@ describe("lobbySettings", () => {
       autoTime: true,
       startingGold: { sheep: 75, wolves: 50 },
       income: { sheep: 1, wolves: 1 },
+      host: "player-2",
     });
 
     expect(lobbySettingsVar().startingGold).toEqual({ sheep: 75, wolves: 50 });
     expect(lobbySettingsVar().time).toBe(400);
     expect(lobbySettingsVar().autoTime).toBe(true);
+    expect(lobbySettingsVar().host).toBe("player-2");
   });
 });

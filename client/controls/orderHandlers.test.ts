@@ -8,7 +8,7 @@ import { expect } from "@std/expect";
 import { waitFor } from "@testing-library/react";
 import { app, Entity } from "../ecs.ts";
 import { selection } from "../systems/autoSelect.ts";
-import { playersVar } from "@/vars/players.ts";
+import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { connect, setServer } from "../connection.ts";
 import { connectionStatusVar } from "@/vars/state.ts";
 import {
@@ -27,6 +27,7 @@ import {
   setActiveOrder,
 } from "./orderHandlers.ts";
 import { newUnit } from "../../server/api/unit.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 describe("order handlers", () => {
   beforeEach(() => {
@@ -107,15 +108,8 @@ describe("order handlers", () => {
 
   describe("smart target selection", () => {
     beforeEach(async () => {
-      // Set up local player
-      playersVar([{
-        id: "player-1",
-        name: "Test Player",
-        color: "blue",
-        local: true,
-        sheepCount: 0,
-        entity: { id: "player-entity-1", gold: 100 },
-      }]);
+      localPlayerIdVar("player-1");
+      addEntity({ id: "player-1", isPlayer: true });
 
       clearTestServerMessages();
       setServer(`localhost:${getTestServerPort()}`);
@@ -320,15 +314,8 @@ describe("order handlers", () => {
 
   describe("order queuing", () => {
     beforeEach(async () => {
-      // Set up local player
-      playersVar([{
-        id: "player-1",
-        name: "Test Player",
-        color: "blue",
-        local: true,
-        sheepCount: 0,
-        entity: { id: "player-entity-1", gold: 100 },
-      }]);
+      localPlayerIdVar("player-1");
+      addEntity({ id: "player-1", isPlayer: true });
 
       clearTestServerMessages();
       setServer(`localhost:${getTestServerPort()}`);

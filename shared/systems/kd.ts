@@ -57,11 +57,13 @@ addSystem((app) => {
   return {
     props: ["position"],
     onAdd: (e) => {
+      if (e.type === "cosmetic") return;
       kd.add(e.position);
       entityToPointMap.set(e, e.position);
       pointToEntityMap.set(e.position, e);
     },
     onChange: (e) => {
+      if (e.type === "cosmetic") return;
       const prev = entityToPointMap.get(e);
       if (prev) {
         kd.replace(prev, e.position);
@@ -73,6 +75,7 @@ addSystem((app) => {
       pointToEntityMap.set(e.position, e);
     },
     onRemove: (e) => {
+      if (e.type === "cosmetic") return;
       const prev = entityToPointMap.get(e);
       if (!prev) return;
       kd.delete(prev);

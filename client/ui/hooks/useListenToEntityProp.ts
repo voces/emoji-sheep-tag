@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Entity, listen } from "../../ecs.ts";
 
 // Shared throttling logic with trailing call
-const useThrottle = <T>(
+const throttle = <T>(
   callback: (value: T) => void,
   delay: number,
 ) => {
@@ -50,7 +50,7 @@ export const useListenToEntityProp = <P extends keyof Entity>(
     () => {
       if (!entity) return undefined;
 
-      const { throttledCallback, cleanup } = useThrottle(setValue, 100);
+      const { throttledCallback, cleanup } = throttle(setValue, 100);
       const unsubscribe = listen(
         entity,
         prop,
@@ -79,7 +79,7 @@ export const useListenToEntityProps = <P extends keyof Entity>(
     () => {
       if (!entity) return undefined;
 
-      const { throttledCallback, cleanup } = useThrottle(setValue, 100);
+      const { throttledCallback, cleanup } = throttle(setValue, 100);
       const unsubscribe = listen(
         entity,
         props,
@@ -101,13 +101,13 @@ export const useListenToEntityProps = <P extends keyof Entity>(
 };
 
 export const useListenToEntities = (
-  entities: Set<Entity>,
+  entities: ReadonlySet<Entity> | ReadonlyArray<Entity>,
   props: (keyof Entity)[],
 ) => {
   const [, setValue] = useState(0);
   useEffect(
     () => {
-      const { throttledCallback, cleanup } = useThrottle(
+      const { throttledCallback, cleanup } = throttle(
         () => setValue((v) => v + 1),
         100,
       );

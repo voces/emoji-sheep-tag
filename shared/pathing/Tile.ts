@@ -67,7 +67,6 @@ export class Tile {
   recalculatePathing(): void {
     this.pathing = this.originalPathing;
     this.entities.forEach((pathing) => (this.pathing |= pathing));
-    // console.log("set tile", this.x, this.y, "to", this.pathing);
   }
 
   pathable(pathing: Pathing): boolean {

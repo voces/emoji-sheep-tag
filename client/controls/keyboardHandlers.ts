@@ -9,7 +9,7 @@ import {
   menuActionRefToKey,
 } from "../util/actionToShortcutKey.ts";
 import { normalizeKey, normalizeKeys } from "../util/normalizeKey.ts";
-import { getLocalPlayer } from "@/vars/players.ts";
+import { getLocalPlayer } from "../api/player.ts";
 import { canPlayerExecuteAction } from "../util/allyPermissions.ts";
 import { type MenuConfig, menusVar } from "../ui/vars/menus.ts";
 import { items, prefabs } from "@/shared/data.ts";

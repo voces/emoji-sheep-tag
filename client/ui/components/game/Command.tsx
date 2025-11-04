@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { styled } from "styled-components";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
-import { useLocalPlayer } from "@/vars/players.ts";
+import { useLocalPlayer } from "@/hooks/usePlayers.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";
 import {
   CommandButton,
@@ -155,7 +155,7 @@ export const Command = ({
       {icon && (
         <SvgIcon
           icon={icon}
-          color={localPlayer?.color}
+          color={localPlayer?.playerColor ?? undefined}
           scale={iconScale}
           {...iconProps}
         />

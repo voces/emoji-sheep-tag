@@ -1,4 +1,7 @@
 import { makeVar } from "@/hooks/useVar.tsx";
+import { colorName, playerEntities } from "@/shared/api/player.ts";
+import { localPlayerIdVar } from "./localPlayerId.ts";
+import { onInit } from "@/shared/context.ts";
 
 export const chatLogVar = makeVar<
   { id: string; timestamp: number; message: string }[]
@@ -20,3 +23,10 @@ export const addChatMessage = (message: string) => {
 };
 
 export const chatValueVar = makeVar<string>("");
+
+onInit(() =>
+  playerEntities().addEventListener("delete", (p) => {
+    if (p.id === localPlayerIdVar()) return;
+    addChatMessage(`${colorName(p)} has left the game!`);
+  })
+);

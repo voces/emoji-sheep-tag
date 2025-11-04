@@ -4,13 +4,14 @@ import { ExtendedSet } from "../util/ExtendedSet.ts";
 import { addSystem, appContext } from "../context.ts";
 import { raise } from "../util/raise.ts";
 
-type Player = SystemEntity<"isPlayer" | "owner" | "team">;
+type Player = SystemEntity<"isPlayer" | "team">;
 
 const map = new WeakMap<
   App<Entity>,
   { sheep: ExtendedSet<Player>; wolves: ExtendedSet<Player> }
 >();
 
+// TODO: kill this?
 export const getTeams = () =>
   map.get(appContext.current) ?? raise("Expected team map to be set for app");
 
@@ -22,7 +23,7 @@ addSystem((app) => {
   map.set(app, data);
 
   return ({
-    props: ["isPlayer", "owner", "team"],
+    props: ["isPlayer", "team"],
     onAdd: (entity) => {
       if (entity.team === "sheep") data.sheep.add(entity);
       else if (entity.team === "wolf") data.wolves.add(entity);

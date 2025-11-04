@@ -3,7 +3,8 @@ import { styled } from "styled-components";
 import { app, Entity } from "../../../ecs.ts";
 import { selection } from "../../../systems/autoSelect.ts";
 import { UnitDataAction } from "@/shared/types.ts";
-import { playersVar, useLocalPlayer } from "@/vars/players.ts";
+import { useLocalPlayer } from "@/hooks/usePlayers.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
 import {
@@ -143,10 +144,8 @@ export const ActionBar = () => {
   const localPlayer = useLocalPlayer();
 
   // Listen to gold changes on the owning player's entity
-  const owningPlayer = selection
-    ? playersVar().find((p) => p.id === selection.owner)
-    : undefined;
-  useListenToEntityProp(owningPlayer?.entity, "gold");
+  const owningPlayer = getPlayer(selection?.owner);
+  useListenToEntityProp(owningPlayer, "gold");
 
   // Show menu actions if menu is active
   let displayActions: ReadonlyArray<

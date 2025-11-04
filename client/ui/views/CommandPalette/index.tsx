@@ -10,7 +10,7 @@ import { stateVar } from "@/vars/state.ts";
 import { flags } from "../../../flags.ts";
 import { Card } from "@/components/layout/Card.tsx";
 import { Input } from "@/components/forms/Input.tsx";
-import { getLocalPlayer } from "@/vars/players.ts";
+import { isLocalPlayerHost } from "../../../api/player.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { loadLocal } from "../../../local.ts";
 import { useExportMap } from "./useExportMap.ts";
@@ -122,7 +122,7 @@ export const CommandPalette = () => {
       name: "Cancel round",
       description: "Cancels the current round",
       valid: () =>
-        stateVar() === "playing" && !!getLocalPlayer()?.host && !editorVar(),
+        stateVar() === "playing" && isLocalPlayerHost() && !editorVar(),
       callback: () => send({ type: "cancel" }),
     },
     {

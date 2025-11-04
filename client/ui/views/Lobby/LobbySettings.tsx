@@ -1,6 +1,6 @@
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { useLocalPlayer } from "@/vars/players.ts";
+import { useIsLocalPlayerHost, usePlayers } from "@/hooks/usePlayers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { send } from "../../../client.ts";
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
@@ -8,7 +8,6 @@ import { Card } from "@/components/layout/Card.tsx";
 import { TimeInput } from "@/components/forms/TimeInput.tsx";
 import { Button } from "@/components/forms/Button.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
-import { playersVar } from "@/vars/players.ts";
 import { NumericSettingInput } from "./NumericSettingInput.tsx";
 
 const SettingsCard = styled(Card)`
@@ -73,9 +72,9 @@ const ModeButton = styled(Button)<{ $active: boolean }>`
 `;
 
 export const LobbySettings = () => {
-  const localPlayer = useLocalPlayer();
   const lobbySettings = useReactiveVar(lobbySettingsVar);
-  const players = useReactiveVar(playersVar);
+  const players = usePlayers();
+  const isHost = useIsLocalPlayerHost();
 
   const maxSheep = Math.max(players.length - 1, 1);
 
@@ -95,7 +94,7 @@ export const LobbySettings = () => {
               type="button"
               $active={lobbySettings.mode === "survival"}
               onClick={() => send({ type: "lobbySettings", mode: "survival" })}
-              disabled={!localPlayer?.host}
+              disabled={!isHost}
             >
               Survival
             </ModeButton>
@@ -103,7 +102,7 @@ export const LobbySettings = () => {
               type="button"
               $active={lobbySettings.mode === "vip"}
               onClick={() => send({ type: "lobbySettings", mode: "vip" })}
-              disabled={!localPlayer?.host}
+              disabled={!isHost}
             >
               VIP
             </ModeButton>
@@ -111,7 +110,7 @@ export const LobbySettings = () => {
               type="button"
               $active={lobbySettings.mode === "switch"}
               onClick={() => send({ type: "lobbySettings", mode: "switch" })}
-              disabled={!localPlayer?.host}
+              disabled={!isHost}
             >
               Switch
             </ModeButton>
@@ -127,7 +126,7 @@ export const LobbySettings = () => {
             max={10}
             step={0.01}
             defaultValue="0.75"
-            disabled={!localPlayer?.host}
+            disabled={!isHost}
             onChange={(value) =>
               send({ type: "lobbySettings", vipHandicap: value })}
           />
@@ -141,7 +140,7 @@ export const LobbySettings = () => {
           max={maxSheep}
           step={1}
           defaultValue="1"
-          disabled={!localPlayer?.host}
+          disabled={!isHost}
           autoChecked={lobbySettings.autoSheep}
           onChange={(value) => send({ type: "lobbySettings", sheep: value })}
           onAutoChange={(checked) =>
@@ -162,7 +161,7 @@ export const LobbySettings = () => {
               max={3599}
               value={lobbySettings.time}
               onChange={(value) => send({ type: "lobbySettings", time: value })}
-              disabled={!localPlayer?.host || lobbySettings.autoTime}
+              disabled={!isHost || lobbySettings.autoTime}
               style={{ flex: 1 }}
             />
             <SettingsLabel htmlFor="autoTime">Auto</SettingsLabel>
@@ -174,7 +173,7 @@ export const LobbySettings = () => {
                   type: "lobbySettings",
                   time: e.currentTarget.checked ? "auto" : lobbySettings.time,
                 })}
-              disabled={!localPlayer?.host}
+              disabled={!isHost}
             />
           </HStack>
         </SettingsRow>
@@ -187,7 +186,7 @@ export const LobbySettings = () => {
           max={100000}
           step={1}
           defaultValue="0"
-          disabled={!localPlayer?.host}
+          disabled={!isHost}
           onChange={(value) =>
             send({
               type: "lobbySettings",
@@ -203,7 +202,7 @@ export const LobbySettings = () => {
           max={100000}
           step={1}
           defaultValue="0"
-          disabled={!localPlayer?.host}
+          disabled={!isHost}
           onChange={(value) =>
             send({
               type: "lobbySettings",
@@ -219,7 +218,7 @@ export const LobbySettings = () => {
           max={100}
           step={0.01}
           defaultValue="1"
-          disabled={!localPlayer?.host}
+          disabled={!isHost}
           onChange={(value) =>
             send({
               type: "lobbySettings",
@@ -235,7 +234,7 @@ export const LobbySettings = () => {
           max={100}
           step={0.01}
           defaultValue="1"
-          disabled={!localPlayer?.host}
+          disabled={!isHost}
           onChange={(value) =>
             send({
               type: "lobbySettings",
@@ -248,14 +247,14 @@ export const LobbySettings = () => {
         <Button
           type="button"
           onClick={() => send({ type: "start", practice: true })}
-          disabled={!localPlayer?.host}
+          disabled={!isHost}
         >
           Practice
         </Button>
         <Button
           type="button"
           onClick={() => send({ type: "start" })}
-          disabled={!localPlayer?.host || players.length === 1}
+          disabled={!isHost || players.length === 1}
         >
           Start
         </Button>

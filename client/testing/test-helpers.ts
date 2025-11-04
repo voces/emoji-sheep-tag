@@ -1,13 +1,13 @@
-import type { Player } from "@/vars/players.ts";
+import { Player } from "@/shared/api/player.ts";
 import type { Entity } from "../ecs.ts";
 
 export const createTestPlayer = (overrides: Partial<Player> = {}): Player => ({
   id: "player-0",
+  isPlayer: true,
   name: "Test Player",
-  color: "red",
-  local: true,
+  playerColor: "red",
   sheepCount: 0,
-  entity: { id: "player-entity", gold: 200, mana: 100, maxMana: 100 },
+  gold: 200,
   ...overrides,
 });
 

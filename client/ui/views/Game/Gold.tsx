@@ -1,7 +1,7 @@
 import { styled } from "styled-components";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { playersVar } from "@/vars/players.ts";
+import { useLocalPlayer } from "@/hooks/usePlayers.ts";
 import { Entity } from "../../../ecs.ts";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
 import { editorVar } from "@/vars/editor.ts";
@@ -29,10 +29,9 @@ const InnerGold = ({ entity }: { entity: Entity }) => {
 
 export const Gold = () => {
   const editor = useReactiveVar(editorVar);
-  const players = useReactiveVar(playersVar);
-  const playerEntity = players.find((p) => p.local)?.entity;
+  const player = useLocalPlayer();
 
-  if (!playerEntity || editor) return null;
+  if (!player || editor) return null;
 
-  return <InnerGold entity={playerEntity} />;
+  return <InnerGold entity={player} />;
 };

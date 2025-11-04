@@ -1,6 +1,7 @@
 import { app, Entity, SystemEntity } from "../ecs.ts";
 import { prefabs } from "@/shared/data.ts";
-import { getLocalPlayer, getPlayer } from "../ui/vars/players.ts";
+import { getLocalPlayer } from "../api/player.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 import { selection } from "../systems/autoSelect.ts";
 import { canBuild } from "../api/unit.ts";
 import { updateCursor } from "../graphics/cursor.ts";
@@ -104,8 +105,8 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
 
   const [normalizedX, normalizedY] = normalizeBuildPosition(x, y, prefab);
 
-  const owner = builder.owner ? getPlayer(builder.owner) : undefined;
-  const playerColor = owner?.color;
+  const owner = getPlayer(builder.owner);
+  const playerColor = owner?.playerColor;
   const targetColor = canBuild(builder, prefab, normalizedX, normalizedY)
     ? 0x0000ff
     : 0xff0000;
@@ -153,7 +154,7 @@ const validateBlueprintAtPosition = (
   if (!blueprint) return;
 
   const localPlayer = getLocalPlayer();
-  const playerColor = localPlayer?.color;
+  const playerColor = localPlayer?.playerColor;
   const targetColor = isValid ? 0x0000ff : 0xff0000;
 
   if (blueprint.owner) {

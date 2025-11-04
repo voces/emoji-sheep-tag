@@ -1,6 +1,7 @@
 import { isAlly } from "@/shared/api/unit.ts";
 import { app, Entity } from "../ecs.ts";
-import { getLocalPlayer, getPlayer } from "../ui/vars/players.ts";
+import { getLocalPlayer } from "../api/player.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 import { prefabs as blueprintData } from "@/shared/data.ts";
 import { nonNull } from "@/shared/types.ts";
 import { computeBlueprintColor } from "../util/colorHelpers.ts";
@@ -25,7 +26,7 @@ const entitiesFromQueue = (e: Entity) => {
   const orders = [...(e.queue ?? [])];
   if (e.order && (e.order.type === "build" || e.queue)) orders.unshift(e.order);
 
-  const playerColor = getPlayer(e.owner)?.color;
+  const playerColor = getPlayer(e.owner)?.playerColor;
 
   const existingBlueprints = blueprints.get(e) ?? [];
 

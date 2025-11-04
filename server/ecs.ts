@@ -38,7 +38,8 @@ function makeLoopGuard(
 
 export const newEcs = () => {
   const initializeEntity = (input: Partial<Entity>) => {
-    const entity: Entity = { ...input, id: input.id || id(input.prefab) };
+    if (!input.id) input.id = id(input.prefab);
+    const entity = input as Entity;
 
     const setTrap: ProxyHandler<Entity>["set"] = function setTrap(
       target,
@@ -199,7 +200,6 @@ import("./systems/lookup.ts");
 import("./systems/lookup.ts");
 import("./systems/pathing.ts");
 import("./systems/pathing.ts");
-import("./systems/playerEntities.ts");
 import("./systems/playerEntities.ts");
 import("./systems/projectile.ts");
 import("./systems/queues.ts");

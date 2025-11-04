@@ -1,11 +1,13 @@
 import "@/client-testing/setup.ts";
-import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { beforeEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { Lobby } from "./index.tsx";
-import { playersVar } from "@/vars/players.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { TestWrapper } from "@/client-testing/utils.tsx";
+import { addEntity } from "@/shared/api/entity.ts";
+import { createTestPlayer } from "@/client-testing/test-helpers.ts";
+import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 
 // We'll test the UI behavior, not the actual network sending
 // The send function calls are handled by the parent component/client
@@ -22,36 +24,14 @@ describe("Lobby Settings UI", () => {
       autoTime: false,
       startingGold: { sheep: 100, wolves: 150 },
       income: { sheep: 1, wolves: 1 },
-    });
-  });
-
-  afterEach(() => {
-    // Clean up players state
-    playersVar([]);
-    lobbySettingsVar({
-      mode: "survival",
-      vipHandicap: 0.8,
-      sheep: 0,
-      autoSheep: true,
-      time: 0,
-      autoTime: true,
-      startingGold: { sheep: 0, wolves: 0 },
-      income: { sheep: 1, wolves: 1 },
+      host: "player-0",
     });
   });
 
   it("should display lobby settings to all players", () => {
     // Set up non-host player
-    playersVar([
-      {
-        id: "player1",
-        name: "Player 1",
-        color: "#ff0000",
-        local: true,
-        host: false,
-        sheepCount: 0,
-      },
-    ]);
+    addEntity(createTestPlayer({ id: "player-1" }));
+    localPlayerIdVar("player-1");
 
     const { getByDisplayValue, getByText } = render(<Lobby />, {
       wrapper: TestWrapper,
@@ -68,130 +48,40 @@ describe("Lobby Settings UI", () => {
   });
 
   it("should enable inputs for host player", () => {
-    // Set up host player
-    playersVar([
-      {
-        id: "host",
-        name: "Host Player",
-        color: "#00ff00",
-        local: true,
-        host: true,
-        sheepCount: 0,
-      },
-    ]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
 
-    const { container } = render(<Lobby />, { wrapper: TestWrapper });
+    render(<Lobby />, { wrapper: TestWrapper });
 
-    const sheepInput = container.querySelector(
-      'input[value="100"]',
-    ) as HTMLInputElement;
-    const wolvesInput = container.querySelector(
-      'input[value="150"]',
-    ) as HTMLInputElement;
+    const sheepInput = screen.getByLabelText("Starting Gold - Sheep");
+    const wolvesInput = screen.getByLabelText("Starting Gold - Wolves");
 
     expect(sheepInput).toBeTruthy();
     expect(wolvesInput).toBeTruthy();
-    expect(sheepInput.disabled).toBe(false);
-    expect(wolvesInput.disabled).toBe(false);
+    expect((sheepInput as HTMLInputElement).disabled).toBe(false);
+    expect((wolvesInput as HTMLInputElement).disabled).toBe(false);
   });
 
   it("should disable inputs for non-host players", () => {
     // Set up non-host player
-    playersVar([
-      {
-        id: "player1",
-        name: "Player 1",
-        color: "#ff0000",
-        local: true,
-        host: false,
-        sheepCount: 0,
-      },
-    ]);
+    addEntity(createTestPlayer({ id: "player-1" }));
+    localPlayerIdVar("player-1");
 
-    const { container } = render(<Lobby />, { wrapper: TestWrapper });
+    render(<Lobby />, { wrapper: TestWrapper });
 
-    const sheepInput = container.querySelector(
-      'input[value="100"]',
-    ) as HTMLInputElement;
-    const wolvesInput = container.querySelector(
-      'input[value="150"]',
-    ) as HTMLInputElement;
+    const sheepInput = screen.getByLabelText("Starting Gold - Sheep");
+    const wolvesInput = screen.getByLabelText("Starting Gold - Wolves");
 
     expect(sheepInput).toBeTruthy();
     expect(wolvesInput).toBeTruthy();
-    expect(sheepInput.disabled).toBe(true);
-    expect(wolvesInput.disabled).toBe(true);
-  });
-
-  it("should allow host to interact with inputs", () => {
-    // Set up host player
-    playersVar([
-      {
-        id: "host",
-        name: "Host Player",
-        color: "#00ff00",
-        local: true,
-        host: true,
-        sheepCount: 0,
-      },
-    ]);
-
-    const { container } = render(<Lobby />, { wrapper: TestWrapper });
-
-    const sheepInput = container.querySelector(
-      'input[value="100"]',
-    ) as HTMLInputElement;
-    const wolvesInput = container.querySelector(
-      'input[value="150"]',
-    ) as HTMLInputElement;
-
-    // Host should be able to interact with inputs
-    expect(sheepInput).toBeTruthy();
-    expect(wolvesInput).toBeTruthy();
-    expect(sheepInput.disabled).toBe(false);
-    expect(wolvesInput.disabled).toBe(false);
-
-    // Should have normal styling for enabled inputs
-    expect(sheepInput.style.backgroundColor).toBe("");
-    expect(sheepInput.style.color).toBe("");
-    expect(sheepInput.style.cursor).toBe("");
-  });
-
-  it("should prevent non-host from interacting with inputs", () => {
-    // Set up non-host player
-    playersVar([
-      {
-        id: "player1",
-        name: "Player 1",
-        color: "#ff0000",
-        local: true,
-        host: false,
-        sheepCount: 0,
-      },
-    ]);
-
-    const { container } = render(<Lobby />, { wrapper: TestWrapper });
-
-    const sheepInput = container.querySelector(
-      'input[value="100"]',
-    ) as HTMLInputElement;
-
-    // Input should be disabled for non-host
-    expect(sheepInput.disabled).toBe(true);
+    expect((sheepInput as HTMLInputElement).disabled).toBe(true);
+    expect((wolvesInput as HTMLInputElement).disabled).toBe(true);
   });
 
   it("should update display when lobby settings change", () => {
     // Set up host player
-    playersVar([
-      {
-        id: "host",
-        name: "Host Player",
-        color: "#00ff00",
-        local: true,
-        host: true,
-        sheepCount: 0,
-      },
-    ]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
 
     const { container, rerender } = render(<Lobby />, { wrapper: TestWrapper });
 
@@ -209,6 +99,7 @@ describe("Lobby Settings UI", () => {
       autoTime: false,
       startingGold: { sheep: 500, wolves: 750 },
       income: { sheep: 1, wolves: 1 },
+      host: "player-0",
     });
 
     rerender(<Lobby />);

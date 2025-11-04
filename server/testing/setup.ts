@@ -76,7 +76,6 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   // Set up lobby
   const lobby = newLobby();
   lobby.settings = {
-    teams: new Map(),
     mode: "survival",
     vipHandicap: 0.8,
     sheep: "auto",
@@ -95,8 +94,6 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   }
 
   lobby.round = {
-    sheep: new Set(sheepClients.map((s) => s.client)),
-    wolves: new Set(wolfClients.map((w) => w.client)),
     ecs,
     start: Date.now(),
     clearInterval: () => {},
@@ -107,27 +104,17 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
 
   const time = new FakeTime();
 
-  // Create player entities (similar to start action)
+  // Set up client properties and add to ECS (similar to start action)
   for (const { client } of sheepClients) {
-    client.playerEntity = ecs.addEntity({
-      name: client.name,
-      owner: client.id,
-      playerColor: client.color,
-      isPlayer: true,
-      team: "sheep",
-      gold: gold,
-    });
+    client.team = "sheep";
+    client.gold = gold;
+    ecs.addEntity(client);
   }
 
   for (const { client } of wolfClients) {
-    client.playerEntity = ecs.addEntity({
-      name: client.name,
-      owner: client.id,
-      playerColor: client.color,
-      isPlayer: true,
-      team: "wolf",
-      gold: gold,
-    });
+    client.team = "wolf";
+    client.gold = gold;
+    ecs.addEntity(client);
   }
 
   return {

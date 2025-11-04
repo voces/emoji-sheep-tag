@@ -3,10 +3,10 @@ import { expect } from "@std/expect";
 import {
   addPlayerToPracticeGame,
   deductPlayerGold,
-  getPlayer,
   getPlayerGold,
   grantPlayerGold,
 } from "./player.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 import { Client } from "../client.ts";
 
@@ -19,7 +19,7 @@ describe("player API", () => {
       { wolves: ["wolf-player"] },
       ({ clients }) => {
         const result = getPlayer("wolf-player");
-        expect(result).toBe(clients.get("wolf-player")!.playerEntity);
+        expect(result).toEqual(clients.get("wolf-player"));
       },
     );
 
@@ -28,7 +28,7 @@ describe("player API", () => {
       { sheep: ["sheep-player"] },
       ({ clients }) => {
         const result = getPlayer("sheep-player");
-        expect(result).toBe(clients.get("sheep-player")!.playerEntity);
+        expect(result).toEqual(clients.get("sheep-player"));
       },
     );
 
@@ -95,7 +95,7 @@ describe("player API", () => {
         });
         newClient.id = "new-player";
         newClient.name = "New Player";
-        newClient.color = "#FF0000";
+        newClient.playerColor = "#FF0000";
         clients.set("new-player", newClient);
 
         // Add player to practice game (within a batch to avoid update cycles)
@@ -103,14 +103,10 @@ describe("player API", () => {
           addPlayerToPracticeGame(newClient);
         });
 
-        // Check player entity was created
-        expect(newClient.playerEntity).toBeDefined();
-        expect(newClient.playerEntity?.team).toBe("sheep");
-        expect(newClient.playerEntity?.gold).toBe(100_000);
-        expect(newClient.playerEntity?.name).toBe("New Player");
-
-        // Check player was added to sheep team
-        expect(lobby.round!.sheep.has(newClient)).toBe(true);
+        // Check player properties were set
+        expect(newClient.team).toBe("sheep");
+        expect(newClient.gold).toBe(100_000);
+        expect(newClient.name).toBe("New Player");
 
         // Check units were spawned
         const units = Array.from(lobby.round!.ecs.entities).filter((e) =>
@@ -131,21 +127,23 @@ describe("player API", () => {
     );
 
     it(
-      "should not add player if already has playerEntity",
+      "should not add player if already has team assigned",
       { sheep: ["existing-player"], gold: 0 },
       ({ lobby, clients, ecs }) => {
         lobby.round!.practice = true;
 
         const existingClient = clients.get("existing-player")!;
-        const originalEntity = existingClient.playerEntity;
+        const originalTeam = existingClient.team;
+        const originalGold = existingClient.gold;
 
         // Try to add again
         ecs.batch(() => {
           addPlayerToPracticeGame(existingClient);
         });
 
-        // Should keep original entity
-        expect(existingClient.playerEntity).toBe(originalEntity);
+        // Should keep original properties
+        expect(existingClient.team).toBe(originalTeam);
+        expect(existingClient.gold).toBe(originalGold);
       },
     );
 
@@ -169,8 +167,8 @@ describe("player API", () => {
           addPlayerToPracticeGame(newClient);
         });
 
-        // Should not create player entity
-        expect(newClient.playerEntity).toBeUndefined();
+        // Should not assign team
+        expect(newClient.team).toBeUndefined();
       },
     );
   });

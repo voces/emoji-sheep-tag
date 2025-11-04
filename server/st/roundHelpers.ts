@@ -49,16 +49,13 @@ export const draftTeams = (lobby: Lobby, desiredSheep: number) => {
   const sheepIds = smartDrafter.draft(allPlayerIds, desiredSheep);
 
   // Convert IDs back to Client objects
+  // TODO: use entities (proxies) instead
   const sheep = new Set<Client>();
   const wolves = new Set<Client>();
 
   for (const player of allPlayers) {
-    if (sheepIds.includes(player.id)) {
-      sheep.add(player);
-      player.sheepCount++;
-    } else {
-      wolves.add(player);
-    }
+    if (sheepIds.includes(player.id)) sheep.add(player);
+    else wolves.add(player);
   }
 
   return { sheep, wolves };

@@ -7,10 +7,10 @@ import { removeEntity } from "@/shared/api/entity.ts";
 import { distanceBetweenEntities } from "@/shared/pathing/math.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { isPractice } from "../api/st.ts";
-import { getPlayer, grantPlayerGold } from "../api/player.ts";
+import { grantPlayerGold } from "../api/player.ts";
 import { newGoldText } from "../api/floatingText.ts";
 import { send } from "../lobbyApi.ts";
-import { colorName } from "@/shared/api/player.ts";
+import { colorName, getPlayer } from "@/shared/api/player.ts";
 import { lobbyContext } from "../contexts.ts";
 
 export const saveOrder = {

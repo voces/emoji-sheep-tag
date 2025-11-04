@@ -1,8 +1,9 @@
 import { styled } from "styled-components";
 import { useState } from "react";
 import { colors } from "@/shared/data.ts";
-import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { playersVar } from "@/vars/players.ts";
+import { usePlayers } from "@/hooks/usePlayers.ts";
+import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
+import { playerEntities } from "@/shared/api/player.ts";
 
 const Wrapper = styled.div`
   width: 1cap;
@@ -57,8 +58,9 @@ export const ColorPicker = (
   },
 ) => {
   const [visible, setVisible] = useState(false);
-  const players = useReactiveVar(playersVar);
-  const takenColors = new Set(players.map((p) => p.color));
+  const players = usePlayers();
+  useListenToEntities(playerEntities(), ["playerColor"]);
+  const takenColors = new Set(players.map((p) => p.playerColor));
 
   return (
     <div style={{ position: "relative" }}>

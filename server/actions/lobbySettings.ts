@@ -56,6 +56,7 @@ export const serializeLobbySettings = (
     autoTime: lobby.settings.time === "auto",
     startingGold: lobby.settings.startingGold,
     income: lobby.settings.income,
+    host: lobby.host?.id ?? null,
   };
 };
 

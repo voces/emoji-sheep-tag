@@ -5,13 +5,14 @@ import { expect } from "@std/expect";
 import { ActionBar, selectionVar } from "./ActionBar.tsx";
 import { Wrapper } from "../../Wrapper.tsx";
 import { menusVar } from "@/vars/menus.ts";
-import { playersVar } from "@/vars/players.ts";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
 import { openMenu } from "@/vars/menuState.ts";
 import {
   createTestPlayer,
   createTestSelection,
 } from "@/client-testing/test-helpers.ts";
+import { addEntity } from "@/shared/api/entity.ts";
+import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 
 afterEach(() => {
   __testing_reset_all_vars();
@@ -34,7 +35,8 @@ it("should show action with full details when in menu", () => {
     },
   ]);
 
-  playersVar([createTestPlayer()]);
+  localPlayerIdVar("player-0");
+  addEntity(createTestPlayer());
 
   const entityId = "wolf-0";
 
@@ -102,10 +104,6 @@ it("should show action with full details when in menu", () => {
   // Now Mirror Image should be visible in the menu
   const mirrorImageButton = screen.getByLabelText("Mirror Image");
   expect(mirrorImageButton).toBeTruthy();
-
-  // Log the actual content for debugging
-  console.log("Mirror Image button content:", mirrorImageButton.textContent);
-  console.log("Mirror Image button innerHTML:", mirrorImageButton.innerHTML);
 
   // The button should show an icon and the hotkey
   // Check if the icon is present (it's an SVG element)

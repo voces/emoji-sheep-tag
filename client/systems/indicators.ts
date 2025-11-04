@@ -1,16 +1,21 @@
-import { app, SystemEntity } from "../ecs.ts";
-import { getLocalPlayer } from "@/vars/players.ts";
+import { SystemEntity } from "../ecs.ts";
+import { getLocalPlayer } from "../api/player.ts";
+import { addSystem, appContext } from "@/shared/context.ts";
+import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 
 const indicators = new Map<
   SystemEntity<"prefab" | "modelScale">,
   { birth: number; initialScale: number }
 >();
 
-app.addSystem({
+addSystem({
   props: ["prefab", "modelScale"],
   onAdd: (e) => {
     if (e.prefab === "indicator") {
-      indicators.set(e, { birth: app.lastUpdate, initialScale: e.modelScale });
+      indicators.set(e, {
+        birth: appContext.current.lastUpdate,
+        initialScale: e.modelScale,
+      });
     }
   },
   onChange: (e) => {
@@ -21,7 +26,7 @@ app.addSystem({
   update: (_, time) => {
     for (const [indicator, { birth, initialScale }] of indicators) {
       const next = initialScale - (time * 3 - birth * 3) ** 2;
-      if (next < 0.01) app.removeEntity(indicator);
+      if (next < 0.01) removeEntity(indicator);
       else {
         indicator.modelScale = next;
         indicator.facing = ((next - 0.01) / 0.99) ** 0.5 * Math.PI * 2 *
@@ -39,7 +44,7 @@ export const newIndicator = (
     model?: "circle" | "gravity";
   } = {},
 ) => {
-  app.addEntity({
+  addEntity({
     id: `indicator-${crypto.randomUUID()}`,
     prefab: "indicator",
     model,

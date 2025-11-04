@@ -2,7 +2,7 @@ import { endRound, send } from "../lobbyApi.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { start } from "../actions/start.ts";
 import { timeout } from "../api/timing.ts";
-import { getPlayer, grantPlayerGold, sendPlayerGold } from "../api/player.ts";
+import { grantPlayerGold, sendPlayerGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getSheep } from "./sheep.ts";
@@ -18,7 +18,7 @@ import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { newSfx } from "../api/sfx.ts";
 import { isEnemy, isStructure, iterateBuffs } from "@/shared/api/unit.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
-import { colorName } from "@/shared/api/player.ts";
+import { colorName, getPlayer } from "@/shared/api/player.ts";
 import { center } from "@/shared/map.ts";
 import { PATHING_NONE } from "@/shared/constants.ts";
 
@@ -56,81 +56,54 @@ const onLose = () =>
   }, 0.05);
 
 const handleSwitchDeath = (sheep: Entity) => {
-  if (!sheep.owner) return;
+  const killingPlayer = getPlayer(lookup(sheep.lastAttacker)?.owner);
+  const victimPlayer = getPlayer(sheep.owner);
+  if (!killingPlayer || !victimPlayer) return;
 
   const lobby = lobbyContext.current;
-  const killingPlayerId = lookup(sheep.lastAttacker)?.owner;
-  if (!killingPlayerId) return;
-  const killingPlayer = getPlayer(killingPlayerId);
-  const victimPlayer = getPlayer(sheep.owner);
 
-  const attackerClient = Array.from(lobby.players).find((c) =>
-    c.id === killingPlayerId
-  );
-  const victimClient = Array.from(lobby.players).find((c) =>
-    c.id === sheep.owner
-  );
-
-  if (!attackerClient || !victimClient || !lobby.round) return;
-
-  // Switch the attacker to sheep team
-  lobby.round.sheep.add(attackerClient);
-  lobby.round.wolves.delete(attackerClient);
-
-  if (killingPlayer && lobby.settings.startingGold.sheep) {
-    killingPlayer.team = "sheep";
-    grantPlayerGold(killingPlayerId, lobby.settings.startingGold.sheep);
+  // Killer
+  killingPlayer.team = "sheep";
+  if (lobby.settings.startingGold.sheep) {
+    grantPlayerGold(killingPlayer.id, lobby.settings.startingGold.sheep);
   }
-
-  // Remove all attacker's wolves and foxes
-  for (const entity of getPlayerUnits(killingPlayerId)) {
+  for (const entity of getPlayerUnits(killingPlayer.id)) {
     if (entity.prefab === "wolf" || entity.prefab === "fox") {
       removeEntity(entity);
     }
   }
-
-  // Spawn new sheep for attacker at victim's location
   newUnit(
-    killingPlayerId,
+    killingPlayer.id,
     "sheep",
     sheep.position?.x ?? 0,
     sheep.position?.y ?? 0,
   );
 
-  // Switch the victim to wolf team
-  lobby.round.wolves.add(victimClient);
-  lobby.round.sheep.delete(victimClient);
-
-  if (victimPlayer && lobby.settings.startingGold.wolves) {
-    victimPlayer.team = "wolf";
-    grantPlayerGold(victimClient.id, lobby.settings.startingGold.wolves);
+  // Victim
+  victimPlayer.team = "wolf";
+  if (lobby.settings.startingGold.wolves) {
+    grantPlayerGold(victimPlayer.id, lobby.settings.startingGold.wolves);
   }
-
-  // Spawn wolf for victim at center
-  newUnit(victimClient.id, "wolf", center.x, center.y);
-
-  // Send switch message
-  if (killingPlayer && victimPlayer) {
-    send({
-      type: "chat",
-      message: `${
-        colorName({
-          color: killingPlayer.playerColor ?? "#ffffff",
-          name: killingPlayer.name ?? "<unknown>",
-        })
-      } killed ${
-        colorName({
-          color: victimPlayer.playerColor ?? "#ffffff",
-          name: victimPlayer.name ?? "<unknown>",
-        })
-      }`,
-    });
-  }
-
-  // Remove all victims's structures
-  for (const entity of getPlayerUnits(sheep.owner)) {
+  for (const entity of getPlayerUnits(victimPlayer.id)) {
     if (isStructure(entity)) entity.health = 0;
   }
+  newUnit(victimPlayer.id, "wolf", center.x, center.y);
+
+  // Send switch message
+  send({
+    type: "chat",
+    message: `${
+      colorName({
+        color: killingPlayer.playerColor ?? "#ffffff",
+        name: killingPlayer.name ?? "<unknown>",
+      })
+    } killed ${
+      colorName({
+        color: victimPlayer.playerColor ?? "#ffffff",
+        name: victimPlayer.name ?? "<unknown>",
+      })
+    }`,
+  });
 };
 
 const onSheepDeath = (sheep: Entity) => {
@@ -179,8 +152,8 @@ const onSheepDeath = (sheep: Entity) => {
   for (const wolf of getTeams().wolves) {
     const bounty = (wolf.owner === killingPlayerId ? 40 : 15) *
       lobbyContext.current.settings.income.wolves;
-    grantPlayerGold(wolf.owner, bounty);
-    const wolfUnit = findPlayerUnit(wolf.owner, (fn) => fn.prefab === "wolf");
+    grantPlayerGold(wolf.id, bounty);
+    const wolfUnit = findPlayerUnit(wolf.id, (fn) => fn.prefab === "wolf");
     if (wolfUnit) debouncedGoldText(wolfUnit, bounty);
   }
 

@@ -3,7 +3,6 @@ import { afterEach, describe, it } from "@std/testing/bdd";
 import { render, screen } from "@testing-library/react";
 import { expect } from "@std/expect";
 import { ActionBar, selectionVar } from "./ActionBar.tsx";
-import { playersVar } from "@/vars/players.ts";
 import { menuStateVar } from "@/vars/menuState.ts";
 import { Wrapper } from "../../Wrapper.tsx";
 import { menusVar } from "@/vars/menus.ts";
@@ -13,6 +12,8 @@ import {
   createTestPlayer,
   createTestSelection,
 } from "@/client-testing/test-helpers.ts";
+import { addEntity } from "@/shared/api/entity.ts";
+import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 
 describe("ActionBar", () => {
   afterEach(() => {
@@ -21,7 +22,8 @@ describe("ActionBar", () => {
   });
 
   it("should not render when no selection", () => {
-    playersVar([createTestPlayer()]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar(undefined);
 
     const { container } = render(<ActionBar />);
@@ -29,7 +31,8 @@ describe("ActionBar", () => {
   });
 
   it("should not render when selection is not owned by local player", () => {
-    playersVar([createTestPlayer()]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar(
       createTestSelection({
         id: "unit-0",
@@ -43,13 +46,8 @@ describe("ActionBar", () => {
   });
 
   it("should render toolbar when selection is owned by local player", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar({
       id: "unit-0",
       owner: "player-0",
@@ -61,13 +59,8 @@ describe("ActionBar", () => {
   });
 
   it("should display entity actions", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar({
       id: "unit-0",
       owner: "player-0",
@@ -106,13 +99,8 @@ describe("ActionBar", () => {
       binding: ["KeyB"] as ReadonlyArray<string>,
     };
 
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
 
     const entity = {
       id: "unit-0",
@@ -132,13 +120,8 @@ describe("ActionBar", () => {
   });
 
   it("should display inventory item actions", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar({
       id: "unit-0",
       owner: "player-0",
@@ -165,13 +148,8 @@ describe("ActionBar", () => {
   });
 
   it("should not display inventory actions when charges are 0", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar({
       id: "unit-0",
       owner: "player-0",
@@ -197,13 +175,8 @@ describe("ActionBar", () => {
   });
 
   it("should include inventory actions with entity actions", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar({
       id: "unit-0",
       owner: "player-0",
@@ -234,13 +207,8 @@ describe("ActionBar", () => {
   });
 
   it("should mark current action as pressed", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar({
       id: "unit-0",
       owner: "player-0",
@@ -260,13 +228,8 @@ describe("ActionBar", () => {
   });
 
   it("should mark build action as current when building", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar({
       id: "unit-0",
       owner: "player-0",
@@ -293,13 +256,8 @@ describe("ActionBar", () => {
       binding: [] as ReadonlyArray<string>,
     };
 
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
 
     const entity = {
       id: "unit-0",
@@ -323,14 +281,8 @@ describe("ActionBar", () => {
   });
 
   it("should not mark purchase actions as current", () => {
-    playersVar([{
-      id: "player-0",
-      name: "Player 0",
-      color: "red",
-      local: true,
-      sheepCount: 0,
-      entity: { id: "player-entity", gold: 100 },
-    }]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
     selectionVar({
       id: "unit-0",
       owner: "player-0",
@@ -371,9 +323,8 @@ describe("ActionBar", () => {
       },
     ]);
 
-    playersVar([
-      createTestPlayer({ entity: { id: "player-entity", gold: 200 } }),
-    ]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
 
     selectionVar(
       createTestSelection({
@@ -439,7 +390,8 @@ describe("ActionBar", () => {
       },
     ]);
 
-    playersVar([createTestPlayer()]);
+    addEntity(createTestPlayer());
+    localPlayerIdVar("player-0");
 
     selectionVar(
       createTestSelection({

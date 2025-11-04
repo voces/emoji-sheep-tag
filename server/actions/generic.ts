@@ -3,6 +3,7 @@ import { Client, getAllClients } from "../client.ts";
 import { send } from "../lobbyApi.ts";
 import { generateUniqueName } from "../util/uniqueName.ts";
 import { colors } from "../../shared/data.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 export const zGenericEvent = z.object({
   type: z.literal("generic"),
@@ -37,7 +38,7 @@ export const generic = (
     // Check if color is already taken by another player in the same lobby
     if (client.lobby) {
       const colorTaken = Array.from(client.lobby.players).some(
-        (p) => p.id !== client.id && p.color === requestedColor,
+        (p) => p.id !== client.id && p.playerColor === requestedColor,
       );
 
       if (colorTaken) {
@@ -48,15 +49,30 @@ export const generic = (
       }
     }
 
-    client.color = requestedColor;
-    send({ type: "colorChange", id: client.id, color: requestedColor });
+    try {
+      const p = getPlayer(client.id);
+      if (!p) throw p;
+      p.playerColor = requestedColor;
+    } catch {
+      client.playerColor = requestedColor;
+      send({
+        type: "updates",
+        updates: [{ id: client.id, playerColor: requestedColor }],
+      });
+    }
   } else if (event.event.type === "nameChange") {
     const uniqueName = generateUniqueName(
       event.event.name,
       getAllClients(),
       client,
     );
-    client.name = uniqueName;
-    send({ type: "nameChange", id: client.id, name: uniqueName });
+    try {
+      const p = getPlayer(client.id);
+      if (!p) throw p;
+      p.name = uniqueName;
+    } catch {
+      client.name = uniqueName;
+      send({ type: "updates", updates: [{ id: client.id, name: uniqueName }] });
+    }
   }
 };

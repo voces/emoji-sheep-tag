@@ -42,10 +42,9 @@ export const joinLobby = (
   // Add to lobby
   client.lobby = lobby;
   lobbyContext.with(lobby, () => {
-    lobby.settings.teams.set(client, "pending");
-    client.color = colors.find((c) =>
-      !setSome(lobby.players, (p) => p.color === c)
-    ) ?? client.color;
+    client.playerColor = colors.find((c) =>
+      !setSome(lobby.players, (p) => p.playerColor === c)
+    ) ?? client.playerColor;
 
     // Initialize the player in the smart drafting algorithm
     const allPlayerIds = Array.from(lobby.players, (p) => p.id);
@@ -55,18 +54,21 @@ export const joinLobby = (
     client.sheepCount = Math.max(
       ...Array.from(lobby.players, (p) => p.sheepCount),
     );
+
+    // If joining an ongoing practice game, add player to sheep team and spawn units
+    if (lobby.round?.practice && lobby.round) {
+      appContext.with(lobby.round.ecs, () => {
+        appContext.current.batch(() => {
+          addPlayerToPracticeGame(client);
+        });
+      });
+    }
+
+    // Send partial state to existing users
     send({
       type: "join",
       status: lobby.status,
-      players: [{
-        id: client.id,
-        name: client.name,
-        color: client.color,
-        team: "pending",
-        host: false,
-        sheepCount: client.sheepCount,
-      }],
-      updates: [],
+      updates: lobby.round ? flushUpdates(false) : [client],
       lobbySettings: serializeLobbySettings(lobby, 1),
     });
     lobby.players.add(client);
@@ -79,32 +81,12 @@ export const joinLobby = (
     client.send({
       type: "join",
       status: lobby.status,
-      players: Array.from(
-        lobby.players,
-        (p) => ({
-          id: p.id,
-          name: p.name,
-          color: p.color,
-          team: lobby.settings.teams.get(p) ?? "pending",
-          local: p === client ? true : undefined,
-          host: lobby.host === p,
-          sheepCount: p.sheepCount,
-        }),
-      ),
-      updates: Array.from(lobby.round?.ecs.entities ?? []),
+      updates: lobby.round
+        ? Array.from(lobby.round.ecs.entities)
+        : Array.from(lobby.players),
       rounds: lobby.rounds,
       lobbySettings: serializeLobbySettings(lobby),
+      localPlayer: client.id,
     });
-
-    // If joining an ongoing practice game, add player to sheep team and spawn units
-    if (lobby.round?.practice && lobby.round) {
-      appContext.with(lobby.round.ecs, () => {
-        appContext.current.batch(() => {
-          addPlayerToPracticeGame(client);
-        });
-      });
-    }
-
-    flushUpdates();
   });
 };

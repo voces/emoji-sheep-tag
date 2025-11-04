@@ -2,12 +2,13 @@ import { TypedEventTarget } from "typed-event-target";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { camera, scene } from "./graphics/three.ts";
 import { InstancedGroup } from "./graphics/InstancedGroup.ts";
-import { app, Entity } from "./ecs.ts";
+import { Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { checkShortcut } from "./controls/keyboardHandlers.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { editorVar } from "@/vars/editor.ts";
+import { addSystem } from "@/shared/context.ts";
 
 export class MouseEvent extends Event {
   readonly pixels: Vector2;
@@ -159,6 +160,6 @@ globalThis.addEventListener("pointerup", (event) =>
 
 globalThis.addEventListener("contextmenu", (e) => e.preventDefault());
 
-app.addSystem({
+addSystem({
   update: (_, time) => (time - lastIntersectUpdate > 0.2) && updateIntersects(),
 });

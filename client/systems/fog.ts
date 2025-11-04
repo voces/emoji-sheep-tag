@@ -1,9 +1,7 @@
 import { Entity, SystemEntity } from "../ecs.ts";
-import { getLocalPlayer } from "@/vars/players.ts";
+import { getLocalPlayer } from "../api/player.ts";
 import { bounds, height, terrainLayers, width } from "@/shared/map.ts";
 
-// Fog resolution multiplier: 2 = 160x160, 4 = 320x320, etc.
-const FOG_RESOLUTION_MULTIPLIER = 4;
 import {
   ClampToEdgeWrapping,
   DataTexture,
@@ -22,7 +20,9 @@ import { FogPass } from "../graphics/FogPass.ts";
 import { isAlly, isStructure, isTree } from "@/shared/api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getEntitiesInRange } from "./kd.ts";
-import { getPlayerTeam } from "@/shared/api/player.ts";
+
+// Fog resolution multiplier: 2 = 160x160, 4 = 320x320, etc.
+const FOG_RESOLUTION_MULTIPLIER = 4;
 
 const alwaysVisible = (entity: Entity) =>
   entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
@@ -74,8 +74,8 @@ const isAlliedWithLocalPlayer = (entity: Entity): boolean => {
   if (!localPlayer) return false;
 
   // If local player is neutral (observer), grant vision from all entities
-  const localTeam = getPlayerTeam(localPlayer.id);
-  if (localTeam === "neutral") return true;
+  const localTeam = localPlayer.team;
+  if (localTeam === "observer" || localTeam === "pending") return true;
 
   return isAlly(localPlayer.id, entity);
 };
@@ -90,7 +90,7 @@ class VisibilityGrid {
   readonly fogTexture: DataTexture;
   private readonly fogData: Uint8Array;
   private readonly changedCells: Set<number> = new Set();
-  private readonly modifiedCells: Set<number> = new Set(); // Cells modified in this update
+  readonly modifiedCells: Set<number> = new Set(); // Cells modified in this update
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -411,7 +411,7 @@ class VisibilityGrid {
       }
     }
 
-    this.modifiedCells.clear(); // Clear for next frame
+    // Don't clear modifiedCells here - getEntitiesNeedingUpdate() needs it
     this.fogTexture.needsUpdate = true;
   }
 
@@ -429,8 +429,12 @@ class VisibilityGrid {
   getEntitiesNeedingUpdate(): Set<Entity> {
     const entities = new Set<Entity>();
 
+    // Also check modifiedCells in addition to changedCells
+    // This catches cases where visibility providers change but cell visibility stays the same
+    const cellsToCheck = new Set([...this.changedCells, ...this.modifiedCells]);
+
     // Check all changed cells and collect entities in those cells
-    for (const cellIndex of this.changedCells) {
+    for (const cellIndex of cellsToCheck) {
       const y = Math.floor(cellIndex / this.width);
       const x = cellIndex % this.width;
 
@@ -515,9 +519,26 @@ addSystem({
   },
 });
 
+const triggerFogChecks = () => {
+  visibilityGrid.updateFog();
+
+  // After updating fog, recalculate visibility only for entities in changed areas
+  const entitiesToUpdate = visibilityGrid.getEntitiesNeedingUpdate();
+  for (const entity of entitiesToUpdate) {
+    if (entity.position) {
+      handleEntityVisibility(entity as SystemEntity<"position">);
+    }
+  }
+
+  // Clear modifiedCells after using it
+  visibilityGrid.modifiedCells.clear();
+};
+
 // System to track visibility
+const sightedEntities = new Set<SystemEntity<"position" | "sightRadius">>();
 addSystem({
   props: ["position", "sightRadius"],
+  entities: sightedEntities,
   onAdd: (entity) => {
     if (!isAlliedWithLocalPlayer(entity)) return;
     visibilityGrid.updateEntity(entity);
@@ -529,17 +550,7 @@ addSystem({
   onRemove: (entity) => {
     visibilityGrid.removeEntity(entity);
   },
-  update: () => {
-    visibilityGrid.updateFog();
-
-    // After updating fog, recalculate visibility only for entities in changed areas
-    const entitiesToUpdate = visibilityGrid.getEntitiesNeedingUpdate();
-    for (const entity of entitiesToUpdate) {
-      if (entity.position) {
-        handleEntityVisibility(entity as SystemEntity<"position">);
-      }
-    }
-  },
+  update: triggerFogChecks,
 });
 
 // Track old positions for entity grid updates
@@ -602,8 +613,9 @@ export const resetFog = () => {
 };
 
 // System to hide enemy units in fog (but keep structures visible once seen)
-const handleEntityVisibility = (entity: SystemEntity<"position">) => {
-  if (alwaysVisible(entity)) return;
+const handleEntityVisibility = (entity: Entity) => {
+  if (alwaysVisible(entity) || !entity.position) return;
+
   // Skip allied entities
   if (isAlliedWithLocalPlayer(entity)) {
     if (entity.hiddenByFog) delete entity.hiddenByFog;
@@ -639,6 +651,27 @@ addSystem({
   onRemove: (e) => {
     // Clean up tracking when entity is removed
     everSeen.delete(e.id);
+  },
+});
+
+// TODO: run only once (a swap runs twice)
+addSystem({
+  props: ["isPlayer", "team"],
+  onChange: (e) => {
+    // If local player's team changed, clear ever-seen structures
+    const localPlayer = getLocalPlayer();
+    if (localPlayer && e.id === localPlayer.id) {
+      everSeen.clear();
+    }
+
+    // Remove all currently tracked entities
+    for (const entity of sightedEntities) {
+      if (isAlliedWithLocalPlayer(entity)) visibilityGrid.updateEntity(entity);
+      else visibilityGrid.removeEntity(entity);
+    }
+
+    // Update fog to reflect changes from entity removal/addition
+    triggerFogChecks();
   },
 });
 

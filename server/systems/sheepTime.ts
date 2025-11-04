@@ -4,7 +4,7 @@ import { endRound, send } from "../lobbyApi.ts";
 import { colorName } from "@/shared/api/player.ts";
 
 addSystem({
-  props: ["isPlayer", "team", "owner"],
+  props: ["isPlayer", "team"],
   updateEntity: (entity, delta) => {
     const lobby = lobbyContext.current;
 

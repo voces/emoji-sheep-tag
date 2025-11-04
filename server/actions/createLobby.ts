@@ -32,18 +32,11 @@ export const createLobby = (
     client.send({
       type: "join",
       status: lobby.status,
-      players: [{
-        id: client.id,
-        name: client.name,
-        color: client.color,
-        team: lobby.settings.teams.get(client) ?? "pending",
-        local: true,
-        host: true,
-        sheepCount: client.sheepCount,
-      }],
-      updates: [],
+      updates: [client],
       rounds: lobby.rounds,
+      localPlayer: client.id,
       lobbySettings: {
+        host: lobby.host?.id ?? null,
         mode: "survival",
         vipHandicap: lobby.settings.vipHandicap,
         sheep: lobby.settings.sheep === "auto" ? 1 : lobby.settings.sheep,

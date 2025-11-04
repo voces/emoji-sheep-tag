@@ -3,9 +3,11 @@ import { Color } from "three";
 import { app, Entity, SystemEntity } from "../ecs.ts";
 import { InstancedGroup } from "../graphics/InstancedGroup.ts";
 import { loadSvg } from "../graphics/loadSvg.ts";
-import { getLocalPlayer, playersVar } from "@/vars/players.ts";
+import { getLocalPlayer } from "../api/player.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 import { getFps } from "../graphics/three.ts";
 import { computeUnitMovementSpeed, isAlly } from "@/shared/api/unit.ts";
+import { addSystem, appContext } from "@/shared/context.ts";
 
 import sheep from "../assets/sheep.svg" with { type: "text" };
 import wolf from "../assets/wolf.svg" with { type: "text" };
@@ -228,7 +230,7 @@ const isVisibleToLocalPlayer = (e: Entity) => {
 const color = new Color();
 
 const updateColor = (e: Entity) => {
-  if (!app.entities.has(e)) return;
+  if (!appContext.current.entities.has(e)) return;
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
@@ -242,8 +244,7 @@ const updateColor = (e: Entity) => {
     collection.setVertexColorAt(e.id, color);
   }
 
-  const accentColor = e.playerColor ??
-    playersVar().find((p) => p.id === e.owner)?.color;
+  const accentColor = e.playerColor ?? getPlayer(e.owner)?.playerColor;
 
   if (accentColor) {
     collection.setPlayerColorAt(e.id, color.set(accentColor ?? 0xffffff));
@@ -255,28 +256,28 @@ const updateColor = (e: Entity) => {
   else collection.setAlphaAt(e.id, 1);
 };
 
-app.addSystem({
+addSystem({
   props: ["owner"],
   onAdd: updateColor,
   onChange: updateColor,
   onRemove: updateColor,
 });
 
-app.addSystem({
+addSystem({
   props: ["vertexColor"],
   onAdd: updateColor,
   onChange: updateColor,
   onRemove: updateColor,
 });
 
-app.addSystem({
+addSystem({
   props: ["alpha"],
   onAdd: updateColor,
   onChange: updateColor,
   onRemove: updateColor,
 });
 
-app.addSystem({
+addSystem({
   props: ["playerColor"],
   onAdd: updateColor,
   onChange: updateColor,
@@ -342,14 +343,14 @@ const onPositionOrRotationChange = (
 
 const handleFog = (e: Entity) =>
   e.position && onPositionOrRotationChange(e as SystemEntity<"position">);
-app.addSystem({
+addSystem({
   props: ["hiddenByFog"],
   onAdd: handleFog,
   onChange: handleFog,
   onRemove: handleFog,
 });
 
-app.addSystem({
+addSystem({
   props: ["facing"],
   onChange: (e) => {
     if (e.position) {
@@ -361,27 +362,27 @@ app.addSystem({
 });
 
 const updateScale = (e: Entity) => {
-  if (!app.entities.has(e)) return;
+  if (!appContext.current.entities.has(e)) return;
   const model = e.model ?? e.prefab;
   if (!model) return;
   const collection = collections[model];
   if (!collection) return console.warn(`No ${e.model} SVG on ${e.id}`);
   collection.setScaleAt(e.id, e.modelScale ?? 1, e.aspectRatio);
 };
-app.addSystem({
+addSystem({
   props: ["modelScale"],
   onAdd: updateScale,
   onChange: updateScale,
   onRemove: updateScale,
 });
-app.addSystem({
+addSystem({
   props: ["aspectRatio"],
   onAdd: updateScale,
   onChange: updateScale,
   onRemove: updateScale,
 });
 
-app.addSystem({
+addSystem({
   props: ["progress", "completionTime"],
   updateEntity: (e, delta) => {
     if (e.progress + delta >= 1) {
@@ -392,7 +393,7 @@ app.addSystem({
 });
 
 const updateAlpha = (e: Entity) => {
-  if (!app.entities.has(e)) return;
+  if (!appContext.current.entities.has(e)) return;
   const collection = collections[e.model ?? e.prefab ?? ""];
   if (!collection) return;
   collection.setAlphaAt(
@@ -401,7 +402,7 @@ const updateAlpha = (e: Entity) => {
     typeof e.progress === "number",
   );
 };
-app.addSystem({
+addSystem({
   props: ["progress"],
   onAdd: updateAlpha,
   onChange: updateAlpha,
@@ -410,7 +411,7 @@ app.addSystem({
 
 const wasCastingMirror = new Map<Entity, number>();
 
-app.addSystem({
+addSystem<Entity, "order" | "position">({
   props: ["order", "position"],
   onChange: (e) => {
     if (e.order.type === "cast" && e.order.orderId === "mirrorImage") {
@@ -446,7 +447,7 @@ app.addSystem({
   update: (delta) => {
     for (const [e, remaining] of wasCastingMirror) {
       const model = e.model ?? e.prefab;
-      if (!model || !e.position) {
+      if (!model || !e.position || !app.entities.has(e)) {
         wasCastingMirror.delete(e);
         continue;
       }
@@ -479,7 +480,7 @@ app.addSystem({
 });
 
 // Reflect logical position to render position
-app.addSystem({
+addSystem({
   props: ["position"],
   onAdd: (e) => {
     prevPositions.set(e, e.position);
@@ -512,7 +513,7 @@ app.addSystem({
 });
 
 const prevModel = new WeakMap<Entity, string>();
-app.addSystem({
+addSystem({
   props: ["prefab"],
   onAdd: (e) => {
     const collection = e.model ?? e.prefab;
@@ -532,7 +533,7 @@ app.addSystem({
     if (!collection) prevModel.delete(e);
   },
 });
-app.addSystem({
+addSystem({
   props: ["model"],
   onAdd: (e) => {
     const collection = e.model ?? e.prefab;

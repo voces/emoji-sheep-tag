@@ -4,21 +4,7 @@ import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
 import { center } from "@/shared/map.ts";
 import type { Client } from "../client.ts";
 import { addEntity } from "@/shared/api/entity.ts";
-
-/**
- * Gets a player entity by their ID
- * @param playerId The player's ID
- * @returns The player entity or undefined if not found
- */
-export const getPlayer = (playerId: string | undefined) => {
-  if (!playerId) return;
-
-  const lobby = lobbyContext.current;
-  if (!lobby?.round) return;
-
-  return Array.from([...lobby.round.sheep, ...lobby.round.wolves])
-    .find((client) => client.id === playerId)?.playerEntity;
-};
+import { getPlayer } from "@/shared/api/player.ts";
 
 /**
  * Gets the gold amount for a player by their ID
@@ -90,18 +76,17 @@ export const spawnPracticeUnits = (playerId: string) => {
  */
 export const addPlayerToPracticeGame = (client: Client) => {
   const lobby = lobbyContext.current;
-  if (!lobby?.round?.practice || client.playerEntity) return;
+  if (!lobby?.round?.practice) return;
 
-  client.playerEntity = addEntity({
-    name: client.name,
-    owner: client.id,
-    playerColor: client.color,
-    isPlayer: true,
-    team: "sheep",
-    gold: 100_000,
-  });
+  // Check if client is already in the game
+  if (client.team) return;
 
-  lobby.round.sheep.add(client);
+  // Set client properties for practice game
+  client.team = "sheep";
+  client.gold = 100_000;
+
+  // Add client to ECS
+  addEntity(client);
 
   spawnPracticeUnits(client.id);
 };

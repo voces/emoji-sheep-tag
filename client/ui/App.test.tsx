@@ -32,16 +32,15 @@ it("can move an action into a menu", async () => {
   sendMessageFromServer({
     type: "join",
     status: "lobby",
-    players: [{
+    updates: [{
       id: "player-0",
+      isPlayer: true,
       name: "Player 0",
-      color: colors[0],
+      playerColor: colors[0],
       team: "sheep",
-      local: true,
-      host: true,
       sheepCount: 0,
     }],
-    updates: [],
+    localPlayer: "player-0",
     rounds: [],
     lobbySettings: {
       mode: "survival",
@@ -52,6 +51,7 @@ it("can move an action into a menu", async () => {
       autoTime: true,
       startingGold: { sheep: 0, wolves: 0 },
       income: { sheep: 1, wolves: 1 },
+      host: "player-0",
     },
   });
   await userEvent.click(
@@ -59,8 +59,7 @@ it("can move an action into a menu", async () => {
   );
   sendMessageFromServer({
     type: "start",
-    sheep: [{ id: "player-0", sheepCount: 1 }],
-    wolves: [],
+    updates: [{ id: "player-0", sheepCount: 1 }],
   });
   sendMessageFromServer({
     type: "updates",

@@ -6,7 +6,7 @@ import { expect } from "@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
 import { getAllTexts } from "@/client-testing/utils.tsx";
 import { Command } from "./Command.tsx";
-import { playersVar } from "@/vars/players.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 describe("Command", () => {
   it("should render button with aria-label", () => {
@@ -145,13 +145,12 @@ describe("Command", () => {
   });
 
   it("should render icon when provided", () => {
-    playersVar([{
+    addEntity({
       id: "player-0",
       name: "Player 0",
-      color: "red",
-      local: true,
+      playerColor: "red",
       sheepCount: 0,
-    }]);
+    });
 
     render(<Command name="Move" icon="route" />, { wrapper: Wrapper });
 

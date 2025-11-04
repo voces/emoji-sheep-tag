@@ -3,7 +3,7 @@ import { styled } from "styled-components";
 import { Color } from "three";
 import { svgs } from "../../systems/three.ts";
 import { computeBlueprintColor } from "../../util/colorHelpers.ts";
-import { getPlayer } from "@/vars/players.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 const SvgContainer = styled.div`
   position: relative;
@@ -86,7 +86,7 @@ export const iconEffects = {
     overlayStyle: {
       backgroundColor: `#${
         computeBlueprintColor(
-          player ? getPlayer(player)?.color ?? 0xffffff : 0xffffff,
+          getPlayer(player)?.playerColor ?? 0xffffff,
           0x0000ff,
         ).toString(16).padStart(6, "0")
       }`,

@@ -1,8 +1,23 @@
 import { camera } from "../graphics/three.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
-import { getLocalPlayer } from "@/vars/players.ts";
-import { data } from "../data.ts";
+import { getPlayers, Player } from "@/shared/api/player.ts";
+import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { getPrimaryUnit } from "../systems/autoSelect.ts";
+import { onInit } from "@/shared/context.ts";
+
+export const getLocalPlayer = (): Player | undefined =>
+  getPlayers().find((p) => p.id === localPlayerIdVar());
+
+export const isLocalPlayerHost = () =>
+  getLocalPlayer()?.id === lobbySettingsVar().host;
+
+export const isLocalPlayer = (player: Player | string): boolean => {
+  const localPlayerId = getLocalPlayer()?.id;
+  return localPlayerId
+    ? localPlayerId === (typeof player === "string" ? player : player.id)
+    : false;
+};
 
 /**
  * Applies the appropriate zoom level based on the local player's state.
@@ -31,9 +46,9 @@ export const applyZoom = () => {
     } else if (primaryUnit.prefab === "spirit") {
       camera.position.z = settings.spiritZoom;
     }
-  } else if (data.sheep.some((p) => p.local)) {
+  } else if (localPlayer?.team === "sheep") {
     camera.position.z = settings.sheepZoom;
-  } else if (data.wolves.some((p) => p.local)) {
+  } else if (localPlayer?.team === "wolf") {
     camera.position.z = settings.wolfZoom;
   } else {
     // Spectator/observer or no team assigned (or no local player yet)
@@ -42,4 +57,4 @@ export const applyZoom = () => {
 };
 
 // Apply zoom on initial load (safe because we handle getPrimaryUnit not being ready)
-applyZoom();
+onInit(applyZoom);

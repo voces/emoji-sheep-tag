@@ -2,7 +2,6 @@ import "global-jsdom/register";
 import { afterEach, beforeEach } from "@std/testing/bdd";
 import { cleanup, configure } from "@testing-library/react";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
-import { data } from "../data.ts";
 import { app, map, unloadEcs } from "../ecs.ts";
 
 localStorage.clear();
@@ -125,9 +124,7 @@ const prettifyDOM = (
 beforeEach(() => {
   // Reset client state (shared by all tests)
   __testing_reset_all_vars();
-  data.sheep = [];
-  data.wolves = [];
-  unloadEcs();
+  unloadEcs({ includePlayers: true });
 });
 
 afterEach(() => {

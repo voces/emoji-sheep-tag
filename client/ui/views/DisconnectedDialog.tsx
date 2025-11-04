@@ -5,7 +5,6 @@ import { VStack } from "@/components/layout/Layout.tsx";
 import { Dialog } from "@/components/layout/Dialog.tsx";
 import { stopReconnecting } from "../../connection.ts";
 import { unloadEcs } from "../../ecs.ts";
-import { playersVar } from "@/vars/players.ts";
 import { generateDoodads } from "@/shared/map.ts";
 
 export const DisconnectedDialog = () => {
@@ -16,7 +15,6 @@ export const DisconnectedDialog = () => {
     stateVar("menu");
     unloadEcs();
     generateDoodads(["dynamic"]);
-    playersVar([]);
     stopReconnecting();
     connectionStatusVar("notConnected");
   };

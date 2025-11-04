@@ -3,7 +3,8 @@ import { Command } from "@/components/game/Command.tsx";
 import { VerticalBar } from "@/components/game/VerticalBar.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
 import { isAlly } from "@/shared/api/unit.ts";
-import { getPlayer, useLocalPlayer } from "@/vars/players.ts";
+import { getPlayer } from "@/shared/api/player.ts";
+import { useLocalPlayer } from "@/hooks/usePlayers.ts";
 import type { Buff, Item } from "@/shared/types.ts";
 import { useTheme } from "styled-components";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
@@ -81,13 +82,15 @@ export const Avatar = (
   const iconEffectProps = iconEffect
     ? iconEffects[iconEffect](entity.owner)
     : (entity.alpha ? { style: { opacity: entity.alpha } } : undefined);
-  const color = entity.playerColor ??
-    (entity.owner ? getPlayer(entity.owner)?.color : undefined);
+  const color = entity.playerColor ?? getPlayer(entity.owner)?.playerColor ??
+    undefined;
   const iconProps: React.ComponentProps<typeof Command>["iconProps"] = {
     ...iconEffectProps,
     color,
   };
-  if (entity.vertexColor && !iconProps.overlayStyle?.backgroundColor) {
+  if (
+    entity.vertexColor && iconProps && !iconProps.overlayStyle?.backgroundColor
+  ) {
     iconProps.overlayStyle = {
       ...iconProps.overlayStyle,
       backgroundColor: `#${entity.vertexColor.toString(16).padStart(6, "0")}`,
