@@ -8,6 +8,7 @@ import { getPlayer } from "@/shared/api/player.ts";
 import { getFps } from "../graphics/three.ts";
 import { computeUnitMovementSpeed, isAlly } from "@/shared/api/unit.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
+import { glow } from "../graphics/glow.ts";
 
 import sheep from "../assets/sheep.svg" with { type: "text" };
 import wolf from "../assets/wolf.svg" with { type: "text" };
@@ -175,6 +176,11 @@ const collections: Record<string, InstancedGroup | undefined> = {
   wood: loadSvg(wood, 0.12, { layer: 2 }),
   // tractor: loadSvg(tractor, 1, { layer: 2 }),
 
+  // Bottom-layer indicators (render between background elements and units)
+  circleBottom: loadSvg(circle, 0.08, { layer: 2 }),
+  gravityBottom: loadSvg(gravity, 2, { layer: 2 }),
+  glow,
+
   // Basic units and structures
   sentry: loadSvg(sentry, 0.03),
   sheep: loadSvg(sheep, 1),
@@ -210,12 +216,14 @@ const collections: Record<string, InstancedGroup | undefined> = {
   dash: loadSvg(dash, 0.1, { layer: 2 }),
   flag: loadSvg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),
   location: loadSvg(location, 2, { layer: 2 }),
-  circle: loadSvg(circle, 0.08, { layer: 2 }),
-  gravity: loadSvg(gravity, 2, { layer: 2 }),
   collision: loadSvg(collision, 2, { layer: 2 }),
   meteor: loadSvg(meteor, 0.5, { layer: 2 }),
   frostOrb: loadSvg(frostOrb, 0.4, { layer: 2 }),
   square: loadSvg(square, 1, { layer: 2 }),
+
+  // Top-layer indicators (render above everything)
+  circle: loadSvg(circle, 0.08, { layer: 2 }),
+  gravity: loadSvg(gravity, 2, { layer: 2 }),
 };
 Object.assign(globalThis, { collections });
 

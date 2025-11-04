@@ -10,6 +10,7 @@ import { useTheme } from "styled-components";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
 import { styled } from "styled-components";
 import { Entity } from "../../../ecs.ts";
+import { svgs } from "../../../systems/three.ts";
 
 const MiniIconWrapper = styled.div`
   display: grid;
@@ -40,16 +41,19 @@ const Inventory = ({ items }: { items: ReadonlyArray<Item> }) => (
 
 const Buffs = ({ entityBuffs }: { entityBuffs: ReadonlyArray<Buff> }) => (
   <MiniIconWrapper>
-    {entityBuffs.filter((b) => !b.expiration && (b.icon || b.model)).map(
-      (buff, i) => (
-        <Command
-          key={i}
-          name=""
-          icon={buff.icon ?? buff.model ?? ""}
-          hideTooltip
-        />
-      ),
-    )}
+    {entityBuffs.filter((b) =>
+      !b.expiration && (b.icon ?? b.model ?? "") in svgs
+    )
+      .map(
+        (buff, i) => (
+          <Command
+            key={i}
+            name=""
+            icon={buff.icon ?? buff.model ?? ""}
+            hideTooltip
+          />
+        ),
+      )}
   </MiniIconWrapper>
 );
 

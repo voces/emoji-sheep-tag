@@ -1,7 +1,7 @@
 import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
 import { styled } from "styled-components";
 import { app, Entity } from "../../../ecs.ts";
-import { selection } from "../../../systems/autoSelect.ts";
+import { selection } from "../../../systems/selection.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { useLocalPlayer } from "@/hooks/usePlayers.ts";
 import { getPlayer } from "@/shared/api/player.ts";

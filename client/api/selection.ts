@@ -5,7 +5,7 @@ import {
   getPrimaryUnit,
   mirrors,
   selection,
-} from "../systems/autoSelect.ts";
+} from "../systems/selection.ts";
 import { closeMenusForUnit } from "@/vars/menuState.ts";
 import { focusGroup } from "./camera.ts";
 import { getEntitiesInRange } from "../systems/kd.ts";

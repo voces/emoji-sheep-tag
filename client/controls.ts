@@ -4,7 +4,7 @@ import { send } from "./client.ts";
 import { Entity } from "./ecs.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 import { getPlayer } from "@/shared/api/player.ts";
-import { selection } from "./systems/autoSelect.ts";
+import { selection } from "./systems/selection.ts";
 import { camera, terrain } from "./graphics/three.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { absurd } from "@/shared/util/absurd.ts";

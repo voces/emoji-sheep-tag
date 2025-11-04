@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { waitFor } from "@testing-library/react";
 import { app, Entity } from "../ecs.ts";
-import { selection } from "../systems/autoSelect.ts";
+import { selection } from "../systems/selection.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { connect, setServer } from "../connection.ts";
 import { connectionStatusVar } from "@/vars/state.ts";

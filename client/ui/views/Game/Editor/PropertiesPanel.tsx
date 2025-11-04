@@ -1,6 +1,6 @@
 import { VStack } from "@/components/layout/Layout.tsx";
 import { useSet } from "@/hooks/useSet.ts";
-import { selection } from "../../../../systems/autoSelect.ts";
+import { selection } from "../../../../systems/selection.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { InputField } from "@/components/forms/Input.tsx";
 import { send } from "../../../../messaging.ts";

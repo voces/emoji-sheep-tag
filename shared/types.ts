@@ -97,6 +97,8 @@ export type Buff = {
   readonly model?: string;
   readonly modelOffset?: { readonly x?: number; readonly y?: number };
   readonly modelScale?: number;
+  readonly modelPlayerColor?: string;
+  readonly modelAlpha?: number;
   readonly particleRate?: number;
   readonly particleOffsetRange?: number;
   readonly particleMinOffsetRange?: number;

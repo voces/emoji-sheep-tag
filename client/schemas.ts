@@ -219,6 +219,8 @@ const zBuff = z.object({
     y: z.number().optional(),
   }).optional(),
   modelScale: z.number().optional(),
+  modelPlayerColor: z.string().optional(),
+  modelAlpha: z.number().optional(),
   particleRate: z.number().optional(),
   particleOffsetRange: z.number().optional(),
   particleMinOffsetRange: z.number().optional(),

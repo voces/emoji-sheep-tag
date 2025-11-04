@@ -52,6 +52,8 @@ const updateBuffModels = (e: Entity) => {
         modelScale: finalScale,
         owner: e.owner,
         isDoodad: true,
+        playerColor: buff.modelPlayerColor,
+        alpha: buff.modelAlpha,
       });
       newModels.set(model, modelEntity);
     }

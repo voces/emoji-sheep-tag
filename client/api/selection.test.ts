@@ -2,7 +2,7 @@ import "@/client-testing/setup.ts";
 import { beforeEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { app, Entity, SystemEntity } from "../ecs.ts";
-import { selection } from "../systems/autoSelect.ts";
+import { selection } from "../systems/selection.ts";
 
 // We need to test the actual implementation, so we'll create test scenarios
 // that work with the real getLocalPlayer function by setting up the player state

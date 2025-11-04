@@ -18,7 +18,6 @@
   - Kat'ma
   - Vamp
 - Minimap
-- Selection hint
 - Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
 - Observers
 - Matchmaking

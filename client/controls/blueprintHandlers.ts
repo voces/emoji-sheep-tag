@@ -2,7 +2,7 @@ import { app, Entity, SystemEntity } from "../ecs.ts";
 import { prefabs } from "@/shared/data.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { getPlayer } from "@/shared/api/player.ts";
-import { selection } from "../systems/autoSelect.ts";
+import { selection } from "../systems/selection.ts";
 import { canBuild } from "../api/unit.ts";
 import { updateCursor } from "../graphics/cursor.ts";
 import { setFind } from "../../server/util/set.ts";

@@ -3,7 +3,7 @@ import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { getPlayers, Player } from "@/shared/api/player.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
-import { getPrimaryUnit } from "../systems/autoSelect.ts";
+import { getPrimaryUnit } from "../systems/selection.ts";
 import { onInit } from "@/shared/context.ts";
 
 export const getLocalPlayer = (): Player | undefined =>

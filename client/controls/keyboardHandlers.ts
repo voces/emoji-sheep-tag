@@ -1,7 +1,7 @@
 import { UnitDataAction } from "@/shared/types.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { Entity } from "../ecs.ts";
-import { selection } from "../systems/autoSelect.ts";
+import { selection } from "../systems/selection.ts";
 import { lookup } from "../systems/lookup.ts";
 import { getCurrentMenu } from "../ui/vars/menuState.ts";
 import {

@@ -2,7 +2,7 @@ import "global-jsdom/register";
 import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { app, Entity } from "../ecs.ts";
-import { selection } from "../systems/autoSelect.ts";
+import { selection } from "../systems/selection.ts";
 import { prefabs as _prefabs } from "@/shared/data.ts";
 import {
   cancelBlueprint,

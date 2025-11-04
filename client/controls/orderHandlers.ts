@@ -1,6 +1,6 @@
 import { send } from "../client.ts";
 import { Entity } from "../ecs.ts";
-import { selection } from "../systems/autoSelect.ts";
+import { selection } from "../systems/selection.ts";
 import { UnitDataActionTarget } from "@/shared/types.ts";
 import { hasAction } from "../util/actionLookup.ts";
 import { CursorVariant, updateCursor } from "../graphics/cursor.ts";

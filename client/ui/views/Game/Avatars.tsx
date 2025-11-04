@@ -1,4 +1,4 @@
-import { selection } from "../../../systems/autoSelect.ts";
+import { selection } from "../../../systems/selection.ts";
 import { styled } from "styled-components";
 import { VStack } from "@/components/layout/Layout.tsx";
 import { Avatar } from "@/components/game/Avatar.tsx";

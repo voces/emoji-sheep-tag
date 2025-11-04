@@ -1,6 +1,6 @@
 import { playEntitySound, playSoundAt } from "../api/sound.ts";
 import { stateVar } from "@/vars/state.ts";
-import { selection } from "./autoSelect.ts";
+import { selection } from "./selection.ts";
 import { addSystem } from "@/shared/context.ts";
 import { Entity } from "../ecs.ts";
 

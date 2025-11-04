@@ -3,7 +3,7 @@ import { startPing } from "./messaging.ts";
 import "./ui/root.tsx";
 import "./controls.ts";
 import "./systems/lookup.ts";
-import "./systems/autoSelect.ts";
+import "./systems/selection.ts";
 import "./systems/three.ts";
 import "./systems/action.ts";
 import "./systems/sounds.ts";

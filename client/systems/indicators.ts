@@ -25,10 +25,11 @@ addSystem({
     indicators.delete(e as SystemEntity<"prefab" | "modelScale">),
   update: (_, time) => {
     for (const [indicator, { birth, initialScale }] of indicators) {
-      const next = initialScale - (time * 3 - birth * 3) ** 2;
+      const next = initialScale - 9 * (time - birth) ** 2;
       if (next < 0.01) removeEntity(indicator);
       else {
         indicator.modelScale = next;
+        // Rotate the indicator based on its scale
         indicator.facing = ((next - 0.01) / 0.99) ** 0.5 * Math.PI * 2 *
           (indicator.turnSpeed ?? 1);
       }
