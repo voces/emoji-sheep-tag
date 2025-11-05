@@ -4,7 +4,7 @@ import type { ServerToClientMessage } from "../client/client.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import type { Entity } from "@/shared/types.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
-import { leave } from "./lobbyApi.ts";
+import { leave, sendJoinMessage } from "./lobbyApi.ts";
 import { build, zBuild } from "./actions/build.ts";
 import { start, zStart } from "./actions/start.ts";
 import { colors } from "@/shared/data.ts";
@@ -19,8 +19,6 @@ import { purchase, zPurchase } from "./actions/purchase.ts";
 import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
 import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
-import { getIdealSheep, getIdealTime } from "./st/roundHelpers.ts";
-import { LobbySettings } from "../client/schemas.ts";
 import {
   editorCreateEntity,
   editorSetPathing,
@@ -33,6 +31,10 @@ import { joinLobby, zJoinLobby } from "./actions/joinLobby.ts";
 import { createLobby, zCreateLobby } from "./actions/createLobby.ts";
 import { joinHub, leaveHub, serializeLobbyList } from "./hub.ts";
 import { upgrade, zUpgrade } from "./actions/upgrade.ts";
+import {
+  updateSelection,
+  zUpdateSelection,
+} from "./actions/updateSelection.ts";
 
 export type SocketEventMap = {
   close: unknown;
@@ -84,7 +86,7 @@ export class Client implements Entity {
   name: string;
   playerColor: string;
   isPlayer: true = true;
-  team?: "sheep" | "wolf";
+  team: "sheep" | "wolf" | "pending" | "observer" = "pending";
   gold?: number;
   handicap?: number;
 
@@ -159,6 +161,7 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zEditorSetPathing,
   zJoinLobby,
   zCreateLobby,
+  zUpdateSelection,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -180,30 +183,7 @@ const actions = {
   editorSetPathing,
   joinLobby,
   createLobby,
-};
-
-const serializeLobbySettings = (
-  lobby: Lobby,
-  playerOffset = 0,
-): LobbySettings => {
-  const players = lobby.players.size + playerOffset;
-  const idealSheep = getIdealSheep(players);
-  const sheep = lobby.settings.sheep === "auto"
-    ? idealSheep
-    : Math.min(Math.max(lobby.settings.sheep, 1), Math.max(players - 1, 1));
-  return {
-    mode: lobby.settings.mode,
-    vipHandicap: lobby.settings.vipHandicap,
-    sheep,
-    autoSheep: lobby.settings.sheep === "auto",
-    time: lobby.settings.time === "auto"
-      ? getIdealTime(players, sheep)
-      : lobby.settings.time,
-    autoTime: lobby.settings.time === "auto",
-    startingGold: lobby.settings.startingGold,
-    income: lobby.settings.income,
-    host: lobby.host?.id ?? null,
-  };
+  updateSelection,
 };
 
 export const handleSocket = (socket: Socket, url?: URL) => {
@@ -221,23 +201,11 @@ export const handleSocket = (socket: Socket, url?: URL) => {
     "open",
     wrap(client, () => {
       if (client.lobby) {
-        // Auto-joined a lobby
-        client.send({
-          type: "join",
-          status: client.lobby.status,
-          updates: client.lobby.round
-            ? Array.from(client.lobby.round.ecs.entities)
-            : Array.from(client.lobby.players),
-          rounds: client.lobby.rounds,
-          lobbySettings: serializeLobbySettings(client.lobby),
-          localPlayer: client.id,
-        });
+        // Auto-rejoin lobby - send full state
+        lobbyContext.with(client.lobby, () => sendJoinMessage(client));
       } else {
         // Client in hub - send initial lobby list
-        client.send({
-          type: "hubState",
-          lobbies: serializeLobbyList(),
-        });
+        client.send({ type: "hubState", lobbies: serializeLobbyList() });
       }
     }),
   );

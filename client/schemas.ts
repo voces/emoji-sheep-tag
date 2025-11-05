@@ -285,7 +285,7 @@ export const zUpdate = z.object({
   isTimer: z.boolean().optional(),
   isFloatingText: z.boolean().optional(),
   teamScoped: z.boolean().optional(),
-  unique: z.boolean().optional(),
+  selectedBy: z.string().array().readonly().nullable().optional(),
 
   attack: z.object({
     damage: z.number(),
@@ -328,6 +328,8 @@ export const zUpdate = z.object({
 
   // Fog of war
   blocksLineOfSight: z.number().optional(),
+
+  unique: z.boolean().optional(),
 
   // Pathing
   radius: z.number().optional(),

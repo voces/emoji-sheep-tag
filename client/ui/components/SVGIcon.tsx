@@ -57,9 +57,35 @@ export const SvgIcon = ({
       if (!(n instanceof SVGElement)) return;
       const current = getComputedStyle(n).fill;
       if (!current) return;
+
+      let alpha: number | undefined;
+
+      // Extract alpha channel if present
+      let rgbOnly = current;
+      if (current.startsWith("rgba(")) {
+        const match = current.match(/rgba?\(([^)]+)\)/);
+        if (match) {
+          const values = match[1].split(",").map((v) => v.trim());
+          rgbOnly = `rgb(${values[0]}, ${values[1]}, ${values[2]})`;
+          alpha = parseFloat(values[3]);
+        }
+      } else if (current.match(/^#[0-9a-fA-F]{8}$/)) {
+        // 8-digit hex with alpha
+        alpha = parseInt(current.slice(7, 9), 16) / 255;
+        rgbOnly = "#" + current.slice(1, 7);
+      }
+
       const newColor = "#" +
-        new Color(current).multiply(new Color(color)).getHexString();
-      n.style.fill = newColor;
+        new Color(rgbOnly).multiply(new Color(color)).getHexString();
+
+      // Apply color with alpha if present
+      if (alpha !== undefined) {
+        n.style.fill = `rgba(${parseInt(newColor.slice(1, 3), 16)}, ${
+          parseInt(newColor.slice(3, 5), 16)
+        }, ${parseInt(newColor.slice(5, 7), 16)}, ${alpha})`;
+      } else {
+        n.style.fill = newColor;
+      }
     });
   }, [icon, color]);
 

@@ -61,6 +61,21 @@ export const send = (message: ServerToClientMessage) => {
   }
 };
 
+/** Sends full lobby state to a joining client */
+export const sendJoinMessage = (client: Client) => {
+  const lobby = lobbyContext.current;
+  client.send({
+    type: "join",
+    status: lobby.status,
+    updates: lobby.round
+      ? Array.from(lobby.round.ecs.entities)
+      : Array.from(lobby.players),
+    rounds: lobby.rounds,
+    lobbySettings: serializeLobbySettings(lobby),
+    localPlayer: client.id,
+  });
+};
+
 /** Causes the local player to leave their current lobby. */
 export const leave = (client?: Client) => {
   client ??= clientContext.current;
@@ -114,6 +129,7 @@ export const leave = (client?: Client) => {
     for (const entity of getPlayerUnits(client.id)) {
       lobby.round.ecs.removeEntity(entity);
     }
+    lobby.round.ecs.removeEntity(client);
   }
 
   lobby.players.delete(client);

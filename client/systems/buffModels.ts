@@ -10,7 +10,7 @@ const buffModels = new Map<Entity, Map<string, Entity>>();
 const updateBuffModels = (e: Entity) => {
   if (!e.position || e.projectile) return;
 
-  const currentModels = buffModels.get(e) ?? new Map();
+  const currentModels = buffModels.get(e) ?? new Map<string, Entity>();
   const newModels = new Map<string, Entity>();
 
   // Get all unique models from buffs (direct buffs and item buffs) with their offsets
@@ -43,6 +43,8 @@ const updateBuffModels = (e: Entity) => {
       existing.position = position;
       existing.modelScale = finalScale;
       if (e.owner !== undefined) existing.owner = e.owner;
+      existing.alpha = buff.modelAlpha;
+      existing.playerColor = buff.modelPlayerColor;
       newModels.set(model, existing);
     } else {
       // Create new model entity

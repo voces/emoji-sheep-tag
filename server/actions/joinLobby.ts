@@ -3,7 +3,7 @@ import type { Client } from "../client.ts";
 import { lobbies } from "../lobby.ts";
 import { broadcastLobbyList, leaveHub } from "../hub.ts";
 import { lobbyContext } from "../contexts.ts";
-import { send } from "../lobbyApi.ts";
+import { send, sendJoinMessage } from "../lobbyApi.ts";
 import { colors } from "@/shared/data.ts";
 import { setSome } from "../util/set.ts";
 import { addPlayerToPracticeGame } from "../api/player.ts";
@@ -55,38 +55,36 @@ export const joinLobby = (
       ...Array.from(lobby.players, (p) => p.sheepCount),
     );
 
-    // If joining an ongoing practice game, add player to sheep team and spawn units
-    if (lobby.round?.practice && lobby.round) {
-      appContext.with(lobby.round.ecs, () => {
-        appContext.current.batch(() => {
-          addPlayerToPracticeGame(client);
+    if (lobby.round) {
+      // If joining an ongoing practice game, add player to sheep team and spawn units
+      if (lobby.round.practice) {
+        client.team = "sheep";
+        lobby.round.ecs.addEntity(client);
+
+        appContext.with(lobby.round.ecs, () => {
+          appContext.current.batch(() => {
+            addPlayerToPracticeGame(client);
+          });
         });
-      });
+      } else lobby.round.ecs.addEntity(client);
     }
 
-    // Send partial state to existing users
+    // Send partial state to existing players (before adding joiner to lobby.players)
     send({
       type: "join",
       status: lobby.status,
       updates: lobby.round ? flushUpdates(false) : [client],
       lobbySettings: serializeLobbySettings(lobby, 1),
     });
+
+    // Add player to lobby
     lobby.players.add(client);
     console.log(new Date(), "Client", client.id, "joined lobby", lobby.name);
 
+    // Send full state to joining player
+    sendJoinMessage(client);
+
     // Update lobby list for hub
     broadcastLobbyList();
-
-    // Send full lobby state to joining client
-    client.send({
-      type: "join",
-      status: lobby.status,
-      updates: lobby.round
-        ? Array.from(lobby.round.ecs.entities)
-        : Array.from(lobby.players),
-      rounds: lobby.rounds,
-      lobbySettings: serializeLobbySettings(lobby),
-      localPlayer: client.id,
-    });
   });
 };

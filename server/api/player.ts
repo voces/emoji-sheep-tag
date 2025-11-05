@@ -78,8 +78,8 @@ export const addPlayerToPracticeGame = (client: Client) => {
   const lobby = lobbyContext.current;
   if (!lobby?.round?.practice) return;
 
-  // Check if client is already in the game
-  if (client.team) return;
+  // Don't add if player already has a team (already in game)
+  if (client.team !== "pending") return;
 
   // Set client properties for practice game
   client.team = "sheep";

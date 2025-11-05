@@ -167,8 +167,8 @@ describe("player API", () => {
           addPlayerToPracticeGame(newClient);
         });
 
-        // Should not assign team
-        expect(newClient.team).toBeUndefined();
+        // Should keep default "pending" team (not changed by addPlayerToPracticeGame)
+        expect(newClient.team).toBe("pending");
       },
     );
   });

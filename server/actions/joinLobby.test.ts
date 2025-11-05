@@ -105,8 +105,8 @@ describe("joinLobby", () => {
         });
       });
 
-      // Should not have team assigned since it's not practice mode
-      expect(newClient.team).toBeUndefined();
+      // Should keep default "pending" team since it's not practice mode
+      expect(newClient.team).toBe("pending");
 
       // Should not have any units spawned
       const units = Array.from(ecs.entities).filter((e) =>

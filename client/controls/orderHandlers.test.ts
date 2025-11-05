@@ -146,14 +146,15 @@ describe("order handlers", () => {
       // Wait for message to arrive at test server
       await waitFor(() => {
         const messages = getTestServerMessages();
-        if (messages.length === 0) {
+        if (!messages.some((m) => m.type === "unitOrder")) {
           throw new Error("Message not received yet");
         }
       }, { interval: 10 });
 
       const messages = getTestServerMessages();
-      expect(messages).toHaveLength(1);
-      const message = messages[0];
+      const unitOrderMessages = messages.filter((m) => m.type === "unitOrder");
+      expect(unitOrderMessages).toHaveLength(1);
+      const message = unitOrderMessages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("move");
@@ -187,14 +188,15 @@ describe("order handlers", () => {
       // Wait for message to arrive at test server
       await waitFor(() => {
         const messages = getTestServerMessages();
-        if (messages.length === 0) {
+        if (!messages.some((m) => m.type === "unitOrder")) {
           throw new Error("Message not received yet");
         }
       }, { interval: 10 });
 
       const messages = getTestServerMessages();
-      expect(messages).toHaveLength(1);
-      const message = messages[0];
+      const unitOrderMessages = messages.filter((m) => m.type === "unitOrder");
+      expect(unitOrderMessages).toHaveLength(1);
+      const message = unitOrderMessages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("attack");
@@ -228,14 +230,15 @@ describe("order handlers", () => {
       // Wait for message to arrive at test server
       await waitFor(() => {
         const messages = getTestServerMessages();
-        if (messages.length === 0) {
+        if (!messages.some((m) => m.type === "unitOrder")) {
           throw new Error("Message not received yet");
         }
       }, { interval: 10 });
 
       const messages = getTestServerMessages();
-      expect(messages).toHaveLength(1);
-      const message = messages[0];
+      const unitOrderMessages = messages.filter((m) => m.type === "unitOrder");
+      expect(unitOrderMessages).toHaveLength(1);
+      const message = unitOrderMessages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.order).toBe("attack");
@@ -352,14 +355,15 @@ describe("order handlers", () => {
       // Wait for message
       await waitFor(() => {
         const messages = getTestServerMessages();
-        if (messages.length === 0) {
+        if (!messages.some((m) => m.type === "unitOrder")) {
           throw new Error("Message not received yet");
         }
       }, { interval: 10 });
 
       const messages = getTestServerMessages();
-      expect(messages).toHaveLength(1);
-      const message = messages[0];
+      const unitOrderMessages = messages.filter((m) => m.type === "unitOrder");
+      expect(unitOrderMessages).toHaveLength(1);
+      const message = unitOrderMessages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.queue).toBe(true);
@@ -390,14 +394,15 @@ describe("order handlers", () => {
       // Wait for message
       await waitFor(() => {
         const messages = getTestServerMessages();
-        if (messages.length === 0) {
+        if (!messages.some((m) => m.type === "unitOrder")) {
           throw new Error("Message not received yet");
         }
       }, { interval: 10 });
 
       const messages = getTestServerMessages();
-      expect(messages).toHaveLength(1);
-      const message = messages[0];
+      const unitOrderMessages = messages.filter((m) => m.type === "unitOrder");
+      expect(unitOrderMessages).toHaveLength(1);
+      const message = unitOrderMessages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.queue).toBeFalsy();
@@ -429,14 +434,15 @@ describe("order handlers", () => {
       // Wait for message
       await waitFor(() => {
         const messages = getTestServerMessages();
-        if (messages.length === 0) {
+        if (!messages.some((m) => m.type === "unitOrder")) {
           throw new Error("Message not received yet");
         }
       }, { interval: 10 });
 
       const messages = getTestServerMessages();
-      expect(messages).toHaveLength(1);
-      const message = messages[0];
+      const unitOrderMessages = messages.filter((m) => m.type === "unitOrder");
+      expect(unitOrderMessages).toHaveLength(1);
+      const message = unitOrderMessages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.queue).toBe(true);
@@ -470,14 +476,15 @@ describe("order handlers", () => {
       // Wait for message
       await waitFor(() => {
         const messages = getTestServerMessages();
-        if (messages.length === 0) {
+        if (!messages.some((m) => m.type === "unitOrder")) {
           throw new Error("Message not received yet");
         }
       }, { interval: 10 });
 
       const messages = getTestServerMessages();
-      expect(messages).toHaveLength(1);
-      const message = messages[0];
+      const unitOrderMessages = messages.filter((m) => m.type === "unitOrder");
+      expect(unitOrderMessages).toHaveLength(1);
+      const message = unitOrderMessages[0];
       expect(message.type).toBe("unitOrder");
       if (message.type === "unitOrder") {
         expect(message.queue).toBe(true);

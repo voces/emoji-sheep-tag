@@ -269,6 +269,8 @@ export type Entity = {
   isFloatingText?: boolean;
   /** Only visible to the owner's team */
   teamScoped?: boolean;
+  /** Player IDs that have this entity selected (for allied visibility) */
+  selectedBy?: ReadonlyArray<string> | null;
 
   // Attacking
   attack?: {
