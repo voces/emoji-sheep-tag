@@ -20,7 +20,7 @@ const Wrapper = styled.div`
   }
 `;
 
-const PickerCard = styled.div`
+export const PickerCard = styled.div`
   position: absolute;
   background: ${({ theme }) => theme.colors.body};
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -50,6 +50,40 @@ const Color = styled.span<
   }
 `;
 
+export const ColorPickerPopup = (
+  { value, onChange, onClose }: {
+    value: string;
+    onChange: (newValue: string) => void;
+    onClose?: () => void;
+  },
+) => {
+  const players = usePlayers();
+  useListenToEntities(playerEntities(), ["playerColor"]);
+  const takenColors = new Set(players.map((p) => p.playerColor));
+
+  return (
+    <PickerCard onClick={(e) => e.stopPropagation()}>
+      {colors.map((c) => {
+        const isTaken = takenColors.has(c) && c !== value;
+        return (
+          <Color
+            key={c}
+            $color={c}
+            $selected={c === value}
+            $disabled={isTaken}
+            onClick={() => {
+              if (!isTaken) {
+                onChange(c);
+                onClose?.();
+              }
+            }}
+          />
+        );
+      })}
+    </PickerCard>
+  );
+};
+
 export const ColorPicker = (
   { value, onChange, readonly }: {
     value: string;
@@ -58,9 +92,6 @@ export const ColorPicker = (
   },
 ) => {
   const [visible, setVisible] = useState(false);
-  const players = usePlayers();
-  useListenToEntities(playerEntities(), ["playerColor"]);
-  const takenColors = new Set(players.map((p) => p.playerColor));
 
   return (
     <div style={{ position: "relative" }}>
@@ -69,25 +100,11 @@ export const ColorPicker = (
         onClick={() => !readonly && setVisible((v) => !v)}
       />
       {visible && (
-        <PickerCard onClick={(e) => e.stopPropagation()}>
-          {colors.map((c) => {
-            const isTaken = takenColors.has(c) && c !== value;
-            return (
-              <Color
-                key={c}
-                $color={c}
-                $selected={c === value}
-                $disabled={isTaken}
-                onClick={() => {
-                  if (!isTaken) {
-                    onChange(c);
-                    setVisible(false);
-                  }
-                }}
-              />
-            );
-          })}
-        </PickerCard>
+        <ColorPickerPopup
+          value={value}
+          onChange={onChange}
+          onClose={() => setVisible(false)}
+        />
       )}
     </div>
   );

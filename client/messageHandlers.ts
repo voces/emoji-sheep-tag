@@ -10,7 +10,7 @@ import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import type { ServerToClientMessage, Update } from "./schemas.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { send } from "./client.ts";
-import { getPlayer, getPlayers } from "@/shared/api/player.ts";
+import { colorName, getPlayer, getPlayers } from "@/shared/api/player.ts";
 import { getWebSocket } from "./connection.ts";
 import { LocalWebSocket } from "./local.ts";
 import { lobbiesVar } from "@/vars/lobbies.ts";
@@ -56,14 +56,27 @@ export const handlers = {
     const newPlayers = players.filter((p) =>
       !prevPlayers.some((p2) => p2.id === p.id) && data.localPlayer !== p.id
     );
+    const localNewPlayer = players.find((p) => p.id === data.localPlayer);
 
     if (newPlayers.length) {
-      addChatMessage(`${
-        new Intl.ListFormat().format(
-          newPlayers.map((p) => `|c${p.playerColor}|${p.name}|`),
-        )
-      } ${newPlayers.length > 1 ? "have" : "has"} joined the game!`);
-    }
+      if (localNewPlayer) {
+        addChatMessage(
+          `Joined the game ${data.lobby} with player${
+            newPlayers.length > 1 ? "s" : ""
+          } ${
+            new Intl.ListFormat().format(
+              newPlayers.map(colorName),
+            )
+          }.`,
+        );
+      } else {
+        addChatMessage(`${
+          new Intl.ListFormat().format(
+            newPlayers.map(colorName),
+          )
+        } ${newPlayers.length > 1 ? "have" : "has"} joined the game!`);
+      }
+    } else if (localNewPlayer) addChatMessage(`Joined the game ${data.lobby}.`);
 
     stateVar(data.status);
     lobbySettingsVar(data.lobbySettings);
@@ -112,7 +125,7 @@ export const handlers = {
     { player, message }: Extract<ServerToClientMessage, { type: "chat" }>,
   ) => {
     const p = getPlayer(player);
-    addChatMessage(p ? `|c${p.playerColor}|${p.name}|: ${message}` : message);
+    addChatMessage(p ? `${colorName(p)}: ${message}` : message);
   },
   lobbySettings: (
     { type: _type, ...lobbySettings }: Extract<

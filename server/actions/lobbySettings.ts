@@ -40,11 +40,17 @@ export const serializeLobbySettings = (
   lobby: Lobby,
   playerOffset = 0,
 ): LobbySettings => {
-  const players = lobby.players.size + playerOffset;
+  // Count only non-observer, non-pending players
+  const nonObserverCount =
+    Array.from(lobby.players).filter((p) =>
+      p.team !== "observer" && p.team !== "pending"
+    ).length;
+  const players = Math.max(nonObserverCount + playerOffset, 1);
   const idealSheep = getIdealSheep(players);
+  const maxSheep = Math.max(players - 1, 1);
   const sheep = lobby.settings.sheep === "auto"
     ? idealSheep
-    : Math.max(Math.min(lobby.settings.sheep, Math.max(players - 1, 1)), 1);
+    : Math.max(Math.min(lobby.settings.sheep, maxSheep), 1);
   return {
     mode: lobby.settings.mode,
     vipHandicap: lobby.settings.vipHandicap,

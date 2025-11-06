@@ -1,5 +1,5 @@
 import { styled } from "styled-components";
-import { useState } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 import { setStoredPlayerName } from "../../../util/playerPrefs.ts";
 
 const InputWrapper = styled.div`
@@ -7,19 +7,21 @@ const InputWrapper = styled.div`
 `;
 
 const NameDisplay = styled.span<{ $readonly?: boolean }>`
-  text-decoration: ${({ $readonly }) => $readonly ? "none" : "underline"};
+  /* text-decoration: ${({ $readonly }) => $readonly ? "none" : "underline"}; */
   display: inline-block;
   border: 1px solid transparent;
   border-radius: ${({ theme }) => theme.borderRadius.sm};
   padding: 0;
   margin: 0;
   line-height: normal;
+  filter: ${(
+    { $readonly },
+  ) => ($readonly ? undefined : `drop-shadow(0 0 2px #fff6)`)};
 
   &.hover {
-    text-shadow: ${({ $readonly, theme }) =>
-      $readonly
-        ? "none"
-        : `0 0 2px ${theme.colors.border}, 0 0 4px ${theme.colors.border}, 0 0 4px ${theme.colors.border}`};
+    filter: ${(
+      { $readonly },
+    ) => ($readonly ? undefined : `drop-shadow(0 0 2px #fffd)`)};
   }
 `;
 
@@ -34,15 +36,28 @@ const NameInputField = styled.input`
   line-height: normal;
 `;
 
-export const NameInput = (
-  { value, onChange, readonly }: {
+export type NameInputRef = {
+  startEditing: () => void;
+};
+
+export const NameInput = forwardRef<
+  NameInputRef,
+  {
     value: string;
     onChange: (newValue: string) => void;
     readonly?: boolean;
-  },
-) => {
+  }
+>(({ value, onChange, readonly }, ref) => {
   const [editing, setEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
+
+  useImperativeHandle(ref, () => ({
+    startEditing: () => {
+      if (!readonly) {
+        setEditing(true);
+      }
+    },
+  }));
 
   const handleSubmit = () => {
     if (tempValue.trim() && tempValue !== value) {
@@ -87,4 +102,4 @@ export const NameInput = (
       </NameDisplay>
     </InputWrapper>
   );
-};
+});

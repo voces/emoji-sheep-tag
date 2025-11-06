@@ -11,6 +11,7 @@ import { app } from "../ecs.ts";
 it("switch wolf -> sheep", () => {
   handlers.join({
     type: "join",
+    lobby: "Strong Spirit",
     status: "playing",
     updates: [
       { id: "player-0", isPlayer: true, team: "sheep" },

@@ -2,6 +2,7 @@ import { type Client } from "./client.ts";
 import { Game } from "./ecs.ts";
 import { broadcastLobbyList } from "./hub.ts";
 import { generateLobbyName } from "./util/lobbyNames.ts";
+import { cleanupSmartDrafter } from "./st/roundHelpers.ts";
 
 /**
  * Contexts:
@@ -55,7 +56,7 @@ type Round = {
 export type Lobby = {
   players: Set<Client>;
   host: Client | undefined; // Auto (ranked) lobbies have no host
-  name: string | undefined; // Auto (ranked) lobbies have no name
+  name: string;
   settings: LobbySettings;
   status: LobbyStatus;
   round?: Round;
@@ -69,6 +70,7 @@ export const deleteLobby = (lobby: Lobby) => {
   lobbies.delete(lobby);
   lobby.round?.clearInterval();
   delete lobby.round;
+  cleanupSmartDrafter(lobby);
   console.log(new Date(), "Lobby deleted", lobby.name);
   broadcastLobbyList();
 };
@@ -91,6 +93,11 @@ export const newLobby = (host?: Client) => {
   };
   console.log(new Date(), "Lobby", lobby.name, "created with host", host?.id);
   lobbies.add(lobby);
+
+  // Assign host to sheep team (first player should be sheep)
+  if (host) {
+    host.team = "sheep";
+  }
 
   // Update lobby list for hub
   broadcastLobbyList();

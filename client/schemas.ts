@@ -405,6 +405,7 @@ export type LobbySettings = z.input<typeof zLobbySettings>;
 
 const zJoin = z.object({
   type: z.literal("join"),
+  lobby: z.string(),
   status: z.union([z.literal("lobby"), z.literal("playing")]),
   updates: zUpdate.array().readonly(),
   rounds: zRound.array().readonly().optional(),

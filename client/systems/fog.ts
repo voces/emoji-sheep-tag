@@ -20,6 +20,7 @@ import { FogPass } from "../graphics/FogPass.ts";
 import { isAlly, isStructure, isTree } from "@/shared/api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getEntitiesInRange } from "./kd.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 // Fog resolution multiplier: 2 = 160x160, 4 = 320x320, etc.
 const FOG_RESOLUTION_MULTIPLIER = 4;
@@ -67,15 +68,22 @@ const removeEntityFromGrid = (entity: Entity) => {
   }
 };
 
-// Check if an entity is allied with the local player
-// Observers (neutral team) see all entities
-const isAlliedWithLocalPlayer = (entity: Entity): boolean => {
+// Check if an entity provides visibility for the local player
+// Observers see all entities, pending users only see wolves, others see allies
+const visibleToLocalPlayer = (entity: Entity): boolean => {
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return false;
 
-  // If local player is neutral (observer), grant vision from all entities
   const localTeam = localPlayer.team;
-  if (localTeam === "observer" || localTeam === "pending") return true;
+
+  // Observers see all entities
+  if (localTeam === "observer") return true;
+
+  // Pending users only see wolf team entities
+  if (localTeam === "pending") {
+    const entityOwner = getPlayer(entity.owner);
+    return entityOwner?.team === "wolf";
+  }
 
   return isAlly(localPlayer.id, entity);
 };
@@ -540,11 +548,11 @@ addSystem({
   props: ["position", "sightRadius"],
   entities: sightedEntities,
   onAdd: (entity) => {
-    if (!isAlliedWithLocalPlayer(entity)) return;
+    if (!visibleToLocalPlayer(entity)) return;
     visibilityGrid.updateEntity(entity);
   },
   onChange: (entity) => {
-    if (!isAlliedWithLocalPlayer(entity)) return;
+    if (!visibleToLocalPlayer(entity)) return;
     visibilityGrid.updateEntity(entity);
   },
   onRemove: (entity) => {
@@ -617,7 +625,7 @@ const handleEntityVisibility = (entity: Entity) => {
   if (alwaysVisible(entity) || !entity.position) return;
 
   // Skip allied entities
-  if (isAlliedWithLocalPlayer(entity)) {
+  if (visibleToLocalPlayer(entity)) {
     if (entity.hiddenByFog) delete entity.hiddenByFog;
     everSeen.add(entity.id);
     return;
@@ -666,7 +674,7 @@ addSystem({
 
     // Remove all currently tracked entities
     for (const entity of sightedEntities) {
-      if (isAlliedWithLocalPlayer(entity)) visibilityGrid.updateEntity(entity);
+      if (visibleToLocalPlayer(entity)) visibilityGrid.updateEntity(entity);
       else visibilityGrid.removeEntity(entity);
     }
 

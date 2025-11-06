@@ -12,6 +12,29 @@ import { distributeEquitably } from "./util/equitableDistribution.ts";
 import { isPractice } from "./api/st.ts";
 import { broadcastLobbyList, joinHub } from "./hub.ts";
 import type { Entity } from "@/shared/types.ts";
+import { autoAssignSheepOrWolf } from "./st/roundHelpers.ts";
+import type { Lobby } from "./lobby.ts";
+
+const convertPendingPlayersToTeams = (lobby: Lobby) => {
+  const pendingPlayers = Array.from(lobby.players).filter((p) =>
+    p.team === "pending"
+  );
+  if (pendingPlayers.length === 0) return;
+
+  for (const player of pendingPlayers) {
+    player.team = autoAssignSheepOrWolf(lobby);
+  }
+};
+
+const createRoundSummary = (lobby: Lobby) => ({
+  sheep: Array.from(lobby.players).filter((p) => p.team === "sheep").map((p) =>
+    p.id
+  ),
+  wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((p) =>
+    p.id
+  ),
+  duration: Date.now() - lobby.round!.start,
+});
 
 export const endRound = (canceled = false) => {
   const lobby = lobbyContext.current;
@@ -23,29 +46,24 @@ export const endRound = (canceled = false) => {
     for (const p of lobby.players) p.handicap = undefined;
   }
 
+  convertPendingPlayersToTeams(lobby);
+
+  const round =
+    !canceled && !lobby.round.practice && lobby.settings.mode !== "switch"
+      ? createRoundSummary(lobby)
+      : undefined;
+
   // Don't want to clear the round in middle of a cycle
   queueMicrotask(() => {
     clearUpdatesCache();
     lobby.round = undefined;
   });
+
   lobby.status = "lobby";
-  const round = {
-    sheep: Array.from(lobby.players).filter((p) => p.team === "sheep").map((
-      p,
-    ) => p.id),
-    wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((
-      p,
-    ) => p.id),
-    duration: Date.now() - lobby.round.start,
-  };
-  if (!canceled && !lobby.round.practice) lobby.rounds.push(round);
-  send({
-    type: "stop",
-    updates: canceled && !lobby.round.practice
-      ? flushUpdates(false)
-      : undefined,
-    round: canceled || lobby.round.practice ? undefined : round,
-  });
+  if (round) lobby.rounds.push(round);
+
+  send({ type: "stop", updates: Array.from(lobby.players), round });
+
   if (canceled) send({ type: "chat", message: "Round canceled." });
 };
 
@@ -66,6 +84,7 @@ export const sendJoinMessage = (client: Client) => {
   const lobby = lobbyContext.current;
   client.send({
     type: "join",
+    lobby: lobby.name,
     status: lobby.status,
     updates: lobby.round
       ? Array.from(lobby.round.ecs.entities)

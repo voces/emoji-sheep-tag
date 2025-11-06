@@ -264,12 +264,11 @@ export const CommandPalette = () => {
 
   useEffect(() => {
     if (
+      showCommandPalette === "open" &&
       !filteredCommands.some((c) => c.originalName === focused) &&
       filteredCommands.length
-    ) {
-      setFocused(filteredCommands[0]?.originalName);
-    }
-  }, [filteredCommands]);
+    ) setFocused(filteredCommands[0]?.originalName);
+  }, [showCommandPalette, filteredCommands]);
 
   const close = () => {
     showCommandPaletteVar("closed");

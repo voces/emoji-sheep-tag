@@ -1,6 +1,5 @@
 import { endRound, send } from "../lobbyApi.ts";
-import { clientContext, lobbyContext } from "../contexts.ts";
-import { start } from "../actions/start.ts";
+import { lobbyContext } from "../contexts.ts";
 import { timeout } from "../api/timing.ts";
 import { grantPlayerGold, sendPlayerGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
@@ -40,19 +39,6 @@ const onLose = () =>
       } lasted ${formatDuration(Date.now() - lobby.round!.start)}!`,
     });
     endRound();
-
-    // Auto start
-    setTimeout(() => {
-      if (!lobby.host) return;
-      clientContext.with(
-        lobby.host,
-        () =>
-          lobbyContext.with(
-            lobby,
-            () => start(lobby.host!, { type: "start" }),
-          ),
-      );
-    }, 250);
   }, 0.05);
 
 const handleSwitchDeath = (sheep: Entity) => {

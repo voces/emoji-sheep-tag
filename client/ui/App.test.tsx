@@ -31,6 +31,7 @@ it("can move an action into a menu", async () => {
   await userEvent.click(screen.getByText("Multiplayer"));
   sendMessageFromServer({
     type: "join",
+    lobby: "Strong Spirit",
     status: "lobby",
     updates: [{
       id: "player-0",
@@ -55,7 +56,7 @@ it("can move an action into a menu", async () => {
     },
   });
   await userEvent.click(
-    await screen.findByText("Practice", undefined, { timeout: 5000 }),
+    await screen.findByRole("button", { name: "Practice" }, { timeout: 5000 }),
   );
   sendMessageFromServer({
     type: "start",

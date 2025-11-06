@@ -10,7 +10,7 @@ import { addPlayerToPracticeGame } from "../api/player.ts";
 import { appContext } from "@/shared/context.ts";
 import { flushUpdates } from "../updates.ts";
 import { serializeLobbySettings } from "./lobbySettings.ts";
-import { initializePlayer } from "../st/roundHelpers.ts";
+import { autoAssignSheepOrWolf, initializePlayer } from "../st/roundHelpers.ts";
 
 export const zJoinLobby = z.object({
   type: z.literal("joinLobby"),
@@ -66,12 +66,19 @@ export const joinLobby = (
             addPlayerToPracticeGame(client);
           });
         });
-      } else lobby.round.ecs.addEntity(client);
+      } else {
+        // Joining during a non-practice round - stay as pending (observer)
+        lobby.round.ecs.addEntity(client);
+      }
+    } else {
+      // No round in progress - assign to a team using auto logic
+      client.team = autoAssignSheepOrWolf(lobby);
     }
 
     // Send partial state to existing players (before adding joiner to lobby.players)
     send({
       type: "join",
+      lobby: lobby.name,
       status: lobby.status,
       updates: lobby.round ? flushUpdates(false) : [client],
       lobbySettings: serializeLobbySettings(lobby, 1),

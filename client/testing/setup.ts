@@ -9,10 +9,7 @@ localStorage.clear();
 // Configure Testing Library to use compact output
 configure({
   getElementError: function (message: string | null, container) {
-    const compactHtml = prettifyDOM(container, {
-      maxDepth: 3,
-      highlight: true,
-    });
+    const compactHtml = prettifyDOM(container, { highlight: true });
     const error = new Error(
       [message, compactHtml].filter(Boolean).join("\n\n"),
     );
@@ -72,7 +69,7 @@ const prettifyDOM = (
   dom: Element | Document,
   options?: { maxDepth?: number; highlight?: boolean },
 ): string => {
-  const maxDepth = options?.maxDepth ?? 3;
+  const maxDepth = options?.maxDepth ?? Infinity;
   const highlight = options?.highlight ?? true;
   const element = dom instanceof Document ? dom.body : dom;
 
@@ -90,19 +87,46 @@ const prettifyDOM = (
       return indent + formatTag("svg", attrs, svgContent, highlight);
     }
 
-    const children = Array.from(node.children);
-    const textContent = node.textContent?.trim();
+    const children = Array.from(node.childNodes);
+    const elementChildren = children.filter((child) => child.nodeType === 1);
+    const hasTextContent = children.some((child) =>
+      child.nodeType === 3 && child.textContent?.trim()
+    );
 
-    if (children.length === 0 && textContent && textContent.length < 50) {
-      return indent + formatTag(tagName, attrs, textContent, highlight);
+    // Get direct text content (not from nested elements)
+    const directText = children
+      .filter((child) => child.nodeType === 3)
+      .map((child) => child.textContent?.trim())
+      .filter(Boolean)
+      .join("");
+
+    // Simple case: only text nodes, no element children
+    if (elementChildren.length === 0 && directText && directText.length < 50) {
+      return indent + formatTag(tagName, attrs, directText, highlight);
     }
 
-    if (children.length === 0) {
+    // Empty element
+    if (elementChildren.length === 0 && !hasTextContent) {
       return indent + formatSelfClosingTag(tagName, attrs, highlight);
     }
 
+    // Mixed content: elements and text nodes
     const childrenStr = children
-      .map((child) => compactify(child as Element, depth + 1))
+      .map((child) => {
+        if (child.nodeType === 1) {
+          // Element node
+          return compactify(child as Element, depth + 1);
+        } else if (child.nodeType === 3) {
+          // Text node
+          const text = child.textContent?.trim();
+          if (text && depth < maxDepth) {
+            const textColor = highlight ? colors.text : "";
+            const reset = highlight ? colors.reset : "";
+            return `${"  ".repeat(depth + 1)}${textColor}${text}${reset}`;
+          }
+        }
+        return "";
+      })
       .filter(Boolean)
       .join("\n");
 
@@ -123,6 +147,7 @@ const prettifyDOM = (
 // Basic setup for tests that only need client state cleanup (no WebSocket server)
 beforeEach(() => {
   // Reset client state (shared by all tests)
+  localStorage.clear();
   __testing_reset_all_vars();
   unloadEcs({ includePlayers: true });
 });
@@ -131,4 +156,5 @@ afterEach(() => {
   for (const entity of app.entities) app.removeEntity(entity);
   for (const key in map) delete map[key];
   cleanup();
+  localStorage.clear();
 });

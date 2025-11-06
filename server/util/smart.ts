@@ -6,6 +6,16 @@ export const smart = () => {
   let currentRound = 0;
   let lastPlayers: string[] = [];
 
+  // Helper: shuffle array for randomization
+  const shuffle = <T>(arr: T[]): T[] => {
+    const result = [...arr];
+    for (let i = result.length - 1; i > 0; i--) {
+      const n = Math.floor(Math.random() * (i + 1));
+      [result[i], result[n]] = [result[n], result[i]];
+    }
+    return result;
+  };
+
   // Undo support
   let lastSelection: string[] | null = null;
   let lastSheepCountSnapshot: Map<string, number> | null = null;
@@ -174,19 +184,19 @@ export const smart = () => {
         consecutiveCost: consecutivePenalty(S, currentRound),
       }));
 
-      scored.sort((A, B) => {
+      // Randomize before sorting to break ties randomly
+      const randomized = shuffle(scored);
+
+      randomized.sort((A, B) => {
         if (A.pairCost !== B.pairCost) return A.pairCost < B.pairCost ? -1 : 1;
         if (A.consecutiveCost !== B.consecutiveCost) {
           return A.consecutiveCost - B.consecutiveCost;
         }
-        const a = A.S, b = B.S;
-        for (let i = 0; i < k; i++) {
-          if (a[i] !== b[i]) return a[i] - b[i];
-        }
+        // Don't use lexicographic tiebreaker - let shuffle handle ties
         return 0;
       });
 
-      for (const { S } of scored) {
+      for (const { S } of randomized) {
         const savedLastRound = new Map<number, number | undefined>();
         for (const playerIdx of S) {
           savedLastRound.set(playerIdx, lastRoundLocal.get(playerIdx));
@@ -262,7 +272,7 @@ export const smart = () => {
     };
 
     for (let i = 0; i < numToDraft; i++) {
-      let bestPlayer: string | null = null;
+      const candidates: string[] = [];
       let bestScore = Infinity;
 
       for (const player of pool) {
@@ -275,14 +285,20 @@ export const smart = () => {
 
         if (totalScore < bestScore) {
           bestScore = totalScore;
-          bestPlayer = player;
+          candidates.length = 0;
+          candidates.push(player);
+        } else if (totalScore === bestScore) {
+          candidates.push(player);
         }
       }
 
-      if (bestPlayer === null) {
+      if (candidates.length === 0) {
         throw new Error("Failed to select player");
       }
 
+      // Randomly select from tied candidates
+      const bestPlayer =
+        candidates[Math.floor(Math.random() * candidates.length)];
       selected.push(bestPlayer);
     }
 
@@ -509,5 +525,29 @@ export const smart = () => {
     }
   };
 
-  return { draft, undo, initializePlayer };
+  const recordTeams = (sheepPlayers: string[]): void => {
+    // Save state for undo
+    lastSheepCountSnapshot = new Map(sheepCount);
+    lastPairCountSnapshot = new Map(pairCount);
+    lastSheepRoundSnapshot = new Map(lastSheepRound);
+    lastCurrentRound = currentRound;
+
+    // Update state with the given sheep team
+    for (const player of sheepPlayers) {
+      sheepCount.set(player, (sheepCount.get(player) || 0) + 1);
+      lastSheepRound.set(player, currentRound);
+    }
+
+    for (let i = 0; i < sheepPlayers.length; i++) {
+      for (let j = i + 1; j < sheepPlayers.length; j++) {
+        const key = pairKey(sheepPlayers[i], sheepPlayers[j]);
+        pairCount.set(key, (pairCount.get(key) || 0) + 1);
+      }
+    }
+
+    currentRound++;
+    lastSelection = sheepPlayers;
+  };
+
+  return { draft, undo, initializePlayer, recordTeams };
 };

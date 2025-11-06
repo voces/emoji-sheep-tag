@@ -1,6 +1,7 @@
 import { Client } from "../client.ts";
 import { Lobby } from "../lobby.ts";
 import { smart } from "../util/smart.ts";
+import { lobbyContext } from "../contexts.ts";
 
 export const getIdealSheep = (players: number) =>
   Math.max(Math.floor((players - 1) / 2), 1);
@@ -38,22 +39,33 @@ export const getIdealTime = (players: number, sheep: number) => {
   return Math.round(capped / 30) * 30;
 };
 
-// Create a global smart drafter instance that persists across rounds
-const smartDrafter = smart();
+// Per-lobby smart drafter instances using a lazy Map
+const smartDrafters = new Map<Lobby, ReturnType<typeof smart>>();
 
-export const draftTeams = (lobby: Lobby, desiredSheep: number) => {
-  const allPlayers = Array.from(lobby.players);
-  const allPlayerIds = allPlayers.map((p) => p.id);
+const getSmartDrafter = () => {
+  const lobby = lobbyContext.current;
+
+  let drafter = smartDrafters.get(lobby);
+  if (!drafter) {
+    drafter = smart();
+    smartDrafters.set(lobby, drafter);
+  }
+  return drafter;
+};
+
+export const draftTeams = (players: Client[], desiredSheep: number) => {
+  const allPlayerIds = players.map((p) => p.id);
 
   // Use smart algorithm to select sheep
-  const sheepIds = smartDrafter.draft(allPlayerIds, desiredSheep);
+  const drafter = getSmartDrafter();
+  const sheepIds = drafter.draft(allPlayerIds, desiredSheep);
 
   // Convert IDs back to Client objects
   // TODO: use entities (proxies) instead
   const sheep = new Set<Client>();
   const wolves = new Set<Client>();
 
-  for (const player of allPlayers) {
+  for (const player of players) {
     if (sheepIds.includes(player.id)) sheep.add(player);
     else wolves.add(player);
   }
@@ -62,9 +74,36 @@ export const draftTeams = (lobby: Lobby, desiredSheep: number) => {
 };
 
 export const undoDraft = () => {
-  smartDrafter.undo();
+  const drafter = getSmartDrafter();
+  drafter.undo();
 };
 
-export const initializePlayer = (playerId: string, allPlayerIds?: string[]) => {
-  smartDrafter.initializePlayer(playerId, allPlayerIds);
+export const recordTeams = (sheepPlayerIds: string[]) => {
+  const drafter = getSmartDrafter();
+  drafter.recordTeams(sheepPlayerIds);
+};
+
+export const initializePlayer = (
+  playerId: string,
+  allPlayerIds?: string[],
+) => {
+  const drafter = getSmartDrafter();
+  drafter.initializePlayer(playerId, allPlayerIds);
+};
+
+export const cleanupSmartDrafter = (lobby: Lobby) => {
+  smartDrafters.delete(lobby);
+};
+
+// Helper function to auto-assign sheep or wolf based on desired count
+export const autoAssignSheepOrWolf = (lobby: Lobby): "sheep" | "wolf" => {
+  const currentSheep = Array.from(lobby.players).filter((p) =>
+    p.team === "sheep"
+  );
+  const totalPlayers = lobby.players.size;
+  const desiredSheep = lobby.settings.sheep === "auto"
+    ? getIdealSheep(totalPlayers)
+    : lobby.settings.sheep;
+
+  return currentSheep.length < desiredSheep ? "sheep" : "wolf";
 };

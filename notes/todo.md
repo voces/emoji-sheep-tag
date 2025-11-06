@@ -19,7 +19,6 @@
   - Vamp
 - Minimap
 - Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
-- Observers
 - Matchmaking
   - 2v4 - 15 rounds
   - 5v5 - 2 rounds

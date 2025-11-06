@@ -38,6 +38,7 @@ const createJoinMessage = (
   overrides: Partial<Parameters<typeof handlers.join>[0]> = {},
 ) => ({
   type: "join" as const,
+  lobby: "Strong Spirit",
   status: "lobby" as const,
   updates: [],
   lobbySettings: DEFAULT_LOBBY_SETTINGS,
@@ -64,7 +65,9 @@ describe("join", () => {
     expect(getPlayers().map((p) => p.id)).toEqual(["player-0"]);
     expect(getLocalPlayer()?.id).toBe("player-0");
     expect(lobbySettingsVar()?.host).toBe("player-0");
-    expect(chatLogVar()).toHaveLength(0);
+    expect(chatLogVar()).toEqual([
+      expect.objectContaining({ message: "Joined the game Strong Spirit." }),
+    ]);
   });
 
   it("initial join (as second player)", () => {
@@ -87,9 +90,12 @@ describe("join", () => {
     expect(getPlayers().map((p) => p.id)).toEqual(["player-0", "player-1"]);
     expect(getLocalPlayer()?.id).toBe("player-1");
     expect(lobbySettingsVar()).toEqual(DEFAULT_LOBBY_SETTINGS);
-    expect(chatLogVar()).toHaveLength(1);
-    expect(chatLogVar()[0].message).toContain("Player 0");
-    expect(chatLogVar()[0].message).toContain("joined");
+    expect(chatLogVar()).toEqual([
+      expect.objectContaining({
+        message:
+          "Joined the game Strong Spirit with player |c#FF0000|Player 0|.",
+      }),
+    ]);
   });
 
   it("another player joins our existing lobby", () => {
@@ -117,8 +123,12 @@ describe("join", () => {
       "existing-player",
       "new-player",
     ]);
-    expect(chatLogVar()).toHaveLength(1);
-    expect(chatLogVar()[0].message).toContain("Newcomer");
+    expect(chatLogVar()).toEqual([
+      expect.objectContaining({ message: "Joined the game Strong Spirit." }),
+      expect.objectContaining({
+        message: "|c#00FF00|Newcomer| has joined the game!",
+      }),
+    ]);
   });
 
   it("single player update (already known)", () => {

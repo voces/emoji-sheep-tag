@@ -3,7 +3,7 @@ import { expect } from "@std/expect";
 import { Client } from "../client.ts";
 import { newLobby } from "../lobby.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
-import { lobbySettings } from "./lobbySettings.ts";
+import { lobbySettings, serializeLobbySettings } from "./lobbySettings.ts";
 
 let mockMessages: Array<{ type: string; [key: string]: unknown }> = [];
 
@@ -277,5 +277,94 @@ describe("lobbySettings action", () => {
       income: { sheep: 1, wolves: 1 },
       host: "host-client",
     });
+  });
+
+  it("should never set sheep count below 1, even with all observers", () => {
+    const hostClient = createMockClient(true);
+    const observer1 = createMockClient(false);
+    const observer2 = createMockClient(false);
+
+    observer1.id = "observer1";
+    observer2.id = "observer2";
+    observer1.team = "observer";
+    observer2.team = "observer";
+
+    const lobby = newLobby(hostClient);
+    lobby.players.add(hostClient);
+    lobby.players.add(observer1);
+    lobby.players.add(observer2);
+
+    hostClient.lobby = lobby;
+    observer1.lobby = lobby;
+    observer2.lobby = lobby;
+
+    // Set host to observer too
+    hostClient.team = "observer";
+
+    // Set sheep count to something
+    lobby.settings.sheep = 2;
+
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
+
+    // Serialize settings
+    const settings = serializeLobbySettings(lobby);
+
+    // Sheep count should never be 0, even with all observers
+    expect(settings.sheep).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should properly bound sheep count based on non-observer count", () => {
+    const hostClient = createMockClient(true);
+    const player1 = createMockClient(false);
+    const observer1 = createMockClient(false);
+
+    player1.id = "player1";
+    observer1.id = "observer1";
+    player1.team = "sheep";
+    observer1.team = "observer";
+
+    const lobby = newLobby(hostClient);
+    lobby.players.add(hostClient);
+    lobby.players.add(player1);
+    lobby.players.add(observer1);
+
+    hostClient.lobby = lobby;
+    player1.lobby = lobby;
+    observer1.lobby = lobby;
+
+    // Set sheep count higher than allowed
+    lobby.settings.sheep = 5;
+
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
+
+    // Serialize settings
+    const settings = serializeLobbySettings(lobby);
+
+    // With 2 non-observers (host + player1), max sheep should be 1
+    expect(settings.sheep).toBe(1);
+  });
+
+  it("should clamp stored sheep count to 1 when only observers remain", () => {
+    const hostClient = createMockClient(true);
+    const lobby = newLobby(hostClient);
+    lobby.players.add(hostClient);
+
+    hostClient.lobby = lobby;
+    hostClient.team = "sheep";
+
+    // Set sheep count to 2
+    lobby.settings.sheep = 2;
+
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
+
+    // Serialize settings before change - should be clamped to 1
+    const settingsBefore = serializeLobbySettings(lobby);
+    expect(settingsBefore.sheep).toBe(1);
+
+    // Verify stored value is still 2 (not adjusted yet)
+    expect(lobby.settings.sheep).toBe(2);
   });
 });

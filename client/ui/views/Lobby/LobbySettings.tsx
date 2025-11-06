@@ -1,4 +1,5 @@
 import { styled } from "styled-components";
+import { useLayoutEffect, useState } from "react";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useIsLocalPlayerHost, usePlayers } from "@/hooks/usePlayers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
@@ -9,6 +10,7 @@ import { TimeInput } from "@/components/forms/TimeInput.tsx";
 import { Button } from "@/components/forms/Button.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
 import { NumericSettingInput } from "./NumericSettingInput.tsx";
+import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 
 const SettingsCard = styled(Card)`
   width: 40%;
@@ -19,7 +21,7 @@ const SettingsCard = styled(Card)`
 `;
 
 const GameSettingsContainer = styled(VStack)`
-  gap: 12px;
+  gap: ${({ theme }) => theme.spacing.md};
 `;
 
 const SettingsRow = styled(VStack)`
@@ -71,12 +73,38 @@ const ModeButton = styled(Button)<{ $active: boolean }>`
   }
 `;
 
+const StartButtonRow = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.md};
+  align-items: center;
+`;
+
+const SecondaryButton = styled(Button)`
+  flex: 1;
+`;
+
+const TertiaryButton = styled(Button)`
+  flex: 1;
+`;
+
 export const LobbySettings = () => {
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const players = usePlayers();
+  useListenToEntities(players, ["team"]);
   const isHost = useIsLocalPlayerHost();
+  const [buttonsDisabled, setButtonsDisabled] = useState(true);
 
-  const maxSheep = Math.max(players.length - 1, 1);
+  // Filter out observers and pending players
+  const nonObservers = players.filter((p) =>
+    p.team !== "observer" && p.team !== "pending"
+  );
+
+  const maxSheep = Math.max(nonObservers.length - 1, 1);
+
+  useLayoutEffect(() => {
+    const timeout = setTimeout(() => setButtonsDisabled(false), 250);
+    return () => clearTimeout(timeout);
+  }, []);
 
   return (
     <SettingsCard>
@@ -244,19 +272,32 @@ export const LobbySettings = () => {
       </GameSettingsContainer>
 
       <GameSettingsContainer>
+        <StartButtonRow>
+          <SecondaryButton
+            type="button"
+            accessKey="a"
+            onClick={() => send({ type: "start", fixedTeams: true })}
+            disabled={buttonsDisabled || !isHost || nonObservers.length < 2}
+          >
+            Manual
+          </SecondaryButton>
+          <TertiaryButton
+            type="button"
+            accessKey="r"
+            onClick={() => send({ type: "start", practice: true })}
+            disabled={buttonsDisabled || !isHost || nonObservers.length < 1}
+          >
+            Practice
+          </TertiaryButton>
+        </StartButtonRow>
+
         <Button
           type="button"
-          onClick={() => send({ type: "start", practice: true })}
-          disabled={!isHost}
+          accessKey="s"
+          onClick={() => send({ type: "start", fixedTeams: false })}
+          disabled={buttonsDisabled || !isHost || nonObservers.length < 2}
         >
-          Practice
-        </Button>
-        <Button
-          type="button"
-          onClick={() => send({ type: "start" })}
-          disabled={!isHost || players.length === 1}
-        >
-          Start
+          Smart Draft
         </Button>
       </GameSettingsContainer>
     </SettingsCard>
