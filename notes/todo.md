@@ -12,7 +12,6 @@
 - Unit should have full orientation (not be symmetric) - wolf & fox
 - When changing zoom, blueprints
 - Multiple terrains
-  - Editor actually changes pathing map
 - Modes
   - Bulldog
   - Kat'ma

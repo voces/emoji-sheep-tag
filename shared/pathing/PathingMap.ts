@@ -108,7 +108,7 @@ const h = (a: Point, b: Point) =>
 export class PathingMap {
   readonly resolution: number;
   readonly tileResolution: number;
-  private readonly layers?: number[][];
+  readonly layers?: number[][];
   readonly heightWorld: number;
   readonly widthWorld: number;
   readonly heightMap: number;
@@ -173,8 +173,14 @@ export class PathingMap {
    * Lazily creates a tile at the given coordinates if it doesn't exist.
    * Neighbors are NOT set up eagerly to avoid cascading tile creation.
    * Instead, they're set up lazily via getNeighbors().
+   * Returns undefined if coordinates are out of bounds.
    */
-  private getTile(x: number, y: number): Tile {
+  private getTile(x: number, y: number): Tile | undefined {
+    // Check bounds first
+    if (x < 0 || y < 0 || x >= this.widthMap || y >= this.heightMap) {
+      return undefined;
+    }
+
     // Return existing tile if already created
     if (this.grid[y][x]) return this.grid[y][x]!;
 
@@ -182,6 +188,11 @@ export class PathingMap {
     const tilesPerPathingCell = this.resolution / this.tileResolution;
     const pathingX = Math.floor(x / tilesPerPathingCell);
     const pathingY = Math.floor(y / tilesPerPathingCell);
+
+    // Verify pathing data exists for this tile
+    if (this.pathing[pathingY]?.[pathingX] === undefined) {
+      return undefined;
+    }
 
     // Create the tile
     const tile = new Tile(
@@ -211,21 +222,20 @@ export class PathingMap {
     // to match the original eager initialization order
 
     // Below
-    if (y < this.heightMap - 1) {
-      nodes.push(this.getTile(x, y + 1));
-    }
+    const below = this.getTile(x, y + 1);
+    if (below) nodes.push(below);
+
     // Right
-    if (x < this.widthMap - 1) {
-      nodes.push(this.getTile(x + 1, y));
-    }
+    const right = this.getTile(x + 1, y);
+    if (right) nodes.push(right);
+
     // Above
-    if (y > 0) {
-      nodes.push(this.getTile(x, y - 1));
-    }
+    const above = this.getTile(x, y - 1);
+    if (above) nodes.push(above);
+
     // Left
-    if (x > 0) {
-      nodes.push(this.getTile(x - 1, y));
-    }
+    const left = this.getTile(x - 1, y);
+    if (left) nodes.push(left);
 
     return nodes;
   }
@@ -238,7 +248,7 @@ export class PathingMap {
   ) {
     for (let dy = y * scale; dy < (y + 1) * scale; dy++) {
       for (let dx = x * scale; dx < (x + 1) * scale; dx++) {
-        const tile = this.grid[dy]?.[dx];
+        const tile = this.getTile(dx, dy);
         if (!tile) continue;
         tile.originalPathing = pathing;
         tile.recalculatePathing();
@@ -280,6 +290,7 @@ export class PathingMap {
         }
         const tile = this.getTile(x, y);
         if (
+          !tile ||
           !tile.pathable(map.map[i]) ||
           (test && !test(tile))
         ) {
@@ -313,7 +324,7 @@ export class PathingMap {
     }
 
     const tile = this.getTile(xTile, yTile);
-    return tile.pathable(pathing);
+    return tile ? tile.pathable(pathing) : false;
   }
 
   pathable(entity: PathingEntity, xWorld?: number, yWorld?: number): boolean {
@@ -550,12 +561,8 @@ export class PathingMap {
     }
 
     const tried = [];
-    if (
-      yTile >= 0 && yTile < this.heightMap && xTile >= 0 &&
-      xTile < this.widthMap
-    ) {
-      tried.push(this.getTile(xTile, yTile));
-    }
+    const initialTile = this.getTile(xTile, yTile);
+    if (initialTile) tried.push(initialTile);
 
     while (
       !this._pathable(minimalTilemap, xTile, yTile) ||
@@ -578,12 +585,8 @@ export class PathingMap {
           break;
       }
 
-      if (
-        yTile >= 0 && yTile < this.heightMap && xTile >= 0 &&
-        xTile < this.widthMap
-      ) {
-        tried.push(this.getTile(xTile, yTile));
-      }
+      const tile = this.getTile(xTile, yTile);
+      if (tile) tried.push(tile);
 
       if (steps === 0) {
         steps = initialSteps;
@@ -603,10 +606,16 @@ export class PathingMap {
   }
 
   worldToTile(world: Point): Tile {
-    return this.getTile(
+    const tile = this.getTile(
       this.xWorldToTile(world.x),
       this.yWorldToTile(world.y),
     );
+    if (!tile) {
+      throw new Error(
+        `worldToTile called with out-of-bounds coordinates: (${world.x}, ${world.y})`,
+      );
+    }
+    return tile;
   }
 
   xWorldToTile(x: number): number {
@@ -826,10 +835,16 @@ export class PathingMap {
         return [];
       }
 
-      startTile = this.getTile(
+      const nearestTile = this.getTile(
         Math.round((nearestStart.x - offset) * this.resolution),
         Math.round((nearestStart.y - offset) * this.resolution),
       );
+      if (!nearestTile) {
+        if (removed) this.addEntity(entity);
+        for (const entity of removedMovingEntities) this.addEntity(entity);
+        return [];
+      }
+      startTile = nearestTile;
     }
 
     // For target, if the exact spot is pathable, we aim towards that; otherwise the nearest spot
@@ -898,52 +913,56 @@ export class PathingMap {
         Math.round((x - offset) * this.resolution),
         Math.round((y - offset) * this.resolution),
       );
-
-      const maxEndEstimate = "position" in target
-        ? distanceBetweenEntities({
-          ...entity,
-          position: {
-            x: this.xTileToWorld(tile.x),
-            y: this.yTileToWorld(tile.y),
-          },
-        }, target) * this.resolution
-        : h(targetReal, tile);
-
-      // TODO: This is unbounded and does not scale!
-      while (
-        "position" in target
+      if (!tile) {
+        endBest = endHeap[0] || targetTile;
+      } else {
+        const maxEndEstimate = "position" in target
           ? distanceBetweenEntities({
-                ...entity,
-                position: {
-                  x: this.xTileToWorld(tile.x),
-                  y: this.yTileToWorld(tile.y),
-                },
-              }, target) * this.resolution <= maxEndEstimate
-          : h(targetReal, tile) <= maxEndEstimate
-      ) {
-        if (cache._pathable(minimalTilemap, tile.x, tile.y)) {
-          endTiles.push(tile);
-          endHeap.push(tile);
-          tile.__endTag = endTag;
-          tile.__endRealCostFromOrigin = 0;
-          tile.__endEstimatedCostRemaining = h(tile, startReal);
-          tile.__endRealPlusEstimatedCost = tile.__endEstimatedCostRemaining +
-            tile.__endRealCostFromOrigin;
-          tile.__endVisited = false;
-          tile.__endClosed = false;
-          tile.__endParent = null;
-        }
+            ...entity,
+            position: {
+              x: this.xTileToWorld(tile.x),
+              y: this.yTileToWorld(tile.y),
+            },
+          }, target) * this.resolution
+          : h(targetReal, tile);
 
-        // Prime next
-        if (next.done) break;
-        next = endNearestPathingGen.next();
-        ({ x, y } = next.value);
-        tile = this.getTile(
-          Math.round((x - offset) * this.resolution),
-          Math.round((y - offset) * this.resolution),
-        );
+        // TODO: This is unbounded and does not scale!
+        while (
+          tile &&
+          ("position" in target
+            ? distanceBetweenEntities({
+                  ...entity,
+                  position: {
+                    x: this.xTileToWorld(tile.x),
+                    y: this.yTileToWorld(tile.y),
+                  },
+                }, target) * this.resolution <= maxEndEstimate
+            : h(targetReal, tile) <= maxEndEstimate)
+        ) {
+          if (cache._pathable(minimalTilemap, tile.x, tile.y)) {
+            endTiles.push(tile);
+            endHeap.push(tile);
+            tile.__endTag = endTag;
+            tile.__endRealCostFromOrigin = 0;
+            tile.__endEstimatedCostRemaining = h(tile, startReal);
+            tile.__endRealPlusEstimatedCost = tile.__endEstimatedCostRemaining +
+              tile.__endRealCostFromOrigin;
+            tile.__endVisited = false;
+            tile.__endClosed = false;
+            tile.__endParent = null;
+          }
+
+          // Prime next
+          if (next.done) break;
+          next = endNearestPathingGen.next();
+          ({ x, y } = next.value);
+          tile = this.getTile(
+            Math.round((x - offset) * this.resolution),
+            Math.round((y - offset) * this.resolution),
+          );
+        }
+        endBest = endHeap[0] || targetTile;
       }
-      endBest = endHeap[0] || targetTile;
     }
 
     const startHeap = new BinaryHeap(
@@ -1126,20 +1145,22 @@ export class PathingMap {
           Math.round((y - offset) * this.resolution),
         );
 
-        endBest = newEndtile;
-        endHeap.push(newEndtile);
-        newEndtile.__endTag = endTag;
-        newEndtile.__endRealCostFromOrigin = h(targetReal, newEndtile);
-        newEndtile.__endEstimatedCostRemaining = h(
-          newEndtile,
-          startReal,
-        );
-        newEndtile.__endRealPlusEstimatedCost =
-          newEndtile.__endEstimatedCostRemaining +
-          newEndtile.__endRealCostFromOrigin;
-        newEndtile.__endVisited = false;
-        newEndtile.__endClosed = false;
-        newEndtile.__endParent = null;
+        if (newEndtile) {
+          endBest = newEndtile;
+          endHeap.push(newEndtile);
+          newEndtile.__endTag = endTag;
+          newEndtile.__endRealCostFromOrigin = h(targetReal, newEndtile);
+          newEndtile.__endEstimatedCostRemaining = h(
+            newEndtile,
+            startReal,
+          );
+          newEndtile.__endRealPlusEstimatedCost =
+            newEndtile.__endEstimatedCostRemaining +
+            newEndtile.__endRealCostFromOrigin;
+          newEndtile.__endVisited = false;
+          newEndtile.__endClosed = false;
+          newEndtile.__endParent = null;
+        }
       }
 
       const endCurrent = endHeap.pop();
@@ -1529,7 +1550,13 @@ export class PathingMap {
   // BAD?
   entityToTile(entity: PathingEntity, position: Point = entity.position): Tile {
     const { x, y } = this.entityToTileCoordsBounded(entity, position);
-    return this.getTile(x, y);
+    const tile = this.getTile(x, y);
+    if (!tile) {
+      throw new Error(
+        `entityToTile called with out-of-bounds coordinates: (${position.x}, ${position.y})`,
+      );
+    }
+    return tile;
   }
 
   /**
@@ -1738,7 +1765,8 @@ export class PathingMap {
       const xEnd = Math.min(xStartMax, xEndMax, xEndTest, maxX);
 
       for (let x = xStart; x <= xEnd; x++) {
-        if (!this.grid[yStart + y * yStep]?.[x]?.pathable(pathing)) {
+        const tile = this.grid[yStart + y * yStep]?.[x];
+        if (!tile || !tile.pathable(pathing)) {
           return false;
         }
       }
@@ -1770,6 +1798,7 @@ export class PathingMap {
           continue;
         }
         const tile = this.getTile(tx, ty);
+        if (!tile) continue;
         tiles.push(tile);
         tile.addEntity(
           entity,
@@ -1809,8 +1838,11 @@ export class PathingMap {
           gridY >= 0 && gridY < this.heightMap &&
           gridX >= 0 && gridX < this.widthMap
         ) {
-          newTiles.push(this.getTile(gridX, gridY));
-          newTileMapValues.push(map[(y - top) * width + (x - left)]);
+          const tile = this.getTile(gridX, gridY);
+          if (tile) {
+            newTiles.push(tile);
+            newTileMapValues.push(map[(y - top) * width + (x - left)]);
+          }
         }
       }
     }

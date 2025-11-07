@@ -21,9 +21,11 @@ import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
 import {
   editorCreateEntity,
+  editorSetCliff,
   editorSetPathing,
   editorUpdateEntities,
   zEditorCreateEntity,
+  zEditorSetCliff,
   zEditorSetPathing,
   zEditorUpdateEntities,
 } from "./actions/editor.ts";
@@ -159,6 +161,7 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zEditorCreateEntity,
   zEditorUpdateEntities,
   zEditorSetPathing,
+  zEditorSetCliff,
   zJoinLobby,
   zCreateLobby,
   zUpdateSelection,
@@ -181,6 +184,7 @@ const actions = {
   editorCreateEntity,
   editorUpdateEntities,
   editorSetPathing,
+  editorSetCliff,
   joinLobby,
   createLobby,
   updateSelection,

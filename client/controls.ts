@@ -74,6 +74,7 @@ import { editorVar } from "@/vars/editor.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
 import { pathingMap } from "./systems/pathing.ts";
 import { tileDefs } from "@/shared/data.ts";
+import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
 
 // Re-export for external use
 export { getActiveOrder, keyboard };
@@ -203,12 +204,32 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
 
     const x = blueprint.position!.x - 0.5;
     const y = blueprint.position!.y - 0.5;
+
+    // Helper to update client pathing after cliff changes
+    const updateClientPathingForCliff = (worldX: number, worldY: number) => {
+      updatePathingForCliff(
+        pathingMap,
+        terrain.masks.groundTile,
+        terrain.masks.cliff,
+        worldX,
+        worldY,
+      );
+    };
+
     if (blueprint.vertexColor === 0xff01ff) {
-      terrain.setCliff(x, y, terrain.getCliff(x, y) + 1);
+      const newHeight = terrain.getCliff(x, y) + 1;
+      terrain.setCliff(x, y, newHeight);
+      updateClientPathingForCliff(x, y);
+      send({ type: "editorSetCliff", x, y, cliff: newHeight });
     } else if (blueprint.vertexColor === 0xff02ff) {
-      terrain.setCliff(x, y, terrain.getCliff(x, y) - 1);
+      const newHeight = terrain.getCliff(x, y) - 1;
+      terrain.setCliff(x, y, newHeight);
+      updateClientPathingForCliff(x, y);
+      send({ type: "editorSetCliff", x, y, cliff: newHeight });
     } else if (blueprint.vertexColor === 0xff03ff) {
       terrain.setCliff(x, y, "r");
+      updateClientPathingForCliff(x, y);
+      send({ type: "editorSetCliff", x, y, cliff: "r" });
     } else {
       terrain.setGroundTile(
         x,
