@@ -57,6 +57,7 @@ describe("lobbySettings action", () => {
     expect(mockMessages).toHaveLength(1);
     expect(mockMessages[0]).toEqual({
       type: "lobbySettings",
+      map: "revo",
       mode: "survival",
       vipHandicap: 0.8,
       sheep: 1,
@@ -126,6 +127,7 @@ describe("lobbySettings action", () => {
     expect(mockMessages).toHaveLength(1);
     expect(mockMessages[0]).toEqual({
       type: "lobbySettings",
+      map: "revo",
       mode: "survival",
       vipHandicap: 0.8,
       sheep: 1,
@@ -164,6 +166,7 @@ describe("lobbySettings action", () => {
     expect(mockMessages).toHaveLength(1);
     expect(mockMessages[0]).toEqual({
       type: "lobbySettings",
+      map: "revo",
       mode: "survival",
       vipHandicap: 0.8,
       sheep: 1,
@@ -230,6 +233,7 @@ describe("lobbySettings action", () => {
     mockMessages.forEach((message) => {
       expect(message).toEqual({
         type: "lobbySettings",
+        map: "revo",
         mode: "survival",
         vipHandicap: 0.8,
         sheep: 1,
@@ -267,6 +271,7 @@ describe("lobbySettings action", () => {
     expect(mockMessages).toHaveLength(1);
     expect(mockMessages[0]).toEqual({
       type: "lobbySettings",
+      map: "revo",
       mode: "survival",
       vipHandicap: 0.8,
       sheep: 1,

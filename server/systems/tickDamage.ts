@@ -1,6 +1,6 @@
 import { addSystem, appContext } from "@/shared/context.ts";
 import { iterateBuffs, testClassification } from "@/shared/api/unit.ts";
-import { getEntitiesInRange } from "./kd.ts";
+import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { Game } from "../ecs.ts";
 import { TICK_RATE } from "@/shared/constants.ts";
 import { damageEntity } from "../api/unit.ts";

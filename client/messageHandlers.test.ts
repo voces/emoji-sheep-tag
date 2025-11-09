@@ -17,6 +17,7 @@ import { generateDoodads } from "@/shared/map.ts";
 
 // Common test objects
 const DEFAULT_LOBBY_SETTINGS = {
+  map: "revo",
   mode: "survival" as const,
   vipHandicap: 0.8,
   sheep: 1,
@@ -600,6 +601,7 @@ describe("chat", () => {
 describe("lobbySettings", () => {
   it("updates lobby settings", () => {
     handlers.lobbySettings({
+      map: "revo",
       type: "lobbySettings",
       mode: "survival",
       vipHandicap: 0.8,
@@ -619,6 +621,7 @@ describe("lobbySettings", () => {
 
   it("overwrites existing settings", () => {
     handlers.lobbySettings({
+      map: "revo",
       type: "lobbySettings",
       mode: "survival",
       vipHandicap: 0.8,
@@ -632,6 +635,7 @@ describe("lobbySettings", () => {
     });
 
     handlers.lobbySettings({
+      map: "revo",
       type: "lobbySettings",
       mode: "vip",
       vipHandicap: 0.5,

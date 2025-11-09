@@ -8,7 +8,7 @@ import {
 } from "../systems/selection.ts";
 import { closeMenusForUnit } from "@/vars/menuState.ts";
 import { focusGroup } from "./camera.ts";
-import { getEntitiesInRange } from "../systems/kd.ts";
+import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 
 export const DOUBLE_CLICK_SELECTION_RADIUS = 6;
 

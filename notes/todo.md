@@ -21,6 +21,7 @@
 - Matchmaking
   - 2v4 - 15 rounds
   - 5v5 - 2 rounds
+- Attack Ground on an entity targets the entity with Frost Castle
 
 # Perf
 

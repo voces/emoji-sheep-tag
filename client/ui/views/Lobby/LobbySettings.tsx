@@ -1,5 +1,5 @@
 import { styled } from "styled-components";
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useIsLocalPlayerHost, usePlayers } from "@/hooks/usePlayers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
@@ -11,6 +11,8 @@ import { Button } from "@/components/forms/Button.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
 import { NumericSettingInput } from "./NumericSettingInput.tsx";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
+import { MAPS } from "@/shared/maps/manifest.ts";
+import { Select } from "@/components/forms/Select.tsx";
 
 const SettingsCard = styled(Card)`
   width: 40%;
@@ -93,6 +95,10 @@ export const LobbySettings = () => {
   useListenToEntities(players, ["team"]);
   const isHost = useIsLocalPlayerHost();
   const [buttonsDisabled, setButtonsDisabled] = useState(true);
+  const mapOptions = useMemo(
+    () => MAPS.map((map) => ({ value: map.id, label: map.name })),
+    [],
+  );
 
   // Filter out observers and pending players
   const nonObservers = players.filter((p) =>
@@ -144,6 +150,22 @@ export const LobbySettings = () => {
             </ModeButton>
           </ButtonGroup>
         </SettingsRow>
+
+        {/* TODO: remove this if once we have multiple maps */}
+        {mapOptions.length > 1 && (
+          <SettingsRow>
+            <SettingsLabel htmlFor="map-select">
+              Map
+            </SettingsLabel>
+            <Select
+              id="map-select"
+              value={lobbySettings.map}
+              options={mapOptions}
+              onChange={(map) => send({ type: "lobbySettings", map })}
+              disabled={!isHost}
+            />
+          </SettingsRow>
+        )}
 
         {lobbySettings.mode === "vip" && (
           <NumericSettingInput

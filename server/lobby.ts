@@ -11,6 +11,7 @@ import { cleanupSmartDrafter } from "./st/roundHelpers.ts";
  */
 
 type LobbySettings = {
+  map: string;
   /**
    * - `"survival"`: classic ST - sheep must survive until time runs out
    * - `"vip"`: one random sheep is VIP, wolves win if VIP dies
@@ -81,6 +82,7 @@ export const newLobby = (host?: Client) => {
     host: host,
     name: generateLobbyName(),
     settings: {
+      map: "revo",
       mode: "survival",
       vipHandicap: 0.8,
       sheep: "auto",

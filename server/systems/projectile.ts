@@ -2,7 +2,7 @@ import { addSystem } from "@/shared/context.ts";
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { lookup } from "./lookup.ts";
 import { applyAndConsumeBuffs, damageEntity } from "../api/unit.ts";
-import { getEntitiesInRange } from "./kd.ts";
+import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { isEnemy, testClassification } from "@/shared/api/unit.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 

@@ -1,6 +1,7 @@
-import { center } from "@/shared/map.ts";
+import { getMapCenter } from "@/shared/map.ts";
 
 export const getSheepSpawn = (): [x: number, y: number] => {
+  const center = getMapCenter();
   if (Math.random() < 0.5) {
     const x = Math.random() * 9 - 4.5;
     const y = Math.random() < 0.5 ? 5 : -5;
@@ -15,7 +16,10 @@ export const getSheepSpawn = (): [x: number, y: number] => {
 export const getSpiritSpawn = (): [
   x: number,
   y: number,
-] => [
-  center.x + (Math.random() * 5 - 2.5),
-  center.y + (Math.random() * 6 - 3),
-];
+] => {
+  const center = getMapCenter();
+  return [
+    center.x + (Math.random() * 5 - 2.5),
+    center.y + (Math.random() * 6 - 3),
+  ];
+};

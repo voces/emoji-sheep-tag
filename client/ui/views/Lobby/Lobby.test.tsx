@@ -16,6 +16,7 @@ describe("Lobby Settings UI", () => {
   beforeEach(() => {
     // Set up initial lobby settings
     lobbySettingsVar({
+      map: "revo",
       mode: "survival",
       vipHandicap: 0.8,
       sheep: 2,
@@ -91,6 +92,7 @@ describe("Lobby Settings UI", () => {
 
     // Update lobby settings (simulating server message)
     lobbySettingsVar({
+      map: "revo",
       mode: "survival",
       vipHandicap: 0.8,
       sheep: 2,

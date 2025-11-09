@@ -1,7 +1,7 @@
 import { lobbyContext } from "../contexts.ts";
 import { newUnit } from "./unit.ts";
 import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
-import { center } from "@/shared/map.ts";
+import { getMapCenter } from "@/shared/map.ts";
 import type { Client } from "../client.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { getPlayer } from "@/shared/api/player.ts";
@@ -64,7 +64,8 @@ export const sendPlayerGold = (
 export const spawnPracticeUnits = (playerId: string) => {
   const sheep = newUnit(playerId, "sheep", ...getSheepSpawn());
   newUnit(playerId, "spirit", ...getSpiritSpawn());
-  const wolf = newUnit(playerId, "wolf", center.x, center.y);
+  const { x, y } = getMapCenter();
+  const wolf = newUnit(playerId, "wolf", x, y);
   if (wolf.manaRegen) wolf.manaRegen *= 10;
   return sheep;
 };

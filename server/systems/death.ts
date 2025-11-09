@@ -18,7 +18,7 @@ import { newSfx } from "../api/sfx.ts";
 import { isEnemy, isStructure, iterateBuffs } from "@/shared/api/unit.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
 import { colorName, getPlayer } from "@/shared/api/player.ts";
-import { center } from "@/shared/map.ts";
+import { getMapCenter } from "@/shared/map.ts";
 import { PATHING_NONE } from "@/shared/constants.ts";
 
 const onLose = () =>
@@ -73,7 +73,8 @@ const handleSwitchDeath = (sheep: Entity) => {
   for (const entity of getPlayerUnits(victimPlayer.id)) {
     if (isStructure(entity)) entity.health = 0;
   }
-  newUnit(victimPlayer.id, "wolf", center.x, center.y);
+  const { x, y } = getMapCenter();
+  newUnit(victimPlayer.id, "wolf", x, y);
 
   // Send switch message
   send({

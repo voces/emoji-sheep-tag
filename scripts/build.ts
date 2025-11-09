@@ -27,6 +27,16 @@ const assetInlinePlugin = {
 
 const decoder = new TextDecoder();
 
+const copyMaps = async () => {
+  const srcDir = "shared/maps";
+  const destDir = "dist/maps";
+  await ensureDir(destDir);
+  for await (const entry of Deno.readDir(srcDir)) {
+    if (!entry.isFile || !entry.name.endsWith(".json")) continue;
+    await Deno.copyFile(`${srcDir}/${entry.name}`, `${destDir}/${entry.name}`);
+  }
+};
+
 const buildHtml = async (env: "dev" | "prod") => {
   // Load HTML first (needed for subsequent steps)
   const dom = new jsdom.JSDOM(
@@ -87,6 +97,7 @@ export const build = async (env: "dev" | "prod") => {
     await Promise.all([
       buildHtml(env),
       processSoundAssets(),
+      copyMaps(),
     ]);
 
     console.log(

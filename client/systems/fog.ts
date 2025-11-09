@@ -1,6 +1,13 @@
-import { Entity, SystemEntity } from "../ecs.ts";
+import { app, Entity, registerFogReset, SystemEntity } from "../ecs.ts";
 import { getLocalPlayer } from "../api/player.ts";
-import { bounds, height, terrainLayers, width } from "@/shared/map.ts";
+import {
+  getMap,
+  getMapBounds,
+  getMapHeight,
+  getMapWidth,
+  getTerrainLayers,
+  onMapChange,
+} from "@/shared/map.ts";
 
 import {
   ClampToEdgeWrapping,
@@ -19,7 +26,7 @@ import {
 import { FogPass } from "../graphics/FogPass.ts";
 import { isAlly, isStructure, isTree } from "@/shared/api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
-import { getEntitiesInRange } from "./kd.ts";
+import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 
 // Fog resolution multiplier: 2 = 160x160, 4 = 320x320, etc.
@@ -28,7 +35,9 @@ const FOG_RESOLUTION_MULTIPLIER = 4;
 const alwaysVisible = (entity: Entity) =>
   entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
   entity.id.startsWith("blueprint-") ||
-  entity.id === "selection-rectangle";
+  entity.id === "selection-rectangle" ||
+  // TODO: this is a hack; find an alternative?
+  entity.model === "glow";
 
 type Cell = {
   visible: Set<Entity>;
@@ -42,6 +51,10 @@ const blockerMap = new Map<string, Entity>();
 
 // Track entities by grid cell for efficient fog updates
 const entityGridMap = new Map<string, Set<Entity>>();
+
+let terrainLayerData = getTerrainLayers();
+let fogBounds = getMapBounds();
+let currentFogMapId = getMap().id;
 
 const addEntityToGrid = (entity: Entity) => {
   if (!entity.position) return;
@@ -151,7 +164,7 @@ class VisibilityGrid {
     const terrainScale = FOG_RESOLUTION_MULTIPLIER / 2;
     const entityTileX = Math.floor(cx / terrainScale);
     const entityTileY = Math.floor(cy / terrainScale);
-    const entityHeight = terrainLayers[entityTileY]?.[entityTileX] ?? 0;
+    const entityHeight = terrainLayerData[entityTileY]?.[entityTileX] ?? 0;
 
     // Build a grid of blocker coverage within sight radius
     // Use Map<number, Set<number>> for faster lookups (avoid string concat)
@@ -232,14 +245,14 @@ class VisibilityGrid {
       const worldX = x / FOG_RESOLUTION_MULTIPLIER;
       const worldY = y / FOG_RESOLUTION_MULTIPLIER;
       if (
-        worldX < bounds.min.x || worldX > bounds.max.x ||
-        worldY < bounds.min.y || worldY > bounds.max.y
+        worldX < fogBounds.min.x || worldX > fogBounds.max.x ||
+        worldY < fogBounds.min.y || worldY > fogBounds.max.y
       ) continue;
 
       // Check height blocking (terrainLayers is 2x resolution)
       const terrainX = Math.floor(x / terrainScale);
       const terrainY = Math.floor(y / terrainScale);
-      const terrainRow = terrainLayers[terrainY];
+      const terrainRow = terrainLayerData[terrainY];
       const height = terrainRow?.[terrainX] ?? 0;
 
       if (height > entityHeight) {
@@ -498,19 +511,30 @@ class VisibilityGrid {
   }
 }
 
-const visibilityGrid = new VisibilityGrid(
-  width * FOG_RESOLUTION_MULTIPLIER,
-  height * FOG_RESOLUTION_MULTIPLIER,
-);
+const createVisibilityGrid = () =>
+  new VisibilityGrid(
+    getMapWidth() * FOG_RESOLUTION_MULTIPLIER,
+    getMapHeight() * FOG_RESOLUTION_MULTIPLIER,
+  );
 
-if (renderTarget?.depthTexture) {
+export let visibilityGrid = createVisibilityGrid();
+
+const createFogPass = () => {
+  if (!renderTarget?.depthTexture) return;
+  const map = getMap();
   const pass = new FogPass(
     visibilityGrid.fogTexture,
     renderTarget.depthTexture,
     camera,
+    { width: map.width, height: map.height, bounds: map.bounds },
   );
   pass.renderToScreen = true;
   setFogPass(pass);
+  return pass;
+};
+
+if (renderTarget?.depthTexture) {
+  createFogPass();
 }
 
 // System to track blockers (kept for quick filtering, but KDTree does spatial queries)
@@ -619,6 +643,32 @@ export const resetFog = () => {
   visibilityGrid.reset();
   if (fogPass && renderer) fogPass.reset(renderer);
 };
+registerFogReset(resetFog);
+
+const rebuildFogResources = () => {
+  terrainLayerData = getTerrainLayers();
+  fogBounds = getMapBounds();
+  visibilityGrid = createVisibilityGrid();
+  entityGridMap.clear();
+  for (const entity of app.entities) {
+    if (alwaysVisible(entity)) continue;
+    addEntityToGrid(entity);
+  }
+  everSeen.clear();
+  for (const entity of sightedEntities) {
+    if (visibleToLocalPlayer(entity)) {
+      visibilityGrid.updateEntity(entity);
+    }
+  }
+  createFogPass();
+  triggerFogChecks();
+};
+
+onMapChange((map) => {
+  if (map.id === currentFogMapId) return;
+  currentFogMapId = map.id;
+  rebuildFogResources();
+});
 
 // System to hide enemy units in fog (but keep structures visible once seen)
 const handleEntityVisibility = (entity: Entity) => {
@@ -682,5 +732,3 @@ addSystem({
     triggerFogChecks();
   },
 });
-
-export { visibilityGrid };

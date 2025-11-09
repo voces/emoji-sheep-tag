@@ -220,6 +220,11 @@ export type Entity = {
    * - "dynamic" (default): server-authoritative. Spawned on the server and replicated/synced to clients.
    */
   type?: "cosmetic" | "static" | "dynamic";
+  /**
+   * Runtime visual effects (glows, particles, indicators, fire, etc.) that should never be exported.
+   * These are dynamically created visual effects, not static map decorations.
+   */
+  isEffect?: boolean;
 
   model?: string | null;
   modelScale?: number | null;

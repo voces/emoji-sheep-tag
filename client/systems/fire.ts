@@ -38,6 +38,7 @@ const updateFires = (e: Entity, remove = false) => {
         },
         zIndex: 0.05 + i * 0.01,
         isDoodad: true,
+        isEffect: true,
       });
       existing.push(fire);
     }

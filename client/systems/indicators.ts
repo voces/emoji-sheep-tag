@@ -53,6 +53,7 @@ export const newIndicator = (
     position,
     modelScale: scale,
     isDoodad: true,
+    isEffect: true,
     owner: getLocalPlayer()?.id,
   });
 };

@@ -21,7 +21,10 @@ const initChannel = () => {
       if (message.type === "blobUrl") {
         sharedBlobURL = message.url;
         if (!worker) {
-          worker = new SharedWorker(sharedBlobURL, { name: "emoji-sheep-tag" });
+          worker = new SharedWorker(sharedBlobURL, {
+            name: "emoji-sheep-tag",
+            type: "module",
+          });
         }
       } else if (message.type === "request") {
         if (sharedBlobURL) {
@@ -79,6 +82,7 @@ export class LocalWebSocket {
   private initializePort() {
     this.port = worker!.port;
     this.port.addEventListener("message", (e) => this.onMessage(e));
+    this.port.addEventListener("messageerror", console.error);
     this.port.postMessage({ type: "connect", id: this.id, name: this.name });
 
     this.openTimeout = setTimeout(() => {
@@ -180,7 +184,10 @@ export const loadLocal = () => {
       const blob = new Blob([workerScript], { type: "application/javascript" });
       sharedBlobURL = URL.createObjectURL(blob);
       channel!.postMessage({ type: "blobUrl", url: sharedBlobURL });
-      worker = new SharedWorker(sharedBlobURL, { name: "emoji-sheep-tag" });
+      worker = new SharedWorker(sharedBlobURL, {
+        name: "emoji-sheep-tag",
+        type: "module",
+      });
     }
     if (!started) {
       worker.port.start();

@@ -1,5 +1,5 @@
 import { addSystem } from "@/shared/context.ts";
-import { getEntitiesInRange } from "./kd.ts";
+import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { buffs } from "@/shared/data.ts";
 import { iterateBuffs, testClassification } from "@/shared/api/unit.ts";
 import { lookup } from "./lookup.ts";

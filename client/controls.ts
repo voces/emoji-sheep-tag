@@ -29,7 +29,7 @@ import {
   selectPrimaryUnit,
 } from "./api/selection.ts";
 import { applyZoom, getLocalPlayer } from "./api/player.ts";
-import { getEntitiesInRect } from "./systems/kd.ts";
+import { getEntitiesInRect } from "@/shared/systems/kd.ts";
 import {
   closeAllMenus,
   closeMenu,
@@ -65,7 +65,7 @@ import {
   handleKeyUp,
   keyboard,
 } from "./controls/keyboardHandlers.ts";
-import { height, width } from "@/shared/map.ts";
+import { getMap } from "@/shared/map.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { isStructure } from "@/shared/api/unit.ts";
@@ -108,10 +108,9 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   ) document.activeElement.blur();
 
   if (
-    (e.element instanceof HTMLElement || e.element instanceof SVGElement) &&
-    e.element.id !== "ui"
+    (e.element instanceof HTMLElement || e.element instanceof SVGElement)
   ) {
-    e.element.focus();
+    if (e.element.id !== "ui") e.element.focus();
     if ("click" in e.element) e.element.click();
     else {
       e.element.dispatchEvent(
@@ -122,7 +121,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
         }),
       );
     }
-    return;
+    if (e.element.id !== "ui") return;
   }
 
   if (e.button === "right") {
@@ -293,6 +292,7 @@ mouse.addEventListener("mouseButtonUp", (e) => {
     for (const entity of entitiesInRect) {
       if (entity.isDoodad && !editorVar()) continue;
       if (entity.id === "selection-rectangle") continue;
+      if (entity.isEffect) continue;
       // Skip entities hidden by fog
       if ((entity as Entity).hiddenByFog) continue;
 
@@ -726,6 +726,7 @@ addSystem({
     if (showSettingsVar() || document.activeElement !== document.body) {
       return false;
     }
+    const { width, height } = getMap();
 
     const skipKeyboard = showCommandPaletteVar() === "open";
 

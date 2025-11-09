@@ -5,6 +5,7 @@ import { clientContext, lobbyContext } from "../contexts.ts";
 import { newLobby } from "../lobby.ts";
 import { FakeTime } from "@std/testing/time";
 import { appContext } from "@/shared/context.ts";
+import { buildDefaultMap } from "@/shared/map.ts";
 
 export type TestSetupOptions = {
   wolves?: string[];
@@ -27,7 +28,7 @@ export type TestSetup = {
 export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   const { wolves = [], sheep = [], gold = 10 } = options;
 
-  const ecs = newEcs();
+  const ecs = newEcs(buildDefaultMap());
   const clients = new Map<string, Client>();
 
   // Create wolf clients
@@ -76,6 +77,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   // Set up lobby
   const lobby = newLobby();
   lobby.settings = {
+    map: "revo",
     mode: "survival",
     vipHandicap: 0.8,
     sheep: "auto",

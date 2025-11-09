@@ -26,7 +26,7 @@ const debouncedBuild = debounce(() => build("dev").catch(console.error), 25);
 await debouncedBuild();
 console.log("[Build] Waiting for changes...");
 
-const watcher = Deno.watchFs("client");
+const watcher = Deno.watchFs(["client", "shared/maps"]);
 for await (const _ of watcher) {
   debouncedBuild().then(() => console.log("[Build] Waiting for changes..."));
 }

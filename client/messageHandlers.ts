@@ -2,7 +2,12 @@ import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { stateVar } from "@/vars/state.ts";
 import { app, map, unloadEcs } from "./ecs.ts";
 import { camera } from "./graphics/three.ts";
-import { center, generateDoodads } from "@/shared/map.ts";
+import {
+  clearDoodads,
+  generateDoodads,
+  getMapCenter,
+  setMapForApp,
+} from "@/shared/map.ts";
 import { stats } from "./util/Stats.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { roundsVar } from "@/vars/rounds.ts";
@@ -15,6 +20,7 @@ import { getWebSocket } from "./connection.ts";
 import { LocalWebSocket } from "./local.ts";
 import { lobbiesVar } from "@/vars/lobbies.ts";
 import { applyZoom } from "./api/player.ts";
+import { loadClientMap } from "./maps.ts";
 
 const processUpdates = (updates: ReadonlyArray<Update>) => {
   const players = updates.filter((u) => u.isPlayer || map[u.id]?.isPlayer);
@@ -45,6 +51,37 @@ const processUpdates = (updates: ReadonlyArray<Update>) => {
       }
     }
   });
+};
+
+let currentMapId = lobbySettingsVar().map;
+let pendingMapId: string | null = null;
+let inflightMapPromise: Promise<void> | null = null;
+
+const ensureMapLoaded = async (map: string) => {
+  if (!map) return;
+  if (map === currentMapId && !pendingMapId) return;
+
+  pendingMapId = map;
+  const promise = (async () => {
+    const loadedMap = await loadClientMap(map);
+    if (pendingMapId !== map) return;
+
+    app.batch(() => {
+      clearDoodads();
+      setMapForApp(app, loadedMap);
+      generateDoodads();
+    });
+
+    currentMapId = map;
+    pendingMapId = null;
+  })();
+
+  inflightMapPromise = promise;
+  try {
+    await promise;
+  } finally {
+    if (inflightMapPromise === promise) inflightMapPromise = null;
+  }
 };
 
 export const handlers = {
@@ -94,6 +131,7 @@ export const handlers = {
     unloadEcs();
     stateVar("playing");
     if (e.updates) processUpdates(e.updates);
+    const center = getMapCenter();
     camera.position.x = center.x;
     camera.position.y = center.y;
     applyZoom();
@@ -132,7 +170,10 @@ export const handlers = {
       ServerToClientMessage,
       { type: "lobbySettings" }
     >,
-  ) => lobbySettingsVar(lobbySettings),
+  ) => {
+    ensureMapLoaded(lobbySettings.map);
+    lobbySettingsVar(lobbySettings);
+  },
   hubState: (
     { lobbies }: Extract<ServerToClientMessage, { type: "hubState" }>,
   ) => {

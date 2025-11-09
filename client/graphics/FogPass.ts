@@ -16,11 +16,13 @@ import {
   WebGLRenderTarget,
 } from "three";
 
-import {
-  bounds,
-  height as mapHeight,
-  width as mapWidth,
-} from "@/shared/map.ts";
+import type { LoadedMap } from "@/shared/map.ts";
+
+type MapDimensions = {
+  width: number;
+  height: number;
+  bounds: LoadedMap["bounds"];
+};
 
 export class FogPass {
   private scene: Scene;
@@ -39,6 +41,7 @@ export class FogPass {
     fogTexture: DataTexture,
     depthTexture: DepthTexture,
     camera: PerspectiveCamera,
+    mapDimensions: MapDimensions,
   ) {
     // Create render targets for ping-pong fog smoothing
     const width = fogTexture.image.width;
@@ -64,9 +67,21 @@ export class FogPass {
         cameraNear: { value: camera.near },
         cameraFar: { value: camera.far },
         worldMin: { value: new Vector2(0, 0) },
-        worldMax: { value: new Vector2(mapWidth, mapHeight) },
-        boundsMin: { value: new Vector2(bounds.min.x, bounds.min.y) },
-        boundsMax: { value: new Vector2(bounds.max.x, bounds.max.y) },
+        worldMax: {
+          value: new Vector2(mapDimensions.width, mapDimensions.height),
+        },
+        boundsMin: {
+          value: new Vector2(
+            mapDimensions.bounds.min.x,
+            mapDimensions.bounds.min.y,
+          ),
+        },
+        boundsMax: {
+          value: new Vector2(
+            mapDimensions.bounds.max.x,
+            mapDimensions.bounds.max.y,
+          ),
+        },
         fogColor: { value: new Color(0x000000) },
         fogOpacity: { value: 0.95 },
         projInv: { value: new Matrix4() },

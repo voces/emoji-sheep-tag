@@ -1,7 +1,7 @@
 import { Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { damageEntity, newUnit } from "../api/unit.ts";
-import { getEntitiesInRange } from "../systems/kd.ts";
+import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { testClassification } from "@/shared/api/unit.ts";

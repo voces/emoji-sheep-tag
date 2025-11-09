@@ -2,6 +2,7 @@ import { App, newApp } from "@verit/ecs";
 import { Entity } from "@/shared/types.ts";
 import { newEntity, remove, update } from "./updates.ts";
 import { initApp } from "@/shared/context.ts";
+import { buildDefaultMap, type LoadedMap, setMapForApp } from "@/shared/map.ts";
 import { id } from "@/shared/util/id.ts";
 
 export type Game = App<Entity> & {
@@ -36,7 +37,7 @@ function makeLoopGuard(
   };
 }
 
-export const newEcs = () => {
+export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
   const initializeEntity = (input: Partial<Entity>) => {
     if (!input.id) input.id = id(input.prefab);
     const entity = input as Entity;
@@ -181,6 +182,7 @@ export const newEcs = () => {
     return originalRemoveEntity(entity);
   };
 
+  setMapForApp(app, map);
   initApp(app);
 
   return app;
@@ -195,7 +197,6 @@ import("./systems/buffs.ts");
 import("./systems/death.ts");
 import("./systems/editor.ts");
 import("./systems/goldGeneration.ts");
-import("./systems/kd.ts");
 import("./systems/lookup.ts");
 import("./systems/lookup.ts");
 import("./systems/pathing.ts");

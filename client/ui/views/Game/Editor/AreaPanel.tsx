@@ -3,7 +3,7 @@ import { Panel } from "./common.ts";
 import { useEffect, useState } from "react";
 import { Color, PerspectiveCamera, WebGLRenderer } from "three";
 import { onRender, scene } from "../../../../graphics/three.ts";
-import { height, width } from "@/shared/map.ts";
+import { getMap, onMapChange } from "@/shared/map.ts";
 
 const MinimapCanvas = styled.canvas`
   position: static;
@@ -23,12 +23,21 @@ const Minimap = () => {
     renderer.setSize(262, 262, false);
 
     const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
-    camera.position.z = width * 0.65;
-    camera.position.x = width / 2;
-    camera.position.y = height / 2;
+    const updateCamera = () => {
+      const map = getMap();
+      camera.position.z = map.width * 0.65;
+      camera.position.x = map.width / 2;
+      camera.position.y = map.height / 2;
+    };
+    updateCamera();
+    const unsubscribe = onMapChange(updateCamera);
     camera.layers.enableAll();
 
-    return onRender(() => renderer.render(scene, camera));
+    const disposeRender = onRender(() => renderer.render(scene, camera));
+    return () => {
+      unsubscribe();
+      disposeRender();
+    };
   }, [canvas]);
 
   return <MinimapCanvas ref={setCanvas} />;

@@ -5,7 +5,7 @@ import { terrain } from "../../../graphics/three.ts";
 import { tileDefs } from "@/shared/data.ts";
 import { packMap2D } from "@/shared/util/2dPacking.ts";
 import { packEntities } from "@/shared/util/entityPacking.ts";
-import { bounds, center } from "@/shared/map.ts";
+import { getMapBounds, getMapCenter } from "@/shared/map.ts";
 
 export const useExportMap = () =>
   useMemo(() => ({
@@ -22,6 +22,9 @@ export const useExportMap = () =>
         })
       ).reverse();
 
+      const center = getMapCenter();
+      const bounds = getMapBounds();
+
       console.log({
         center,
         bounds,
@@ -33,7 +36,8 @@ export const useExportMap = () =>
         entities: packEntities(
           Array.from(app.entities).filter((e) =>
             e.isDoodad && e.prefab && e.position &&
-            !e.id.startsWith("blueprint-")
+            !e.id.startsWith("blueprint-") &&
+            !e.isEffect
           ),
         ),
       });

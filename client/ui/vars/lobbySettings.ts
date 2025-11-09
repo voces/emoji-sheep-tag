@@ -3,6 +3,7 @@ import { LobbySettings } from "../../schemas.ts";
 
 export const lobbySettingsVar = makeVar<LobbySettings>({
   host: "",
+  map: "revo",
   mode: "survival",
   vipHandicap: 0.8,
   sheep: 0,

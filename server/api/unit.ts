@@ -21,7 +21,7 @@ import {
 import { buffs, items, prefabs } from "@/shared/data.ts";
 import { findAction } from "../util/actionLookup.ts";
 import { BUILD_REFUND_RATE, FOLLOW_DISTANCE } from "@/shared/constants.ts";
-import { getEntitiesInRange } from "../systems/kd.ts";
+import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { deductPlayerGold, getPlayerGold, grantPlayerGold } from "./player.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { addEntity, mergeEntityWithPrefab } from "@/shared/api/entity.ts";

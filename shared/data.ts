@@ -695,7 +695,7 @@ export const prefabs: Record<string, DataEntity> = {
     }, {
       name: "Upgrade to Frost Castle",
       description:
-        "Upgrades the hut to a Frost Castle, which is capable of firing frost orbs as wolves.",
+        "Upgrades the hut to a Frost Castle, which is capable of firing frost orbs at wolves.",
       type: "upgrade",
       prefab: "frostCastle",
       goldCost: 30,

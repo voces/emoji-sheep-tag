@@ -7,7 +7,7 @@ import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { newEcs } from "../ecs.ts";
 import { send } from "../lobbyApi.ts";
-import { center, generateDoodads } from "@/shared/map.ts";
+import { generateDoodads, getMapCenter } from "@/shared/map.ts";
 import { TICK_RATE } from "@/shared/constants.ts";
 import { appContext } from "@/shared/context.ts";
 import { getSheepSpawn } from "../st/getSheepSpawn.ts";
@@ -24,6 +24,7 @@ import { spawnPracticeUnits } from "../api/player.ts";
 import { Entity } from "@/shared/types.ts";
 import { flushUpdates } from "../updates.ts";
 import { Lobby } from "../lobby.ts";
+import { createServerMap } from "../maps.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -194,6 +195,7 @@ const addWolvesSpawnTimer = () => {
 };
 
 const spawnWolves = (wolves: Set<Client>) => {
+  const center = getMapCenter();
   for (const owner of wolves) {
     newUnit(owner.id, "wolf", center.x, center.y);
   }
@@ -264,7 +266,8 @@ export const start = (
     undoDraft();
   }
 
-  const ecs = newEcs();
+  const map = createServerMap(lobby.settings.map);
+  const ecs = newEcs(map);
   lobby.round = {
     ecs,
     start: Date.now(),
@@ -281,7 +284,7 @@ export const start = (
     lobbyContext.with(lobby, () => appContext.with(ecs, () => ecs.batch(fn)));
 
   withContexts(() => {
-    generateDoodads(editor ? [] : ["static", "dynamic"]);
+    generateDoodads(editor ? undefined : ["static", "dynamic"]);
     createPlayerEntities(ecs, lobby, sheep, wolves, practice);
     send({ type: "start", updates: flushUpdates(false) });
 

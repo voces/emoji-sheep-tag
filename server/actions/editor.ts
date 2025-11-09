@@ -3,7 +3,7 @@ import { zUpdate } from "../../client/schemas.ts";
 import { lookup } from "../systems/lookup.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { pathingMap } from "../systems/pathing.ts";
-import { cliffs, tiles } from "@/shared/map.ts";
+import { getCliffs, getTiles } from "@/shared/map.ts";
 import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
 
 export const zEditorCreateEntity = z.object({
@@ -61,6 +61,8 @@ export const editorSetCliff = (
   _: unknown,
   { x, y, cliff }: z.output<typeof zEditorSetCliff>,
 ) => {
+  const cliffs = getCliffs();
+  const tiles = getTiles();
   // Update server's cliff data
   if (cliffs[y]?.[x] !== undefined) cliffs[y][x] = cliff;
 

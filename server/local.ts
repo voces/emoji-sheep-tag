@@ -33,11 +33,8 @@ const clients: Map<number, ClientInfo> = new Map();
 
 self.onconnect = (e) => {
   const port = e.ports[0];
+  if (!port) return;
   port.start();
-
-  // let timeout = setTimeout(() => {
-  //   client.socket.close();
-  // }, 5000);
 
   port.onmessage = (event) => {
     const data = event.data;
@@ -49,7 +46,6 @@ self.onconnect = (e) => {
         const name = data.name;
         const socket = createSocket(id, port);
         clients.set(id, { id, port, socket });
-        // Create a mock URL object with the name parameter for consistency
         const mockUrl = name
           ? new URL(`ws://local?name=${encodeURIComponent(name)}`)
           : undefined;

@@ -2,9 +2,12 @@ import { App, newApp, SystemEntity as ECSSystemEntity } from "@verit/ecs";
 import { onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "@/shared/types.ts";
 import { appContext, initApp } from "@/shared/context.ts";
-import { generateDoodads } from "@/shared/map.ts";
+import {
+  buildDefaultMap,
+  generateDoodads,
+  setMapForApp,
+} from "@/shared/map.ts";
 import { editorVar } from "@/vars/editor.ts";
-import { resetFog } from "./systems/fog.ts";
 
 export type Entity = CommonEntity & {
   selected?: boolean;
@@ -77,6 +80,8 @@ export const app = newApp<Entity>({
 // deno-lint-ignore no-explicit-any
 (globalThis as any).app = app;
 
+setMapForApp(app, buildDefaultMap());
+
 appContext.current = app;
 
 queueMicrotask(() => initApp(app));
@@ -85,14 +90,20 @@ onRender((delta, time) => app.update(delta, time));
 
 export const map: Record<string, Entity> = {};
 
+let fogResetter: (() => void) | undefined;
+export const registerFogReset = (fn: () => void) => {
+  fogResetter = fn;
+};
+
 export const unloadEcs = (
   { includePlayers = false }: { includePlayers?: boolean } = {},
 ) =>
   app.batch(() => {
     const editor = editorVar();
     for (const entity of app.entities) {
-      if (entity.type === "cosmetic" || entity.type === "static") continue;
-      if (editor) continue;
+      if (entity.type === "cosmetic" || entity.type === "static") {
+        if (!editor) continue;
+      }
       if (entity.isPlayer) continue;
 
       app.removeEntity(entity);
@@ -106,7 +117,7 @@ export const unloadEcs = (
         delete map[entity.id];
       }
     }
-    resetFog();
+    fogResetter?.();
   });
 
 generateDoodads();

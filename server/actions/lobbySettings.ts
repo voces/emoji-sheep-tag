@@ -3,11 +3,13 @@ import { Client } from "../client.ts";
 import { send } from "../lobbyApi.ts";
 import { Lobby } from "../lobby.ts";
 import { LobbySettings } from "../../client/schemas.ts";
+import { getMapMeta } from "@/shared/maps/manifest.ts";
 import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
 
 // C->S
 export const zLobbySettings = z.object({
   type: z.literal("lobbySettings"),
+  map: z.string().refine((value) => !!getMapMeta(value)).optional(),
   mode: z.union([z.literal("survival"), z.literal("vip"), z.literal("switch")])
     .optional(),
   vipHandicap: z.number().min(0.01).max(10).transform((v) =>
@@ -52,6 +54,7 @@ export const serializeLobbySettings = (
     ? idealSheep
     : Math.max(Math.min(lobby.settings.sheep, maxSheep), 1);
   return {
+    map: lobby.settings.map,
     mode: lobby.settings.mode,
     vipHandicap: lobby.settings.vipHandicap,
     sheep,
@@ -68,7 +71,7 @@ export const serializeLobbySettings = (
 
 export const lobbySettings = (
   client: Client,
-  { mode, vipHandicap, sheep, startingGold, time, income }: z.TypeOf<
+  { mode, vipHandicap, sheep, startingGold, time, income, map }: z.TypeOf<
     typeof zLobbySettings
   >,
 ) => {
@@ -85,6 +88,7 @@ export const lobbySettings = (
   if (startingGold !== undefined) lobby.settings.startingGold = startingGold;
   if (time !== undefined) lobby.settings.time = time;
   if (income !== undefined) lobby.settings.income = income;
+  if (map && getMapMeta(map)) lobby.settings.map = map;
 
   // Send updated settings to all players in the lobby
   send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });

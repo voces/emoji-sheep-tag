@@ -157,74 +157,103 @@ export const svgs: Record<string, string> = {
   construction,
 };
 
-const collections: Record<string, InstancedGroup | undefined> = {
+type SvgConfig = {
+  svg: string;
+  scale: number;
+  options?: Parameters<typeof loadSvg>[2];
+};
+
+const svg = (
+  svgText: string,
+  scale: number,
+  options?: Parameters<typeof loadSvg>[2],
+): SvgConfig => ({ svg: svgText, scale, options });
+
+const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   // Background elements (lowest z-order)
-  flowers: loadSvg(flowers, 0.25, { layer: 2 }),
-  grass: loadSvg(grass, 0.75, { layer: 2 }),
-  treeStump: loadSvg(treeStump, 0.11, {
+  flowers: svg(flowers, 0.25, { layer: 2 }),
+  grass: svg(grass, 0.75, { layer: 2 }),
+  treeStump: svg(treeStump, 0.11, {
     layer: 2,
     yOffset: -0.36,
     xOffset: -0.01,
   }),
-  rock: loadSvg(rock, 0.6, { layer: 2 }),
-  fence: loadSvg(fence, 0.07, { layer: 2 }),
-  well: loadSvg(well, 0.13, { layer: 2 }),
-  scarecrow: loadSvg(scarecrow, 0.14, { layer: 2 }),
-  derelictHouse: loadSvg(derelictHouse, 3.5, { layer: 2 }),
-  barrel: loadSvg(barrel, 0.14, { layer: 2 }),
-  hayBale: loadSvg(hayBale, 0.31, { layer: 2, xOffset: -0.05, yOffset: -0.1 }),
-  wood: loadSvg(wood, 0.12, { layer: 2 }),
+  rock: svg(rock, 0.6, { layer: 2 }),
+  fence: svg(fence, 0.07, { layer: 2 }),
+  well: svg(well, 0.13, { layer: 2 }),
+  scarecrow: svg(scarecrow, 0.14, { layer: 2 }),
+  derelictHouse: svg(derelictHouse, 3.5, { layer: 2 }),
+  barrel: svg(barrel, 0.14, { layer: 2 }),
+  hayBale: svg(hayBale, 0.31, { layer: 2, xOffset: -0.05, yOffset: -0.1 }),
+  wood: svg(wood, 0.12, { layer: 2 }),
   // tractor: loadSvg(tractor, 1, { layer: 2 }),
 
   // Bottom-layer indicators (render between background elements and units)
-  circleBottom: loadSvg(circle, 0.08, { layer: 2 }),
-  gravityBottom: loadSvg(gravity, 2, { layer: 2 }),
+  circleBottom: svg(circle, 0.08, { layer: 2 }),
+  gravityBottom: svg(gravity, 2, { layer: 2 }),
   glow,
 
   // Basic units and structures
-  sentry: loadSvg(sentry, 0.03),
-  sheep: loadSvg(sheep, 1),
-  hut: loadSvg(hut, 2),
-  house: loadSvg(house, 3.4),
-  watchtower: loadSvg(watchtower, 0.06),
-  divinity: loadSvg(divinity, 1),
-  castle: loadSvg(castle, 0.7),
+  sentry: svg(sentry, 0.03),
+  sheep: svg(sheep, 1),
+  hut: svg(hut, 2),
+  house: svg(house, 3.4),
+  watchtower: svg(watchtower, 0.06),
+  divinity: svg(divinity, 1),
+  castle: svg(castle, 0.7),
   // shop: loadSvg(shop, 1),
-  fox: loadSvg(fox, 1.8),
-  wolf: loadSvg(wolf, 2),
+  fox: svg(fox, 1.8),
+  wolf: svg(wolf, 2),
   // atom: loadSvg(atom, 0.05),
 
   // Trees (should render in front of structures)
-  windmill: loadSvg(windmill, 0.24, { layer: 2, yOffset: 0.1, xOffset: -0.1 }),
-  tree: loadSvg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
-  totem: loadSvg(totem, 0.18, { yOffset: 0.12 }),
+  windmill: svg(windmill, 0.24, { layer: 2, yOffset: 0.1, xOffset: -0.1 }),
+  tree: svg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
+  totem: svg(totem, 0.18, { yOffset: 0.12 }),
 
   // Temple stacks on things, we want it visible, always
-  hinduTemple: loadSvg(hinduTemple, 1.75),
+  hinduTemple: svg(hinduTemple, 1.75),
 
   // SFX elements (highest z-order, always on top)
-  shield: loadSvg(shield, 1, { layer: 2 }),
-  wind: loadSvg(wind, 1, { layer: 2 }),
-  sparkle: loadSvg(sparkle, 1, { layer: 2 }),
-  rune: loadSvg(rune, 0.4, { layer: 2 }),
-  rune2: loadSvg(rune2, 0.05, { layer: 2 }),
-  swap: loadSvg(swap, 0.1, { layer: 2 }),
-  fire: loadSvg(fire, 1, { layer: 2 }),
-  crimsonArc: loadSvg(crimsonArc, 0.1, { layer: 2 }),
-  vip: loadSvg(vip, 0.03, { layer: 2 }),
-  claw: loadSvg(claw, 0.05, { layer: 2 }),
-  dash: loadSvg(dash, 0.1, { layer: 2 }),
-  flag: loadSvg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),
-  location: loadSvg(location, 2, { layer: 2 }),
-  collision: loadSvg(collision, 2, { layer: 2 }),
-  meteor: loadSvg(meteor, 0.5, { layer: 2 }),
-  frostOrb: loadSvg(frostOrb, 0.4, { layer: 2 }),
-  square: loadSvg(square, 1, { layer: 2 }),
+  shield: svg(shield, 1, { layer: 2 }),
+  wind: svg(wind, 1, { layer: 2 }),
+  sparkle: svg(sparkle, 1, { layer: 2 }),
+  rune: svg(rune, 0.4, { layer: 2 }),
+  rune2: svg(rune2, 0.05, { layer: 2 }),
+  swap: svg(swap, 0.1, { layer: 2 }),
+  fire: svg(fire, 1, { layer: 2 }),
+  crimsonArc: svg(crimsonArc, 0.1, { layer: 2 }),
+  vip: svg(vip, 0.03, { layer: 2 }),
+  claw: svg(claw, 0.05, { layer: 2 }),
+  dash: svg(dash, 0.1, { layer: 2 }),
+  flag: svg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),
+  location: svg(location, 2, { layer: 2 }),
+  collision: svg(collision, 2, { layer: 2 }),
+  meteor: svg(meteor, 0.5, { layer: 2 }),
+  frostOrb: svg(frostOrb, 0.4, { layer: 2 }),
+  square: svg(square, 1, { layer: 2 }),
 
   // Top-layer indicators (render above everything)
-  circle: loadSvg(circle, 0.08, { layer: 2 }),
-  gravity: loadSvg(gravity, 2, { layer: 2 }),
+  circle: svg(circle, 0.08, { layer: 2 }),
+  gravity: svg(gravity, 2, { layer: 2 }),
 };
+
+const getCollection = (model: string): InstancedGroup | undefined => {
+  const config = svgConfigs[model];
+  if (!config) return undefined;
+  if (config instanceof InstancedGroup) return config;
+
+  const group = loadSvg(config.svg, config.scale, config.options);
+  svgConfigs[model] = group;
+  return group;
+};
+
+const collections: Record<string, InstancedGroup | undefined> = new Proxy(
+  {} as Record<string, InstancedGroup | undefined>,
+  {
+    get: (_target, prop: string) => getCollection(prop),
+  },
+);
 Object.assign(globalThis, { collections });
 
 const isVisibleToLocalPlayer = (e: Entity) => {
@@ -258,7 +287,6 @@ const updateColor = (e: Entity) => {
     collection.setPlayerColorAt(e.id, color.set(accentColor ?? 0xffffff));
   }
 
-  // TODO: merge these
   if (e.alpha) collection.setAlphaAt(e.id, e.alpha, false);
   else if (e.progress) collection.setAlphaAt(e.id, e.progress, true);
   else collection.setAlphaAt(e.id, 1);

@@ -8,12 +8,28 @@ import {
   WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
-import { center, cliffs, height, tiles, width } from "@/shared/map.ts";
+import { getMap, type LoadedMap, onMapChange } from "@/shared/map.ts";
 import { stats } from "../util/Stats.ts";
 import { tileDefs } from "@/shared/data.ts";
 import { Terrain2D } from "./Terrain2D.ts";
 import { FogPass } from "./FogPass.ts";
 import { floatingTextScene } from "../systems/floatingText.ts";
+
+const terrainTilePalette = [
+  ...tileDefs.map((t) => ({
+    color: `#${t.color.toString(16).padStart(6, "0")}`,
+  })),
+  { color: "#dbbba3" },
+];
+
+const createTerrainMasks = (map: LoadedMap = getMap()) => ({
+  cliff: map.cliffs.toReversed(),
+  groundTile: map.tiles.toReversed(),
+  cliffTile: Array.from(
+    { length: map.height },
+    () => Array(map.width).fill(tileDefs.length),
+  ),
+});
 
 const canvas = document.querySelector("canvas");
 if (!canvas) throw new Error("Could not find canvas");
@@ -55,8 +71,9 @@ if (!("Deno" in globalThis)) {
 }
 
 camera.position.z = 9;
-camera.position.x = center.x;
-camera.position.y = center.y;
+const initialMap = getMap();
+camera.position.x = initialMap.center.x;
+camera.position.y = initialMap.center.y;
 camera.layers.enableAll();
 
 export const listener = "AudioListener" in globalThis
@@ -126,26 +143,22 @@ if (listener) {
 }
 
 export const terrain = new Terrain2D(
-  {
-    cliff: cliffs.toReversed(),
-    groundTile: tiles.toReversed(),
-    cliffTile: Array.from(
-      { length: height },
-      () => Array(width).fill(tileDefs.length),
-    ),
-  },
-  [
-    ...tileDefs.map((t) => ({
-      color: `#${t.color.toString(16).padStart(6, "0")}`,
-    })),
-    { color: `#dbbba3` },
-  ],
+  createTerrainMasks(initialMap),
+  terrainTilePalette,
 );
 terrain.layers.set(3);
 terrain.position.z = -0.002;
 terrain.scale.setScalar(0.5);
 if ("depthWrite" in terrain.material) terrain.material.depthWrite = false;
 scene.add(terrain);
+let currentTerrainMapId = initialMap.id;
+onMapChange((map) => {
+  if (map.id === currentTerrainMapId) return;
+  currentTerrainMapId = map.id;
+  terrain.load(createTerrainMasks(map), terrainTilePalette);
+  camera.position.x = map.center.x;
+  camera.position.y = map.center.y;
+});
 // deno-lint-ignore no-explicit-any
 (globalThis as any).terrain = terrain;
 

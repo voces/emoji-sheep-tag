@@ -44,6 +44,7 @@ it("can move an action into a menu", async () => {
     localPlayer: "player-0",
     rounds: [],
     lobbySettings: {
+      map: "revo",
       mode: "survival",
       vipHandicap: 0.75,
       sheep: 1,

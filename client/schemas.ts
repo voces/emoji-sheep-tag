@@ -385,6 +385,7 @@ const zRound = z.object({
 
 const zLobbySettings = z.object({
   host: z.string().nullable(),
+  map: z.string(),
   mode: z.union([z.literal("survival"), z.literal("vip"), z.literal("switch")]),
   vipHandicap: z.number(),
   sheep: z.number(),

@@ -15,6 +15,7 @@ import { editorVar } from "@/vars/editor.ts";
 import { loadLocal } from "../../../local.ts";
 import { useExportMap } from "./useExportMap.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { switchToEditorMode } from "@/shared/systems/kd.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -131,6 +132,7 @@ export const CommandPalette = () => {
       valid: () => flags.debug && !editorVar() && stateVar() === "menu",
       callback: () => {
         editorVar(true);
+        switchToEditorMode();
         loadLocal();
         connect();
       },

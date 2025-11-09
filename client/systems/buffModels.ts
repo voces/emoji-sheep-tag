@@ -39,8 +39,13 @@ const updateBuffModels = (e: Entity) => {
 
     const existing = currentModels.get(model);
     if (existing) {
-      // Update position, modelScale, and owner of existing model
-      existing.position = position;
+      // Update position only if coordinates changed to avoid unnecessary onChange triggers
+      if (
+        existing.position?.x !== position.x ||
+        existing.position?.y !== position.y
+      ) {
+        existing.position = position;
+      }
       existing.modelScale = finalScale;
       if (e.owner !== undefined) existing.owner = e.owner;
       existing.alpha = buff.modelAlpha;
@@ -49,11 +54,12 @@ const updateBuffModels = (e: Entity) => {
     } else {
       // Create new model entity
       const modelEntity = addEntity({
-        prefab: model,
+        model,
         position,
         modelScale: finalScale,
         owner: e.owner,
         isDoodad: true,
+        isEffect: true,
         playerColor: buff.modelPlayerColor,
         alpha: buff.modelAlpha,
       });

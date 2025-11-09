@@ -80,6 +80,7 @@ const spawnParticle = (e: Entity, delta: number, time: number) => {
         modelScale: randomScale,
         owner: e.owner,
         isDoodad: true,
+        isEffect: true,
       });
 
       // Track expiration by lifetime

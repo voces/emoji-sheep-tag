@@ -471,4 +471,15 @@ export class Terrain2D extends Mesh {
     this.geometry.dispose();
     this.geometry = geometry;
   }
+
+  load(
+    masks: { cliff: CliffMask; groundTile: number[][]; cliffTile: number[][] },
+    tiles: { color: string }[],
+  ) {
+    this.masks = masks;
+    this.tiles = tiles;
+    const geometry = computeGround(this.masks, this.tiles);
+    this.geometry.dispose();
+    this.geometry = geometry;
+  }
 }
