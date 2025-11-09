@@ -589,3 +589,34 @@ addSystem({
     if (!collection) prevModel.delete(e);
   },
 });
+
+const minimapColor = new Color();
+const savedColors = new Map<string, Array<Color | null>>();
+
+export const setMinimapMask = (entity: Entity, mask: boolean) => {
+  const collection = entity.model ?? entity.prefab;
+  if (!collection) return;
+  const group = collections[collection];
+  if (!group) return;
+
+  group.setMinimapMaskAt(entity.id, mask ? 1 : 0);
+
+  const playerColor = entity.playerColor ??
+    getPlayer(entity.owner)?.playerColor;
+  if (!playerColor) return;
+
+  if (mask) {
+    savedColors.set(entity.id, group.saveInstanceColors(entity.id));
+    group.setVertexColorAt(entity.id, minimapColor.set(playerColor));
+  } else {
+    const colorArray = savedColors.get(entity.id);
+    if (colorArray) {
+      group.restoreInstanceColors(entity.id, colorArray);
+      savedColors.delete(entity.id);
+    }
+  }
+};
+
+export const clearMinimapMaskCache = () => {
+  savedColors.clear();
+};

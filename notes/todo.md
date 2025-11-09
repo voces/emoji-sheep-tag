@@ -1,3 +1,5 @@
+# Ideas
+
 - Login system
 - Invis Farm?
 - Items
@@ -6,9 +8,6 @@
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
 - Can hear through fog
-- Pathing falls over with lots of foxes
-  - Falls over when spam clicking movement orders
-  - Per-player pathing calc limits?
 - Unit should have full orientation (not be symmetric) - wolf & fox
 - When changing zoom, blueprints
 - Multiple terrains
@@ -21,7 +20,16 @@
 - Matchmaking
   - 2v4 - 15 rounds
   - 5v5 - 2 rounds
+- Too much chat!
+- Settings not discoverable in game
+
+# Bugs
+
 - Attack Ground on an entity targets the entity with Frost Castle
+- Fire + Illusion?
+- Pathing falls over with lots of foxes
+  - Falls over when spam clicking movement orders
+  - Per-player pathing calc limits?
 
 # Perf
 

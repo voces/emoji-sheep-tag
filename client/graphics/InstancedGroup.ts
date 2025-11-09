@@ -51,6 +51,17 @@ export class InstancedGroup extends Group {
           "instanceAlpha",
           instanceAlphaAttr,
         );
+
+        const instanceMinimapMaskAttr = new InstancedBufferAttribute(
+          new Float32Array(count),
+          1,
+        );
+        instanceMinimapMaskAttr.array.fill(0);
+        (child.geometry as ShapeGeometry).setAttribute(
+          "instanceMinimapMask",
+          instanceMinimapMaskAttr,
+        );
+
         this.children.push(mesh);
         mesh.layers.mask = this.layers.mask;
       }
@@ -94,6 +105,16 @@ export class InstancedGroup extends Group {
       newAttrib.copyArray(oldAttrib.array);
       newAttrib.setUsage(DynamicDrawUsage);
       geo.setAttribute("instanceAlpha", newAttrib);
+
+      const oldMaskAttrib = geo.getAttribute("instanceMinimapMask");
+      const newMaskAttrib = new InstancedBufferAttribute(
+        new Float32Array(value),
+        1,
+      );
+      newMaskAttrib.array.fill(0);
+      newMaskAttrib.copyArray(oldMaskAttrib.array);
+      newMaskAttrib.setUsage(DynamicDrawUsage);
+      geo.setAttribute("instanceMinimapMask", newMaskAttrib);
 
       return next;
     });
@@ -337,6 +358,51 @@ export class InstancedGroup extends Group {
         instanceAlphaAttr.setX(index, alpha > step ? 1 : alpha / step);
         if (progressiveAlpha) alpha = Math.max(0, alpha - step);
         instanceAlphaAttr.needsUpdate = true;
+      }
+    }
+  }
+
+  setMinimapMaskAt(index: number | string, maskValue: number) {
+    if (typeof index === "string") index = this.getIndex(index);
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh) {
+        const instanceMinimapMaskAttr = (child.geometry as ShapeGeometry)
+          .getAttribute("instanceMinimapMask");
+        instanceMinimapMaskAttr.setX(index, maskValue);
+        instanceMinimapMaskAttr.needsUpdate = true;
+      }
+    }
+  }
+
+  saveInstanceColors(index: number | string): Array<Color | null> {
+    if (typeof index === "string") index = this.getIndex(index);
+    const colorArray: Array<Color | null> = [];
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh && child.instanceColor) {
+        const savedColor = new Color();
+        child.getColorAt(index, savedColor);
+        colorArray.push(savedColor);
+      } else {
+        colorArray.push(null);
+      }
+    }
+    return colorArray;
+  }
+
+  restoreInstanceColors(
+    index: number | string,
+    colorArray: Array<Color | null>,
+  ) {
+    if (typeof index === "string") index = this.getIndex(index);
+    let childIndex = 0;
+    for (const child of this.children) {
+      if (child instanceof InstancedMesh) {
+        const savedColor = colorArray[childIndex];
+        if (savedColor) {
+          child.setColorAt(index, savedColor);
+          if (child.instanceColor) child.instanceColor.needsUpdate = true;
+        }
+        childIndex++;
       }
     }
   }

@@ -63,6 +63,10 @@ type Mouse = {
   world: Vector2;
   angle: number;
   intersects: Set<Entity>;
+  customRaycast?: (
+    x: number,
+    y: number,
+  ) => { intersects: ExtendedSet<Entity>; world: Vector2 } | null;
 };
 
 export const mouse: MouseEventTarget & Mouse = Object.assign(
@@ -73,6 +77,7 @@ export const mouse: MouseEventTarget & Mouse = Object.assign(
     world: new Vector2(),
     angle: 0,
     intersects: new Set<Entity>(),
+    customRaycast: undefined,
   },
 );
 
@@ -89,6 +94,20 @@ let lastIntersectUpdate = performance.now() / 1000;
 
 const updateIntersects = () => {
   lastIntersectUpdate = performance.now() / 1000;
+
+  if (mouse.customRaycast) {
+    const result = mouse.customRaycast(mouse.pixels.x, mouse.pixels.y);
+    if (result) {
+      mouse.intersects = result.intersects;
+      mouse.world.copy(result.world);
+      mouse.angle = Math.atan2(
+        result.world.y - camera.position.y,
+        result.world.x - camera.position.x,
+      );
+      return;
+    }
+  }
+
   raycaster.layers.set(0);
   if (editorVar()) raycaster.layers.enable(2);
   const intersects = raycaster.intersectObject(scene, true);

@@ -110,7 +110,8 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   if (
     (e.element instanceof HTMLElement || e.element instanceof SVGElement)
   ) {
-    if (e.element.id !== "ui") e.element.focus();
+    const isGameElement = e.element.id === "ui" || e.element.id === "minimap";
+    if (!isGameElement) e.element.focus();
     if ("click" in e.element) e.element.click();
     else {
       e.element.dispatchEvent(
@@ -121,7 +122,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
         }),
       );
     }
-    if (e.element.id !== "ui") return;
+    if (!isGameElement) return;
   }
 
   if (e.button === "right") {
@@ -139,6 +140,9 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 const handleLeftClick = (e: MouseButtonEvent) => {
   const blueprint = getBlueprint();
 
+  // Don't handle entity selection/deselection on minimap
+  const isMinimapClick = e.element?.id === "minimap";
+
   if (blueprint) {
     handleBlueprintClick(e);
     lastClickedEntity = null;
@@ -147,7 +151,7 @@ const handleLeftClick = (e: MouseButtonEvent) => {
     if (!handleTargetOrder(e)) playSound("ui", pick("error1"), { volume: 0.3 });
     lastClickedEntity = null;
     lastEntityClickTime = 0;
-  } else if (e.intersects.size) {
+  } else if (e.intersects.size && !isMinimapClick) {
     const clickedEntity = e.intersects.first()!;
     const now = performance.now();
     const additive = addToSelection();
@@ -167,7 +171,7 @@ const handleLeftClick = (e: MouseButtonEvent) => {
 
     lastEntityClickTime = now;
     lastClickedEntity = clickedEntity;
-  } else {
+  } else if (!isMinimapClick) {
     dragStart = { x: e.world.x, y: e.world.y };
     lastClickedEntity = null;
     lastEntityClickTime = 0;
@@ -691,9 +695,9 @@ globalThis.addEventListener("blur", clearKeyboard);
 // Camera controls
 let zoomTimeout = 0;
 globalThis.addEventListener("wheel", (e) => {
-  if (
-    document.elementFromPoint(mouse.pixels.x, mouse.pixels.y)?.id !== "ui"
-  ) {
+  const elementId = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y)
+    ?.id;
+  if (elementId !== "ui" && elementId !== "minimap") {
     return false;
   }
   if (e.ctrlKey) return;

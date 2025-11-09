@@ -21,25 +21,35 @@ const loader = new SVGLoader();
 let zOrderCounter = 0;
 
 const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
-  // 1) Declare our attribute & a varying
+  // 1) Declare our attributes & varyings
   shader.vertexShader = "attribute float instanceAlpha;\n" +
+    "attribute float instanceMinimapMask;\n" +
     "varying float vInstanceAlpha;\n" +
+    "varying float vInstanceMinimapMask;\n" +
     shader.vertexShader;
 
-  // 2) Pass it through in the vertex stage
+  // 2) Pass them through in the vertex stage
   shader.vertexShader = shader.vertexShader.replace(
     "void main() {",
     "void main() {\n" +
-      "  vInstanceAlpha = instanceAlpha;",
+      "  vInstanceAlpha = instanceAlpha;\n" +
+      "  vInstanceMinimapMask = instanceMinimapMask;",
   );
 
   shader.fragmentShader = "varying float vInstanceAlpha;\n" +
+    "varying float vInstanceMinimapMask;\n" +
     shader.fragmentShader;
 
-  // 4) Multiply the built-in opacity by our per-instance alpha
+  // 3) In minimap mask mode, use vColor (from instanceColor) for solid player color silhouette
   shader.fragmentShader = shader.fragmentShader.replace(
     /vec4 diffuseColor = vec4\( diffuse, opacity \);/,
-    `vec4 diffuseColor = vec4( diffuse, opacity * vInstanceAlpha );`,
+    `float finalOpacity = vInstanceMinimapMask > 0.5 ? vInstanceAlpha : opacity * vInstanceAlpha;
+    #ifdef USE_INSTANCING_COLOR
+      vec3 final = vInstanceMinimapMask > 0.5 ? vColor : diffuse;
+    #else
+      vec3 final = diffuse;
+    #endif
+    vec4 diffuseColor = vec4( final, finalOpacity );`,
   );
 };
 
