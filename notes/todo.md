@@ -1,16 +1,28 @@
 # Ideas
 
 - Login system
-- Invis Farm?
+- Farms
+  - Strong?
+  - Invis?
+  - Magic?
+  - Money?
 - Items
   - Auras?
     - Like team items, but don't like them being required...
+  - Beam
+  - Suppression Field?
+  - Nuke?
+  - Hay Trap
+  - Goblins?
+  - Disease Cloud?
+  - Neck
+  - Sobi Mask
+  - Crystal Ball
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
 - Can hear through fog
 - Unit should have full orientation (not be symmetric) - wolf & fox
 - When changing zoom, blueprints
-- Multiple terrains
 - Modes
   - Bulldog
   - Kat'ma
@@ -20,16 +32,17 @@
 - Matchmaking
   - 2v4 - 15 rounds
   - 5v5 - 2 rounds
-- Too much chat!
 - Settings not discoverable in game
+- In game scoreboard
+  - Switch variant
 
 # Bugs
 
-- Attack Ground on an entity targets the entity with Frost Castle
 - Fire + Illusion?
 - Pathing falls over with lots of foxes
   - Falls over when spam clicking movement orders
   - Per-player pathing calc limits?
+- A structure could get built just as the sheep dies, common in switch
 
 # Perf
 
@@ -38,8 +51,3 @@
   - Automatic split into "static" and "dynamic"
   - Use `updateRange`
   - Per-mirror instances
-
-# Maybe fixed
-
-- Units sometimes get stuck on corners still...
-- Sometimes an attack claw entity is left over on clients and not removed

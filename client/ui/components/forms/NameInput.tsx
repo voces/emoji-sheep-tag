@@ -1,6 +1,7 @@
 import { styled } from "styled-components";
 import { forwardRef, useImperativeHandle, useState } from "react";
 import { setStoredPlayerName } from "../../../util/playerPrefs.ts";
+import { useMemoState } from "@/hooks/useMemoState.ts";
 
 const InputWrapper = styled.div`
   position: relative;
@@ -49,7 +50,7 @@ export const NameInput = forwardRef<
   }
 >(({ value, onChange, readonly }, ref) => {
   const [editing, setEditing] = useState(false);
-  const [tempValue, setTempValue] = useState(value);
+  const [tempValue, setTempValue] = useMemoState(value);
 
   useImperativeHandle(ref, () => ({
     startEditing: () => {

@@ -145,7 +145,9 @@ export const Chat = () => {
 
   return (
     <ChatContainer>
-      {chatLog.filter((log) => showChatBox || (now - log.timestamp < 10_000))
+      {chatLog.filter((
+        log,
+      ) => (now - log.timestamp < (showChatBox ? 60_000 : 10_000)))
         .map((log) => (
           <ChatMessage
             key={log.id}

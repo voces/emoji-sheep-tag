@@ -143,7 +143,8 @@ export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
   }, {
     model: "gravity",
     color: target && (orders.some(([u, order]) =>
-        order.order === "attack" || isEnemy(u, target)
+        order.order === "attack" || order.order === "attack-ground" ||
+        isEnemy(u, target)
       ))
       ? "#dd3333"
       : undefined,
@@ -160,27 +161,33 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
 
   const orderToExecute = activeOrder.order;
   const target = e.intersects.first();
-  const unitsWithTarget = selection.filter((entity) => {
-    // Skip if entity is constructing
-    const isConstructing = typeof entity.progress === "number";
-    if (isConstructing) {
-      const action = entity.actions?.find((a) =>
-        a.type === "target" && a.order === orderToExecute
-      );
-      if (action) {
-        const canExecute = "canExecuteWhileConstructing" in action &&
-          action.canExecuteWhileConstructing === true;
-        if (!canExecute) return false;
-      }
-    }
 
-    return hasAction(
-      entity,
-      (a) =>
-        a.type === "target" && a.order === orderToExecute &&
-        !!target && testClassification(entity, target, a.targeting),
-    );
-  });
+  // For ground-targeted orders (AOE cursor), ignore entities entirely
+  const isGroundOrder = !!activeOrder.aoe;
+
+  const unitsWithTarget = isGroundOrder
+    ? new ExtendedSet<Entity>()
+    : selection.filter((entity) => {
+      // Skip if entity is constructing
+      const isConstructing = typeof entity.progress === "number";
+      if (isConstructing) {
+        const action = entity.actions?.find((a) =>
+          a.type === "target" && a.order === orderToExecute
+        );
+        if (action) {
+          const canExecute = "canExecuteWhileConstructing" in action &&
+            action.canExecuteWhileConstructing === true;
+          if (!canExecute) return false;
+        }
+      }
+
+      return hasAction(
+        entity,
+        (a) =>
+          a.type === "target" && a.order === orderToExecute &&
+          !!target && testClassification(entity, target, a.targeting),
+      );
+    });
 
   if (target && unitsWithTarget.size) {
     if (orderToExecute === "attack") {
@@ -240,10 +247,11 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
       y: unitsWithTarget.size ? target?.position?.y ?? e.world.y : e.world.y,
     }, {
       model: "gravity",
-      color: orderToExecute === "attack" ||
+      color:
+        orderToExecute === "attack" || orderToExecute === "attack-ground" ||
           (target && unitsWithTarget.some((u) => isEnemy(u, target)))
-        ? "#dd3333"
-        : undefined,
+          ? "#dd3333"
+          : undefined,
       scale: unitsWithTarget.size && target?.radius ? target.radius * 4 : 1,
     });
 
