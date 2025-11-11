@@ -33,7 +33,7 @@ const createRoundSummary = (lobby: Lobby) => ({
   wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((p) =>
     p.id
   ),
-  duration: Date.now() - lobby.round!.start,
+  duration: Date.now() - (lobby.round?.start ?? Date.now()),
 });
 
 export const endRound = (canceled = false) => {
@@ -183,7 +183,7 @@ export const leave = (client?: Client) => {
     if (
       sheep.length === 0 || wolves.length === 0 ||
       lobby.round.vip === client.id
-    ) endRound(Date.now() - lobby.round.start < 10_000);
+    ) endRound(!lobby.round.start || Date.now() - lobby.round.start < 10_000);
   }
 
   // Remove lobby reference and return client to hub

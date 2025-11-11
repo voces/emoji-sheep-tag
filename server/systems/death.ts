@@ -36,7 +36,9 @@ const onLose = () =>
             })
           ),
         )
-      } lasted ${formatDuration(Date.now() - lobby.round!.start)}!`,
+      } lasted ${
+        formatDuration(Date.now() - (lobby.round?.start ?? Date.now()))
+      }!`,
     });
     endRound();
   }, 0.05);
@@ -84,12 +86,12 @@ const handleSwitchDeath = (sheep: Entity) => {
         color: killingPlayer.playerColor ?? "#ffffff",
         name: killingPlayer.name ?? "<unknown>",
       })
-    } killed ${
+    } switched with ${
       colorName({
         color: victimPlayer.playerColor ?? "#ffffff",
         name: victimPlayer.name ?? "<unknown>",
       })
-    }`,
+    }!`,
   });
 };
 

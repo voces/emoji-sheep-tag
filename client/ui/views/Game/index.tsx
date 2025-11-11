@@ -13,6 +13,7 @@ const TopRight = styled(HStack)`
   top: ${({ theme }) => theme.spacing.md};
   right: ${({ theme }) => theme.spacing.md};
   pointer-events: none;
+  align-items: start;
 `;
 
 export const Game = () => (

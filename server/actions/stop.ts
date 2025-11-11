@@ -9,7 +9,7 @@ export const zCancel = z.object({
 
 export const cancel = (client: Client) => {
   if (client.lobby?.host !== client || !client.lobby.round) return;
-  if (!client.lobby.round.practice) {
+  if (!client.lobby.round.practice && client.lobby.settings.mode !== "switch") {
     // Undo the draft selection (this restores all smart algorithm state)
     undoDraft();
     // Also decrement display sheepCount on clients

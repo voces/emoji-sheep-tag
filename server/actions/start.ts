@@ -271,7 +271,6 @@ export const start = (
   const ecs = newEcs(map);
   lobby.round = {
     ecs,
-    start: Date.now(),
     practice,
     editor,
     clearInterval: () => {},

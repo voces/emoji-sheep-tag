@@ -442,9 +442,7 @@ export const smart = () => {
   };
 
   const undo = (): void => {
-    if (lastSelection === null) {
-      throw new Error("No round to undo");
-    }
+    if (lastSelection === null) return;
 
     // Restore state
     if (lastSheepCountSnapshot) {
