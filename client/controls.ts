@@ -234,12 +234,17 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
       updateClientPathingForCliff(x, y);
       send({ type: "editorSetCliff", x, y, cliff: "r" });
     } else {
-      terrain.setGroundTile(
+      const tileIndex = tileDefs.findIndex((t) =>
+        t.color === blueprint.vertexColor
+      );
+      terrain.setGroundTile(x, y, tileIndex);
+      send({
+        type: "editorSetPathing",
         x,
         y,
-        tileDefs.findIndex((t) => t.color === blueprint.vertexColor),
-      );
-      send({ type: "editorSetPathing", x, y, pathing: blueprint.pathing! });
+        pathing: blueprint.pathing!,
+        tile: tileIndex,
+      });
       pathingMap.setPathing(x, y, blueprint.pathing!);
     }
 

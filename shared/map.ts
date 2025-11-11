@@ -118,10 +118,7 @@ export const buildLoadedMap = (
       max: { x: tiles[0]?.length ?? 0, y: tiles.length },
     };
 
-  const center = packed.center ? { x: packed.center.x, y: packed.center.y } : {
-    x: (bounds.min.x + bounds.max.x) / 2,
-    y: (bounds.min.y + bounds.max.y) / 2,
-  };
+  const center = { x: packed.center.x, y: packed.center.y };
 
   const rawPathing = getPathingMaskFromTerrainMasks(tiles, cliffs, bounds);
   const terrainPathingMap = rawPathing.toReversed();

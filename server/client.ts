@@ -20,11 +20,15 @@ import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
 import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
 import {
+  editorAdjustBounds,
   editorCreateEntity,
+  editorResizeMap,
   editorSetCliff,
   editorSetPathing,
   editorUpdateEntities,
+  zEditorAdjustBounds,
   zEditorCreateEntity,
+  zEditorResizeMap,
   zEditorSetCliff,
   zEditorSetPathing,
   zEditorUpdateEntities,
@@ -162,6 +166,8 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zEditorUpdateEntities,
   zEditorSetPathing,
   zEditorSetCliff,
+  zEditorResizeMap,
+  zEditorAdjustBounds,
   zJoinLobby,
   zCreateLobby,
   zUpdateSelection,
@@ -185,6 +191,8 @@ const actions = {
   editorUpdateEntities,
   editorSetPathing,
   editorSetCliff,
+  editorResizeMap,
+  editorAdjustBounds,
   joinLobby,
   createLobby,
   updateSelection,

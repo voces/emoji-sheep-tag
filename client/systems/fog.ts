@@ -245,8 +245,8 @@ class VisibilityGrid {
       const worldX = x / FOG_RESOLUTION_MULTIPLIER;
       const worldY = y / FOG_RESOLUTION_MULTIPLIER;
       if (
-        worldX < fogBounds.min.x || worldX > fogBounds.max.x ||
-        worldY < fogBounds.min.y || worldY > fogBounds.max.y
+        worldX < fogBounds.min.x || worldX >= fogBounds.max.x ||
+        worldY < fogBounds.min.y || worldY >= fogBounds.max.y
       ) continue;
 
       // Check height blocking (terrainLayers is 2x resolution)

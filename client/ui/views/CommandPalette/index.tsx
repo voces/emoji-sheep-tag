@@ -14,6 +14,7 @@ import { isLocalPlayerHost } from "../../../api/player.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { loadLocal } from "../../../local.ts";
 import { useExportMap } from "./useExportMap.ts";
+import { useSelectMap } from "./useSelectMap.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { switchToEditorMode } from "@/shared/systems/kd.ts";
 
@@ -59,15 +60,19 @@ const Highlight = styled.span`
   );
 `;
 
+type CommandResult =
+  | void
+  | { type: "prompt"; placeholder: string; callback: (value: string) => void }
+  | { type: "options"; placeholder: string; commands: Command[] };
+
 type Command = {
   name: string;
   description: string;
   valid?: () => boolean;
-  prompts?: string[];
-  callback: (...args: string[]) => void;
+  callback: () => CommandResult | Promise<CommandResult>;
 };
 
-type CommandOption =
+type FilteredCommand =
   & Omit<Command, "name" | "description">
   & {
     originalName: string;
@@ -114,9 +119,13 @@ export const CommandPalette = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [focused, setFocused] = useState<string | undefined>();
   const [prompt, setPrompt] = useState("");
-  const [inputs, setInputs] = useState<string[]>([]);
+  const [nestedCommands, setNestedCommands] = useState<Command[]>([]);
+  const [promptCallback, setPromptCallback] = useState<
+    ((value: string) => void) | null
+  >(null);
 
   const exportMap = useExportMap();
+  const selectMap = useSelectMap();
 
   const commands = useMemo((): Command[] => [
     {
@@ -138,6 +147,7 @@ export const CommandPalette = () => {
       },
     },
     exportMap,
+    selectMap,
     {
       name: "Open settings",
       description: "Open setting menu",
@@ -190,19 +200,27 @@ export const CommandPalette = () => {
       name: "Set latency",
       description: "Artificially increase latency",
       valid: () => flags.debug,
-      prompts: ["Latency (MS)"],
-      callback: (latency) =>
-        addChatMessage(
-          `Latency set to ${globalThis.latency = parseFloat(latency)}ms.`,
-        ),
+      callback: () => ({
+        type: "prompt",
+        placeholder: "Latency (MS)",
+        callback: (latency: string) =>
+          addChatMessage(
+            `Latency set to ${globalThis.latency = parseFloat(latency)}ms.`,
+          ),
+      }),
     },
     {
       name: "Set noise",
       description: "Artificially increase noise on latency",
       valid: () => flags.debug,
-      prompts: ["Noise (MS)"],
-      callback: (noise) =>
-        addChatMessage(`Noise set to ${globalThis.noise = parseFloat(noise)}.`),
+      callback: () => ({
+        type: "prompt",
+        placeholder: "Noise (MS)",
+        callback: (noise: string) =>
+          addChatMessage(
+            `Noise set to ${globalThis.noise = parseFloat(noise)}ms.`,
+          ),
+      }),
     },
     {
       name: `${flags.debugStats ? "Hide" : "Show"} stats`,
@@ -237,18 +255,23 @@ export const CommandPalette = () => {
     gameplaySettings.showFps,
   ]);
 
-  const filteredCommands = useMemoWithPrevious<CommandOption[]>((prev) => {
-    if (prompt) return prev ?? [];
+  const filteredCommands = useMemoWithPrevious<FilteredCommand[]>((prev) => {
+    // If we're showing a text prompt (not options), keep previous commands
+    if (prompt && !nestedCommands.length) return prev ?? [];
+
+    const sourceList = nestedCommands.length
+      ? nestedCommands
+      : commands.filter((cmd) =>
+        typeof cmd.valid !== "function" || cmd.valid()
+      );
+
     const regexp = new RegExp(input.toLowerCase().split("").join(".*"), "i");
-    const matches: CommandOption[] = [];
-    for (let i = 0; i < commands.length && matches.length < 10; i++) {
-      const command = commands[i];
+    const matches: FilteredCommand[] = [];
+    for (let i = 0; i < sourceList.length && matches.length < 10; i++) {
+      const command = sourceList[i];
       const nameMatches = command.name.match(regexp);
       const descriptionMatches = command.description.match(regexp);
-      if (
-        (typeof command.valid !== "function" || command.valid()) &&
-        (nameMatches || descriptionMatches)
-      ) {
+      if (nameMatches || descriptionMatches) {
         matches.push({
           ...command,
           originalName: command.name,
@@ -258,11 +281,11 @@ export const CommandPalette = () => {
           description: descriptionMatches
             ? highlightText(command.description, input)
             : [command.description],
-        } as CommandOption);
+        } as FilteredCommand);
       }
     }
     return matches;
-  }, [input, showCommandPalette]);
+  }, [input, showCommandPalette, nestedCommands, prompt]);
 
   useEffect(() => {
     if (
@@ -275,33 +298,48 @@ export const CommandPalette = () => {
   const close = () => {
     showCommandPaletteVar("closed");
     setTimeout(() => {
-      setInputs([]);
       setInput("");
       setPrompt("");
+      setNestedCommands([]);
+      setPromptCallback(null);
     }, 100);
     inputRef.current?.blur();
   };
 
   useEffect(() => {
     if (showCommandPalette === "sent") {
+      // If we're in a prompt state, handle the input
+      if (promptCallback) {
+        promptCallback(input);
+        close();
+        return;
+      }
+
       const command = filteredCommands.find((c) => c.originalName === focused);
+
       if (command) {
-        if (command.prompts) {
-          const curIdx = command.prompts.indexOf(prompt);
-          if (curIdx < command.prompts.length - 1) {
-            setPrompt(command.prompts[curIdx + 1]);
+        const result = command.callback();
+        Promise.resolve(result).then((res) => {
+          if (!res) {
+            close();
+          } else if (res.type === "prompt") {
+            setPrompt(res.placeholder);
+            setPromptCallback(() => res.callback);
             setInput("");
             showCommandPaletteVar("open");
-            if (curIdx !== -1) setInputs((prev) => [...prev, input]);
-            return;
+          } else if (res.type === "options") {
+            setPrompt(res.placeholder);
+            setNestedCommands(res.commands);
+            setInput("");
+            showCommandPaletteVar("open");
           }
-        }
-        command.callback(...inputs, input);
+        });
+      } else {
+        close();
       }
-      close();
     } else if (showCommandPalette === "dismissed") close();
     else if (showCommandPalette === "open") inputRef.current?.focus();
-  }, [showCommandPalette]);
+  }, [showCommandPalette, promptCallback, input, filteredCommands, focused]);
 
   return (
     <PaletteContainer
@@ -316,7 +354,8 @@ export const CommandPalette = () => {
         onKeyDown={(e) => {
           e.stopPropagation();
           if (e.code === "Enter") return showCommandPaletteVar("sent");
-          if (prompt) return;
+          // Don't allow navigation when showing a text prompt
+          if (promptCallback) return;
           if (e.code === "ArrowUp" && filteredCommands.length) {
             setFocused(
               filteredCommands.at(
@@ -335,25 +374,20 @@ export const CommandPalette = () => {
         }}
         onBlur={() => showCommandPaletteVar("dismissed")}
       />
-      {!prompt && filteredCommands.map((c) => (
-        <CommandOption
-          key={c.originalName}
-          $focused={focused === c.originalName}
-          onClick={() => {
-            setFocused(c.originalName);
-            if (c.prompts?.length) {
-              setPrompt(c.prompts[0]);
-              setInput("");
-            } else {
-              c.callback();
-              close();
-            }
-          }}
-        >
-          <div>{c.name}</div>
-          <CommandDescription>{c.description}</CommandDescription>
-        </CommandOption>
-      ))}
+      {!promptCallback &&
+        filteredCommands.map((c) => (
+          <CommandOption
+            key={c.originalName}
+            $focused={focused === c.originalName}
+            onClick={() => {
+              setFocused(c.originalName);
+              showCommandPaletteVar("sent");
+            }}
+          >
+            <div>{c.name}</div>
+            <CommandDescription>{c.description}</CommandDescription>
+          </CommandOption>
+        ))}
     </PaletteContainer>
   );
 };

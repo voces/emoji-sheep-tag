@@ -90,7 +90,7 @@ export const getPathingMaskFromTerrainMasks = (
       // Check if outside bounds - treat as fully blocked (0xFF)
       if (bounds) {
         const worldX = x / 2; // tileResolution is 2
-        const worldY = y / 2;
+        const worldY = (parsedTiles.length - 1 - y) / 2;
         if (
           worldX < bounds.min.x || worldX >= bounds.max.x ||
           worldY < bounds.min.y || worldY >= bounds.max.y

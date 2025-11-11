@@ -54,7 +54,7 @@ export const Minimap = () => {
     const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
     const updateCamera = () => {
       const map = getMap();
-      camera.position.z = map.width * 0.65;
+      camera.position.z = Math.max(map.width, map.height) * 0.65;
       camera.position.x = map.width / 2;
       camera.position.y = map.height / 2;
     };

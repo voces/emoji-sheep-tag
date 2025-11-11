@@ -1,7 +1,7 @@
 import { App, newApp } from "@verit/ecs";
 import { Entity } from "@/shared/types.ts";
 import { newEntity, remove, update } from "./updates.ts";
-import { initApp } from "@/shared/context.ts";
+import { appContext, initApp } from "@/shared/context.ts";
 import { buildDefaultMap, type LoadedMap, setMapForApp } from "@/shared/map.ts";
 import { id } from "@/shared/util/id.ts";
 
@@ -182,14 +182,15 @@ export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
     return originalRemoveEntity(entity);
   };
 
-  setMapForApp(app, map);
-  initApp(app);
+  appContext.with(app, () => {
+    setMapForApp(app, map);
+    initApp(app);
+  });
 
   return app;
 };
 
 import("./systems/clearFlags.ts");
-
 import("./systems/action/action.ts");
 import("./systems/auras.ts");
 import("./systems/autoAttack.ts");
@@ -207,4 +208,5 @@ import("./systems/queues.ts");
 import("./systems/regen.ts");
 import("./systems/tickDamage.ts");
 import("./systems/sheepTime.ts");
+import("@/shared/systems/mapCenterMarker.ts");
 import("./orders/index.ts");

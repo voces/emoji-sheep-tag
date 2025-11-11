@@ -22,7 +22,7 @@ import {
 import { endRound } from "../lobbyApi.ts";
 import { spawnPracticeUnits } from "../api/player.ts";
 import { Entity } from "@/shared/types.ts";
-import { flushUpdates } from "../updates.ts";
+import { clearUpdatesCache, flushUpdates } from "../updates.ts";
 import { Lobby } from "../lobby.ts";
 import { createServerMap } from "../maps.ts";
 
@@ -266,6 +266,7 @@ export const start = (
     undoDraft();
   }
 
+  clearUpdatesCache();
   const map = createServerMap(lobby.settings.map);
   const ecs = newEcs(map);
   lobby.round = {
@@ -281,10 +282,21 @@ export const start = (
   }, TICK_RATE);
 
   const withContexts = (fn: () => void) =>
-    lobbyContext.with(lobby, () => appContext.with(ecs, () => ecs.batch(fn)));
+    appContext.with(ecs, () => ecs.batch(fn));
 
   withContexts(() => {
     generateDoodads(editor ? undefined : ["static", "dynamic"]);
+
+    // Add map center marker in editor mode
+    if (editor) {
+      const center = getMapCenter();
+      addEntity({
+        id: "map-center-marker",
+        position: { x: center.x, y: center.y },
+        model: "atom",
+      });
+    }
+
     createPlayerEntities(ecs, lobby, sheep, wolves, practice);
     send({ type: "start", updates: flushUpdates(false) });
 

@@ -13,7 +13,10 @@ export const MAPS: readonly MapManifestEntry[] = [{
   id: "revo",
   name: "Revolution",
   file: "revo",
-  description: "Classic Sheep Tag layout with central farms.",
+}, {
+  id: "compact",
+  name: "Compact",
+  file: "compact",
 }] as const;
 
 export const getMapMeta = (id: string) => MAPS.find((map) => map.id === id);

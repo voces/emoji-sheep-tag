@@ -5,6 +5,7 @@ import { camera } from "./graphics/three.ts";
 import {
   clearDoodads,
   generateDoodads,
+  getMap,
   getMapCenter,
   setMapForApp,
 } from "@/shared/map.ts";
@@ -21,6 +22,11 @@ import { LocalWebSocket } from "./local.ts";
 import { lobbiesVar } from "@/vars/lobbies.ts";
 import { applyZoom } from "./api/player.ts";
 import { loadClientMap } from "./maps.ts";
+import { unpackMap2D } from "@/shared/util/2dPacking.ts";
+import {
+  getCliffHeight,
+  getPathingMaskFromTerrainMasks,
+} from "@/shared/pathing/terrainHelpers.ts";
 
 const processUpdates = (updates: ReadonlyArray<Update>) => {
   const players = updates.filter((u) => u.isPlayer || map[u.id]?.isPlayer);
@@ -57,7 +63,7 @@ let currentMapId = lobbySettingsVar().map;
 let pendingMapId: string | null = null;
 let inflightMapPromise: Promise<void> | null = null;
 
-const ensureMapLoaded = async (map: string) => {
+export const ensureMapLoaded = async (map: string) => {
   if (!map) return;
   if (map === currentMapId && !pendingMapId) return;
 
@@ -173,6 +179,39 @@ export const handlers = {
   ) => {
     ensureMapLoaded(lobbySettings.map);
     lobbySettingsVar(lobbySettings);
+  },
+  mapUpdate: (data: Extract<ServerToClientMessage, { type: "mapUpdate" }>) => {
+    const currentMap = getMap();
+    const tiles = unpackMap2D(data.terrain);
+    const cliffs = unpackMap2D(data.cliffs).map((row) =>
+      row.map((value) => (value === 0 ? "r" : value - 1))
+    ) as (number | "r")[][];
+
+    const rawPathing = getPathingMaskFromTerrainMasks(
+      tiles,
+      cliffs,
+      data.bounds,
+    );
+    const terrainPathingMap = rawPathing.toReversed();
+    const terrainLayers = rawPathing.map((row, y) =>
+      row.map((_, x) => Math.floor(getCliffHeight(x, y, cliffs)))
+    ).toReversed();
+
+    const updatedMap = {
+      ...currentMap,
+      id: `${currentMap.id}-resized-${Date.now()}`,
+      tiles,
+      cliffs,
+      width: data.width,
+      height: data.height,
+      bounds: data.bounds,
+      center: data.center,
+      terrainPathingMap,
+      terrainLayers,
+    };
+
+    setMapForApp(app, updatedMap);
+    // The terrain will be automatically updated by the onMapChange listener in three.ts
   },
   hubState: (
     { lobbies }: Extract<ServerToClientMessage, { type: "hubState" }>,

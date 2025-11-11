@@ -458,6 +458,19 @@ const zHubState = z.object({
   lobbies: z.array(zLobby).readonly(),
 });
 
+const zMapUpdate = z.object({
+  type: z.literal("mapUpdate"),
+  terrain: z.string(),
+  cliffs: z.string(),
+  width: z.number(),
+  height: z.number(),
+  bounds: z.object({
+    min: z.object({ x: z.number(), y: z.number() }),
+    max: z.object({ x: z.number(), y: z.number() }),
+  }),
+  center: z.object({ x: z.number(), y: z.number() }),
+});
+
 export const zMessage = z.discriminatedUnion("type", [
   zStart,
   zUpdates,
@@ -468,6 +481,7 @@ export const zMessage = z.discriminatedUnion("type", [
   zChat,
   zLobbySettingsMessage,
   zHubState,
+  zMapUpdate,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;

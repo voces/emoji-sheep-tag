@@ -42,7 +42,7 @@ import square from "../assets/square.svg" with { type: "text" };
 import pinkPotion from "../assets/pinkPotion.svg" with { type: "text" };
 import rock from "../assets/rock.svg" with { type: "text" };
 import house from "../assets/house.svg" with { type: "text" };
-// import atom from "../assets/atom.svg" with { type: "text" };
+import atom from "../assets/atom.svg" with { type: "text" };
 import ramp from "../assets/ramp.svg" with { type: "text" };
 import raise from "../assets/raise.svg" with { type: "text" };
 import lower from "../assets/lower.svg" with { type: "text" };
@@ -117,7 +117,7 @@ export const svgs: Record<string, string> = {
   pinkPotion,
   rock,
   house,
-  // atom,
+  atom,
   ramp,
   raise,
   lower,
@@ -204,7 +204,7 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   // shop: loadSvg(shop, 1),
   fox: svg(fox, 1.8),
   wolf: svg(wolf, 2),
-  // atom: loadSvg(atom, 0.05),
+  atom: svg(atom, 0.05),
 
   // Trees (should render in front of structures)
   windmill: svg(windmill, 0.24, { layer: 2, yOffset: 0.1, xOffset: -0.1 }),
