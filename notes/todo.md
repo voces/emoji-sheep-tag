@@ -35,6 +35,13 @@
 - Settings not discoverable in game
 - In game scoreboard
 - View
+- Birds & Bees
+  - Should redirect target if occupied/avoid crowding
+  - Birds
+    - Should spawn a fixed set from trees
+    - Should rest on branches
+  - Bees
+    - Should rest on one of the three flowers
 
 # Bugs
 
