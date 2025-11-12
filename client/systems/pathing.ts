@@ -23,7 +23,7 @@ export const pathable = (
   entity: Entity,
   target?: { x: number; y: number },
 ) => {
-  if (!isPathingEntity(entity)) return false;
+  if (!isPathingEntity(entity)) return true;
   return pathingMap.pathable(entity, target?.x, target?.y);
 };
 
