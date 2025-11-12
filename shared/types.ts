@@ -3,6 +3,16 @@ import { Classification } from "./data.ts";
 import { Point } from "./pathing/math.ts";
 import { Footprint, Pathing } from "./pathing/types.ts";
 
+export type Gait = {
+  readonly duration: number;
+  readonly components: ReadonlyArray<{
+    readonly radiusX: number;
+    readonly radiusY: number;
+    readonly frequency: number;
+    readonly phase: number;
+  }>;
+};
+
 export type WalkOrder =
   & {
     readonly type: "walk";
@@ -264,6 +274,7 @@ export type Entity = {
   /** Radians per second */
   turnSpeed?: number;
   sightRadius?: number;
+  gait?: Gait;
   actions?: ReadonlyArray<UnitDataAction>;
   completionTime?: number;
   progress?: number | null;

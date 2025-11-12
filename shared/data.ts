@@ -312,6 +312,7 @@ type DataEntity =
     | "movementSpeed"
     | "turnSpeed"
     | "sightRadius"
+    | "gait"
     | "blocksLineOfSight"
     | "actions"
     | "buffs"
@@ -445,6 +446,10 @@ export const prefabs: Record<string, DataEntity> = {
     sightRadius: 6,
     radius: 0.25,
     pathing: PATHING_WALKABLE,
+    gait: {
+      duration: 0.2,
+      components: [{ radiusX: 0.003, radiusY: 0.015, frequency: 1, phase: 0 }],
+    },
     actions: [
       move,
       stop,
@@ -542,6 +547,10 @@ export const prefabs: Record<string, DataEntity> = {
     sightRadius: 14,
     radius: 0.5,
     pathing: PATHING_WALKABLE,
+    gait: {
+      duration: 0.55,
+      components: [{ radiusX: 0.005, radiusY: 0.015, frequency: 1, phase: 0 }],
+    },
     mana: 60,
     maxMana: 100,
     manaRegen: 1,
@@ -649,6 +658,10 @@ export const prefabs: Record<string, DataEntity> = {
     sightRadius: 10,
     radius: 0.5,
     pathing: PATHING_WALKABLE,
+    gait: {
+      duration: 0.65,
+      components: [{ radiusX: 0.006, radiusY: 0.016, frequency: 1, phase: 0 }],
+    },
     attack: {
       damage: 20,
       range: 0.09, // Sheep between two huts is 0.25; this gives a bit of wiggle
@@ -975,6 +988,34 @@ export const prefabs: Record<string, DataEntity> = {
     pathing: PATHING_NONE,
     isDoodad: true,
     type: "cosmetic",
+  },
+  bird: {
+    name: "Bird",
+    model: "bird1",
+    movementSpeed: 2,
+    isDoodad: true,
+    type: "cosmetic",
+    gait: {
+      duration: 0.25,
+      components: [
+        { radiusX: 0.002, radiusY: 0.03, frequency: 1, phase: 0 },
+      ],
+    },
+  },
+  bee: {
+    name: "Bee",
+    model: "bee",
+    modelScale: 0.3,
+    movementSpeed: 1.5,
+    isDoodad: true,
+    type: "cosmetic",
+    gait: {
+      duration: 3,
+      components: [
+        { radiusX: 0.08, radiusY: 0.12, frequency: 1, phase: 0 },
+        { radiusX: 0.001, radiusY: 0.004, frequency: 50, phase: 0 },
+      ],
+    },
   },
   tile: {
     name: "Tile",

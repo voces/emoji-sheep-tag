@@ -278,6 +278,17 @@ export const zUpdate = z.object({
   facing: z.number().nullable().optional(),
   turnSpeed: z.number().optional(),
   sightRadius: z.number().optional(),
+  gait: z.object({
+    duration: z.number(),
+    components: z.array(
+      z.object({
+        radiusX: z.number(),
+        radiusY: z.number(),
+        frequency: z.number(),
+        phase: z.number(),
+      }).readonly(),
+    ).readonly(),
+  }).optional(),
   actions: z.array(zAction).readonly().optional(),
   completionTime: z.number().optional(),
   progress: z.number().nullable().optional(),

@@ -50,6 +50,24 @@ export const getEntitiesInRange = (
   }).filter((v): v is Entity => !!v);
 };
 
+export const getNearestEntity = (
+  x: number,
+  y: number,
+  filter: (entity: Entity) => boolean,
+): Entity | null => {
+  const data = dataMap.get(appContext.current);
+  if (!data) throw new Error("Expected kd system to have initialized data");
+
+  const pointFilter = (point: Point) => {
+    const entity = data.pointToEntityMap.get(point);
+    return entity ? filter(entity) : false;
+  };
+
+  const point = data.kd.nearest(x, y, pointFilter);
+  if (!point) return null;
+  return data.pointToEntityMap.get(point) ?? null;
+};
+
 addSystem<Entity, "position">((app) => {
   const entityToPointMap = new Map<Entity, Point>();
   const pointToEntityMap = new Map<Point, Entity>();

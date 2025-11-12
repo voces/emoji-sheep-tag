@@ -83,6 +83,9 @@ import cancel from "../assets/cancel.svg" with { type: "text" };
 import vip from "../assets/vip.svg" with { type: "text" };
 import wolfDodge from "../assets/wolf-dodge.svg" with { type: "text" };
 import construction from "../assets/construction.svg" with { type: "text" };
+import bird1 from "../assets/bird1.svg" with { type: "text" };
+import bird2 from "../assets/bird2.svg" with { type: "text" };
+import bee from "../assets/bee.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -214,6 +217,10 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   // Temple stacks on things, we want it visible, always
   hinduTemple: svg(hinduTemple, 1.75),
 
+  bird1: svg(bird1, 0.25, { layer: 2 }),
+  bird2: svg(bird2, 0.25, { layer: 2 }),
+  bee: svg(bee, 0.17, { layer: 2 }),
+
   // SFX elements (highest z-order, always on top)
   shield: svg(shield, 1, { layer: 2 }),
   wind: svg(wind, 1, { layer: 2 }),
@@ -321,6 +328,8 @@ addSystem({
 });
 
 const prevPositions = new WeakMap<Entity, Entity["position"]>();
+const gaitProgress = new WeakMap<Entity, number>();
+const pathStartPositions = new WeakMap<Entity, { x: number; y: number }>();
 
 const onPositionOrRotationChange = (
   e: SystemEntity<"position"> & {
@@ -339,6 +348,10 @@ const onPositionOrRotationChange = (
       e.zIndex,
     );
   }
+
+  let baseX = e.position.x;
+  let baseY = e.position.y;
+
   if (e.order && "path" in e.order) {
     const prev = prevPositions.get(e);
     if (prev) {
@@ -353,28 +366,83 @@ const onPositionOrRotationChange = (
           e.position.x - prev.x,
         );
         const dist = movement * 1.05;
-        const x = prev.x + dist * Math.cos(angle);
-        const y = prev.y + dist * Math.sin(angle);
-        collections[model]?.setPositionAt(
-          e.id,
-          x,
-          y,
-          e.facing,
-          e.zIndex,
-        );
-        prevPositions.set(e, { x, y });
-        return;
+        baseX = prev.x + dist * Math.cos(angle);
+        baseY = prev.y + dist * Math.sin(angle);
+        prevPositions.set(e, { x: baseX, y: baseY });
+      } else {
+        prevPositions.set(e, e.position);
       }
+    } else {
+      prevPositions.set(e, e.position);
     }
+  } else {
+    prevPositions.set(e, e.position);
   }
+
+  let finalX = baseX;
+  let finalY = baseY;
+
+  if (e.gait && e.order && "path" in e.order && e.movementSpeed) {
+    const path = e.order.path;
+    if (!path || path.length === 0) {
+      gaitProgress.delete(e);
+      pathStartPositions.delete(e);
+    } else {
+      if (!pathStartPositions.has(e)) {
+        pathStartPositions.set(e, { x: e.position.x, y: e.position.y });
+      }
+
+      const dt = 1 / getFps();
+      const currentProgress = gaitProgress.get(e) ?? 0;
+      const newProgress = (currentProgress + dt) % e.gait.duration;
+      gaitProgress.set(e, newProgress);
+
+      const t = (newProgress / e.gait.duration) * Math.PI * 2;
+      const distancePerCycle = e.movementSpeed * e.gait.duration;
+
+      let offsetX = 0;
+      let offsetY = 0;
+
+      for (const component of e.gait.components) {
+        const angle = component.frequency * t + component.phase;
+        offsetX += component.radiusX * distancePerCycle * Math.cos(angle);
+        offsetY += component.radiusY * distancePerCycle * Math.sin(angle);
+      }
+
+      const fadeDistance = 0.5;
+      const startPos = pathStartPositions.get(e)!;
+      const distFromStart = ((e.position.x - startPos.x) ** 2 +
+        (e.position.y - startPos.y) ** 2) ** 0.5;
+      const endPos = path[path.length - 1];
+      const distToEnd = ((e.position.x - endPos.x) ** 2 +
+        (e.position.y - endPos.y) ** 2) ** 0.5;
+
+      const fadeInMultiplier = Math.min(1, distFromStart / fadeDistance);
+      const fadeOutMultiplier = Math.min(1, distToEnd / fadeDistance);
+      const fadeMultiplier = Math.min(fadeInMultiplier, fadeOutMultiplier);
+
+      offsetX *= fadeMultiplier;
+      offsetY *= fadeMultiplier;
+
+      const heading = e.facing ?? 0;
+      const cos = Math.cos(heading);
+      const sin = Math.sin(heading);
+
+      finalX = baseX + offsetX * cos - offsetY * sin;
+      finalY = baseY + offsetX * sin + offsetY * cos;
+    }
+  } else {
+    gaitProgress.delete(e);
+    pathStartPositions.delete(e);
+  }
+
   collections[model]?.setPositionAt(
     e.id,
-    e.position.x,
-    e.position.y,
+    finalX,
+    finalY,
     e.facing,
     e.zIndex,
   );
-  prevPositions.set(e, e.position);
 };
 
 const handleFog = (e: Entity) =>

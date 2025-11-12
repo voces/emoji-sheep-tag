@@ -68,6 +68,7 @@
 - https://www.svgrepo.com/svg/489938/vip
 - https://www.svgrepo.com/svg/429961/maintenance-repair-construction
 - Shadowstep: self made
+- https://www.svgrepo.com/svg/298925/bird
 
 # Audio
 

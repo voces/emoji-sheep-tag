@@ -19,6 +19,8 @@ import "./systems/indicators.ts";
 import "./systems/mirrors.ts";
 import "./systems/fog.ts";
 import "./systems/floatingText.ts";
+import "./systems/birds.ts";
+import "./systems/bees.ts";
 import "@/shared/systems/kd.ts";
 import "@/shared/systems/mapCenterMarker.ts";
 import "./graphics/cursor.ts";
