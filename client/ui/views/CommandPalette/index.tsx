@@ -11,12 +11,21 @@ import { flags } from "../../../flags.ts";
 import { Card } from "@/components/layout/Card.tsx";
 import { Input } from "@/components/forms/Input.tsx";
 import { isLocalPlayerHost } from "../../../api/player.ts";
-import { editorVar } from "@/vars/editor.ts";
+import {
+  editorCurrentMapVar,
+  editorMapModifiedVar,
+  editorVar,
+} from "@/vars/editor.ts";
 import { loadLocal } from "../../../local.ts";
-import { useExportMap } from "./useExportMap.ts";
+import { useCopyMap } from "./useCopyMap.ts";
 import { useSelectMap } from "./useSelectMap.ts";
+import { useSaveMapAs } from "./useSaveMapAs.ts";
+import { useQuickSaveMap } from "./useQuickSaveMap.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { switchToEditorMode } from "@/shared/systems/kd.ts";
+import { resetEditorModifiedState } from "@/util/editorExitConfirmation.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { MAPS } from "@/shared/maps/manifest.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -67,7 +76,7 @@ type CommandResult =
 
 type Command = {
   name: string;
-  description: string;
+  description?: string;
   valid?: () => boolean;
   callback: () => CommandResult | Promise<CommandResult>;
 };
@@ -77,7 +86,7 @@ type FilteredCommand =
   & {
     originalName: string;
     name: (string | React.JSX.Element)[] | string;
-    description: (string | React.JSX.Element)[] | string;
+    description?: (string | React.JSX.Element)[] | string;
   };
 
 const highlightText = (text: string, query: string) => {
@@ -115,44 +124,65 @@ const highlightText = (text: string, query: string) => {
 export const CommandPalette = () => {
   const showCommandPalette = useReactiveVar(showCommandPaletteVar);
   const gameplaySettings = useReactiveVar(gameplaySettingsVar);
+  const currentMap = useReactiveVar(editorCurrentMapVar);
+  const mapModified = useReactiveVar(editorMapModifiedVar);
+  const isEditor = useReactiveVar(editorVar);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [focused, setFocused] = useState<string | undefined>();
   const [prompt, setPrompt] = useState("");
   const [nestedCommands, setNestedCommands] = useState<Command[]>([]);
   const [promptCallback, setPromptCallback] = useState<
-    ((value: string) => void) | null
+    | ((value: string) => void | CommandResult | Promise<void | CommandResult>)
+    | null
   >(null);
 
-  const exportMap = useExportMap();
+  const copyMap = useCopyMap();
   const selectMap = useSelectMap();
+  const saveMapAs = useSaveMapAs();
+  const quickSaveMap = useQuickSaveMap();
 
   const commands = useMemo((): Command[] => [
     {
       name: "Cancel round",
       description: "Cancels the current round",
-      valid: () =>
-        stateVar() === "playing" && isLocalPlayerHost() && !editorVar(),
+      valid: () => stateVar() === "playing" && isLocalPlayerHost() && !isEditor,
       callback: () => send({ type: "cancel" }),
     },
+    ...(!isEditor
+      ? [{
+        name: "Open settings",
+        description: "Open setting menu",
+        callback: () => showSettingsVar(true),
+      }]
+      : []),
     {
       name: "Open editor",
       description: "Opens the map editor",
-      valid: () => flags.debug && !editorVar() && stateVar() === "menu",
+      valid: () => !isEditor && stateVar() === "menu",
       callback: () => {
         editorVar(true);
         switchToEditorMode();
         loadLocal();
         connect();
+        resetEditorModifiedState();
+        const defaultMapId = lobbySettingsVar().map;
+        const defaultMap = MAPS.find((m) => m.id === defaultMapId);
+        editorCurrentMapVar(
+          defaultMap ? { id: defaultMap.id, name: defaultMap.name } : undefined,
+        );
       },
     },
-    exportMap,
-    selectMap,
-    {
-      name: "Open settings",
-      description: "Open setting menu",
-      callback: () => showSettingsVar(true),
-    },
+    ...(currentMap || mapModified
+      ? [quickSaveMap, saveMapAs, copyMap, selectMap]
+      : [selectMap, copyMap]),
+    ...(isEditor
+      ? [{
+        name: "Open settings",
+        description: "Open setting menu",
+        callback: () => showSettingsVar(true),
+      }]
+      : []),
     {
       name: `${gameplaySettings.showPing ? "Hide" : "Show"} ping`,
       description: `${
@@ -248,6 +278,13 @@ export const CommandPalette = () => {
       },
     },
   ], [
+    copyMap,
+    selectMap,
+    saveMapAs,
+    quickSaveMap,
+    currentMap,
+    mapModified,
+    isEditor,
     flags.debug,
     flags.debugStats,
     flags.debugPathing,
@@ -270,7 +307,7 @@ export const CommandPalette = () => {
     for (let i = 0; i < sourceList.length && matches.length < 10; i++) {
       const command = sourceList[i];
       const nameMatches = command.name.match(regexp);
-      const descriptionMatches = command.description.match(regexp);
+      const descriptionMatches = command.description?.match(regexp);
       if (nameMatches || descriptionMatches) {
         matches.push({
           ...command,
@@ -278,9 +315,11 @@ export const CommandPalette = () => {
           name: nameMatches
             ? highlightText(command.name, input)
             : [command.name],
-          description: descriptionMatches
-            ? highlightText(command.description, input)
-            : [command.description],
+          description: command.description
+            ? (descriptionMatches
+              ? highlightText(command.description, input)
+              : [command.description])
+            : undefined,
         } as FilteredCommand);
       }
     }
@@ -310,8 +349,23 @@ export const CommandPalette = () => {
     if (showCommandPalette === "sent") {
       // If we're in a prompt state, handle the input
       if (promptCallback) {
-        promptCallback(input);
-        close();
+        const result = promptCallback(input);
+        Promise.resolve(result).then((res) => {
+          if (res && res.type === "prompt") {
+            setPrompt(res.placeholder);
+            setPromptCallback(() => res.callback);
+            setInput("");
+            showCommandPaletteVar("open");
+          } else if (res && res.type === "options") {
+            setPrompt(res.placeholder);
+            setNestedCommands(res.commands);
+            setInput("");
+            setPromptCallback(null);
+            showCommandPaletteVar("open");
+          } else {
+            close();
+          }
+        });
         return;
       }
 
@@ -385,7 +439,9 @@ export const CommandPalette = () => {
             }}
           >
             <div>{c.name}</div>
-            <CommandDescription>{c.description}</CommandDescription>
+            {c.description && (
+              <CommandDescription>{c.description}</CommandDescription>
+            )}
           </CommandOption>
         ))}
     </PaletteContainer>

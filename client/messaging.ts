@@ -2,6 +2,7 @@ import type { ClientToServerMessage } from "../server/client.ts";
 import { getWebSocket } from "./connection.ts";
 import { flags } from "./flags.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { editorMapModifiedVar } from "@/vars/editor.ts";
 
 const delay = (fn: () => void) => {
   if (typeof latency !== "number" && typeof noise !== "number") {
@@ -14,6 +15,18 @@ const delay = (fn: () => void) => {
 };
 
 export const send = (message: ClientToServerMessage) => {
+  // Track editor modifications
+  if (
+    message.type === "editorCreateEntity" ||
+    message.type === "editorUpdateEntities" ||
+    message.type === "editorSetPathing" ||
+    message.type === "editorSetCliff" ||
+    message.type === "editorResizeMap" ||
+    message.type === "editorAdjustBounds"
+  ) {
+    editorMapModifiedVar(true);
+  }
+
   delay(() => {
     try {
       const ws = getWebSocket();

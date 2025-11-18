@@ -17,6 +17,10 @@ import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
 import { purchase, zPurchase } from "./actions/purchase.ts";
 import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
+import {
+  uploadCustomMap,
+  zUploadCustomMap,
+} from "./actions/uploadCustomMap.ts";
 import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
 import {
@@ -162,6 +166,7 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zCancel,
   zPurchase,
   zLobbySettings,
+  zUploadCustomMap,
   zEditorCreateEntity,
   zEditorUpdateEntities,
   zEditorSetPathing,
@@ -187,6 +192,7 @@ const actions = {
   cancel,
   purchase,
   lobbySettings,
+  uploadCustomMap,
   editorCreateEntity,
   editorUpdateEntities,
   editorSetPathing,

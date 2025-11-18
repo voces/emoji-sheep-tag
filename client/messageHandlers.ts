@@ -7,6 +7,7 @@ import {
   generateDoodads,
   getMap,
   getMapCenter,
+  type PackedMap,
   setMapForApp,
 } from "@/shared/map.ts";
 import { stats } from "./util/Stats.ts";
@@ -27,6 +28,9 @@ import {
   getCliffHeight,
   getPathingMaskFromTerrainMasks,
 } from "@/shared/pathing/terrainHelpers.ts";
+import { storeReceivedMap } from "./storage/receivedMaps.ts";
+import { getLocalMap, saveLocalMap } from "./storage/localMaps.ts";
+import { triggerLocalMapsRefresh } from "@/vars/localMapsRefresh.ts";
 
 const processUpdates = (updates: ReadonlyArray<Update>) => {
   const players = updates.filter((u) => u.isPlayer || map[u.id]?.isPlayer);
@@ -122,6 +126,7 @@ export const handlers = {
     } else if (localNewPlayer) addChatMessage(`Joined the game ${data.lobby}.`);
 
     stateVar(data.status);
+    ensureMapLoaded(data.lobbySettings.map);
     lobbySettingsVar(data.lobbySettings);
     processUpdates(data.updates);
 
@@ -226,5 +231,39 @@ export const handlers = {
     // Otherwise, switch to hub view
     stateVar("hub");
     lobbiesVar(lobbies);
+  },
+  uploadCustomMap: async (
+    { mapId, mapData }: Extract<
+      ServerToClientMessage,
+      { type: "uploadCustomMap" }
+    >,
+  ) => {
+    // Store the received custom map data so it can be loaded when needed
+    storeReceivedMap(mapId, mapData as PackedMap);
+
+    // Also save to IndexedDB if we don't already have it
+    const localId = mapId.replace("local:", "");
+    const existing = await getLocalMap(localId);
+
+    if (!existing) {
+      const packedMap = mapData as PackedMap;
+
+      // Use the name from PackedMap if available, otherwise generate from ID
+      const friendlyName = packedMap.name || (() => {
+        const namePart = localId.replace(/-\d+$/, ""); // Remove timestamp
+        return namePart
+          .split("-")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+      })();
+
+      try {
+        await saveLocalMap(localId, friendlyName, packedMap);
+        triggerLocalMapsRefresh();
+        addChatMessage(`Received map "${friendlyName}" from host`);
+      } catch (err) {
+        console.error("Failed to save received map:", err);
+      }
+    }
   },
 };

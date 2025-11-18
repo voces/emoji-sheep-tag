@@ -9,7 +9,9 @@ import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
 // C->S
 export const zLobbySettings = z.object({
   type: z.literal("lobbySettings"),
-  map: z.string().refine((value) => !!getMapMeta(value)).optional(),
+  map: z.string().refine((value) =>
+    !!getMapMeta(value) || value.startsWith("local:")
+  ).optional(),
   mode: z.union([z.literal("survival"), z.literal("vip"), z.literal("switch")])
     .optional(),
   vipHandicap: z.number().min(0.01).max(10).transform((v) =>
@@ -88,7 +90,9 @@ export const lobbySettings = (
   if (startingGold !== undefined) lobby.settings.startingGold = startingGold;
   if (time !== undefined) lobby.settings.time = time;
   if (income !== undefined) lobby.settings.income = income;
-  if (map && getMapMeta(map)) lobby.settings.map = map;
+  if (map && (getMapMeta(map) || map.startsWith("local:"))) {
+    lobby.settings.map = map;
+  }
 
   // Send updated settings to all players in the lobby
   send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });

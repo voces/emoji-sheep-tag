@@ -482,6 +482,12 @@ const zMapUpdate = z.object({
   center: z.object({ x: z.number(), y: z.number() }),
 });
 
+const zUploadCustomMap = z.object({
+  type: z.literal("uploadCustomMap"),
+  mapId: z.string(),
+  mapData: z.unknown(),
+});
+
 export const zMessage = z.discriminatedUnion("type", [
   zStart,
   zUpdates,
@@ -493,6 +499,7 @@ export const zMessage = z.discriminatedUnion("type", [
   zLobbySettingsMessage,
   zHubState,
   zMapUpdate,
+  zUploadCustomMap,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;

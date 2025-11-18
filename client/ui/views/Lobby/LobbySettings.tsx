@@ -1,5 +1,5 @@
 import { styled } from "styled-components";
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useIsLocalPlayerHost, usePlayers } from "@/hooks/usePlayers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
@@ -13,6 +13,17 @@ import { NumericSettingInput } from "./NumericSettingInput.tsx";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
 import { Select } from "@/components/forms/Select.tsx";
+import {
+  listLocalMaps,
+  type LocalMapMetadata,
+} from "../../../storage/localMaps.ts";
+import { uploadAndSelectCustomMap } from "../../../actions/uploadCustomMap.ts";
+import { localMapsRefreshVar } from "@/vars/localMapsRefresh.ts";
+
+const formatDate = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleDateString();
+};
 
 const SettingsCard = styled(Card)`
   width: 40%;
@@ -95,9 +106,27 @@ export const LobbySettings = () => {
   useListenToEntities(players, ["team"]);
   const isHost = useIsLocalPlayerHost();
   const [buttonsDisabled, setButtonsDisabled] = useState(true);
+  const [localMaps, setLocalMaps] = useState<LocalMapMetadata[]>([]);
+  const refreshTrigger = useReactiveVar(localMapsRefreshVar);
+
+  useEffect(() => {
+    listLocalMaps().then((maps) => {
+      setLocalMaps(maps);
+    }).catch((err) => {
+      console.error("Failed to load local maps:", err);
+      setLocalMaps([]);
+    });
+  }, [refreshTrigger]);
+
   const mapOptions = useMemo(
-    () => MAPS.map((map) => ({ value: map.id, label: map.name })),
-    [],
+    () => [
+      ...MAPS.map((map) => ({ value: map.id, label: map.name })),
+      ...localMaps.map((map) => ({
+        value: `local:${map.id}`,
+        label: `${map.name} - ${map.author}, ${formatDate(map.timestamp)}`,
+      })),
+    ],
+    [localMaps],
   );
 
   // Filter out observers and pending players
@@ -161,7 +190,16 @@ export const LobbySettings = () => {
               id="map-select"
               value={lobbySettings.map}
               options={mapOptions}
-              onChange={(map) => send({ type: "lobbySettings", map })}
+              onChange={(map) => {
+                if (map.startsWith("local:")) {
+                  const localId = map.replace("local:", "");
+                  uploadAndSelectCustomMap(localId).catch((err) => {
+                    console.error("Failed to upload custom map:", err);
+                  });
+                } else {
+                  send({ type: "lobbySettings", map });
+                }
+              }}
               disabled={!isHost}
             />
           </SettingsRow>

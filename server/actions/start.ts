@@ -267,7 +267,7 @@ export const start = (
   }
 
   clearUpdatesCache();
-  const map = createServerMap(lobby.settings.map);
+  const map = createServerMap(lobby.settings.map, lobby);
   const ecs = newEcs(map);
   lobby.round = {
     ecs,

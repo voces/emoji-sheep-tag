@@ -14,7 +14,9 @@ import {
 import { appContext } from "./context.ts";
 import { getMapMeta } from "./maps/manifest.ts";
 
-export type PackedMap = typeof defaultPackedMap;
+export type PackedMap = Omit<typeof defaultPackedMap, "name"> & {
+  name?: string;
+};
 
 export type LoadedMap = {
   id: string;

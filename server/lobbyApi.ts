@@ -13,6 +13,7 @@ import { isPractice } from "./api/st.ts";
 import { broadcastLobbyList, joinHub } from "./hub.ts";
 import type { Entity } from "@/shared/types.ts";
 import { autoAssignSheepOrWolf } from "./st/roundHelpers.ts";
+import { getCustomMapForLobby } from "./actions/uploadCustomMap.ts";
 import type { Lobby } from "./lobby.ts";
 
 const convertPendingPlayersToTeams = (lobby: Lobby) => {
@@ -82,6 +83,20 @@ export const send = (message: ServerToClientMessage) => {
 /** Sends full lobby state to a joining client */
 export const sendJoinMessage = (client: Client) => {
   const lobby = lobbyContext.current;
+
+  // Check if lobby is using a custom map and send it to the joining client
+  const mapId = lobby.settings.map;
+  if (mapId.startsWith("local:")) {
+    const customMapData = getCustomMapForLobby(lobby, mapId);
+    if (customMapData) {
+      client.send({
+        type: "uploadCustomMap",
+        mapId,
+        mapData: customMapData,
+      });
+    }
+  }
+
   client.send({
     type: "join",
     lobby: lobby.name,

@@ -6,6 +6,8 @@ import {
   type PackedMap,
 } from "@/shared/map.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
+import { getLocalMap } from "./storage/localMaps.ts";
+import { getReceivedMap } from "./storage/receivedMaps.ts";
 
 const packedCache = new Map<string, PackedMap>([
   ["revo", defaultPackedMap],
@@ -39,7 +41,31 @@ const fetchPackedMap = (map: string): Promise<PackedMap> => {
   return promise;
 };
 
+const fetchLocalPackedMap = async (
+  mapId: string,
+): Promise<{ packed: PackedMap; name: string }> => {
+  // First check if we received this map from the server
+  const receivedMap = getReceivedMap(`local:${mapId}`);
+  if (receivedMap) {
+    return { packed: receivedMap, name: mapId };
+  }
+
+  // Otherwise, load from local storage
+  const entry = await getLocalMap(mapId);
+  if (!entry) throw new Error(`Custom map "${mapId}" not found`);
+  return { packed: entry.data, name: entry.name };
+};
+
+export const isLocalMap = (mapId: string): boolean =>
+  mapId.startsWith("local:");
+
 export const loadClientMap = async (map: string): Promise<LoadedMap> => {
+  if (isLocalMap(map)) {
+    const localId = map.replace("local:", "");
+    const { packed, name } = await fetchLocalPackedMap(localId);
+    return buildLoadedMap(map, packed, { name });
+  }
+
   const packed = await fetchPackedMap(map);
   const meta = getMapMeta(map);
   return buildLoadedMap(map, packed, { name: meta?.name });

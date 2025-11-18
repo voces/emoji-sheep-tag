@@ -301,7 +301,7 @@ class VisibilityGrid {
       newCellKeys.add(cellIndex);
       this.modifiedCells.add(cellIndex);
 
-      // Check if blocked by entity
+      // Check if blocked by entity - mark cells behind the blocker
       const blockerRow = blockerGrid.get(y);
       if (blockerRow?.has(x)) {
         const blocker = blockerAtCell.get(y)?.get(x);
@@ -338,6 +338,7 @@ class VisibilityGrid {
                 const rayStartX = x + perpX * offset;
                 const rayStartY = y + perpY * offset;
 
+                // Start shadow from next cell (i=1 instead of i=0)
                 for (let i = 1; i <= shadowLength; i++) {
                   const shadowX = Math.round(rayStartX + normalX * i);
                   const shadowY = Math.round(rayStartY + normalY * i);
@@ -350,8 +351,7 @@ class VisibilityGrid {
                 }
               }
             }
-            // Don't add neighbors - this blocker stops vision
-            continue;
+            // Still add neighbors so we can see around the blocker
           }
         }
       }

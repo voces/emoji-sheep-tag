@@ -15,7 +15,7 @@ addSystem({
 
     if (nextSpawnTime <= 0) {
       spawnBird();
-      nextSpawnTime = 1;
+      nextSpawnTime = 45 / trees.size;
     }
   },
 });

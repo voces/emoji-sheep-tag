@@ -6,6 +6,8 @@ import {
   type PackedMap,
 } from "@/shared/map.ts";
 import { getMapMeta, MAPS } from "@/shared/maps/manifest.ts";
+import { getCustomMapForLobby } from "./actions/uploadCustomMap.ts";
+import type { Lobby } from "./lobby.ts";
 
 const packedCache = new Map<string, PackedMap>([
   ["revo", defaultPackedMap],
@@ -56,7 +58,17 @@ const readPackedMap = (map: string): PackedMap => {
   return packed;
 };
 
-export const createServerMap = (map: string): LoadedMap => {
+export const createServerMap = (
+  map: string,
+  lobby?: Lobby,
+): LoadedMap => {
+  if (map.startsWith("local:") && lobby) {
+    const customMap = getCustomMapForLobby(lobby, map);
+    if (!customMap) throw new Error(`Custom map "${map}" not found in lobby`);
+    const localId = map.replace("local:", "");
+    return buildLoadedMap(map, customMap, { name: localId });
+  }
+
   const packed = readPackedMap(map);
   const meta = getMapMeta(map);
   return buildLoadedMap(map, packed, { name: meta?.name });

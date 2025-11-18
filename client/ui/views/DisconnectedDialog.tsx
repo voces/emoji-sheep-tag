@@ -6,12 +6,15 @@ import { Dialog } from "@/components/layout/Dialog.tsx";
 import { stopReconnecting } from "../../connection.ts";
 import { unloadEcs } from "../../ecs.ts";
 import { generateDoodads } from "@/shared/map.ts";
+import { confirmEditorExit } from "@/util/editorExitConfirmation.ts";
 
 export const DisconnectedDialog = () => {
   const connectionStatus = useReactiveVar(connectionStatusVar);
   if (connectionStatus !== "disconnected") return null;
 
   const handleGiveUp = () => {
+    if (!confirmEditorExit()) return;
+
     stateVar("menu");
     unloadEcs();
     generateDoodads(["dynamic"]);

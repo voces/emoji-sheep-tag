@@ -11,7 +11,7 @@ export const HStack = styled.div<
   {
     $gap?: keyof DefaultTheme["spacing"];
     $align?: "center";
-    $justifyContent?: "space-between";
+    $justifyContent?: "space-between" | "flex-end";
   }
 >`
   display: flex;

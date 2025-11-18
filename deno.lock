@@ -2,6 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@luca/esbuild-deno-loader@*": "0.11.1",
+    "jsr:@std/assert@*": "1.0.14",
     "jsr:@std/assert@^1.0.12": "1.0.14",
     "jsr:@std/assert@^1.0.13": "1.0.14",
     "jsr:@std/async@^1.0.13": "1.0.14",
