@@ -173,8 +173,10 @@ export const CommandPalette = () => {
         );
       },
     },
-    ...(currentMap || mapModified
+    ...((currentMap && !MAPS.find((m) => m.id === currentMap.id))
       ? [quickSaveMap, saveMapAs, copyMap, selectMap]
+      : mapModified
+      ? [saveMapAs, copyMap, selectMap]
       : [selectMap, copyMap]),
     ...(isEditor
       ? [{

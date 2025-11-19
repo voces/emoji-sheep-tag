@@ -34,6 +34,15 @@ export const defaultMenus: MenuConfig[] = [
       })),
     ],
   },
+  {
+    id: "editor",
+    name: "Editor",
+    binding: ["KeyE"],
+    prefabs: ["editor"],
+    actions: [
+      { type: "action", actionKey: "back" },
+    ],
+  },
 ];
 
 // Track which default menu IDs have been explicitly deleted per prefab

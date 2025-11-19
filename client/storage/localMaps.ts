@@ -206,7 +206,7 @@ export const importLocalMapFromFile = (): Promise<{
       reader.onload = () => {
         try {
           const data = JSON.parse(reader.result as string) as PackedMap;
-          const name = file.name.replace(/\.json$/i, "");
+          const name = data.name || file.name.replace(/\.json$/i, "");
           resolve({ name, data });
         } catch (err) {
           reject(err);

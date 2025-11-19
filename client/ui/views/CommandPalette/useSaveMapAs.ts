@@ -161,7 +161,12 @@ export const useSaveMapAs = () =>
                 return;
               }
 
-              exportLocalMapToFile(name.trim(), packed);
+              const { name: _, ...packedWithoutName } = packed;
+              const packedWithName = {
+                name: name.trim(),
+                ...packedWithoutName,
+              };
+              exportLocalMapToFile(name.trim(), packedWithName);
               editorMapModifiedVar(false);
             },
           }),
