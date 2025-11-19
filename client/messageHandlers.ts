@@ -123,7 +123,9 @@ export const handlers = {
           )
         } ${newPlayers.length > 1 ? "have" : "has"} joined the game!`);
       }
-    } else if (localNewPlayer) addChatMessage(`Joined the game ${data.lobby}.`);
+    } else if (localNewPlayer && !editorVar()) {
+      addChatMessage(`Joined the game ${data.lobby}.`);
+    }
 
     stateVar(data.status);
     ensureMapLoaded(data.lobbySettings.map);

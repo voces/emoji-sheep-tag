@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { styled } from "styled-components";
-import { connect, send } from "../../../client.ts";
+import { send } from "../../../client.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
 import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
@@ -16,15 +16,12 @@ import {
   editorMapModifiedVar,
   editorVar,
 } from "@/vars/editor.ts";
-import { loadLocal } from "../../../local.ts";
 import { useCopyMap } from "./useCopyMap.ts";
 import { useSelectMap } from "./useSelectMap.ts";
 import { useSaveMapAs } from "./useSaveMapAs.ts";
 import { useQuickSaveMap } from "./useQuickSaveMap.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
-import { switchToEditorMode } from "@/shared/systems/kd.ts";
-import { resetEditorModifiedState } from "@/util/editorExitConfirmation.ts";
-import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { openEditor } from "@/util/openEditor.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
@@ -160,18 +157,7 @@ export const CommandPalette = () => {
       name: "Open editor",
       description: "Opens the map editor",
       valid: () => !isEditor && stateVar() === "menu",
-      callback: () => {
-        editorVar(true);
-        switchToEditorMode();
-        loadLocal();
-        connect();
-        resetEditorModifiedState();
-        const defaultMapId = lobbySettingsVar().map;
-        const defaultMap = MAPS.find((m) => m.id === defaultMapId);
-        editorCurrentMapVar(
-          defaultMap ? { id: defaultMap.id, name: defaultMap.name } : undefined,
-        );
-      },
+      callback: openEditor,
     },
     ...((currentMap && !MAPS.find((m) => m.id === currentMap.id))
       ? [quickSaveMap, saveMapAs, copyMap, selectMap]

@@ -37,6 +37,7 @@ export const zLobbySettings = z.object({
       Math.round(v * 100) / 100
     ),
   }).optional(),
+  view: z.boolean().optional(),
 });
 
 // S->C
@@ -67,13 +68,14 @@ export const serializeLobbySettings = (
     autoTime: lobby.settings.time === "auto",
     startingGold: lobby.settings.startingGold,
     income: lobby.settings.income,
+    view: lobby.settings.view,
     host: lobby.host?.id ?? null,
   };
 };
 
 export const lobbySettings = (
   client: Client,
-  { mode, vipHandicap, sheep, startingGold, time, income, map }: z.TypeOf<
+  { mode, vipHandicap, sheep, startingGold, time, income, map, view }: z.TypeOf<
     typeof zLobbySettings
   >,
 ) => {
@@ -90,6 +92,7 @@ export const lobbySettings = (
   if (startingGold !== undefined) lobby.settings.startingGold = startingGold;
   if (time !== undefined) lobby.settings.time = time;
   if (income !== undefined) lobby.settings.income = income;
+  if (view !== undefined) lobby.settings.view = view;
   if (map && (getMapMeta(map) || map.startsWith("local:"))) {
     lobby.settings.map = map;
   }

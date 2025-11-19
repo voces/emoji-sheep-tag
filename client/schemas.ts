@@ -411,6 +411,7 @@ const zLobbySettings = z.object({
     sheep: z.number(),
     wolves: z.number(),
   }),
+  view: z.boolean(),
 });
 
 export type LobbySettings = z.input<typeof zLobbySettings>;

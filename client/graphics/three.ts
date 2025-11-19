@@ -14,6 +14,7 @@ import { tileDefs } from "@/shared/data.ts";
 import { Terrain2D } from "./Terrain2D.ts";
 import { FogPass } from "./FogPass.ts";
 import { floatingTextScene } from "../systems/floatingText.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 
 const terrainTilePalette = [
   ...tileDefs.map((t) => ({
@@ -226,13 +227,14 @@ const animate = () => {
   if (!renderer || !fogPass || !renderTarget) return;
 
   fogPass.updateCamera(camera);
+  fogPass.setDisableFogOfWar(lobbySettingsVar().view);
 
   // Render scene to non-MSAA target with depth
   renderer.setRenderTarget(renderTarget);
   renderer.clear();
   renderer.render(scene, camera);
 
-  // Apply fog pass
+  // Apply fog pass (includes boundary fog, fog of war optional)
   fogPass.render(renderer, renderTarget, renderTarget, delta);
   renderer.setRenderTarget(null);
 

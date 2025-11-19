@@ -1,6 +1,7 @@
 import { loadLocal } from "../../local.ts";
 import { connect } from "../../client.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
+import { openEditor } from "../util/openEditor.ts";
 import { styled } from "styled-components";
 import { Card } from "@/components/layout/Card.tsx";
 import { VStack } from "@/components/layout/Layout.tsx";
@@ -31,6 +32,9 @@ export const Menu = () => (
       </Button>
       <Button type="button" onClick={() => showSettingsVar(true)}>
         Settings
+      </Button>
+      <Button type="button" onClick={openEditor}>
+        Editor
       </Button>
     </VStack>
   </MenuContainer>

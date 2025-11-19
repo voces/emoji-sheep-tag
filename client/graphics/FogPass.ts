@@ -88,6 +88,7 @@ export class FogPass {
         viewInv: { value: new Matrix4() },
         deltaTime: { value: 0.016 },
         fogTexelSize: { value: new Vector2(1.0 / width, 1.0 / height) },
+        disableFogOfWar: { value: false },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -114,6 +115,7 @@ export class FogPass {
         uniform mat4 viewInv;
         uniform float deltaTime;
         uniform vec2 fogTexelSize;
+        uniform bool disableFogOfWar;
 
         varying vec2 vUv;
 
@@ -180,8 +182,8 @@ export class FogPass {
           // Sample smoothed visibility from previous fog target
           float vis = texture2D(prevFogTex, fogUV).r;
 
-          // Apply fog only in hidden areas
-          float alpha = fogOpacity * (1.0 - vis);
+          // Apply fog only in hidden areas (unless fog of war is disabled)
+          float alpha = disableFogOfWar ? 0.0 : fogOpacity * (1.0 - vis);
 
           // Apply boundary fade if near or outside bounds
           if (distToEdge < fadeInset) {
@@ -335,6 +337,10 @@ export class FogPass {
     this.material.uniforms.cameraFar.value = camera.far;
     this.material.uniforms.projInv.value.copy(camera.projectionMatrix).invert();
     this.material.uniforms.viewInv.value.copy(camera.matrixWorld);
+  }
+
+  setDisableFogOfWar(disable: boolean) {
+    this.material.uniforms.disableFogOfWar.value = disable;
   }
 
   reset(renderer: WebGLRenderer) {

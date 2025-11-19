@@ -329,6 +329,19 @@ export const LobbySettings = () => {
               income: { ...lobbySettings.income, wolves: value },
             })}
         />
+
+        <SettingsRow>
+          <HStack $align="center" style={{ gap: "4px" }}>
+            <Checkbox
+              id="view"
+              checked={lobbySettings.view}
+              onChange={(e) =>
+                send({ type: "lobbySettings", view: e.currentTarget.checked })}
+              disabled={!isHost}
+            />
+            <SettingsLabel htmlFor="view">View (Disable Fog)</SettingsLabel>
+          </HStack>
+        </SettingsRow>
       </GameSettingsContainer>
 
       <GameSettingsContainer>

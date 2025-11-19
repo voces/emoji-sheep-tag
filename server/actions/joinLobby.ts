@@ -58,9 +58,6 @@ export const joinLobby = (
     if (lobby.round) {
       // If joining an ongoing practice game, add player to sheep team and spawn units
       if (lobby.round.practice) {
-        client.team = "sheep";
-        lobby.round.ecs.addEntity(client);
-
         appContext.with(lobby.round.ecs, () => {
           appContext.current.batch(() => {
             addPlayerToPracticeGame(client);

@@ -83,6 +83,7 @@ export const loadSvg = (
     xOffset?: number;
     facingOffset?: number;
   } = {},
+  zOrder?: number,
 ) => {
   const name = Object.entries(svgs).find((e) => e[1] === svg)?.[0];
   scale /= 36 * 2; // SVGs are 36x36, and we want a sheep to be size 1
@@ -168,8 +169,8 @@ export const loadSvg = (
   const igroup = new InstancedGroup(group, count, name);
   if (typeof layer === "number") igroup.traverse((o) => o.layers.set(layer));
 
-  // Apply auto-incrementing render order
-  const currentZOrder = zOrderCounter++;
+  // Apply render order (use provided zOrder or auto-increment)
+  const currentZOrder = zOrder ?? zOrderCounter++;
   igroup.traverse((o) => {
     if ("renderOrder" in o) o.renderOrder = currentZOrder;
   });

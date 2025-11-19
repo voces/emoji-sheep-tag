@@ -8,6 +8,7 @@ import {
   getTerrainLayers,
   onMapChange,
 } from "@/shared/map.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 
 import {
   ClampToEdgeWrapping,
@@ -673,6 +674,12 @@ onMapChange((map) => {
 // System to hide enemy units in fog (but keep structures visible once seen)
 const handleEntityVisibility = (entity: Entity) => {
   if (alwaysVisible(entity) || !entity.position) return;
+
+  // If view mode is enabled, disable fog entirely
+  if (lobbySettingsVar().view) {
+    if (entity.hiddenByFog) delete entity.hiddenByFog;
+    return;
+  }
 
   // Skip allied entities
   if (visibleToLocalPlayer(entity)) {

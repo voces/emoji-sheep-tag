@@ -53,6 +53,7 @@ it("can move an action into a menu", async () => {
       autoTime: true,
       startingGold: { sheep: 0, wolves: 0 },
       income: { sheep: 1, wolves: 1 },
+      view: false,
       host: "player-0",
     },
   });

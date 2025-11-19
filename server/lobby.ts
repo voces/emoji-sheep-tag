@@ -24,10 +24,6 @@ type LobbySettings = {
    * Health multiplier for sheep structures in VIP mode (0.01-10)
    */
   vipHandicap: number;
-  // /**
-  //  * Uses a smart algorithm to rotate sheep and wolves
-  //  */
-  // teamSelection: "smart";
   /**
    * - A `number` will draft the specified number of sheep
    * - `"auto"` will draft (N/2)-1 sheep, where N is the number of players
@@ -40,7 +36,7 @@ type LobbySettings = {
   time: "auto" | number;
   startingGold: { sheep: number; wolves: number };
   income: { sheep: number; wolves: number };
-  // view: boolean;
+  view: boolean;
 };
 
 type LobbyStatus = "lobby" | "playing";
@@ -89,6 +85,7 @@ export const newLobby = (host?: Client) => {
       time: "auto",
       startingGold: { sheep: 0, wolves: 0 },
       income: { sheep: 1, wolves: 1 },
+      view: false,
     },
     status: "lobby",
     rounds: [],

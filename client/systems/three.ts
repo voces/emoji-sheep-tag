@@ -245,12 +245,23 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   gravity: svg(gravity, 2, { layer: 2 }),
 };
 
+// Pre-assign render orders based on the order in svgConfigs
+const modelRenderOrders = new Map<string, number>(
+  Object.keys(svgConfigs).map((key, index) => [key, index]),
+);
+
 const getCollection = (model: string): InstancedGroup | undefined => {
   const config = svgConfigs[model];
   if (!config) return undefined;
   if (config instanceof InstancedGroup) return config;
 
-  const group = loadSvg(config.svg, config.scale, config.options);
+  const renderOrder = modelRenderOrders.get(model);
+  const group = loadSvg(
+    config.svg,
+    config.scale,
+    config.options,
+    renderOrder,
+  );
   svgConfigs[model] = group;
   return group;
 };

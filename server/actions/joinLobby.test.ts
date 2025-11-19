@@ -5,6 +5,7 @@ import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { appContext } from "@/shared/context.ts";
 import { addPlayerToPracticeGame } from "../api/player.ts";
+import { joinLobby } from "./joinLobby.ts";
 
 afterEach(cleanupTest);
 
@@ -153,6 +154,51 @@ describe("joinLobby", () => {
       );
       // Should have same number of units (no duplicate practice units)
       expect(units.length).toBe(unitsBefore.length);
+    },
+  );
+
+  it(
+    "joinLobby action should add player to practice game via full flow",
+    { sheep: ["existing-player"], gold: 0 },
+    ({ lobby, clients, ecs }) => {
+      // Set practice mode
+      lobby.round!.practice = true;
+
+      // Create a new client to join mid-game
+      const newClient = new Client({
+        readyState: WebSocket.OPEN,
+        send: () => {},
+        close: () => {},
+        addEventListener: () => {},
+      });
+      newClient.id = "joining-player";
+      newClient.name = "Joining Player";
+      newClient.playerColor = "#00FF00";
+      clients.set("joining-player", newClient);
+
+      // Call the actual joinLobby action
+      joinLobby(newClient, { type: "joinLobby", lobbyName: lobby.name });
+
+      // Check player properties were set by addPlayerToPracticeGame
+      expect(newClient.team).toBe("sheep");
+      expect(newClient.gold).toBe(100_000);
+      expect(newClient.lobby).toBe(lobby);
+
+      // Check units were spawned
+      const units = Array.from(ecs.entities).filter((e) =>
+        e.owner === "joining-player"
+      );
+      expect(units.length).toBeGreaterThanOrEqual(3); // sheep, spirit, wolf
+
+      const sheep = units.find((u) => u.prefab === "sheep");
+      expect(sheep).toBeDefined();
+
+      const spirit = units.find((u) => u.prefab === "spirit");
+      expect(spirit).toBeDefined();
+
+      const wolf = units.find((u) => u.prefab === "wolf");
+      expect(wolf).toBeDefined();
+      expect(wolf?.manaRegen).toBeGreaterThan(0);
     },
   );
 });
