@@ -98,6 +98,8 @@ export const mirrorImageOrder = {
         (a.type === "auto" && ["stop", "hold"].includes(a.order))
       );
       mirror.isMirror = true;
+      // Copy facing angle from original unit
+      if (unit.facing !== undefined) mirror.facing = unit.facing;
       // Copy health and mana from original unit
       if (unit.health !== undefined) mirror.health = unit.health;
       if (unit.mana !== undefined) mirror.mana = unit.mana;

@@ -158,6 +158,9 @@ export const svgs: Record<string, string> = {
   vip,
   wolfDodge,
   construction,
+  bird1,
+  bird2,
+  bee,
 };
 
 type SvgConfig = {
@@ -205,8 +208,8 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   divinity: svg(divinity, 1),
   castle: svg(castle, 0.7),
   // shop: loadSvg(shop, 1),
-  fox: svg(fox, 1.8),
-  wolf: svg(wolf, 2),
+  fox: svg(fox, 0.6),
+  wolf: svg(wolf, 0.7),
   atom: svg(atom, 0.05),
 
   // Trees (should render in front of structures)

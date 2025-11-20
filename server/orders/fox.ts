@@ -35,7 +35,7 @@ export const foxOrder = {
     const angle = unit.facing ?? DEFAULT_FACING;
     const x = unit.position.x + Math.cos(angle);
     const y = unit.position.y + Math.sin(angle);
-    const fox = newUnit(unit.owner, "fox", x, y);
+    const fox = newUnit(unit.owner, "fox", x, y, { facing: angle });
 
     // Get lifetime duration from the action definition
     const lifetime = action.type === "auto" ? action.buffDuration : undefined;

@@ -166,6 +166,7 @@ export const loadSvg = (
   }
 
   // Make instanced
+  // Dynamic map utilization check will skip bounds recalc when mesh covers >80% of map
   const igroup = new InstancedGroup(group, count, name);
   if (typeof layer === "number") igroup.traverse((o) => o.layers.set(layer));
 

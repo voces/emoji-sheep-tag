@@ -50,8 +50,8 @@ type Cell = {
 // Track entities that block line of sight (for quick lookup)
 const blockerMap = new Map<string, Entity>();
 
-// Track entities by grid cell for efficient fog updates
-const entityGridMap = new Map<string, Set<Entity>>();
+// Track entities by grid cell for efficient fog updates (y -> x -> entities)
+const entityGridMap = new Map<number, Map<number, Set<Entity>>>();
 
 let terrainLayerData = getTerrainLayers();
 let fogBounds = getMapBounds();
@@ -61,23 +61,32 @@ const addEntityToGrid = (entity: Entity) => {
   if (!entity.position) return;
   const x = Math.floor(entity.position.x * FOG_RESOLUTION_MULTIPLIER);
   const y = Math.floor(entity.position.y * FOG_RESOLUTION_MULTIPLIER);
-  const key = `${x},${y}`;
-  if (!entityGridMap.has(key)) {
-    entityGridMap.set(key, new Set());
+  let row = entityGridMap.get(y);
+  if (!row) {
+    row = new Map();
+    entityGridMap.set(y, row);
   }
-  entityGridMap.get(key)!.add(entity);
+  let cell = row.get(x);
+  if (!cell) {
+    cell = new Set();
+    row.set(x, cell);
+  }
+  cell.add(entity);
 };
 
 const removeEntityFromGrid = (entity: Entity) => {
   if (!entity.position) return;
   const x = Math.floor(entity.position.x * FOG_RESOLUTION_MULTIPLIER);
   const y = Math.floor(entity.position.y * FOG_RESOLUTION_MULTIPLIER);
-  const key = `${x},${y}`;
-  const set = entityGridMap.get(key);
-  if (set) {
-    set.delete(entity);
-    if (set.size === 0) {
-      entityGridMap.delete(key);
+  const row = entityGridMap.get(y);
+  if (!row) return;
+  const cell = row.get(x);
+  if (!cell) return;
+  cell.delete(entity);
+  if (cell.size === 0) {
+    row.delete(x);
+    if (row.size === 0) {
+      entityGridMap.delete(y);
     }
   }
 };
@@ -471,10 +480,13 @@ class VisibilityGrid {
           }
 
           // Get entities at this grid cell
-          const cellEntities = entityGridMap.get(`${cx},${cy}`);
-          if (cellEntities) {
-            for (const entity of cellEntities) {
-              entities.add(entity);
+          const row = entityGridMap.get(cy);
+          if (row) {
+            const cellEntities = row.get(cx);
+            if (cellEntities) {
+              for (const entity of cellEntities) {
+                entities.add(entity);
+              }
             }
           }
         }
@@ -612,12 +624,17 @@ addSystem({
 
       // Only update if grid cell changed
       if (oldX !== newX || oldY !== newY) {
-        const oldKey = `${oldX},${oldY}`;
-        const oldSet = entityGridMap.get(oldKey);
-        if (oldSet) {
-          oldSet.delete(entity);
-          if (oldSet.size === 0) {
-            entityGridMap.delete(oldKey);
+        const oldRow = entityGridMap.get(oldY);
+        if (oldRow) {
+          const oldCell = oldRow.get(oldX);
+          if (oldCell) {
+            oldCell.delete(entity);
+            if (oldCell.size === 0) {
+              oldRow.delete(oldX);
+              if (oldRow.size === 0) {
+                entityGridMap.delete(oldY);
+              }
+            }
           }
         }
         // Add to new position

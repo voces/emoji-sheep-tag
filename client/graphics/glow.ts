@@ -97,7 +97,7 @@ glowMaterial.onBeforeCompile = (shader) => {
 const glowMesh = new Mesh(glowGeometry, glowMaterial);
 g.add(glowMesh);
 
-export const glow = new InstancedGroup(g);
+export const glow = new InstancedGroup(g, 1, "glow");
 glow.traverse((o) => o.layers.set(2));
 scene.add(glow);
 

@@ -13,10 +13,12 @@ import {
   Ray,
   Raycaster,
   ShapeGeometry,
+  Sphere,
 } from "three";
 import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
 import { editorVar } from "@/vars/editor.ts";
+import { getMapBounds } from "@/shared/map.ts";
 
 const dummy = new Object3D();
 const dummyColor = new Color();
@@ -27,17 +29,32 @@ const hasPlayerColor = (material: Material | Material[]) =>
     : (material as Material).userData.player;
 
 const _tempBox = new Box3();
+const _instanceLocalMatrix = new Matrix4();
+const _box3 = new Box3();
+const _sphere = new Sphere();
 
 export class InstancedGroup extends Group {
   private map: Record<string, number> = {};
   private reverseMap: string[] = [];
   private innerCount: number;
   private bvh: BVH;
+  private skipBoundsRecalc: boolean; // Skip bounding box/sphere recalc for omnipresent meshes
+  private mapUtilizationThreshold: number; // Skip recalc if coverage exceeds this fraction of map
 
-  constructor(group: Group, count: number = 1, readonly svgName?: string) {
+  constructor(
+    group: Group,
+    count: number = 1,
+    readonly svgName?: string,
+    options?: {
+      skipBoundsRecalc?: boolean; // Optimize for meshes that cover the screen 99% of the time
+      mapUtilizationThreshold?: number; // Skip if bounding box covers > this fraction (0-1)
+    },
+  ) {
     super();
     this.bvh = new BVH(svgName);
     this.innerCount = count;
+    this.skipBoundsRecalc = options?.skipBoundsRecalc ?? false;
+    this.mapUtilizationThreshold = options?.mapUtilizationThreshold ?? 0.5;
     for (const child of group.children) {
       if (child instanceof Mesh) {
         const mesh = new InstancedMesh(child.geometry, child.material, count);
@@ -61,6 +78,9 @@ export class InstancedGroup extends Group {
           "instanceMinimapMask",
           instanceMinimapMaskAttr,
         );
+
+        // Override bounding box/sphere computation to exclude infinite instances
+        this.patchInstancedMeshBounds(mesh);
 
         this.children.push(mesh);
         mesh.layers.mask = this.layers.mask;
@@ -115,6 +135,8 @@ export class InstancedGroup extends Group {
       newMaskAttrib.copyArray(oldMaskAttrib.array);
       newMaskAttrib.setUsage(DynamicDrawUsage);
       geo.setAttribute("instanceMinimapMask", newMaskAttrib);
+
+      this.patchInstancedMeshBounds(next);
 
       return next;
     });
@@ -224,8 +246,84 @@ export class InstancedGroup extends Group {
     }
   }
 
+  private patchInstancedMeshBounds(mesh: InstancedMesh) {
+    // Store reference to this InstancedGroup for use in overrides
+    // deno-lint-ignore no-this-alias
+    const group = this;
+
+    // Override computeBoundingBox to exclude infinite instances
+    mesh.computeBoundingBox = function () {
+      const geometry = this.geometry;
+      const count = this.count;
+
+      if (this.boundingBox === null) {
+        this.boundingBox = new Box3();
+      }
+
+      if (geometry.boundingBox === null) {
+        geometry.computeBoundingBox();
+      }
+
+      this.boundingBox.makeEmpty();
+
+      for (let i = 0; i < count; i++) {
+        this.getMatrixAt(i, _instanceLocalMatrix);
+        if (group.isFiniteMatrix(_instanceLocalMatrix)) {
+          _box3.copy(geometry.boundingBox!).applyMatrix4(_instanceLocalMatrix);
+          this.boundingBox.union(_box3);
+        }
+      }
+    };
+
+    // Override computeBoundingSphere to exclude infinite instances
+    mesh.computeBoundingSphere = function () {
+      const geometry = this.geometry;
+      const count = this.count;
+
+      if (this.boundingSphere === null) this.boundingSphere = new Sphere();
+
+      if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
+
+      this.boundingSphere.makeEmpty();
+
+      for (let i = 0; i < count; i++) {
+        this.getMatrixAt(i, _instanceLocalMatrix);
+        if (group.isFiniteMatrix(_instanceLocalMatrix)) {
+          _sphere.copy(geometry.boundingSphere!).applyMatrix4(
+            _instanceLocalMatrix,
+          );
+          this.boundingSphere.union(_sphere);
+        }
+      }
+    };
+  }
+
+  private shouldSkipBoundsRecalc(child: InstancedMesh): boolean {
+    if (this.skipBoundsRecalc) return true;
+
+    // Use the patched computeBoundingBox which already excludes infinite instances
+    if (!child.boundingBox) child.computeBoundingBox();
+
+    if (!child.boundingBox || child.boundingBox.isEmpty()) return false;
+
+    const bbox = child.boundingBox;
+    const bboxWidth = bbox.max.x - bbox.min.x;
+    const bboxHeight = bbox.max.y - bbox.min.y;
+    const bboxArea = bboxWidth * bboxHeight;
+
+    const bounds = getMapBounds();
+    const mapWidth = bounds.max.x - bounds.min.x;
+    const mapHeight = bounds.max.y - bounds.min.y;
+    const mapArea = mapWidth * mapHeight;
+
+    const utilization = bboxArea / mapArea;
+
+    return utilization > this.mapUtilizationThreshold;
+  }
+
   private debouncingChildComputeBoundingBoxMap = new WeakSet<InstancedMesh>();
   private debouncedChildComputeBoundingBox(child: InstancedMesh) {
+    if (this.shouldSkipBoundsRecalc(child)) return;
     if (this.debouncingChildComputeBoundingBoxMap.has(child)) return;
     this.debouncingChildComputeBoundingBoxMap.add(child);
     queueMicrotask(() => {
@@ -238,6 +336,7 @@ export class InstancedGroup extends Group {
     InstancedMesh
   >();
   private debouncedChildComputeBoundingSphere(child: InstancedMesh) {
+    if (this.shouldSkipBoundsRecalc(child)) return;
     if (this.debouncingChildComputeBoundingSphereMap.has(child)) return;
     this.debouncingChildComputeBoundingSphereMap.add(child);
     queueMicrotask(() => {

@@ -34,7 +34,6 @@
   - 5v5 - 2 rounds
 - Settings not discoverable in game
 - In game scoreboard
-- View
 - Birds & Bees
   - Should redirect target if occupied/avoid crowding
   - Birds

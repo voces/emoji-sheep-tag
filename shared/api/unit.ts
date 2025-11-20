@@ -1,3 +1,4 @@
+import { DEFAULT_FACING } from "../constants.ts";
 import {
   Classification,
   ClassificationGroup,
@@ -45,6 +46,7 @@ export const tempUnit = (
     prefab: type,
     owner,
     position: { x, y },
+    facing: DEFAULT_FACING,
     ...extra,
   }) as Entity;
 
