@@ -1,4 +1,4 @@
-export const DEFAULT_FACING = 0;
+export const DEFAULT_FACING = Math.PI;
 
 /** Game tick rate in seconds (50ms per tick) */
 export const TICK_RATE = 0.05;

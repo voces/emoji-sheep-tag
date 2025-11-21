@@ -4,6 +4,9 @@ import { iterateBuffs } from "@/shared/api/unit.ts";
 addSystem({
   props: ["mana", "maxMana", "manaRegen"],
   updateEntity: (e, delta) => {
+    // Don't regenerate mana while constructing
+    if (typeof e.progress === "number") return;
+
     e.mana = Math.max(
       Math.min(e.maxMana, e.mana + e.manaRegen * delta),
       0,

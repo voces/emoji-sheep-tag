@@ -40,14 +40,20 @@ export function* iterateActions(entity: Entity): Generator<UnitDataAction> {
 /**
  * Finds the first action matching the given predicate
  */
+export function findAction<T extends UnitDataAction>(
+  entity: Entity,
+  matcher: (action: UnitDataAction) => action is T,
+): T | undefined;
+export function findAction(
+  entity: Entity,
+  matcher: ActionMatcher,
+): UnitDataAction | undefined;
 export function findAction(
   entity: Entity,
   matcher: ActionMatcher,
 ): UnitDataAction | undefined {
   for (const action of iterateActions(entity)) {
-    if (matcher(action)) {
-      return action;
-    }
+    if (matcher(action)) return action;
   }
   return undefined;
 }

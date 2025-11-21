@@ -2,7 +2,7 @@ import { send } from "../client.ts";
 import { Entity } from "../ecs.ts";
 import { selection } from "../systems/selection.ts";
 import { UnitDataActionTarget } from "@/shared/types.ts";
-import { hasAction } from "../util/actionLookup.ts";
+import { findAction, hasAction } from "../util/actionLookup.ts";
 import { CursorVariant, updateCursor } from "../graphics/cursor.ts";
 import { newIndicator } from "../systems/indicators.ts";
 import { playEntitySound, playSound, playSoundAt } from "../api/sound.ts";
@@ -13,6 +13,7 @@ import { isEnemy, testClassification } from "@/shared/api/unit.ts";
 import { Classification } from "@/shared/data.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { canPlayerExecuteAction } from "../util/allyPermissions.ts";
+import { distanceBetweenEntities } from "@/shared/pathing/math.ts";
 
 let activeOrder:
   | { order: string; variant: CursorVariant; aoe: number }
@@ -173,8 +174,9 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
       // Skip if entity is constructing
       const isConstructing = typeof entity.progress === "number";
       if (isConstructing) {
-        const action = entity.actions?.find((a) =>
-          a.type === "target" && a.order === orderToExecute
+        const action = findAction(
+          entity,
+          (a) => a.type === "target" && a.order === orderToExecute,
         );
         if (action) {
           const canExecute = "canExecuteWhileConstructing" in action &&
@@ -183,12 +185,23 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
         }
       }
 
-      return hasAction(
+      if (!target) return false;
+
+      const action = findAction(
         entity,
-        (a) =>
+        (a): a is UnitDataActionTarget =>
           a.type === "target" && a.order === orderToExecute &&
-          !!target && testClassification(entity, target, a.targeting),
+          testClassification(entity, target, a.targeting),
       );
+      if (!action) return false;
+
+      if (typeof entity.movementSpeed !== "number") {
+        const range = action.range ?? 0;
+        const distance = distanceBetweenEntities(entity, target);
+        if (distance > range) return false;
+      }
+
+      return true;
     });
 
   if (target && unitsWithTarget.size) {

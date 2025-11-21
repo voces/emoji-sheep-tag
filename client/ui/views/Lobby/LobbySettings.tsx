@@ -113,6 +113,10 @@ export const LobbySettings = () => {
     listLocalMaps().then((maps) => {
       setLocalMaps(maps);
     }).catch((err) => {
+      if (err instanceof Error && err.message === "IndexedDB not available") {
+        setLocalMaps([]);
+        return;
+      }
       console.error("Failed to load local maps:", err);
       setLocalMaps([]);
     });

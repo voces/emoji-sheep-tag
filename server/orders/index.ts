@@ -17,6 +17,7 @@ import { swapOrder } from "./swap.ts";
 import { dodgeOrder } from "./dodge.ts";
 import { giveToEnemyOrder } from "./giveToEnemy.ts";
 import { reclaimFromEnemyOrder } from "./reclaimFromEnemy.ts";
+import { crystalSpeedOrder } from "./crystalSpeed.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -49,6 +50,7 @@ registerOrder(swapOrder);
 registerOrder(dodgeOrder);
 registerOrder(giveToEnemyOrder);
 registerOrder(reclaimFromEnemyOrder);
+registerOrder(crystalSpeedOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);

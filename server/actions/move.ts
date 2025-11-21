@@ -23,7 +23,7 @@ export const handleMove = (
     : orderTarget;
   if (!target) return;
 
-  if (isPractice() && unit.position) {
+  if (isPractice() && unit.position && !queue) {
     const targetPosition = "x" in target ? target : target.position;
     if (
       targetPosition &&

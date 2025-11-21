@@ -87,6 +87,8 @@ import bird1 from "../assets/bird1.svg" with { type: "text" };
 import bird2 from "../assets/bird2.svg" with { type: "text" };
 import bee from "../assets/bee.svg" with { type: "text" };
 import alignment from "../assets/alignment.svg" with { type: "text" };
+import crystal from "../assets/crystal.svg" with { type: "text" };
+import sparkle2 from "../assets/sparkle2.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -163,6 +165,8 @@ export const svgs: Record<string, string> = {
   bird2,
   bee,
   alignment,
+  crystal,
+  sparkle2,
 };
 
 type SvgConfig = {
@@ -218,6 +222,7 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   windmill: svg(windmill, 0.24, { layer: 2, yOffset: 0.1, xOffset: -0.1 }),
   tree: svg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
   totem: svg(totem, 0.18, { yOffset: 0.12 }),
+  crystal: svg(crystal, 1, { yOffset: 0.2 }),
 
   // Temple stacks on things, we want it visible, always
   hinduTemple: svg(hinduTemple, 1.75),
@@ -230,6 +235,7 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   shield: svg(shield, 1, { layer: 2 }),
   wind: svg(wind, 1, { layer: 2 }),
   sparkle: svg(sparkle, 1, { layer: 2 }),
+  sparkle2: svg(sparkle2, 0.2, { layer: 2 }),
   rune: svg(rune, 0.4, { layer: 2 }),
   rune2: svg(rune2, 0.05, { layer: 2 }),
   swap: svg(swap, 0.1, { layer: 2 }),

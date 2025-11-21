@@ -84,7 +84,7 @@ export const practiceModeActions = {
     type: "auto",
     order: "giveToEnemy",
     icon: "alignment",
-    binding: ["KeyE"],
+    binding: ["KeyQ"],
   } as const satisfies UnitDataAction,
   reclaimFromEnemy: {
     name: "Reclaim",
@@ -92,7 +92,7 @@ export const practiceModeActions = {
     type: "auto",
     order: "reclaimFromEnemy",
     icon: "alignment",
-    binding: ["KeyE"],
+    binding: ["KeyQ"],
   } as const satisfies UnitDataAction,
 };
 
@@ -732,6 +732,14 @@ export const prefabs: Record<string, DataEntity> = {
       prefab: "frostCastle",
       goldCost: 30,
       binding: ["KeyF"],
+    }, {
+      name: "Upgrade to Crystal",
+      description:
+        "Upgrades the hut to a Crystal, which is capable of casting buffs on nearby units.",
+      type: "upgrade",
+      prefab: "crystal",
+      goldCost: 20,
+      binding: ["KeyC"],
     }, selfDestruct],
     bounty: 1,
   },
@@ -894,6 +902,35 @@ export const prefabs: Record<string, DataEntity> = {
       targetsAllowed: [["unit", "ward"]],
     },
     buffs: [{ impartedBuffOnAttack: "frostEffect" }],
+  },
+  crystal: {
+    name: "Crystal",
+    sightRadius: 6,
+    radius: 0.5,
+    tilemap: tilemap4x4,
+    maxHealth: 200,
+    mana: 50,
+    maxMana: 100,
+    manaRegen: 2,
+    completionTime: 10,
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
+    actions: [
+      {
+        name: "Gemstride",
+        description: "Increase target's movement speed by 25% for 20 seconds.",
+        type: "target",
+        order: "crystalSpeed",
+        icon: "sparkle2",
+        binding: ["KeyS"],
+        manaCost: 60,
+        castDuration: 0.5,
+        range: 5,
+        targeting: [["ally", "unit"]],
+        allowAllies: true,
+      },
+      selfDestruct,
+    ],
+    bounty: 6,
   },
   fence: {
     name: "Fence",

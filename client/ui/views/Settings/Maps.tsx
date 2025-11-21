@@ -80,6 +80,11 @@ export const Maps = () => {
       setLocalMaps(maps);
       setLoading(false);
     }).catch((err) => {
+      if (err instanceof Error && err.message === "IndexedDB not available") {
+        setLocalMaps([]);
+        setLoading(false);
+        return;
+      }
       console.error("Failed to load local maps:", err);
       addChatMessage("Failed to load local maps");
       setLocalMaps([]);

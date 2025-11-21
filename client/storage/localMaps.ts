@@ -18,6 +18,11 @@ export type LocalMapEntry = LocalMapMetadata & {
 
 const openDB = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") {
+      reject(new Error("IndexedDB not available"));
+      return;
+    }
+
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => reject(request.error);

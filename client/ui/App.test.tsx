@@ -11,7 +11,7 @@ import { setServer } from "../client.ts";
 import { render, screen, waitFor } from "@testing-library/react";
 import { App } from "./App.tsx";
 import { userEvent } from "@testing-library/user-event";
-import { colors } from "@/shared/data.ts";
+import { colors, practiceModeActions } from "@/shared/data.ts";
 import { mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { Entity } from "@/shared/types.ts";
 import { expect } from "@std/expect/expect";
@@ -82,14 +82,7 @@ it("can move an action into a menu", async () => {
         trueOwner: "player-0",
         actions: [
           ...mergeEntityWithPrefab({ prefab: "wolf" }).actions!,
-          {
-            name: "Give to Enemy",
-            description: "Transfer control to enemy player",
-            type: "auto",
-            order: "giveToEnemy",
-            icon: "sword",
-            binding: ["KeyE"],
-          },
+          practiceModeActions.giveToEnemy,
         ],
       } as Entity,
     ],
@@ -110,7 +103,7 @@ it("can move an action into a menu", async () => {
       ["Shadowstep", "D"],
       ["Swap", "C"],
       ["Place Sentry", "W"],
-      ["Give to Enemy", "E"],
+      ["Give to Enemy", "Q"],
       ["Shop", "B"],
     ])
   );

@@ -27,6 +27,10 @@ export const useSelectMap = () => {
 
   useEffect(() => {
     listLocalMaps().then(setLocalMaps).catch((err) => {
+      if (err instanceof Error && err.message === "IndexedDB not available") {
+        setLocalMaps([]);
+        return;
+      }
       console.error("Failed to load custom maps:", err);
       setLocalMaps([]);
     });

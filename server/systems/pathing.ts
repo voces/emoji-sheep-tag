@@ -33,6 +33,7 @@ export const calcPath = (
 ) => {
   if (!isPathingEntity(entity)) return [];
   if (!pathingMap().pathable(entity)) return [];
+  if (typeof entity.movementSpeed !== "number") return [];
   if (typeof target === "string") {
     const targetEntity = lookup(target);
     if (!targetEntity?.position) return [];

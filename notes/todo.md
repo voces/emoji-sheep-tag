@@ -57,3 +57,9 @@
   - Automatic split into "static" and "dynamic"
   - Use `updateRange`
   - Per-mirror instances
+
+# Quality
+
+- Update the order system so that actions are more generic, based around their
+  intrinsic type with fields that modify that. The order handler should be
+  generic, based on the fields being used.
