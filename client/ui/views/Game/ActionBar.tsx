@@ -6,7 +6,10 @@ import { UnitDataAction } from "@/shared/types.ts";
 import { useLocalPlayer } from "@/hooks/usePlayers.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
-import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
+import {
+  useListenToEntityProp,
+  useListenToEntityProps,
+} from "@/hooks/useListenToEntityProp.ts";
 import {
   closeMenusForUnit,
   getCurrentMenu,
@@ -138,9 +141,7 @@ export const ActionBar = () => {
   const menus = useReactiveVar(menusVar);
   useReactiveVar(menuStateVar);
   const currentMenu = getCurrentMenu();
-  useListenToEntityProp(selection, "order");
-  useListenToEntityProp(selection, "mana");
-  useListenToEntityProp(selection, "inventory");
+  useListenToEntityProps(selection, ["order", "mana", "inventory", "owner"]);
   const localPlayer = useLocalPlayer();
 
   // Listen to gold changes on the owning player's entity

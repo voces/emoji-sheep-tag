@@ -16,6 +16,9 @@ export const canPlayerExecuteAction = (
   // Direct ownership always allows action
   if (playerId === unit.owner) return true;
 
+  // trueOwner always has control, even if current owner is different
+  if (playerId === unit.trueOwner) return true;
+
   // If action doesn't allow allies, deny
   if (!action.allowAllies) return false;
 

@@ -218,6 +218,7 @@ export type Entity = {
   name?: string;
   prefab?: string;
   owner?: string;
+  trueOwner?: string;
   /**
    * Spawn mode for entities defined in map files:
    *

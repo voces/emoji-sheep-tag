@@ -17,6 +17,9 @@ export const canExecuteActionOnUnit = (
   // Direct ownership always allows action
   if (client.id === unit.owner) return true;
 
+  // trueOwner always has control, even if current owner is different
+  if (client.id === unit.trueOwner) return true;
+
   // If action doesn't allow allies, deny
   if (!action.allowAllies) return false;
 

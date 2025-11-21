@@ -146,6 +146,18 @@ const createPlayerEntities = (
     player.team = "wolf";
     player.gold = lobby.settings.startingGold.wolves;
   }
+
+  // In practice mode, create an additional enemy player entity
+  if (practice) {
+    ecs.addEntity({
+      id: "practice-enemy",
+      name: "Enemy",
+      isPlayer: true,
+      team: "wolf",
+      gold: 100_000,
+      playerColor: "#ff0000",
+    });
+  }
 };
 
 const spawnSheepUnits = (

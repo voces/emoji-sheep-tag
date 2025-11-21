@@ -62,12 +62,36 @@ it("can move an action into a menu", async () => {
   );
   sendMessageFromServer({
     type: "start",
-    updates: [{ id: "player-0", sheepCount: 1 }],
+    updates: [
+      { id: "player-0", sheepCount: 1 },
+      {
+        id: "practice-enemy",
+        name: "Enemy",
+        isPlayer: true,
+        team: "wolf",
+        gold: 0,
+        playerColor: "#ff0000",
+      },
+    ],
   });
   sendMessageFromServer({
     type: "updates",
     updates: [
-      mergeEntityWithPrefab({ prefab: "wolf", owner: "player-0" }) as Entity,
+      {
+        ...mergeEntityWithPrefab({ prefab: "wolf", owner: "player-0" }),
+        trueOwner: "player-0",
+        actions: [
+          ...mergeEntityWithPrefab({ prefab: "wolf" }).actions!,
+          {
+            name: "Give to Enemy",
+            description: "Transfer control to enemy player",
+            type: "auto",
+            order: "giveToEnemy",
+            icon: "sword",
+            binding: ["KeyE"],
+          },
+        ],
+      } as Entity,
     ],
   });
 
@@ -86,6 +110,7 @@ it("can move an action into a menu", async () => {
       ["Shadowstep", "D"],
       ["Swap", "C"],
       ["Place Sentry", "W"],
+      ["Give to Enemy", "E"],
       ["Shop", "B"],
     ])
   );

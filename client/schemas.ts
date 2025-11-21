@@ -248,6 +248,7 @@ export const zUpdate = z.object({
   prefab: z.string().optional(),
   name: z.string().optional(),
   owner: z.string().optional(),
+  trueOwner: z.string().optional(),
   type: z.union([
     z.literal("cosmetic"),
     z.literal("static"),

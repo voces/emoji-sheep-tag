@@ -15,6 +15,8 @@ import { cancelUpgradeOrder } from "./cancelUpgrade.ts";
 import { selfDestructOrder } from "./selfDestruct.ts";
 import { swapOrder } from "./swap.ts";
 import { dodgeOrder } from "./dodge.ts";
+import { giveToEnemyOrder } from "./giveToEnemy.ts";
+import { reclaimFromEnemyOrder } from "./reclaimFromEnemy.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -45,6 +47,8 @@ registerOrder(cancelUpgradeOrder);
 registerOrder(selfDestructOrder);
 registerOrder(swapOrder);
 registerOrder(dodgeOrder);
+registerOrder(giveToEnemyOrder);
+registerOrder(reclaimFromEnemyOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);

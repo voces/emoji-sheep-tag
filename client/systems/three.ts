@@ -86,6 +86,7 @@ import construction from "../assets/construction.svg" with { type: "text" };
 import bird1 from "../assets/bird1.svg" with { type: "text" };
 import bird2 from "../assets/bird2.svg" with { type: "text" };
 import bee from "../assets/bee.svg" with { type: "text" };
+import alignment from "../assets/alignment.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -161,6 +162,7 @@ export const svgs: Record<string, string> = {
   bird1,
   bird2,
   bee,
+  alignment,
 };
 
 type SvgConfig = {

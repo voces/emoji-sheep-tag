@@ -12,6 +12,7 @@ import { getLocalPlayer } from "../api/player.ts";
 import { isEnemy, testClassification } from "@/shared/api/unit.ts";
 import { Classification } from "@/shared/data.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
+import { canPlayerExecuteAction } from "../util/allyPermissions.ts";
 
 let activeOrder:
   | { order: string; variant: CursorVariant; aoe: number }
@@ -44,21 +45,22 @@ export const cancelOrder = (
 export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
   const target = e.intersects.first();
   const localPlayer = getLocalPlayer();
-  const selections = selection.clone().filter((s) =>
-    s.owner === localPlayer?.id
-  );
+  if (!localPlayer) return false;
 
   // Check if clicking on the only selected unit
-  const clickingOnlySelectedUnit = target && selections.size === 1 &&
-    target.selected && selections.first()?.id === target.id;
+  const clickingOnlySelectedUnit = target && selection.size === 1 &&
+    target.selected && selection.first()?.id === target.id;
 
   const orders: Array<readonly [Entity, UnitDataActionTarget]> = [];
 
-  for (const entity of selections) {
+  for (const entity of selection) {
     // Skip if entity is constructing and action doesn't allow it
     const isConstructing = typeof entity.progress === "number";
 
     const action = entity.actions?.filter((a): a is UnitDataActionTarget => {
+      // Check if player can execute this action (includes trueOwner, owner, and ally permissions)
+      if (!canPlayerExecuteAction(localPlayer.id, entity, a)) return false;
+
       if (isConstructing) {
         const canExecute = "canExecuteWhileConstructing" in a &&
           a.canExecuteWhileConstructing === true;

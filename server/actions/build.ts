@@ -5,6 +5,8 @@ import { orderBuild } from "../api/unit.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { lookup } from "../systems/lookup.ts";
+import { canExecuteActionOnUnit } from "../util/allyPermissions.ts";
+import { findAction } from "../util/actionLookup.ts";
 
 export const zBuild = z.object({
   type: z.literal("build"),
@@ -22,7 +24,17 @@ export const build = (
   const round = lobbyContext.current.round;
   if (!round) return;
   const u = lookup(unit);
-  if (u?.owner !== client.id) return;
+  if (!u) return;
+
+  // Find the build action for this unit type
+  const action = findAction(
+    u,
+    (a) => a.type === "build" && a.unitType === buildType,
+  );
+  if (!action) return;
+
+  // Check if client can execute this build action
+  if (!canExecuteActionOnUnit(client, u, action)) return;
 
   // Interrupt if not queuing
   if (!queue) {

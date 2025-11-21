@@ -5,6 +5,7 @@ import { getMapCenter } from "@/shared/map.ts";
 import type { Client } from "../client.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { getPlayer } from "@/shared/api/player.ts";
+import { practiceModeActions } from "@/shared/data.ts";
 
 /**
  * Gets the gold amount for a player by their ID
@@ -67,6 +68,18 @@ export const spawnPracticeUnits = (playerId: string) => {
   const { x, y } = getMapCenter();
   const wolf = newUnit(playerId, "wolf", x, y);
   if (wolf.manaRegen) wolf.manaRegen *= 10;
+
+  // Set trueOwner so the player retains control even when transferring ownership
+  wolf.trueOwner = playerId;
+
+  // Add practice mode "Give to Enemy" action (will be swapped to "Reclaim" when given)
+  if (wolf.actions) {
+    wolf.actions = [
+      ...wolf.actions,
+      practiceModeActions.giveToEnemy,
+    ];
+  }
+
   return sheep;
 };
 

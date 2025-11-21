@@ -77,6 +77,25 @@ const selfDestruct: UnitDataAction = {
   canExecuteWhileConstructing: true,
 };
 
+export const practiceModeActions = {
+  giveToEnemy: {
+    name: "Give to Enemy",
+    description: "Transfer control to enemy player",
+    type: "auto",
+    order: "giveToEnemy",
+    icon: "alignment",
+    binding: ["KeyE"],
+  } as const satisfies UnitDataAction,
+  reclaimFromEnemy: {
+    name: "Reclaim",
+    description: "Take back control from enemy",
+    type: "auto",
+    order: "reclaimFromEnemy",
+    icon: "alignment",
+    binding: ["KeyE"],
+  } as const satisfies UnitDataAction,
+};
+
 export const items: Record<string, Item> = {
   claw: {
     id: "claw",
