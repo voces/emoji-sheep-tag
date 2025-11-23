@@ -4,7 +4,6 @@
 - Farms
   - Strong?
   - Invis?
-  - Magic?
   - Money?
 - Items
   - Auras?
@@ -21,13 +20,11 @@
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
 - Can hear through fog
-- Unit should have full orientation (not be symmetric) - wolf & fox
 - When changing zoom, blueprints
 - Modes
   - Bulldog
   - Kat'ma
   - Vamp
-- Minimap
 - Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
 - Matchmaking
   - 2v4 - 15 rounds
@@ -41,6 +38,13 @@
     - Should rest on branches
   - Bees
     - Should rest on one of the three flowers
+- Replace duplicate models
+  - Tiny Hut -> Shack
+  - House -> Cabin
+  - Wide Hut -> Cottage
+  - Rotund Hut -> House
+- Should be able to Tab between types in a selection
+- Share Gold functionality
 
 # Bugs
 
@@ -49,6 +53,8 @@
   - Falls over when spam clicking movement orders
   - Per-player pathing calc limits?
 - A structure could get built just as the sheep dies, common in switch
+- When move targetting a unit, the order clears when the target is reached; it
+  should keep following
 
 # Perf
 

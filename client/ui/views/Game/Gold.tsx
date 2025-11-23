@@ -15,14 +15,14 @@ const Container = styled.div(({ theme }) => ({
 }));
 
 const InnerGold = ({ entity }: { entity: Entity }) => {
-  useListenToEntityProp(entity, "gold");
+  const gold = useListenToEntityProp(entity, "gold", (g) => Math.floor(g ?? 0));
 
   return (
     <Container>
       <span style={{ width: 24, height: 24 }}>
         <SvgIcon icon="gold" />
       </span>
-      <span>{Math.floor(entity.gold ?? 0)}</span>
+      <span>{gold}</span>
     </Container>
   );
 };

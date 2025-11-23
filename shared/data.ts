@@ -606,7 +606,7 @@ export const prefabs: Record<string, DataEntity> = {
         icon: "wolfDodge",
         binding: ["KeyD"],
         manaCost: 5,
-        buffDuration: 0.35,
+        buffDuration: 0.4,
       },
       {
         name: "Mirror Image",

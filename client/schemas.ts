@@ -232,6 +232,7 @@ const zBuff = z.object({
 const zItem = z.object({
   id: z.string(),
   name: z.string(),
+  description: z.string().optional(),
   icon: z.string().optional(),
   gold: z.number(),
   binding: z.string().array().readonly(),
@@ -257,9 +258,9 @@ export const zUpdate = z.object({
   health: z.number().nullable().optional(),
   maxHealth: z.number().optional(),
   healthRegen: z.number().optional(),
-  mana: z.number().optional(),
-  maxMana: z.number().optional(),
-  manaRegen: z.number().optional(),
+  mana: z.number().nullable().optional(),
+  maxMana: z.number().nullable().optional(),
+  manaRegen: z.number().nullable().optional(),
 
   // Player data
   isPlayer: z.boolean().optional(),

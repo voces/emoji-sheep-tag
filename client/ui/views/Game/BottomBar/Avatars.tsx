@@ -1,16 +1,15 @@
-import { selection } from "../../../systems/selection.ts";
+import { selection } from "../../../../systems/selection.ts";
 import { styled } from "styled-components";
-import { VStack } from "@/components/layout/Layout.tsx";
 import { Avatar } from "@/components/game/Avatar.tsx";
 import { useSet } from "@/hooks/useSet.ts";
 import { useMemo } from "react";
-import { Entity } from "../../../ecs.ts";
+import { Entity } from "../../../../ecs.ts";
 
-const AvatarContainer = styled(VStack)`
-  pointer-events: none;
-  position: fixed;
-  top: ${({ theme }) => theme.spacing.md};
-  left: ${({ theme }) => theme.spacing.md};
+const AvatarContainer = styled.div`
+  display: grid;
+  gap: ${({ theme }) => theme.spacing.sm};
+  grid-template-rows: repeat(3, 1fr);
+  grid-auto-flow: column;
 `;
 
 const getGroupKey = (entity: Entity): string =>
@@ -46,5 +45,3 @@ export const Avatars = () => {
     </AvatarContainer>
   );
 };
-
-// prefab

@@ -5,8 +5,6 @@ import {
   type MouseButtonEvent,
   type MouseMoveEvent,
 } from "../../../mouse.ts";
-import { getActiveOrder } from "../../../controls/orderHandlers.ts";
-import { getBlueprint } from "../../../controls/blueprintHandlers.ts";
 
 type State = {
   isInterpolating: boolean;
@@ -28,27 +26,29 @@ export const createCameraMovement = (
 
   const handleMouseButtonDown = (e: MouseButtonEvent) => {
     if (e.button !== "left") return;
-    if (e.element?.id !== "minimap") return;
+    if (
+      !(e.element instanceof HTMLElement &&
+        e.element.hasAttribute("data-minimap"))
+    ) return;
+
+    const shouldIssueOrder = e.hadActiveOrder || e.hadBlueprint;
+    if (shouldIssueOrder) return;
 
     const rect = canvas.getBoundingClientRect();
     const x = e.pixels.x - rect.left;
     const y = e.pixels.y - rect.top;
 
     if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-      const hasActiveOrder = getActiveOrder() !== undefined;
-      const hasBlueprint = getBlueprint() !== undefined;
-      const shouldIssueOrder = hasActiveOrder || hasBlueprint;
+      const map = getMap();
+      const mapWidth = map.bounds.max.x - map.bounds.min.x;
+      const mapHeight = map.bounds.max.y - map.bounds.min.y;
+      const worldX = map.bounds.min.x + (x / rect.width) * mapWidth;
+      const worldY = map.bounds.max.y - (y / rect.height) * mapHeight;
 
-      if (!shouldIssueOrder) {
-        const map = getMap();
-        const worldX = (x / rect.width) * map.width;
-        const worldY = map.height - (y / rect.height) * map.height;
-
-        state.targetX = worldX;
-        state.targetY = worldY;
-        state.isInterpolating = true;
-        state.isDragging = true;
-      }
+      state.targetX = worldX;
+      state.targetY = worldY;
+      state.isDragging = true;
+      state.isInterpolating = true;
     }
   };
 
@@ -65,13 +65,21 @@ export const createCameraMovement = (
     const y = e.pixels.y - rect.top;
 
     const map = getMap();
+    const mapWidth = map.bounds.max.x - map.bounds.min.x;
+    const mapHeight = map.bounds.max.y - map.bounds.min.y;
     const worldX = Math.max(
-      0,
-      Math.min((x / rect.width) * map.width, map.width),
+      map.bounds.min.x,
+      Math.min(
+        map.bounds.min.x + (x / rect.width) * mapWidth,
+        map.bounds.max.x,
+      ),
     );
     const worldY = Math.max(
-      0,
-      Math.min(map.height - (y / rect.height) * map.height, map.height),
+      map.bounds.min.y,
+      Math.min(
+        map.bounds.max.y - (y / rect.height) * mapHeight,
+        map.bounds.max.y,
+      ),
     );
 
     state.targetX = worldX;

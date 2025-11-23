@@ -1,12 +1,11 @@
 import { styled } from "styled-components";
 import { Chat } from "./Chat.tsx";
-import { ActionBar } from "./ActionBar.tsx";
 import { Gold } from "./Gold.tsx";
-import { Avatars } from "./Avatars.tsx";
 import { Timers } from "./Timers.tsx";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { Editor } from "./Editor/index.tsx";
 import { SimpleStats } from "./SimpleStats.tsx";
+import { BottomBar } from "./BottomBar/index.tsx";
 
 const TopRight = styled(HStack)`
   position: fixed;
@@ -19,13 +18,17 @@ const TopRight = styled(HStack)`
 export const Game = () => (
   <>
     <Chat />
-    <Avatars />
+
+    {/* <Avatars /> */}
+
     <SimpleStats />
+
     <TopRight>
       <Gold />
       <Timers />
       <Editor />
     </TopRight>
-    <ActionBar />
+
+    <BottomBar />
   </>
 );

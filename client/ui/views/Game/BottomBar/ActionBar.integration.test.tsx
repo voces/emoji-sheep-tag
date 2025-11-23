@@ -3,7 +3,6 @@ import { afterEach, it } from "@std/testing/bdd";
 import { render, screen } from "@testing-library/react";
 import { expect } from "@std/expect";
 import { ActionBar, selectionVar } from "./ActionBar.tsx";
-import { Wrapper } from "../../Wrapper.tsx";
 import { menusVar } from "@/vars/menus.ts";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
 import { openMenu } from "@/vars/menuState.ts";
@@ -13,6 +12,7 @@ import {
 } from "@/client-testing/test-helpers.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
+import { Wrapper } from "../../../Wrapper.tsx";
 
 afterEach(() => {
   __testing_reset_all_vars();

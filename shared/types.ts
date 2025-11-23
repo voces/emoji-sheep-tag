@@ -259,9 +259,9 @@ export type Entity = {
   health?: number | null;
   maxHealth?: number;
   healthRegen?: number;
-  mana?: number;
-  maxMana?: number;
-  manaRegen?: number;
+  mana?: number | null;
+  maxMana?: number | null;
+  manaRegen?: number | null;
 
   // Player data
   isPlayer?: boolean;

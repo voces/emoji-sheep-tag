@@ -91,19 +91,19 @@ it("can move an action into a menu", async () => {
   // Mirror Image not in top-level actions
   await waitFor(() =>
     expect(
-      screen.getAllByRole("button").map((
-        b,
-      ) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
+      screen.getAllByRole("button")
+        .filter((b) => b.getAttribute("aria-label"))
+        .map((b) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
     ).toEqual([
       ["Wolf", undefined],
-      ["Attack", "A"],
-      ["Move", "V"],
-      ["Stop", "Z"],
-      ["Hold position", "H"],
-      ["Shadowstep", "D"],
-      ["Swap", "C"],
-      ["Place Sentry", "W"],
       ["Give to Enemy", "Q"],
+      ["Place Sentry", "W"],
+      ["Attack", "A"],
+      ["Shadowstep", "D"],
+      ["Hold position", "H"],
+      ["Stop", "Z"],
+      ["Swap", "C"],
+      ["Move", "V"],
       ["Shop", "B"],
     ])
   );
@@ -118,25 +118,25 @@ it("can move an action into a menu", async () => {
   await userEvent.click(screen.getByLabelText("Shop"));
   await waitFor(() =>
     expect(
-      screen.getAllByRole("button").map((
-        b,
-      ) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
+      screen.getAllByRole("button")
+        .filter((b) => b.getAttribute("aria-label"))
+        .map((b) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
     ).toEqual([
       ["Wolf", undefined],
-      ["Back", "`"],
-      ["Purchase Claws +20", "C"],
+      ["Purchase Bomber", "E"],
+      ["Mirror Image", "R"],
+      ["Purchase Locate Sheep", "T"],
+      ["Purchase Scythe", "Y"],
       ["Purchase Echo Fang", "A"],
+      ["Purchase Potion of Speed", "S"],
       ["Purchase Dire Collar", "D"],
       ["Purchase Fox Token", "F"],
       ["Purchase Potion of Strength", "G"],
+      ["Purchase Claws +20", "C"],
       ["Purchase Swift Claws +15%", "V"],
       ["Purchase Boots +30", "B"],
-      ["Purchase Potion of Speed", "S"],
-      ["Purchase Bomber", "E"],
       ["Purchase Mana Potion", "M"],
-      ["Purchase Locate Sheep", "T"],
-      ["Purchase Scythe", "Y"],
-      ["Mirror Image", "R"],
+      ["Back", "`"],
     ])
   );
 });

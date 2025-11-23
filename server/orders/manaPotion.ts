@@ -12,7 +12,7 @@ export const manaPotionOrder = {
     if (!action || action.type !== "auto") return "failed";
 
     // Don't use mana potion if already at full mana
-    if (unit.mana !== undefined && unit.maxMana !== undefined) {
+    if (typeof unit.mana === "number" && typeof unit.maxMana === "number") {
       if (unit.mana >= unit.maxMana) return "failed";
     }
 
@@ -30,7 +30,7 @@ export const manaPotionOrder = {
     const action = findActionByOrder(unit, "manaPotion");
     if (!action || action.type !== "auto" || !action.manaRestore) return false;
 
-    if (unit.mana !== undefined && unit.maxMana !== undefined) {
+    if (typeof unit.mana === "number" && typeof unit.maxMana === "number") {
       unit.mana = Math.min(unit.mana + action.manaRestore, unit.maxMana);
     }
 

@@ -69,6 +69,46 @@ export const computeUnitMovementSpeed = (unit: Entity): number => {
   return baseSpeed * speedMultiplier + flatSpeedBonus;
 };
 
+/**
+ * Computes the total damage a unit can deal, including base damage plus bonuses from items and buffs
+ */
+export const computeUnitDamage = (unit: Entity): number => {
+  if (!unit.attack) return 0;
+
+  let totalDamage = unit.attack.damage;
+
+  // Apply multipliers first, then add bonuses from buffs (including item buffs)
+  for (const buff of iterateBuffs(unit)) {
+    if (buff.damageMultiplier) {
+      totalDamage *= buff.damageMultiplier;
+    }
+  }
+
+  for (const buff of iterateBuffs(unit)) {
+    if (buff.damageBonus) {
+      totalDamage += buff.damageBonus;
+    }
+  }
+
+  return totalDamage;
+};
+
+/**
+ * Computes the effective attack speed multiplier for a unit, including bonuses from items and buffs
+ */
+export const computeUnitAttackSpeed = (unit: Entity): number => {
+  let speedMultiplier = 1.0;
+
+  // Apply attack speed bonuses from buffs (including item buffs)
+  for (const buff of iterateBuffs(unit)) {
+    if (buff.attackSpeedMultiplier) {
+      speedMultiplier *= buff.attackSpeedMultiplier;
+    }
+  }
+
+  return speedMultiplier;
+};
+
 const classificationToGroup = {} as {
   [key in Classification]: ClassificationGroup;
 };
@@ -158,6 +198,7 @@ export const isStructure = (entity: Entity) => {
 };
 
 export const isUnit = (entity: Entity) => {
+  if (entity.type === "cosmetic") return false;
   if (entity.targetedAs?.includes("unit")) return true;
   if (
     entity.targetedAs?.includes("structure") ||

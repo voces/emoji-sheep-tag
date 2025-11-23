@@ -88,6 +88,10 @@ export const cancelOrder = (
   cancelBlueprint();
 };
 
+// Set getters on mouse object for event state capture
+mouse.getActiveOrder = getActiveOrder;
+mouse.getBlueprint = getBlueprint;
+
 // Selection drag state
 let dragStart: { x: number; y: number } | null = null;
 let selectionEntity: Entity | null = null;
@@ -110,7 +114,8 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   if (
     (e.element instanceof HTMLElement || e.element instanceof SVGElement)
   ) {
-    const isGameElement = e.element.id === "ui" || e.element.id === "minimap";
+    const isGameElement = e.element.id === "ui" ||
+      e.element.hasAttribute("data-minimap");
     if (!isGameElement) e.element.focus();
     if ("click" in e.element) e.element.click();
     else {
@@ -141,7 +146,8 @@ const handleLeftClick = (e: MouseButtonEvent) => {
   const blueprint = getBlueprint();
 
   // Don't handle entity selection/deselection on minimap
-  const isMinimapClick = e.element?.id === "minimap";
+  const isMinimapClick = e.element instanceof HTMLElement &&
+    e.element.hasAttribute("data-minimap");
 
   if (blueprint) {
     handleBlueprintClick(e);
@@ -700,9 +706,10 @@ globalThis.addEventListener("blur", clearKeyboard);
 // Camera controls
 let zoomTimeout = 0;
 globalThis.addEventListener("wheel", (e) => {
-  const elementId = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y)
-    ?.id;
-  if (elementId !== "ui" && elementId !== "minimap") {
+  const element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
+  const isGameElement = element?.id === "ui" ||
+    (element instanceof HTMLElement && element.hasAttribute("data-minimap"));
+  if (!isGameElement) {
     return false;
   }
   if (e.ctrlKey) return;
@@ -735,7 +742,7 @@ addSystem({
     if (showSettingsVar() || document.activeElement !== document.body) {
       return false;
     }
-    const { width, height } = getMap();
+    const map = getMap();
 
     const skipKeyboard = showCommandPaletteVar() === "open";
 
@@ -768,12 +775,12 @@ addSystem({
 
       // Move camera opposite to maintain cursor lock on world
       camera.position.x = Math.min(
-        Math.max(0, camera.position.x - worldDeltaX),
-        width,
+        Math.max(map.bounds.min.x, camera.position.x - worldDeltaX),
+        map.bounds.max.x,
       );
       camera.position.y = Math.min(
-        Math.max(0, camera.position.y - worldDeltaY),
-        height,
+        Math.max(map.bounds.min.y, camera.position.y - worldDeltaY),
+        map.bounds.max.y,
       );
 
       // Update grab position for next frame
@@ -803,16 +810,22 @@ addSystem({
       x *= 1 + 1.3 * Math.exp(-10 * panDuration) + (panDuration / 5) ** 0.5 -
         0.32;
       camera.position.x = Math.min(
-        Math.max(0, camera.position.x + x * delta * camera.position.z),
-        width,
+        Math.max(
+          map.bounds.min.x,
+          camera.position.x + x * delta * camera.position.z,
+        ),
+        map.bounds.max.x,
       );
     }
     if (y) {
       y *= 1 + 1.3 * Math.exp(-10 * panDuration) + (panDuration / 5) ** 0.5 -
         0.32;
       camera.position.y = Math.min(
-        Math.max(0, camera.position.y + y * delta * camera.position.z),
-        height,
+        Math.max(
+          map.bounds.min.y,
+          camera.position.y + y * delta * camera.position.z,
+        ),
+        map.bounds.max.y,
       );
     }
 

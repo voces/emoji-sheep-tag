@@ -16,8 +16,12 @@ export const CommandButton = styled.div`
     transition: filter 100ms ease-out 0ms;
   }
 
-  &:hover,
-  &.hover {
+  &[aria-disabled="true"] {
+    border-color: #bbb;
+    filter: saturate(0.3) brightness(0.7);
+  }
+
+  &.hover:not([aria-disabled="true"]) {
     border-style: inset;
   }
 `;

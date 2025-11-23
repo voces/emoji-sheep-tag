@@ -91,29 +91,7 @@ export const createMinimapRenderer = (
   );
   viewportIndicatorScene.add(viewportIndicator);
 
-  const render = (delta: number, mainCamera: PerspectiveCamera) => {
-    minimapFogPass.updateCamera(camera);
-
-    const aspect = mainCamera.aspect;
-    const vFov = (mainCamera.fov * Math.PI) / 180;
-    const height = 2 * Math.tan(vFov / 2) * mainCamera.position.z;
-    const width = height * aspect;
-
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-    const x = mainCamera.position.x;
-    const y = mainCamera.position.y;
-
-    const points = [
-      new Vector3(x - halfWidth, y - halfHeight, 0),
-      new Vector3(x + halfWidth, y - halfHeight, 0),
-      new Vector3(x + halfWidth, y + halfHeight, 0),
-      new Vector3(x - halfWidth, y + halfHeight, 0),
-      new Vector3(x - halfWidth, y - halfHeight, 0),
-    ];
-
-    viewportIndicator.geometry.setFromPoints(points);
-
+  const renderScene = () => {
     const scaledEntities: Array<{ entity: Entity; originalScale: number }> = [];
     const maskedEntities: Entity[] = [];
 
@@ -137,6 +115,33 @@ export const createMinimapRenderer = (
     }
 
     for (const entity of maskedEntities) setMinimapMask(entity, false);
+  };
+
+  const renderFogAndOverlay = (
+    delta: number,
+    mainCamera: PerspectiveCamera,
+  ) => {
+    minimapFogPass.updateCamera(camera);
+
+    const aspect = mainCamera.aspect;
+    const vFov = (mainCamera.fov * Math.PI) / 180;
+    const height = 2 * Math.tan(vFov / 2) * mainCamera.position.z;
+    const width = height * aspect;
+
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    const x = mainCamera.position.x;
+    const y = mainCamera.position.y;
+
+    const points = [
+      new Vector3(x - halfWidth, y - halfHeight, 0),
+      new Vector3(x + halfWidth, y - halfHeight, 0),
+      new Vector3(x + halfWidth, y + halfHeight, 0),
+      new Vector3(x - halfWidth, y + halfHeight, 0),
+      new Vector3(x - halfWidth, y - halfHeight, 0),
+    ];
+
+    viewportIndicator.geometry.setFromPoints(points);
 
     minimapFogPass.render(
       renderer,
@@ -156,7 +161,8 @@ export const createMinimapRenderer = (
   };
 
   return {
-    render,
+    renderScene,
+    renderFogAndOverlay,
     dispose: () => {
       unsubscribeFog();
       sceneRenderTarget.dispose();

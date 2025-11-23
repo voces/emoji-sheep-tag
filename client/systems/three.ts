@@ -652,6 +652,7 @@ addSystem({
       collections[prev ?? ""]?.delete(e.id);
       prevModel.set(e, next);
       if (e.position) onPositionOrRotationChange(e as SystemEntity<"position">);
+      updateColor(e);
     }
   },
   onRemove: (e) => {
@@ -672,6 +673,7 @@ addSystem({
       collections[prev ?? ""]?.delete(e.id);
       prevModel.set(e, next);
       if (e.position) onPositionOrRotationChange(e as SystemEntity<"position">);
+      updateColor(e);
     }
   },
   onRemove: (e) => {

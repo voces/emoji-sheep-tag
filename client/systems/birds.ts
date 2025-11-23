@@ -1,9 +1,11 @@
-import { addSystem, appContext } from "@/shared/context.ts";
+import { addSystem } from "@/shared/context.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { prefabs } from "@/shared/data.ts";
 import { Entity } from "../ecs.ts";
+import { onMapChange } from "@/shared/map.ts";
 
 const trees = new Set<Entity>();
+const allBirds = new Set<Entity>();
 
 let nextSpawnTime = 0;
 addSystem({
@@ -121,11 +123,20 @@ const spawnBird = () => {
     isEffect: true,
   });
 
+  // Track bird for cleanup
+  allBirds.add(bird);
+
   // Remove bird after it reaches destination
   const flightTime = distance / (bird.movementSpeed ?? 2);
   setTimeout(() => {
-    if (appContext.current.entities.has(bird)) {
-      removeEntity(bird);
-    }
+    removeEntity(bird);
+    allBirds.delete(bird);
   }, flightTime * 1000);
 };
+
+// Clean up all birds when map changes
+onMapChange(() => {
+  for (const bird of allBirds) removeEntity(bird);
+  allBirds.clear();
+  nextSpawnTime = 0;
+});

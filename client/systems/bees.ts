@@ -1,5 +1,5 @@
 import { addSystem, appContext } from "@/shared/context.ts";
-import { addEntity } from "@/shared/api/entity.ts";
+import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { prefabs } from "@/shared/data.ts";
 import { KdTree } from "@/shared/util/KDTree.ts";
 import { Point } from "@/shared/pathing/math.ts";
@@ -10,11 +10,11 @@ const flowerKd = new KdTree();
 const flowerToPoint = new Map<Entity, Point>();
 const pointToFlower = new Map<Point, Entity>();
 
-// Track which flowers have spawned bees
-const flowersWithBees = new Set<Entity>();
-
 // Track visited flowers per bee
 const beeVisitedFlowers = new WeakMap<Entity, Set<Entity>>();
+
+// Track which bee belongs to which flower (one bee per flower)
+const flowerToBee = new Map<Entity, Entity>();
 
 addSystem({
   props: ["prefab", "position"] as const,
@@ -35,14 +35,19 @@ addSystem({
         flowerToPoint.delete(e);
         pointToFlower.delete(point);
       }
-      flowersWithBees.delete(e);
+
+      const bee = flowerToBee.get(e);
+      if (bee) {
+        removeEntity(bee);
+        flowerToBee.delete(e);
+      }
     }
   },
 });
 
 const spawnBeeAtFlower = (flower: Entity) => {
   if (!flower.position) return;
-  flowersWithBees.add(flower);
+  if (flowerToBee.has(flower)) return; // Already has a bee
 
   const movementSpeed = (prefabs.bee.movementSpeed ?? 1.5) *
     (0.8 + Math.random() * 0.4);
@@ -57,6 +62,8 @@ const spawnBeeAtFlower = (flower: Entity) => {
     modelScale,
     isEffect: true,
   });
+
+  flowerToBee.set(flower, bee);
 
   // Initialize visited set with starting flower
   const visitedFlowers = new Set<Entity>([flower]);

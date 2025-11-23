@@ -12,7 +12,7 @@ export const swapOrder = {
 
     // Check if unit has enough mana
     const manaCost = action.manaCost ?? 0;
-    if (unit.mana === undefined || unit.mana < manaCost) {
+    if (typeof unit.mana !== "number" || unit.mana < manaCost) {
       return "failed";
     }
 
@@ -85,12 +85,6 @@ export const swapOrder = {
       mirror.buffs = mirror.buffs.filter((buff: Buff) =>
         buff.expiration !== "Swap"
       );
-    }
-
-    // Consume mana
-    const manaCost = action.manaCost ?? 0;
-    if (unit.mana !== undefined) {
-      unit.mana = Math.max(0, unit.mana - manaCost);
     }
 
     // Store target positions

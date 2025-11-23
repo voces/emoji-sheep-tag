@@ -23,6 +23,8 @@ export const reclaimFromEnemyOrder = {
       );
     }
 
+    if (unit.order?.type === "attack") unit.order = null;
+
     return "immediate";
   },
 } satisfies OrderDefinition;

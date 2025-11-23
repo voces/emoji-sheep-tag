@@ -9,6 +9,7 @@ import { Gameplay } from "./Gameplay.tsx";
 import { Shortcuts } from "./Shortcuts/Shortcuts.tsx";
 import { Audio } from "./Audio.tsx";
 import { Maps } from "./Maps.tsx";
+import { UI } from "./UI.tsx";
 
 const SettingsDialog = styled(Dialog)`
   width: 700px;
@@ -77,7 +78,7 @@ const CloseButton = styled(Button)`
 export const Settings = () => {
   const showSettings = useReactiveVar(showSettingsVar);
   const [activeTab, setActiveTab] = useState<
-    "gameplay" | "shortcuts" | "audio" | "maps"
+    "gameplay" | "shortcuts" | "audio" | "maps" | "ui"
   >(
     "gameplay",
   );
@@ -122,12 +123,19 @@ export const Settings = () => {
           >
             Maps
           </Tab>
+          <Tab
+            $active={activeTab === "ui"}
+            onClick={() => setActiveTab("ui")}
+          >
+            UI
+          </Tab>
         </TabsContainer>
         <TabContent>
           {activeTab === "gameplay" && <Gameplay />}
           {activeTab === "shortcuts" && <Shortcuts />}
           {activeTab === "audio" && <Audio />}
           {activeTab === "maps" && <Maps />}
+          {activeTab === "ui" && <UI />}
         </TabContent>
       </SettingsContent>
     </SettingsDialog>

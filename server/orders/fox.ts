@@ -3,8 +3,6 @@ import { Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
-import { practiceModeActions } from "@/shared/data.ts";
-import { isPractice } from "../api/st.ts";
 
 export const foxOrder = {
   id: "fox",
@@ -49,14 +47,6 @@ export const foxOrder = {
       }];
     }
 
-    if (isPractice()) {
-      if (unit.trueOwner) fox.trueOwner = unit.trueOwner;
-      fox.actions = [
-        ...(fox.actions ?? []),
-        unit.trueOwner !== unit.owner
-          ? practiceModeActions.reclaimFromEnemy
-          : practiceModeActions.giveToEnemy,
-      ];
-    }
+    if (unit.trueOwner) fox.trueOwner = unit.trueOwner;
   },
 } satisfies OrderDefinition;

@@ -196,7 +196,7 @@ const resize = () => {
 globalThis.addEventListener("resize", resize);
 resize();
 
-type RenderListener = (delta: number, time: number) => void;
+type RenderListener = (deltaSeconds: number, timeSeconds: number) => void;
 const renderListeners: RenderListener[] = [];
 export const onRender = (fn: RenderListener) => {
   renderListeners.push(fn);

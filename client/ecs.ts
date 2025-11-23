@@ -109,13 +109,13 @@ export const unloadEcs = (
       app.removeEntity(entity);
       delete map[entity.id];
     }
-    if (includePlayers) {
-      for (const entity of app.entities) {
-        if (!entity.isPlayer) continue;
+    for (const entity of app.entities) {
+      if (
+        !entity.isPlayer || (entity.id !== "practice-enemy" && !includePlayers)
+      ) continue;
 
-        app.removeEntity(entity);
-        delete map[entity.id];
-      }
+      app.removeEntity(entity);
+      delete map[entity.id];
     }
     fogResetter?.();
   });

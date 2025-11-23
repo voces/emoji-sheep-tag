@@ -41,11 +41,16 @@ const throttle = <T>(
   return { throttledCallback, cleanup };
 };
 
-export const useListenToEntityProp = <P extends keyof Entity>(
+export const useListenToEntityProp = <P extends keyof Entity, T = Entity[P]>(
   entity: Entity | undefined,
   prop: P,
+  transform?: (value: Entity[P]) => T,
 ) => {
-  const [value, setValue] = useState(entity?.[prop]);
+  const [value, setValue] = useState<T>(
+    transform && entity?.[prop] !== undefined
+      ? transform(entity[prop])
+      : (entity?.[prop] as T),
+  );
   useEffect(
     () => {
       if (!entity) return undefined;
@@ -54,38 +59,9 @@ export const useListenToEntityProp = <P extends keyof Entity>(
       const unsubscribe = listen(
         entity,
         prop,
-        (e) => throttledCallback(e[prop]),
-      );
-
-      return () => {
-        cleanup();
-        unsubscribe();
-      };
-    },
-    [entity, prop],
-  );
-
-  return value;
-};
-
-export const useListenToEntityProps = <P extends keyof Entity>(
-  entity: Entity | undefined,
-  props: P[],
-) => {
-  const [value, setValue] = useState(
-    Object.fromEntries(props.map((prop) => [prop, entity?.[prop]])),
-  );
-  useEffect(
-    () => {
-      if (!entity) return undefined;
-
-      const { throttledCallback, cleanup } = throttle(setValue, 100);
-      const unsubscribe = listen(
-        entity,
-        props,
         (e) =>
           throttledCallback(
-            Object.fromEntries(props.map((prop) => [prop, e?.[prop]])),
+            transform ? transform(e[prop]) : (e[prop] as T),
           ),
       );
 
@@ -94,7 +70,52 @@ export const useListenToEntityProps = <P extends keyof Entity>(
         unsubscribe();
       };
     },
-    [entity, props.join(" | ")],
+    [entity, prop, transform],
+  );
+
+  return value;
+};
+
+export const useListenToEntityProps = <
+  P extends keyof Entity,
+  T = { [K in P]: Entity[K] },
+>(
+  entity: Entity | undefined,
+  props: P[],
+  transform?: (value: { [K in P]: Entity[K] }) => T,
+) => {
+  const initialValue = Object.fromEntries(
+    props.map((prop) => [prop, entity?.[prop]]),
+  ) as { [K in P]: Entity[K] };
+
+  const [value, setValue] = useState<T>(
+    transform ? transform(initialValue) : (initialValue as T),
+  );
+
+  useEffect(
+    () => {
+      if (!entity) return undefined;
+
+      const { throttledCallback, cleanup } = throttle(setValue, 100);
+      const unsubscribe = listen(
+        entity,
+        props,
+        (e) => {
+          const propsValue = Object.fromEntries(
+            props.map((prop) => [prop, e?.[prop]]),
+          ) as { [K in P]: Entity[K] };
+          throttledCallback(
+            transform ? transform(propsValue) : (propsValue as T),
+          );
+        },
+      );
+
+      return () => {
+        cleanup();
+        unsubscribe();
+      };
+    },
+    [entity, props.join(" | "), transform],
   );
 
   return value;

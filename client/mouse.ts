@@ -35,11 +35,17 @@ export class MouseEvent extends Event {
 }
 
 export class MouseButtonEvent extends MouseEvent {
+  readonly hadActiveOrder: boolean;
+  readonly hadBlueprint: boolean;
+
   constructor(
     direction: "up" | "down",
     readonly button: "left" | "right" | "middle",
   ) {
     super(`mouseButton${direction[0].toUpperCase() + direction.slice(1)}`);
+
+    this.hadActiveOrder = mouse.getActiveOrder?.() !== undefined;
+    this.hadBlueprint = mouse.getBlueprint?.() !== undefined;
   }
 }
 
@@ -67,6 +73,10 @@ type Mouse = {
     x: number,
     y: number,
   ) => { intersects: ExtendedSet<Entity>; world: Vector2 } | null;
+  getActiveOrder?: () =>
+    | { order: string; variant: string; aoe: number }
+    | undefined;
+  getBlueprint?: () => { prefab: string } | undefined;
 };
 
 export const mouse: MouseEventTarget & Mouse = Object.assign(

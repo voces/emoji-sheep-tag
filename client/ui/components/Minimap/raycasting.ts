@@ -19,6 +19,8 @@ export const createMinimapRaycast = (
   const plane = new Plane(new Vector3(0, 0, 1), 0);
   const cameraSpace = new Vector2();
   const world3 = new Vector3();
+  let isPointerDown = false;
+  let pointerDownWasOnMinimap = false;
 
   const performMinimapRaycast = () => {
     const rect = canvas.getBoundingClientRect();
@@ -40,20 +42,41 @@ export const createMinimapRaycast = (
     const localX = x - rect.left;
     const localY = y - rect.top;
 
-    if (
-      localX >= 0 && localX <= rect.width && localY >= 0 &&
-      localY <= rect.height
-    ) {
-      return performMinimapRaycast();
+    const isOverMinimap = localX >= 0 && localX <= rect.width && localY >= 0 &&
+      localY <= rect.height;
+
+    if (isOverMinimap) {
+      if (!isPointerDown || pointerDownWasOnMinimap) {
+        return performMinimapRaycast();
+      }
     }
     return null;
   };
+
+  const handlePointerDown = () => {
+    isPointerDown = true;
+    const rect = canvas.getBoundingClientRect();
+    const localX = mouse.pixels.x - rect.left;
+    const localY = mouse.pixels.y - rect.top;
+    pointerDownWasOnMinimap = localX >= 0 && localX <= rect.width &&
+      localY >= 0 && localY <= rect.height;
+  };
+
+  const handlePointerUp = () => {
+    isPointerDown = false;
+    pointerDownWasOnMinimap = false;
+  };
+
+  globalThis.addEventListener("pointerdown", handlePointerDown);
+  globalThis.addEventListener("pointerup", handlePointerUp);
 
   mouse.customRaycast = minimapRaycast;
 
   return {
     dispose: () => {
       mouse.customRaycast = undefined;
+      globalThis.removeEventListener("pointerdown", handlePointerDown);
+      globalThis.removeEventListener("pointerup", handlePointerUp);
     },
   };
 };

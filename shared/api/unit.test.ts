@@ -1,7 +1,13 @@
 import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { computeUnitMovementSpeed } from "./unit.ts";
+import {
+  computeUnitAttackSpeed,
+  computeUnitDamage,
+  computeUnitMovementSpeed,
+  tempUnit,
+} from "./unit.ts";
 import { Entity } from "../types.ts";
+import { items } from "../data.ts";
 
 describe("computeUnitMovementSpeed", () => {
   it("should return base movement speed for unit with no items", () => {
@@ -181,5 +187,104 @@ describe("computeUnitMovementSpeed", () => {
 
     // 2.0 * 1.2 + 0.5 = 2.4 + 0.5 = 2.9
     expect(computeUnitMovementSpeed(unit)).toBe(2.9);
+  });
+});
+
+describe("computeUnitDamage", () => {
+  it("should return 0 for unit without attack", () => {
+    const unit = tempUnit("test-owner", "sheep", 10, 10);
+    expect(computeUnitDamage(unit)).toBe(0);
+  });
+
+  it("should return base damage for unit with no items", () => {
+    const unit = tempUnit("test-owner", "wolf", 10, 10);
+    expect(computeUnitDamage(unit)).toBe(70); // Wolf base damage
+  });
+
+  it("should add item damage bonuses", () => {
+    const unit = tempUnit("test-owner", "wolf", 10, 10, {
+      inventory: [items.claw],
+    });
+    expect(computeUnitDamage(unit)).toBe(90); // 70 + 20
+  });
+
+  it("should add multiple item damage bonuses", () => {
+    const unit = tempUnit("test-owner", "wolf", 10, 10, {
+      inventory: [
+        items.claw,
+        { ...items.claw, id: "claw2", buffs: [{ damageBonus: 15 }] }, // Second claw with different damage
+      ],
+    });
+    expect(computeUnitDamage(unit)).toBe(105); // 70 + 20 + 15
+  });
+
+  it("should ignore items without damage property", () => {
+    const unit = tempUnit("test-owner", "wolf", 10, 10, {
+      inventory: [items.foxToken],
+    });
+    expect(computeUnitDamage(unit)).toBe(70); // Only wolf base damage
+  });
+});
+
+describe("computeUnitAttackSpeed", () => {
+  it("should return 1.0 for unit with no items", () => {
+    const unit = tempUnit("test-owner", "wolf", 10, 10);
+
+    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
+  });
+
+  it(
+    "should return 1.0 for unit with items that have no attack speed multiplier",
+    () => {
+      const unit = tempUnit("test-owner", "wolf", 10, 10, {
+        inventory: [items.claw, items.foxToken], // Neither has attackSpeedMultiplier
+      });
+
+      expect(computeUnitAttackSpeed(unit)).toBe(1.0);
+    },
+  );
+
+  it("should apply single attack speed multiplier", () => {
+    const unit = tempUnit("test-owner", "wolf", 10, 10, {
+      inventory: [items.swiftness], // 1.15x multiplier
+    });
+
+    expect(computeUnitAttackSpeed(unit)).toBe(1.15);
+  });
+
+  it(
+    "should stack multiple attack speed multipliers multiplicatively",
+    () => {
+      const unit = tempUnit("test-owner", "wolf", 10, 10, {
+        inventory: [
+          items.swiftness, // 1.15x
+          {
+            ...items.swiftness,
+            id: "swiftness2",
+            buffs: [{ attackSpeedMultiplier: 1.2 }],
+          }, // 1.2x
+        ],
+      });
+
+      expect(computeUnitAttackSpeed(unit)).toBeCloseTo(1.38, 2); // 1.15 * 1.2 = 1.38
+    },
+  );
+
+  it("should ignore items without attack speed multiplier", () => {
+    const unit = tempUnit("test-owner", "wolf", 10, 10, {
+      inventory: [
+        items.swiftness, // 1.15x
+        items.claw, // No attack speed multiplier
+        items.foxToken, // No attack speed multiplier
+      ],
+    });
+
+    expect(computeUnitAttackSpeed(unit)).toBe(1.15);
+  });
+
+  it("should return 1.0 for unit with empty inventory", () => {
+    const unit = tempUnit("test-owner", "wolf", 10, 10);
+
+    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
   });
 });

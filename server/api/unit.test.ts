@@ -1,13 +1,7 @@
 import { afterEach, describe } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import {
-  addItem,
-  computeUnitAttackSpeed,
-  computeUnitDamage,
-  damageEntity,
-  newUnit,
-} from "./unit.ts";
-import { Entity, Item } from "@/shared/types.ts";
+import { addItem, damageEntity, newUnit } from "./unit.ts";
+import { Entity } from "@/shared/types.ts";
 import { items } from "@/shared/data.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 
@@ -95,111 +89,6 @@ describe("addItem", () => {
 
     expect(unit.inventory).toHaveLength(1);
     expect(unit.inventory![0].id).toBe("foxToken");
-  });
-});
-
-describe("computeUnitDamage", () => {
-  it("should return 0 for unit without attack", function* () {
-    const unit = newUnit("test-owner", "sheep", 10, 10);
-    yield;
-    expect(computeUnitDamage(unit)).toBe(0);
-  });
-
-  it("should return base damage for unit with no items", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    yield;
-    expect(computeUnitDamage(unit)).toBe(70); // Wolf base damage
-  });
-
-  it("should add item damage bonuses", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [items.claw];
-    yield;
-    expect(computeUnitDamage(unit)).toBe(90); // 70 + 20
-  });
-
-  it("should add multiple item damage bonuses", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [
-      items.claw,
-      { ...items.claw, id: "claw2", buffs: [{ damageBonus: 15 }] }, // Second claw with different damage
-    ];
-    yield;
-    expect(computeUnitDamage(unit)).toBe(105); // 70 + 20 + 15
-  });
-
-  it("should ignore items without damage property", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [items.foxToken]; // foxToken has no damage property
-    yield;
-    expect(computeUnitDamage(unit)).toBe(70); // Only wolf base damage
-  });
-});
-
-describe("computeUnitAttackSpeed", () => {
-  it("should return 1.0 for unit with no items", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    yield;
-    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
-  });
-
-  it(
-    "should return 1.0 for unit with items that have no attack speed multiplier",
-    function* () {
-      const unit = newUnit("test-owner", "wolf", 10, 10);
-      unit.inventory = [items.claw, items.foxToken]; // Neither has attackSpeedMultiplier
-      yield;
-      expect(computeUnitAttackSpeed(unit)).toBe(1.0);
-    },
-  );
-
-  it("should apply single attack speed multiplier", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [items.swiftness]; // 1.15x multiplier
-    yield;
-    expect(computeUnitAttackSpeed(unit)).toBe(1.15);
-  });
-
-  it(
-    "should stack multiple attack speed multipliers multiplicatively",
-    function* () {
-      const unit = newUnit("test-owner", "wolf", 10, 10);
-      unit.inventory = [
-        items.swiftness, // 1.15x
-        {
-          ...items.swiftness,
-          id: "swiftness2",
-          buffs: [{ attackSpeedMultiplier: 1.2 }],
-        }, // 1.2x
-      ];
-      yield;
-      expect(computeUnitAttackSpeed(unit)).toBeCloseTo(1.38, 2); // 1.15 * 1.2 = 1.38
-    },
-  );
-
-  it("should ignore items without attack speed multiplier", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [
-      items.swiftness, // 1.15x
-      items.claw, // No attack speed multiplier
-      items.foxToken, // No attack speed multiplier
-    ];
-    yield;
-    expect(computeUnitAttackSpeed(unit)).toBe(1.15);
-  });
-
-  it("should return 1.0 for unit with empty inventory", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    unit.inventory = [];
-    yield;
-    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
-  });
-
-  it("should return 1.0 for unit with no inventory property", function* () {
-    const unit = newUnit("test-owner", "wolf", 10, 10);
-    (unit as { inventory?: ReadonlyArray<Item> }).inventory = undefined;
-    yield;
-    expect(computeUnitAttackSpeed(unit)).toBe(1.0);
   });
 });
 

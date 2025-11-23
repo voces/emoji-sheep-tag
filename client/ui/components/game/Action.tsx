@@ -5,6 +5,7 @@ import { absurd } from "@/shared/util/absurd.ts";
 import { Command } from "./Command.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
 import { getPlayer } from "@/shared/api/player.ts";
+import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
 
 export const Action = ({ action, current, entity }: {
   action: UnitDataAction & { count?: number };
@@ -13,25 +14,33 @@ export const Action = ({ action, current, entity }: {
 }) => {
   // Check if action is disabled due to insufficient mana
   const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
-  let disabled = manaCost > 0 && (entity.mana ?? 0) < manaCost;
+  const hasMana = useListenToEntityProps(
+    entity,
+    manaCost > 0 ? ["mana"] : [],
+    ({ mana }) => (mana ?? 0) >= manaCost,
+  );
 
   const owningPlayer = getPlayer(entity.owner);
 
   // Check if action is disabled due to insufficient gold
-  if (action.goldCost) {
-    const goldCost = action.goldCost;
-    // Find the owning player of the entity
-    const playerGold = owningPlayer?.gold ?? 0;
-    disabled = disabled || (goldCost > 0 && playerGold < goldCost);
-  }
+  const goldCost = action.goldCost ?? 0;
+  const hasGold = useListenToEntityProps(
+    owningPlayer,
+    goldCost > 0 ? ["gold"] : [],
+    ({ gold }) => (gold ?? 0) >= goldCost,
+  );
 
   // Check if action is disabled during construction
-  const isConstructing = typeof entity.progress === "number";
-  const canExecuteWhileConstructing = "canExecuteWhileConstructing" in action &&
-    action.canExecuteWhileConstructing === true;
-  if (isConstructing && !canExecuteWhileConstructing) {
-    disabled = true;
-  }
+  const blockedByConstructing = useListenToEntityProps(
+    entity,
+    "canExecuteWhileConstructing" in action &&
+      action.canExecuteWhileConstructing === true
+      ? []
+      : ["progress"],
+    ({ progress }) => typeof progress === "number",
+  );
+
+  const disabled = !hasMana || !hasGold || blockedByConstructing;
 
   switch (action.type) {
     case "auto":

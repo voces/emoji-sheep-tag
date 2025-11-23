@@ -246,10 +246,5 @@ export const clearDoodads = (types?: Entity["type"][]) => {
   }
 };
 
-export const resetDoodads = (types?: Entity["type"][]) => {
-  clearDoodads(types);
-  generateDoodads(types);
-};
-
 // Provide a helper for consumers that still need a default map before lobby state arrives
 export const buildDefaultMap = () => buildLoadedMap("revo", defaultPackedMap);

@@ -57,6 +57,7 @@ export const Command = ({
   iconProps,
   count,
   onClick,
+  ...rest
 }: {
   name: string;
   description?: string;
@@ -71,7 +72,7 @@ export const Command = ({
   iconProps?: Partial<React.ComponentProps<typeof SvgIcon>>;
   count?: number;
   onClick?: () => void;
-}) => {
+} & React.ComponentProps<typeof CommandButton>) => {
   const localPlayer = useLocalPlayer();
 
   const { tooltipContainerProps, tooltip } = useTooltip(useMemo(() => (
@@ -146,17 +147,14 @@ export const Command = ({
       aria-disabled={disabled}
       aria-pressed={pressed}
       onClick={handleClick}
-      style={{
-        filter: disabled ? "saturate(0.3) brightness(0.7)" : undefined,
-        opacity: disabled ? 0.6 : undefined,
-      }}
-      {...tooltipContainerProps}
+      {...(name ? tooltipContainerProps : undefined)}
+      {...rest}
     >
       {icon && (
         <SvgIcon
           icon={icon}
           color={localPlayer?.playerColor ?? undefined}
-          scale={iconScale}
+          scale={(iconScale ?? 1) * 0.9}
           {...iconProps}
         />
       )}

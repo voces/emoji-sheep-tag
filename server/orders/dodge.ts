@@ -71,6 +71,7 @@ export const dodgeOrder = {
           totalDuration: action.buffDuration,
           expiration: "DodgeImage",
         }],
+        trueOwner: unit.trueOwner,
       },
     );
 

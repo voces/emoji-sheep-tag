@@ -11,8 +11,8 @@ import {
 import { normalizeKey, normalizeKeys } from "../util/normalizeKey.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { canPlayerExecuteAction } from "../util/allyPermissions.ts";
-import { type MenuConfig, menusVar } from "../ui/vars/menus.ts";
-import { items, prefabs } from "@/shared/data.ts";
+import { menusVar } from "../ui/vars/menus.ts";
+import { convertMenuConfigToAction } from "../util/convertMenuConfigToAction.ts";
 
 export const keyboard: Record<string, boolean> = {};
 export const normalizedKeyboard: Record<string, boolean> = {};
@@ -39,107 +39,6 @@ const getActionsInMenusForSelection = (
   }
 
   return actionsInMenus;
-};
-
-const convertBackAction = (
-  config: MenuConfig,
-  shortcuts: Record<string, Record<string, string[]>>,
-  section: string,
-): UnitDataAction => {
-  const actionKey = `menu-back-${config.id}`;
-  const binding = shortcuts[section]?.[actionKey] ?? ["Backquote"];
-  return {
-    name: "Back",
-    type: "auto",
-    order: "back",
-    icon: "cancel",
-    binding,
-  };
-};
-
-const convertPrefabAction = (
-  actionKey: string,
-  config: MenuConfig,
-  shortcuts: Record<string, Record<string, string[]>>,
-  section: string,
-): UnitDataAction => {
-  const prefab = prefabs[section];
-  const prefabAction = prefab?.actions?.find((a) =>
-    actionToShortcutKey(a) === actionKey
-  );
-
-  if (prefabAction) {
-    const binding = shortcuts[section]?.[actionKey] ??
-      prefabAction.binding ?? [];
-    return {
-      ...prefabAction,
-      binding,
-    };
-  }
-
-  const fallbackKey = `menu-${config.id}.${actionKey}`;
-  const binding = shortcuts[section]?.[fallbackKey] ?? [];
-  return {
-    name: actionKey,
-    type: "auto",
-    order: actionKey,
-    binding,
-  };
-};
-
-const convertPurchaseAction = (
-  itemId: string,
-  config: MenuConfig,
-  shortcuts: Record<string, Record<string, string[]>>,
-  section: string,
-): UnitDataAction => {
-  const item = items[itemId];
-  const actionKey = `menu-${config.id}.purchase-${itemId}`;
-  const binding = shortcuts[section]?.[actionKey] ?? item.binding;
-  return {
-    name: `Purchase ${item.name}`,
-    description: item.description,
-    type: "purchase",
-    itemId,
-    binding,
-    goldCost: item.gold,
-  };
-};
-
-const convertMenuConfigToAction = (
-  config: MenuConfig,
-  allConfigs: MenuConfig[],
-  shortcuts: Record<string, Record<string, string[]>>,
-  section: string,
-): UnitDataAction & { type: "menu" } => {
-  const convertActionRef = (
-    ref: MenuConfig["actions"][number],
-  ): UnitDataAction => {
-    if ("id" in ref) {
-      return convertMenuConfigToAction(ref, allConfigs, shortcuts, section);
-    }
-
-    if (ref.type === "action") {
-      if (ref.actionKey === "back") {
-        return convertBackAction(config, shortcuts, section);
-      }
-      return convertPrefabAction(ref.actionKey, config, shortcuts, section);
-    }
-
-    return convertPurchaseAction(ref.itemId, config, shortcuts, section);
-  };
-
-  const menuBinding = shortcuts[section]?.[`menu-${config.id}`] ??
-    config.binding;
-
-  return {
-    name: config.name,
-    description: config.description,
-    type: "menu",
-    icon: config.icon,
-    binding: menuBinding,
-    actions: config.actions.map(convertActionRef),
-  };
 };
 
 export const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
@@ -293,8 +192,16 @@ export const findActionForShortcut = (
             menu,
             allMenus,
             shortcuts,
-            entity.prefab,
+            entity,
           );
+
+          // Skip menus that only have a back action or are empty
+          const nonBackActions = menuAction.actions.filter((a) =>
+            a.type !== "auto" || a.order !== "back"
+          );
+          if (nonBackActions.length === 0) {
+            continue;
+          }
 
           if (menuAction.binding) {
             const matchQuality = checkShortcut(menuAction.binding, e.code);

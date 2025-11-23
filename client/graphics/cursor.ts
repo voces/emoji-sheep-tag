@@ -1,6 +1,7 @@
 import { setFirst } from "../../server/util/set.ts";
 import { isAlly, isEnemy } from "@/shared/api/unit.ts";
-import { getActiveOrder, hasBlueprint } from "../controls.ts";
+import { getActiveOrder } from "../controls.ts";
+import { getBlueprint } from "../controls/blueprintHandlers.ts";
 import { Entity } from "../ecs.ts";
 import { mouse } from "../mouse.ts";
 import { getLocalPlayer } from "../api/player.ts";
@@ -43,7 +44,8 @@ const cursor = document.getElementById("cursor");
 // if (!cursor) throw new Error("Expected cursor element");
 
 const getCursorVariant = (intersect: Entity | undefined) => {
-  if (hasBlueprint()) return "hidden";
+  const blueprint = getBlueprint();
+  if (blueprint && blueprint.prefab !== "ping") return "hidden";
   const active = getActiveOrder()?.variant;
   if (active) return active;
   if (!intersect) return "default";

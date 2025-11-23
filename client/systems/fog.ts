@@ -756,3 +756,19 @@ addSystem({
     triggerFogChecks();
   },
 });
+
+// Handle owner changes (e.g., giving units to enemy in practice mode)
+addSystem({
+  props: ["owner", "sightRadius"],
+  onChange: (entity) => {
+    // Check if this entity should provide vision based on new owner
+    if (visibleToLocalPlayer(entity)) {
+      visibilityGrid.updateEntity(entity);
+    } else {
+      visibilityGrid.removeEntity(entity);
+    }
+
+    // Update fog to reflect changes
+    triggerFogChecks();
+  },
+});

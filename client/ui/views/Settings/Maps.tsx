@@ -35,11 +35,10 @@ const MapItem = styled.div`
 const MapInfo = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
 `;
 
 const MapName = styled.span`
-  font-size: 14px;
+  font-size: 15px;
 `;
 
 const MapMeta = styled.span`

@@ -203,6 +203,7 @@ import("./systems/lookup.ts");
 import("./systems/pathing.ts");
 import("./systems/pathing.ts");
 import("./systems/playerEntities.ts");
+import("./systems/practiceMode.ts");
 import("./systems/projectile.ts");
 import("./systems/queues.ts");
 import("./systems/regen.ts");

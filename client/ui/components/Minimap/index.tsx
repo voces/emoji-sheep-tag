@@ -1,5 +1,5 @@
 import { styled } from "styled-components";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Color, PerspectiveCamera, WebGLRenderer } from "three";
 import {
   camera as mainCamera,
@@ -39,7 +39,7 @@ const MinimapCanvas = styled.canvas`
   cursor: pointer;
 `;
 
-export const Minimap = () => {
+export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -49,17 +49,20 @@ export const Minimap = () => {
     const pixelRatio = Math.min(globalThis.devicePixelRatio, 2);
     renderer.setPixelRatio(pixelRatio);
     renderer.setClearColor(new Color(0x333333));
-    renderer.setSize(262, 262, false);
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 
     const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
     const updateCamera = () => {
       const map = getMap();
-      camera.position.z = Math.max(map.width, map.height) * 0.65;
-      camera.position.x = map.width / 2;
-      camera.position.y = map.height / 2;
+      camera.position.z = Math.max(
+        map.bounds.max.x - map.bounds.min.x,
+        map.bounds.max.y - map.bounds.min.y,
+      ) * 0.65;
+      camera.position.x = (map.bounds.max.x + map.bounds.min.x) / 2;
+      camera.position.y = (map.bounds.max.y + map.bounds.min.y) / 2;
     };
     updateCamera();
-    const unsubscribe = onMapChange(updateCamera);
+    const unsubscribeMapChange = onMapChange(updateCamera);
     camera.layers.enableAll();
 
     const cameraMovement = createCameraMovement(canvas, mainCamera);
@@ -73,13 +76,43 @@ export const Minimap = () => {
       pixelRatio,
     );
 
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        const height = entry.contentRect.height;
+        renderer.setSize(width, height, false);
+      }
+    });
+    resizeObserver.observe(canvas);
+
+    const targetFPS = 15;
+    const frameTime = 1 / targetFPS; // Delta is in seconds, so frameTime should be too
+    let timeSinceLastSceneRender = 0;
+    let isFirstFrame = true;
+
     const disposeRender = onRender((delta) => {
       cameraMovement.updateCameraSmooth(delta);
-      minimapRenderer.render(delta, mainCamera);
+
+      // Render scene entities at throttled FPS
+      if (isFirstFrame) {
+        minimapRenderer.renderScene();
+        isFirstFrame = false;
+        timeSinceLastSceneRender = 0;
+      } else {
+        timeSinceLastSceneRender += delta;
+        if (timeSinceLastSceneRender >= frameTime) {
+          minimapRenderer.renderScene();
+          timeSinceLastSceneRender -= frameTime;
+        }
+      }
+
+      // Render fog and overlay at full FPS
+      minimapRenderer.renderFogAndOverlay(delta, mainCamera);
     });
 
     return () => {
-      unsubscribe();
+      resizeObserver.disconnect();
+      unsubscribeMapChange();
       disposeRender();
       cameraMovement.dispose();
       raycast.dispose();
@@ -87,5 +120,5 @@ export const Minimap = () => {
     };
   }, [canvas]);
 
-  return <MinimapCanvas ref={setCanvas} id="minimap" />;
+  return <MinimapCanvas ref={setCanvas} data-minimap {...props} />;
 };
