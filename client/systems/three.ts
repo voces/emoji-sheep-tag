@@ -89,6 +89,9 @@ import bee from "../assets/bee.svg" with { type: "text" };
 import alignment from "../assets/alignment.svg" with { type: "text" };
 import crystal from "../assets/crystal.svg" with { type: "text" };
 import sparkle2 from "../assets/sparkle2.svg" with { type: "text" };
+import shack from "../assets/shack.svg" with { type: "text" };
+import cabin from "../assets/cabin.svg" with { type: "text" };
+import cottage from "../assets/cottage.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -167,6 +170,9 @@ export const svgs: Record<string, string> = {
   alignment,
   crystal,
   sparkle2,
+  shack,
+  cabin,
+  cottage,
 };
 
 type SvgConfig = {
@@ -209,7 +215,10 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   sentry: svg(sentry, 0.03),
   sheep: svg(sheep, 1),
   hut: svg(hut, 2),
-  house: svg(house, 3.4),
+  house: svg(house, 0.14),
+  shack: svg(shack, 0.04),
+  cabin: svg(cabin, 0.085),
+  cottage: svg(cottage, 0.14, { yOffset: 0.02 }),
   watchtower: svg(watchtower, 0.06),
   divinity: svg(divinity, 1),
   castle: svg(castle, 0.7),
@@ -225,7 +234,7 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   crystal: svg(crystal, 1, { yOffset: 0.2 }),
 
   // Temple stacks on things, we want it visible, always
-  hinduTemple: svg(hinduTemple, 1.75),
+  hinduTemple: svg(hinduTemple, 1.9),
 
   bird1: svg(bird1, 0.25, { layer: 2 }),
   bird2: svg(bird2, 0.25, { layer: 2 }),

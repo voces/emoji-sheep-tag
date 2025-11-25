@@ -38,11 +38,6 @@
     - Should rest on branches
   - Bees
     - Should rest on one of the three flowers
-- Replace duplicate models
-  - Tiny Hut -> Shack
-  - House -> Cabin
-  - Wide Hut -> Cottage
-  - Rotund Hut -> House
 - Should be able to Tab between types in a selection
 - Share Gold functionality
 

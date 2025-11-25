@@ -1,8 +1,8 @@
 # Art
 
 - https://iconduck.com/emojis/97154/sheep
-- https://iconduck.com/emojis/97196/wolf-face
-- https://iconduck.com/emojis/98625/hut
+- https://iconduck.com/emojis/97196/wolf-face revisioned
+- https://www.svgrepo.com/svg/405842/hut
 - https://www.svgrepo.com/svg/90719/fence
 - https://www.svgrepo.com/svg/405378/fire
 - https://www.svgrepo.com/svg/405006/collision
@@ -19,7 +19,7 @@
 - https://www.svgrepo.com/svg/424411/building-landmark-senegal
 - https://www.svgrepo.com/svg/411739/shop
 - https://www.svgrepo.com/svg/83759/claw
-- https://www.svgrepo.com/svg/405703/fox
+- https://www.svgrepo.com/svg/405703/fox revisioned
 - https://www.svgrepo.com/svg/317730/saphire
 - https://www.svgrepo.com/svg/245894/running-shoes-shoe
 - https://www.svgrepo.com/svg/191964/potion
@@ -32,7 +32,6 @@
 - https://www.svgrepo.com/svg/500810/checkboxempty
 - https://www.svgrepo.com/svg/247157/potion
 - https://www.svgrepo.com/svg/398225/rock
-- https://www.svgrepo.com/svg/362110/house
 - https://www.svgrepo.com/svg/451375/take-pedestrian-ramp
 - https://www.svgrepo.com/svg/486897/upper-limit
 - https://www.svgrepo.com/svg/486729/lower-limit
