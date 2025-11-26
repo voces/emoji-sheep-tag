@@ -212,7 +212,7 @@ describe("damageEntity", () => {
 
   it("should not reduce health below 0", function* () {
     const attacker = newUnit("attacker-owner", "wolf", 10, 10);
-    const target = newUnit("target-owner", "tinyHut", 20, 20);
+    const target = newUnit("target-owner", "shack", 20, 20);
 
     damageEntity(attacker, target);
     yield;

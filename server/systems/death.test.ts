@@ -32,20 +32,20 @@ describe("death system bounty integration", () => {
     gold: 0,
   }, function* () {
     const wolf = newUnit("wolf-player", "wolf", 0, 0);
-    const wideHut = newUnit("sheep-player", "wideHut", 5, 5);
+    const cottage = newUnit("sheep-player", "cottage", 5, 5);
     yield;
 
     let goldBefore = getPlayerGold("wolf-player");
-    damageEntity(wolf, wideHut, 1000, true);
+    damageEntity(wolf, cottage, 1000, true);
     yield;
 
     expect(getPlayerGold("wolf-player") - goldBefore).toBeCloseTo(3, 1);
 
-    const rotundHut = newUnit("sheep-player", "rotundHut", 10, 10);
+    const house = newUnit("sheep-player", "house", 10, 10);
     yield;
 
     goldBefore = getPlayerGold("wolf-player");
-    damageEntity(wolf, rotundHut, 1000, true);
+    damageEntity(wolf, house, 1000, true);
     yield;
 
     expect(getPlayerGold("wolf-player") - goldBefore).toBeCloseTo(4, 1);

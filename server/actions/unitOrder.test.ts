@@ -541,21 +541,21 @@ describe("unitOrder self destruct", () => {
       const client = clients.get("test-client")!;
 
       // Use tiny hut which has self destruct action
-      const tinyHut = newUnit("test-client", "tinyHut", 15, 15);
-      tinyHut.health = 1;
-      tinyHut.maxHealth = 100;
+      const shack = newUnit("test-client", "shack", 15, 15);
+      shack.health = 1;
+      shack.maxHealth = 100;
       yield;
 
       // Execute self destruct action
       unitOrder(client, {
         type: "unitOrder",
-        units: [tinyHut.id],
+        units: [shack.id],
         order: "selfDestruct",
       });
       yield;
 
       // Should set health to 0 even with low health
-      expect(tinyHut.health).toBe(0);
+      expect(shack.health).toBe(0);
     },
   );
 });

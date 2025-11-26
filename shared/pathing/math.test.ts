@@ -54,7 +54,7 @@ it("distanceBetweenEntities > unit & structure", () => {
     width: 1,
     height: 1,
   };
-  const tinyHutTilemap = {
+  const shackTilemap = {
     map: Array(4).fill(1),
     top: -1,
     left: -1,
@@ -88,7 +88,7 @@ it("distanceBetweenEntities > unit & structure", () => {
   expect(
     distanceBetweenEntities(sheep, {
       id: "hut-0",
-      tilemap: tinyHutTilemap,
+      tilemap: shackTilemap,
       position: { x: 2, y: 0 },
     }),
   ).toEqual(1.5);
@@ -96,7 +96,7 @@ it("distanceBetweenEntities > unit & structure", () => {
   expect(
     distanceBetweenEntities(sheep, {
       id: "hut-0",
-      tilemap: tinyHutTilemap,
+      tilemap: shackTilemap,
       position: { x: -2, y: 0 },
     }),
   ).toEqual(1.5);
@@ -104,7 +104,7 @@ it("distanceBetweenEntities > unit & structure", () => {
   expect(
     distanceBetweenEntities(sheep, {
       id: "hut-0",
-      tilemap: tinyHutTilemap,
+      tilemap: shackTilemap,
       position: { x: 1.5, y: 1.5 },
     }),
   ).toEqual(Math.SQRT2);

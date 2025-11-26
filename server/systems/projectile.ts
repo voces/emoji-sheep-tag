@@ -15,6 +15,8 @@ addSystem({
     const movement = e.projectile.speed * delta;
 
     if (distance <= movement) {
+      e.position = e.projectile.target;
+
       const attacker = lookup(e.projectile.attackerId);
       if (!attacker) return removeEntity(e);
 

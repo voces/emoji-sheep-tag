@@ -107,6 +107,6 @@ export const saveOrder = {
           });
         }
       }
-    } else damageEntity(unit, target, 100);
+    } else damageEntity(unit, target, 1000);
   },
 } satisfies OrderDefinition;

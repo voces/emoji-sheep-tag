@@ -92,6 +92,9 @@ import sparkle2 from "../assets/sparkle2.svg" with { type: "text" };
 import shack from "../assets/shack.svg" with { type: "text" };
 import cabin from "../assets/cabin.svg" with { type: "text" };
 import cottage from "../assets/cottage.svg" with { type: "text" };
+import hayPile from "../assets/hayPile.svg" with { type: "text" };
+import hayCube from "../assets/hayCube.svg" with { type: "text" };
+import brokenHayCube from "../assets/brokenHayCube.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -173,6 +176,9 @@ export const svgs: Record<string, string> = {
   shack,
   cabin,
   cottage,
+  hayPile,
+  hayCube,
+  brokenHayCube,
 };
 
 type SvgConfig = {
@@ -205,22 +211,23 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   hayBale: svg(hayBale, 0.31, { layer: 2, xOffset: -0.05, yOffset: -0.1 }),
   wood: svg(wood, 0.12, { layer: 2 }),
   // tractor: loadSvg(tractor, 1, { layer: 2 }),
-
-  // Bottom-layer indicators (render between background elements and units)
-  circleBottom: svg(circle, 0.08, { layer: 2 }),
-  gravityBottom: svg(gravity, 2, { layer: 2 }),
   glow,
 
-  // Basic units and structures
+  // Units that can hide behind things
   sentry: svg(sentry, 0.03),
   sheep: svg(sheep, 1),
+
+  // Background decor units can hide behind
+  hayPile: svg(hayPile, 0.12, { layer: 2 }),
+
+  // Basic units and structures
   hut: svg(hut, 2),
   house: svg(house, 0.14),
   shack: svg(shack, 0.04),
   cabin: svg(cabin, 0.085),
   cottage: svg(cottage, 0.14, { yOffset: 0.02 }),
   watchtower: svg(watchtower, 0.06),
-  divinity: svg(divinity, 1),
+  divinity: svg(divinity, 1.1),
   castle: svg(castle, 0.7),
   // shop: loadSvg(shop, 1),
   fox: svg(fox, 0.6),
@@ -232,6 +239,8 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   tree: svg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
   totem: svg(totem, 0.18, { yOffset: 0.12 }),
   crystal: svg(crystal, 1, { yOffset: 0.2 }),
+  hayCube: svg(hayCube, 0.05),
+  brokenHayCube: svg(brokenHayCube, 0.05),
 
   // Temple stacks on things, we want it visible, always
   hinduTemple: svg(hinduTemple, 1.9),

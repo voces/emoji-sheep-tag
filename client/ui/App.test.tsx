@@ -123,6 +123,7 @@ it("can move an action into a menu", async () => {
         .map((b) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
     ).toEqual([
       ["Wolf", undefined],
+      ["Back", "`"],
       ["Purchase Bomber", "E"],
       ["Mirror Image", "R"],
       ["Purchase Locate Sheep", "T"],
@@ -132,11 +133,11 @@ it("can move an action into a menu", async () => {
       ["Purchase Dire Collar", "D"],
       ["Purchase Fox Token", "F"],
       ["Purchase Potion of Strength", "G"],
+      ["Purchase Hay Trap", "X"],
       ["Purchase Claws +20", "C"],
       ["Purchase Swift Claws +15%", "V"],
       ["Purchase Boots +30", "B"],
       ["Purchase Mana Potion", "M"],
-      ["Back", "`"],
     ])
   );
 });
