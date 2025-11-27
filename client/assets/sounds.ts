@@ -16,6 +16,7 @@ export const sounds: Record<string, string> = {
   howl1: new URL("./assets/howl1.opus", import.meta.url).pathname,
   howl2: new URL("./assets/howl2.opus", import.meta.url).pathname,
   jarOpen1: new URL("./assets/jarOpen1.opus", import.meta.url).pathname,
+  laser1: new URL("./assets/laser1.opus", import.meta.url).pathname,
   poof1: new URL("./assets/poof1.opus", import.meta.url).pathname,
   sheep1: new URL("./assets/sheep1.opus", import.meta.url).pathname,
   sheep2: new URL("./assets/sheep2.opus", import.meta.url).pathname,

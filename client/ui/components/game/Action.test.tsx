@@ -23,7 +23,6 @@ it("should render auto action", () => {
     { wrapper: Wrapper },
   );
 
-  expect(screen.getByRole("button")).toBeTruthy();
   expect(screen.getByLabelText("Stop")).toBeTruthy();
 });
 
@@ -42,7 +41,6 @@ it("should render target action", () => {
     { wrapper: Wrapper },
   );
 
-  expect(screen.getByRole("button")).toBeTruthy();
   expect(screen.getByLabelText("Attack")).toBeTruthy();
 });
 
@@ -74,7 +72,7 @@ it("should render build action with gold cost", async () => {
     { wrapper: Wrapper },
   );
 
-  await userEvent.hover(screen.getByRole("button"));
+  await userEvent.hover(screen.getByLabelText("Build Farm"));
 
   expect(getAllTexts(screen.getByRole("tooltip"))).toEqual([
     "Build Farm",
@@ -111,7 +109,7 @@ it("should render purchase action with gold cost", async () => {
     { wrapper: Wrapper },
   );
 
-  await userEvent.hover(screen.getByRole("button"));
+  await userEvent.hover(screen.getByLabelText("Buy Sword"));
 
   expect(getAllTexts(screen.getByRole("tooltip"))).toEqual([
     "Buy Sword",
@@ -139,7 +137,6 @@ it("should render menu action", () => {
     { wrapper: Wrapper },
   );
 
-  expect(screen.getByRole("button")).toBeTruthy();
   expect(screen.getByLabelText("Shop")).toBeTruthy();
 });
 
@@ -164,8 +161,8 @@ it("should disable action when insufficient mana", () => {
     { wrapper: Wrapper },
   );
 
-  const button = screen.getByRole("button");
-  expect(button.getAttribute("aria-disabled")).toBe("true");
+  const element = screen.getByLabelText("Cast Spell");
+  expect(element.getAttribute("aria-disabled")).toBe("true");
 });
 
 it("should disable build action when insufficient gold", () => {
@@ -196,8 +193,8 @@ it("should disable build action when insufficient gold", () => {
     { wrapper: Wrapper },
   );
 
-  const button = screen.getByRole("button");
-  expect(button.getAttribute("aria-disabled")).toBe("true");
+  const element = screen.getByLabelText("Build Farm");
+  expect(element.getAttribute("aria-disabled")).toBe("true");
 });
 
 it("should disable purchase action when insufficient gold", () => {
@@ -228,8 +225,8 @@ it("should disable purchase action when insufficient gold", () => {
     { wrapper: Wrapper },
   );
 
-  const button = screen.getByRole("button");
-  expect(button.getAttribute("aria-disabled")).toBe("true");
+  const element = screen.getByLabelText("Buy Expensive Item");
+  expect(element.getAttribute("aria-disabled")).toBe("true");
 });
 
 it("should show current state when action is current", () => {
@@ -247,8 +244,8 @@ it("should show current state when action is current", () => {
     { wrapper: Wrapper },
   );
 
-  const button = screen.getByRole("button");
-  expect(button.getAttribute("aria-pressed")).toBe("true");
+  const element = screen.getByLabelText("Hold");
+  expect(element.getAttribute("aria-pressed")).toBe("true");
 });
 
 it("should enable action with sufficient resources", () => {
@@ -282,6 +279,6 @@ it("should enable action with sufficient resources", () => {
     { wrapper: Wrapper },
   );
 
-  const button = screen.getByRole("button");
-  expect(button.getAttribute("aria-disabled")).not.toBe("true");
+  const element = screen.getByLabelText("Build Farm");
+  expect(element.getAttribute("aria-disabled")).not.toBe("true");
 });

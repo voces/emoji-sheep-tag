@@ -115,6 +115,8 @@ export const beamOrder = {
       angle,
       BEAM_DURATION,
       "ease-in",
+      undefined,
+      { sounds: { "birth": ["laser1"] } },
     );
   },
 } satisfies OrderDefinition;

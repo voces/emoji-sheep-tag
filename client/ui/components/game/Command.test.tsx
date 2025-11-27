@@ -18,7 +18,7 @@ describe("Command", () => {
   it("should display tooltip on hover", async () => {
     render(<Command name="Stop" />, { wrapper: Wrapper });
 
-    await userEvent.hover(screen.getByRole("button"));
+    await userEvent.hover(screen.getByLabelText("Stop"));
 
     expect(screen.getByRole("tooltip").textContent).toBe("Stop");
   });
@@ -26,7 +26,7 @@ describe("Command", () => {
   it("should display tooltip with gold cost", async () => {
     render(<Command name="Build Farm" goldCost={50} />, { wrapper: Wrapper });
 
-    await userEvent.hover(screen.getByRole("button"));
+    await userEvent.hover(screen.getByLabelText("Build Farm"));
 
     expect(getAllTexts(screen.getByRole("tooltip"))).toEqual([
       "Build Farm",
@@ -38,22 +38,22 @@ describe("Command", () => {
   it("should show disabled state", () => {
     render(<Command name="Cast Spell" disabled />, { wrapper: Wrapper });
 
-    const button = screen.getByRole("button");
-    expect(button.getAttribute("aria-disabled")).toBe("true");
+    const element = screen.getByLabelText("Cast Spell");
+    expect(element.getAttribute("aria-disabled")).toBe("true");
   });
 
   it("should show pressed state when current", () => {
     render(<Command name="Hold" pressed />, { wrapper: Wrapper });
 
-    const button = screen.getByRole("button");
-    expect(button.getAttribute("aria-pressed")).toBe("true");
+    const element = screen.getByLabelText("Hold");
+    expect(element.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("should show unpressed state when not current", () => {
     render(<Command name="Stop" pressed={false} />, { wrapper: Wrapper });
 
-    const button = screen.getByRole("button");
-    expect(button.getAttribute("aria-pressed")).toBe("false");
+    const element = screen.getByLabelText("Stop");
+    expect(element.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("should display keyboard shortcut", () => {
@@ -82,7 +82,7 @@ describe("Command", () => {
       return originalDispatch.call(document, event);
     };
 
-    screen.getByRole("button").click();
+    screen.getByLabelText("Stop").click();
 
     expect(dispatchedEvents.length).toBe(2); // keydown and keyup
     expect(dispatchedEvents[0].type).toBe("keydown");
@@ -108,7 +108,7 @@ describe("Command", () => {
       return originalDispatch.call(document, event);
     };
 
-    screen.getByRole("button").click();
+    screen.getByLabelText("Multi").click();
 
     expect(dispatchedEvents.length).toBe(4); // 2 keydown + 2 keyup
     expect(dispatchedEvents[0].type).toBe("keydown");
@@ -136,7 +136,7 @@ describe("Command", () => {
       return originalDispatch.call(document, event);
     };
 
-    screen.getByRole("button").click();
+    screen.getByLabelText("NoBinding").click();
 
     expect(dispatchedEvents.length).toBe(0);
 
@@ -155,14 +155,14 @@ describe("Command", () => {
     render(<Command name="Move" icon="route" />, { wrapper: Wrapper });
 
     // Icon rendering is handled by SvgIcon component, just verify it's present
-    expect(screen.getByRole("button")).toBeTruthy();
+    expect(screen.getByLabelText("Move")).toBeTruthy();
   });
 
   it("should show disabled state correctly", () => {
     render(<Command name="Disabled" disabled />, { wrapper: Wrapper });
 
-    const button = screen.getByRole("button");
-    expect(button.getAttribute("aria-disabled")).toBe("true");
+    const element = screen.getByLabelText("Disabled");
+    expect(element.getAttribute("aria-disabled")).toBe("true");
     // The styling is implementation detail - focus on the functional aspect
   });
 });

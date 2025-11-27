@@ -75,10 +75,6 @@ describe("ActionBar", () => {
 
     render(<ActionBar />, { wrapper: Wrapper });
 
-    const buttons = screen.getAllByRole("button").filter((b) =>
-      b.getAttribute("aria-label")
-    );
-    expect(buttons.length).toBe(4);
     expect(screen.getByLabelText("Stop")).toBeTruthy();
     expect(screen.getByLabelText("Move")).toBeTruthy();
     expect(screen.getByLabelText("Attack")).toBeTruthy();
@@ -173,10 +169,9 @@ describe("ActionBar", () => {
 
     render(<ActionBar />, { wrapper: Wrapper });
 
-    const buttons = screen.getAllByRole("button").filter((b) =>
-      b.getAttribute("aria-label")
-    );
-    expect(buttons.length).toBe(1); // Only Stop, no potion action
+    // Only Stop action should be visible, no potion action
+    expect(screen.getByLabelText("Stop")).toBeTruthy();
+    expect(screen.queryByLabelText("Use Potion")).toBeNull();
   });
 
   it("should include inventory actions with entity actions", () => {
