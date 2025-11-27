@@ -4,6 +4,8 @@ export const sounds: Record<string, string> = {
   click2: new URL("./assets/click2.opus", import.meta.url).pathname,
   click3: new URL("./assets/click3.opus", import.meta.url).pathname,
   click4: new URL("./assets/click4.opus", import.meta.url).pathname,
+  charging1: new URL("./assets/charging1.opus", import.meta.url).pathname,
+  charging2: new URL("./assets/charging2.opus", import.meta.url).pathname,
   construction1:
     new URL("./assets/construction1.opus", import.meta.url).pathname,
   error1: new URL("./assets/error1.opus", import.meta.url).pathname,

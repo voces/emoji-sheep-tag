@@ -85,6 +85,27 @@ export const beamOrder = {
     return "ordered";
   },
 
+  onCastStart: (unit) => {
+    if (
+      !unit.position || unit.order?.type !== "cast" ||
+      unit.order.orderId !== "beam" || !unit.order.target
+    ) return;
+
+    const dx = unit.position.x - unit.order.target.x;
+    const dy = unit.position.y - unit.order.target.y;
+    const angle = Math.atan2(dy, dx);
+
+    newSfx(
+      { x: unit.position.x, y: unit.position.y },
+      "beamStart",
+      angle,
+      unit.order.remaining,
+      "ease-in",
+      undefined,
+      { sounds: { "birth": ["charging1"] } },
+    );
+  },
+
   onCastComplete: (unit) => {
     if (unit.order?.type !== "cast" || unit.order.orderId !== "beam") return;
 

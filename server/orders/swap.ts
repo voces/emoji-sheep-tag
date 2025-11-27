@@ -55,6 +55,8 @@ export const swapOrder = {
     mirror.buffs = [
       ...(mirror.buffs ?? []),
       {
+        name: "Swapping",
+        description: "Preparing to swap positions",
         remainingDuration: buffDuration,
         model: "swap",
       },
@@ -63,6 +65,8 @@ export const swapOrder = {
     unit.buffs = [
       ...(unit.buffs ?? []),
       {
+        name: "Swapping",
+        description: "Preparing to swap positions",
         remainingDuration: buffDuration,
         model: "swap",
       },

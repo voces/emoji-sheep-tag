@@ -1,9 +1,12 @@
 import { HStack } from "@/components/layout/Layout.tsx";
 import { Command } from "@/components/game/Command.tsx";
 import { VerticalBar } from "@/components/game/VerticalBar.tsx";
-import type { Buff, Item } from "@/shared/types.ts";
+import type { Item } from "@/shared/types.ts";
 import { useTheme } from "styled-components";
-import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
+import {
+  useListenToEntityProp,
+  useListenToEntityProps,
+} from "@/hooks/useListenToEntityProp.ts";
 import { styled } from "styled-components";
 import { Entity } from "../../../ecs.ts";
 import { svgs } from "../../../systems/three.ts";
@@ -38,16 +41,18 @@ const MiniIconWrapper = styled.div<{ $rows: number }>`
 `;
 
 export const Inventory = (
-  { items, rows = 1 }: { items: ReadonlyArray<Item>; rows?: number },
+  { entity, rows = 1 }: { entity: Entity; rows?: number },
 ) => {
+  const items = useListenToEntityProp(entity, "inventory");
   const grouped = useMemo(() => {
     const grouped: Record<string, Item[]> = {};
-    for (const item of items) {
+    for (const item of items ?? []) {
       if (grouped[item.id]) grouped[item.id].push(item);
       else grouped[item.id] = [item];
     }
     return Object.values(grouped);
   }, [items]);
+  if (!grouped.length) return null;
 
   return (
     <MiniIconWrapper $rows={rows}>
@@ -64,28 +69,37 @@ export const Inventory = (
   );
 };
 
+const getFlashDuration = (remainingDuration?: number): number => {
+  if (remainingDuration === undefined || remainingDuration >= 10) return 0;
+  return 0.75 + remainingDuration / 8;
+};
+
 export const Buffs = (
-  { entityBuffs, rows = 1 }: {
-    entityBuffs: ReadonlyArray<Buff>;
+  { entity, rows = 1 }: {
+    entity: Entity;
     rows?: number;
   },
-) => (
-  <MiniIconWrapper $rows={rows}>
-    {entityBuffs.filter((b) =>
-      !b.expiration && (b.icon ?? b.model ?? "") in svgs
-    )
-      .map(
-        (buff, i) => (
-          <Command
-            key={i}
-            name=""
-            icon={buff.icon ?? buff.model ?? ""}
-            hideTooltip
-          />
-        ),
-      )}
-  </MiniIconWrapper>
-);
+) => {
+  const buffs = useListenToEntityProp(entity, "buffs");
+  if (!buffs?.length) return null;
+
+  return (
+    <MiniIconWrapper $rows={rows}>
+      {buffs.filter((b) => !b.expiration && (b.icon ?? b.model ?? "") in svgs)
+        .map(
+          (buff, i) => (
+            <Command
+              key={i}
+              name={buff.name ?? ""}
+              description={buff.description}
+              icon={buff.icon ?? buff.model ?? ""}
+              flashDuration={getFlashDuration(buff.remainingDuration)}
+            />
+          ),
+        )}
+    </MiniIconWrapper>
+  );
+};
 
 export const Avatar = (
   { entity, count }: { entity: Entity; count?: number },
@@ -186,12 +200,8 @@ export const Avatar = (
           />
         )}
       </HStack>
-      {entity.inventory?.length
-        ? <Inventory key="inventory" items={entity.inventory} />
-        : null}
-      {entity.buffs?.length
-        ? <Buffs key="buffs" entityBuffs={entity.buffs} />
-        : null}
+      <Inventory key="inventory" entity={entity} />
+      <Buffs key="buffs" entity={entity} />
     </HStack>
   );
 };

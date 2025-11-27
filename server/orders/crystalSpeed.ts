@@ -41,6 +41,8 @@ export const crystalSpeedOrder = {
     target.buffs = [
       ...(target.buffs ?? []),
       {
+        name: "Crystal Speed",
+        description: "+25% movement speed",
         remainingDuration: buffDuration,
         totalDuration: buffDuration,
         movementSpeedMultiplier: 1.25,

@@ -38,6 +38,8 @@ export const dodgeOrder = {
 
     // Add dodge buff
     unit.buffs = [...(unit.buffs || []), {
+      name: "Dodge",
+      description: "Prevents frost effects",
       remainingDuration: action.buffDuration,
       preventsBuffs: ["frostEffect"],
     }];

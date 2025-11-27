@@ -36,6 +36,8 @@ export const strengthPotionOrder = {
 
     // Add strength buff using damage multiplier from action definition
     const strengthBuff: Buff = {
+      name: "Strength Potion",
+      description: `${action.damageMultiplier}x damage on next attack`,
       remainingDuration: action.buffDuration,
       damageMultiplier: action.damageMultiplier,
       consumeOnAttack: true,

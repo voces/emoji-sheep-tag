@@ -327,23 +327,32 @@ export const items: Record<string, Item> = {
 
 export const buffs: Record<string, Buff> = {
   frostEffect: {
+    name: "Frost",
+    description: "-15% movement speed, -5% attack speed",
     remainingDuration: 5,
     movementSpeedMultiplier: 0.85,
     attackSpeedMultiplier: 0.95,
   },
   totemMovementAura: {
+    name: "Totem Speed Aura",
+    description: "+4% movement speed",
     movementSpeedMultiplier: 1.04,
     model: "wind",
     modelOffset: { y: 0.35 },
     modelScale: 0.6,
   },
-  totemHealthRegenAura: {
-    healthRegen: 2,
-  },
   totemDamageMitigationAura: {
+    name: "Totem Reinforcement Aura",
+    description: "30% damage mitigation",
     damageMitigation: 0.3,
     model: "shield",
     modelOffset: { x: 0.1, y: 0.2 },
+  },
+  totemHealthRegenAura: {
+    name: "Totem Regeneration Aura",
+    description: "+2 health regeneration",
+    healthRegen: 2,
+    icon: "sparkle",
   },
 };
 
@@ -822,12 +831,12 @@ export const prefabs: Record<string, DataEntity> = {
       targetsAllowed: [["unit", "ally"]],
     }, {
       radius: 7,
-      auraBuff: "totemHealthRegenAura",
-      targetsAllowed: [["ally"]],
-    }, {
-      radius: 7,
       auraBuff: "totemDamageMitigationAura",
       targetsAllowed: [["structure", "ally"]],
+    }, {
+      radius: 7,
+      auraBuff: "totemHealthRegenAura",
+      targetsAllowed: [["ally"]],
     }],
   },
   cottage: {

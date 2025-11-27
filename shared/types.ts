@@ -77,6 +77,8 @@ export type Item = {
 };
 
 export type Buff = {
+  readonly name?: string;
+  readonly description?: string;
   readonly remainingDuration?: number;
   readonly attackSpeedMultiplier?: number;
   readonly movementSpeedBonus?: number;

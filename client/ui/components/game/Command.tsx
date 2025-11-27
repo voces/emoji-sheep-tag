@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { styled } from "styled-components";
+import { keyframes, styled } from "styled-components";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { useLocalPlayer } from "@/hooks/usePlayers.ts";
@@ -9,6 +9,17 @@ import {
   CommandCount,
   CommandShortcut,
 } from "@/components/Command.tsx";
+
+const flash = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+`;
+
+const FlashingCommandButton = styled(CommandButton)`
+  &[data-flashing="true"] {
+    animation: ${flash} var(--flash-duration) linear infinite;
+  }
+`;
 
 const ShortcutStyle = styled.span`
   color: ${({ theme }) => theme.colors.gold};
@@ -57,6 +68,7 @@ export const Command = ({
   iconProps,
   count,
   onClick,
+  flashDuration,
   ...rest
 }: {
   name: string;
@@ -72,6 +84,7 @@ export const Command = ({
   iconProps?: Partial<React.ComponentProps<typeof SvgIcon>>;
   count?: number;
   onClick?: () => void;
+  flashDuration?: number;
 } & React.ComponentProps<typeof CommandButton>) => {
   const localPlayer = useLocalPlayer();
 
@@ -112,7 +125,7 @@ export const Command = ({
         </>
       )}
     </>
-  ), [name, goldCost, manaCost]));
+  ), [name, goldCost, manaCost, description]));
 
   const handleClick = () => {
     onClick?.();
@@ -141,12 +154,16 @@ export const Command = ({
   };
 
   return (
-    <CommandButton
+    <FlashingCommandButton
       role={binding?.length ? "button" : undefined}
       aria-label={name}
       aria-disabled={disabled}
       aria-pressed={pressed}
       onClick={handleClick}
+      data-flashing={flashDuration && flashDuration > 0 ? "true" : undefined}
+      style={flashDuration && flashDuration > 0
+        ? { "--flash-duration": `${flashDuration}s` } as React.CSSProperties
+        : undefined}
       {...(name ? tooltipContainerProps : undefined)}
       {...rest}
     >
@@ -163,6 +180,6 @@ export const Command = ({
       )}
       {typeof count === "number" && <CommandCount>{count}</CommandCount>}
       {!hideTooltip && tooltip}
-    </CommandButton>
+    </FlashingCommandButton>
   );
 };

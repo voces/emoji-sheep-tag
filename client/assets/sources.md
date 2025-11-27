@@ -104,6 +104,7 @@
 - treefall1: https://freesound.org/people/newlocknew/sounds/626734/
 - frostburst1: https://freesound.org/people/FartCTO/sounds/789840/
 - laser1: https://freesound.org/people/wcoltd/sounds/440776/
+- charging1: https://freesound.org/people/wildweasel/sounds/39043/
 
 ## To consider
 

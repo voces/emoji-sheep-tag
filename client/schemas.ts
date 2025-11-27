@@ -184,6 +184,8 @@ const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
 );
 
 const zBuff = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
   remainingDuration: z.number().optional(),
   attackSpeedMultiplier: z.number().optional(),
   movementSpeedBonus: z.number().optional(),

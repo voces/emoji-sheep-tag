@@ -52,8 +52,6 @@ const UnitStats = () => {
         : undefined,
   );
 
-  useListenToEntityProps(selection, ["inventory"]);
-
   if (!selection) return null;
 
   return (
@@ -87,18 +85,8 @@ const UnitStats = () => {
         </HStack>
       )}
 
-      {selection.inventory && (
-        <Inventory
-          items={selection.inventory}
-          rows={1}
-        />
-      )}
-      {selection.buffs && (
-        <Buffs
-          entityBuffs={selection.buffs}
-          rows={1}
-        />
-      )}
+      <Inventory entity={selection} rows={1} />
+      <Buffs entity={selection} rows={1} />
     </StatsContainer>
   );
 };
