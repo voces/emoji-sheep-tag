@@ -38,7 +38,6 @@
     - Should rest on one of the three flowers
 - Should be able to Tab between types in a selection
 - Share Gold functionality
-- Add ability to face a direction when you issue a move order but can't move
 - Buff descriptions
 - Buff stack id & max stack
 
@@ -48,7 +47,6 @@
 - Pathing falls over with lots of foxes
   - Falls over when spam clicking movement orders
   - Per-player pathing calc limits?
-- A structure could get built just as the sheep dies, common in switch
 - When move targetting a unit, the order clears when the target is reached; it
   should keep following
 - Replace meteor opacities with style to avoid color parsing complaints

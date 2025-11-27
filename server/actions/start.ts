@@ -260,11 +260,20 @@ export const start = (
   // Single active player automatically switches to practice mode
   if (activePlayers.length === 1) practice = true;
 
-  console.log(new Date(), "Round started in lobby", lobby.name);
-
   lobby.status = "playing";
 
   const { sheep, wolves } = determineTeams(lobby, practice, fixedTeams);
+
+  console.log(
+    new Date(),
+    `${practice ? "Practice round" : "Round"} started in lobby ${lobby.name}${
+      practice
+        ? ""
+        : `. ${Array.from(sheep, (s) => s.name).join(", ")} vs ${
+          Array.from(wolves, (w) => w.name).join(", ")
+        }`
+    }`,
+  );
 
   // Update smart drafter counts (unless in switch mode)
   if (!practice && lobby.settings.mode !== "switch") {

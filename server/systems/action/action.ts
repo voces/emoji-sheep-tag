@@ -66,7 +66,7 @@ addSystem({
             delta - (diff - MAX_ATTACK_ANGLE) / e.turnSpeed,
           );
 
-          // Abort swing delta consumed turning
+          // Abort if delta consumed turning
           if (delta === 0) break;
         }
       }

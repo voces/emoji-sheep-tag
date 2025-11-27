@@ -8,7 +8,7 @@ import { handleBlockedPath } from "./pathRetry.ts";
 
 export const advanceBuild = (e: Entity, delta: number): number => {
   if (e.order?.type !== "build") return delta;
-  if (!e.position) {
+  if (!e.position || e.health === 0) {
     delete e.order;
     return delta;
   }

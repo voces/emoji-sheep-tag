@@ -177,7 +177,14 @@ export const orderMove = (
   const path = calcPath(mover, "x" in target ? target : target.id, {
     distanceFromTarget: "x" in target ? undefined : FOLLOW_DISTANCE,
   });
-  if (!path.length && "x" in target) return false;
+
+  // If there's no path to a point target, at least set an order to face that direction
+  // The action system will handle the turning via lookTarget
+  if (!path.length && "x" in target) {
+    delete mover.queue;
+    mover.order = { type: "walk", target, path: [] };
+    return false;
+  }
 
   delete mover.queue;
   mover.order = {
