@@ -1,10 +1,12 @@
 import { Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
-import { damageEntity, newUnit } from "../api/unit.ts";
+import { damageEntity } from "../api/unit.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "../util/actionLookup.ts";
 import { testClassification } from "@/shared/api/unit.ts";
+import { newSfx } from "../api/sfx.ts";
+import { DEFAULT_FACING } from "@/shared/constants.ts";
 
 export const meteorOrder = {
   id: "meteor",
@@ -40,8 +42,9 @@ export const meteorOrder = {
     const action = findActionByOrder(unit, "meteor");
     if (!action) return console.warn("No meteor action");
 
-    const meteor = newUnit(unit.owner, "meteor", target.x, target.y + 0.75);
-    meteor.isDoodad = true;
+    newSfx(target, "meteor", DEFAULT_FACING, 0.25, undefined, undefined, {
+      sounds: { birth: ["explosion1"] },
+    });
 
     const damageRadius = "aoe" in action ? action.aoe ?? 0 : 0;
     const damage = "damage" in action ? action.damage ?? 0 : 0;

@@ -269,7 +269,7 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   flag: svg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),
   location: svg(location, 2, { layer: 2 }),
   collision: svg(collision, 2, { layer: 2 }),
-  meteor: svg(meteor, 0.5, { layer: 2 }),
+  meteor: svg(meteor, 0.5, { layer: 2, yOffset: 0.7, xOffset: 0.08 }),
   beamStart: svg(beamStart, 0.25, { layer: 2, xOffset: 0.75 }),
   beam: svg(beam, 0.5, { layer: 2, xOffset: -3 }),
   frostOrb: svg(frostOrb, 0.4, { layer: 2 }),
