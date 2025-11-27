@@ -23,19 +23,19 @@ export const mergeEntityWithPrefab = (
   const prefabData = prefabs[entity.prefab];
   if (!prefabData) return entity as Partial<Entity> & { id: string };
 
-  if (typeof prefabData.maxHealth && typeof entity.health !== "number") {
-    entity = { ...entity, health: prefabData.maxHealth };
-  }
-
   const merged = { ...prefabData, ...entity };
 
   // Apply handicap to maxHealth if present
   if (merged.handicap && merged.maxHealth) {
     merged.maxHealth *= merged.handicap;
-    // Only set health to maxHealth if health wasn't already set
-    if (typeof merged.health !== "number") {
-      merged.health = merged.maxHealth;
-    }
+  }
+
+  // Set health if not already set
+  if (merged.maxHealth && typeof merged.health !== "number") {
+    // Set initial health based on progress for buildings under construction
+    merged.health = typeof merged.progress === "number"
+      ? merged.maxHealth * merged.progress
+      : merged.maxHealth;
   }
 
   return merged as Partial<Entity> & { id: string };

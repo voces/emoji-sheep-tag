@@ -34,7 +34,10 @@ const createRoundSummary = (lobby: Lobby) => ({
   wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((p) =>
     p.id
   ),
-  duration: Date.now() - (lobby.round?.start ?? Date.now()),
+  duration: Math.min(
+    (lobby.round?.duration ?? 0) * 1000,
+    Date.now() - (lobby.round?.start ?? Date.now()),
+  ),
 });
 
 export const endRound = (canceled = false) => {

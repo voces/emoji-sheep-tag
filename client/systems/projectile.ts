@@ -23,5 +23,10 @@ app.addSystem({
       x: e.position.x + dx * ratio,
       y: e.position.y + dy * ratio,
     };
+
+    // Tumble effect
+    if (e.projectile.tumble) {
+      e.facing = (e.facing ?? 0) + e.projectile.tumble * delta;
+    }
   },
 });

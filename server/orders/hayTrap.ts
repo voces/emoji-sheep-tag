@@ -62,12 +62,22 @@ export const hayTrapOrder = {
 
   onCastComplete: (unit) => {
     const data = hayTrapProjectiles.get(unit);
-    if (data) {
+    if (data && data.hay.position) {
+      const speed = data.hay.movementSpeed ?? 10;
+      const distance = distanceBetweenPoints(data.hay.position, data.target);
+      const flightTime = distance / speed;
+      // Calculate tumble speed for ~2 rotations, rounded to land at default facing
+      const rotations = Math.max(1, Math.round(flightTime * 2));
+      // Tumble direction: negative when thrown right (clockwise), positive when thrown left
+      const direction = data.target.x > data.hay.position.x ? -1 : 1;
+      const tumble = direction * (rotations * Math.PI * 2) / flightTime;
+
       data.hay.projectile = {
         attackerId: unit.id,
         target: data.target,
-        speed: data.hay.movementSpeed ?? 10,
+        speed,
         splashRadius: 0,
+        tumble,
       };
       hayTrapProjectiles.delete(unit);
     }

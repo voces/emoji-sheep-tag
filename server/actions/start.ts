@@ -215,7 +215,9 @@ const spawnWolves = (wolves: Set<Client>) => {
 };
 
 const setupSurvivalTimer = (lobby: Lobby, sheep: Set<Client>) => {
-  const timeToWin = lobby.settings.time === "auto"
+  if (!lobby.round) return;
+
+  lobby.round.duration = lobby.settings.time === "auto"
     ? getIdealTime(lobby.players.size, sheep.size)
     : lobby.settings.time;
 
@@ -223,15 +225,15 @@ const setupSurvivalTimer = (lobby: Lobby, sheep: Set<Client>) => {
     isTimer: true,
     buffs: [{
       expiration: "Time until sheep win:",
-      remainingDuration: timeToWin,
-      totalDuration: timeToWin,
+      remainingDuration: lobby.round.duration,
+      totalDuration: lobby.round.duration,
     }],
   });
 
   timeout(() => {
     send({ type: "chat", message: "Sheep win!" });
     endRound();
-  }, timeToWin);
+  }, lobby.round.duration);
 };
 
 export const start = (

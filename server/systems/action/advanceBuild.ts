@@ -54,19 +54,40 @@ export const advanceBuild = (e: Entity, delta: number): number => {
 addSystem({
   props: ["progress", "completionTime"],
   updateEntity: (e, delta) => {
-    if (e.progress + delta >= 1) {
-      delete (e as Entity).progress;
+    const progressDelta = delta / e.completionTime;
+    const isUpgrade = e.actions?.some((a) =>
+      a.type === "auto" && a.order === "cancel-upgrade"
+    );
+
+    if (e.progress + progressDelta >= 1) {
+      // Complete construction - add final health increment (capped at remaining progress)
+      // Skip health increment for upgrades since they keep their existing health
       if (
-        e.actions?.some((a) =>
-          a.type === "auto" && a.order === "cancel-upgrade"
-        )
+        !isUpgrade &&
+        typeof e.maxHealth === "number" &&
+        typeof e.health === "number"
       ) {
-        e.actions = e.actions.filter((a) =>
+        const remainingProgress = 1 - e.progress;
+        e.health += e.maxHealth * remainingProgress;
+      }
+      delete (e as Entity).progress;
+      if (isUpgrade) {
+        e.actions = e.actions!.filter((a) =>
           a.type !== "auto" || a.order !== "cancel-upgrade"
         );
       }
       return;
     }
-    e.progress += delta / e.completionTime;
+
+    // Increment health proportionally as progress increases
+    // Skip for upgrades since they keep their existing health
+    if (
+      !isUpgrade &&
+      typeof e.maxHealth === "number" &&
+      typeof e.health === "number"
+    ) {
+      e.health += e.maxHealth * progressDelta;
+    }
+    e.progress += progressDelta;
   },
 });

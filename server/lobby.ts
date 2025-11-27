@@ -44,6 +44,7 @@ type LobbyStatus = "lobby" | "playing";
 type Round = {
   ecs: Game;
   start?: number;
+  duration?: number;
   clearInterval: () => void;
   practice: boolean;
   editor: boolean;

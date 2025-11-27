@@ -129,6 +129,7 @@ describe("damageEntity", () => {
       const attacker = newUnit("attacker-owner", "fox", 10, 10);
       const target = newUnit("target-owner", "hut", 20, 20);
       target.progress = 0.5; // Building in progress
+      delete target.completionTime; // Prevent progress system from modifying health
       yield;
 
       damageEntity(attacker, target, undefined, false);
@@ -175,6 +176,7 @@ describe("damageEntity", () => {
       const target = newUnit("target-owner", "hut", 20, 20);
       attacker.isMirror = true;
       target.progress = 0.3; // Building in progress
+      delete target.completionTime; // Prevent progress system from modifying health
       yield;
 
       damageEntity(attacker, target, undefined, false);
@@ -189,6 +191,7 @@ describe("damageEntity", () => {
     const target = newUnit("target-owner", "hut", 20, 20);
     attacker.isMirror = true;
     target.progress = 0.5;
+    delete target.completionTime; // Prevent progress system from modifying health
     yield;
 
     damageEntity(attacker, target, undefined, true);
@@ -202,6 +205,7 @@ describe("damageEntity", () => {
     const target = newUnit("target-owner", "hut", 20, 20);
     attacker.isMirror = true;
     target.progress = 0.5;
+    delete target.completionTime; // Prevent progress system from modifying health
     yield;
 
     damageEntity(attacker, target, 35, true);

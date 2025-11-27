@@ -324,6 +324,7 @@ export const zUpdate = z.object({
     target: z.object({ x: z.number(), y: z.number() }),
     speed: z.number(),
     splashRadius: z.number(),
+    tumble: z.number().optional(),
   }).nullable().optional(),
   attackCooldownRemaining: z.number().nullable().optional(),
   lastAttacker: z.string().nullable().optional(),

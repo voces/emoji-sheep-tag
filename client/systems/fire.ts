@@ -5,11 +5,14 @@ const fires = new WeakMap<Entity, Entity[]>();
 
 const getFires = (entity: Entity) => {
   if ((entity.health ?? 0) <= 0) return 0;
-  return 3 -
-    Math.min(
-      Math.round(((entity.health ?? 0) / (entity.maxHealth ?? 1)) * 3),
-      3,
-    );
+  const maxHealth = entity.maxHealth ?? 1;
+  // For buildings under construction, expected health is maxHealth * progress
+  const expectedHealth = typeof entity.progress === "number"
+    ? maxHealth * entity.progress
+    : maxHealth;
+  const missingHealthRatio = (expectedHealth - (entity.health ?? 0)) /
+    maxHealth;
+  return Math.min(Math.round(missingHealthRatio * 3), 3);
 };
 
 const fireOffsets = [

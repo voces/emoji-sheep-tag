@@ -317,6 +317,8 @@ export type Entity = {
     readonly target: { readonly x: number; readonly y: number };
     readonly speed: number;
     readonly splashRadius: number;
+    /** Rotation speed in radians per second for tumbling effect */
+    readonly tumble?: number;
   } | null;
   attackCooldownRemaining?: number | null;
   lastAttacker?: string | null;

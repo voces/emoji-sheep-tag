@@ -3,7 +3,10 @@ import { selectionVar } from "./ActionBar.tsx";
 import { useSet } from "@/hooks/useSet.ts";
 import { selection } from "../../../../systems/selection.ts";
 import { Avatars } from "./Avatars.tsx";
-import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
+import {
+  useListenToEntityProp,
+  useListenToEntityProps,
+} from "@/hooks/useListenToEntityProp.ts";
 import {
   computeUnitAttackSpeed,
   computeUnitDamage,
@@ -51,6 +54,8 @@ const UnitStats = () => {
         ? Math.round(computeUnitMovementSpeed(selection) * 100)
         : undefined,
   );
+
+  useListenToEntityProp(selection, "name");
 
   if (!selection) return null;
 

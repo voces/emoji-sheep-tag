@@ -41,9 +41,6 @@
 - Buff stack id & max stack
 - The Beam is hardcoded blue. Should be the player's color, but need to support
   different blending modes
-- WebGPU
-- Convert player + vertex color to be computer CPU-side; support highlights in
-  additional to lowlights (multiply)
 
 # Bugs
 
@@ -51,12 +48,8 @@
 - Pathing falls over with lots of foxes
   - Falls over when spam clicking movement orders
   - Per-player pathing calc limits?
-- When move targetting a unit, the order clears when the target is reached; it
+- When move targeting a unit, the order clears when the target is reached; it
   should keep following
-- Replace meteor opacities with style to avoid color parsing complaints
-- When a structure begins building, it's health should increase at the progress
-  rate rather than starting at 100%. Can then reduce the multiplier to something
-  like 1.5x
 
 # Perf
 
@@ -66,8 +59,11 @@
   - Use `updateRange`
   - Per-mirror instances
 
-# Quality
+# Code quality
 
 - Update the order system so that actions are more generic, based around their
   intrinsic type with fields that modify that. The order handler should be
   generic, based on the fields being used.
+- WebGPU
+- Convert player + vertex color to be computer CPU-side; support highlights in
+  additional to lowlights (multiply)

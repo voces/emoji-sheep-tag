@@ -77,6 +77,16 @@ const selfDestruct: UnitDataAction = {
   canExecuteWhileConstructing: true,
 };
 
+const upgradeToFrostCastle = (from: string): UnitDataAction => ({
+  name: "Upgrade to Frost Castle",
+  description:
+    `Upgrades the ${from} to a Frost Castle, which is capable of firing frost orbs at wolves.`,
+  type: "upgrade",
+  prefab: "frostCastle",
+  goldCost: 30,
+  binding: ["KeyF"],
+});
+
 export const practiceModeActions = {
   giveToEnemy: {
     name: "Give to Enemy",
@@ -764,33 +774,30 @@ export const prefabs: Record<string, DataEntity> = {
     maxHealth: 120,
     completionTime: 0.7,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
-    actions: [{
-      name: "Illusify",
-      description:
-        "Makes the hut an illusion, allowing units to pass through it.",
-      type: "auto",
-      order: "illusify",
-      icon: "hut",
-      iconEffect: "mirror",
-      goldCost: 12,
-      binding: ["KeyS"],
-    }, {
-      name: "Upgrade to Frost Castle",
-      description:
-        "Upgrades the hut to a Frost Castle, which is capable of firing frost orbs at wolves.",
-      type: "upgrade",
-      prefab: "frostCastle",
-      goldCost: 30,
-      binding: ["KeyF"],
-    }, {
-      name: "Upgrade to Crystal",
-      description:
-        "Upgrades the hut to a Crystal, which is capable of casting buffs on nearby units.",
-      type: "upgrade",
-      prefab: "crystal",
-      goldCost: 20,
-      binding: ["KeyC"],
-    }, selfDestruct],
+    actions: [
+      {
+        name: "Illusify",
+        description:
+          "Makes the hut an illusion, allowing units to pass through it.",
+        type: "auto",
+        order: "illusify",
+        icon: "hut",
+        iconEffect: "mirror",
+        goldCost: 12,
+        binding: ["KeyS"],
+      },
+      upgradeToFrostCastle("hut"),
+      {
+        name: "Upgrade to Crystal",
+        description:
+          "Upgrades the hut to a Crystal, which is capable of casting buffs on nearby units.",
+        type: "upgrade",
+        prefab: "crystal",
+        goldCost: 20,
+        binding: ["KeyC"],
+      },
+      selfDestruct,
+    ],
     bounty: 1,
   },
   cabin: {
@@ -801,7 +808,7 @@ export const prefabs: Record<string, DataEntity> = {
     maxHealth: 220, // Tuned to be 3 hit with 1 claw and 2 hit with 2 claws
     completionTime: 1.1,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
-    actions: [selfDestruct],
+    actions: [upgradeToFrostCastle("cabin"), selfDestruct],
     bounty: 2,
   },
   shack: {
@@ -1086,7 +1093,7 @@ export const prefabs: Record<string, DataEntity> = {
   brokenHayCube: {
     name: "Broken Hay Cube",
     radius: 0.125,
-    pathing: b,
+    pathing: PATHING_WALKABLE | PATHING_SOLID,
     maxHealth: 20,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     bounty: 5,
