@@ -55,7 +55,7 @@ export const meteorOrder = {
         "targeting" in action && action.targeting
           ? testClassification(unit, entity, action.targeting)
           : true
-      ) damageEntity(unit, entity, damage);
+      ) damageEntity(unit, entity, damage, false);
     }
   },
 } satisfies OrderDefinition;

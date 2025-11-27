@@ -95,6 +95,8 @@ import cottage from "../assets/cottage.svg" with { type: "text" };
 import hayPile from "../assets/hayPile.svg" with { type: "text" };
 import hayCube from "../assets/hayCube.svg" with { type: "text" };
 import brokenHayCube from "../assets/brokenHayCube.svg" with { type: "text" };
+import beam from "../assets/beam.svg" with { type: "text" };
+import beamStart from "../assets/beamStart.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep,
@@ -179,6 +181,7 @@ export const svgs: Record<string, string> = {
   hayPile,
   hayCube,
   brokenHayCube,
+  beamStart,
 };
 
 type SvgConfig = {
@@ -266,6 +269,7 @@ const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
   location: svg(location, 2, { layer: 2 }),
   collision: svg(collision, 2, { layer: 2 }),
   meteor: svg(meteor, 0.5, { layer: 2 }),
+  beam: svg(beam, 0.5, { layer: 2, xOffset: -3 }),
   frostOrb: svg(frostOrb, 0.4, { layer: 2 }),
   square: svg(square, 1, { layer: 2 }),
 

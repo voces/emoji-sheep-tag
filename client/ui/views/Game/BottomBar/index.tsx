@@ -50,7 +50,7 @@ export const BottomBar = () => {
   return (
     <Wrapper $preferredActionsPerRow={Math.min(preferredActionsPerRow, 10)}>
       {!practice && (
-        <MinimapContainer>
+        <MinimapContainer role="button">
           <Minimap style={{ width: 192, height: 192 }} />
         </MinimapContainer>
       )}

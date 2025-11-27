@@ -8,10 +8,8 @@
 - Items
   - Auras?
     - Like team items, but don't like them being required...
-  - Beam
   - Suppression Field?
   - Nuke?
-  - Hay Trap
   - Goblins?
   - Disease Cloud?
   - Neck
@@ -40,6 +38,9 @@
     - Should rest on one of the three flowers
 - Should be able to Tab between types in a selection
 - Share Gold functionality
+- Add ability to face a direction when you issue a move order but can't move
+- Buff descriptions
+- Buff stack id & max stack
 
 # Bugs
 
@@ -50,6 +51,10 @@
 - A structure could get built just as the sheep dies, common in switch
 - When move targetting a unit, the order clears when the target is reached; it
   should keep following
+- Replace meteor opacities with style to avoid color parsing complaints
+- When a structure begins building, it's health should increase at the progress
+  rate rather than starting at 100%. Can then reduce the multiplier to something
+  like 1.5x
 
 # Perf
 

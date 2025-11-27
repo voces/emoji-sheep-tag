@@ -84,7 +84,7 @@ export const practiceModeActions = {
     type: "auto",
     order: "giveToEnemy",
     icon: "alignment",
-    binding: ["KeyQ"],
+    binding: ["KeyU"],
   } as const satisfies UnitDataAction,
   reclaimFromEnemy: {
     name: "Reclaim",
@@ -92,7 +92,7 @@ export const practiceModeActions = {
     type: "auto",
     order: "reclaimFromEnemy",
     icon: "alignment",
-    binding: ["KeyQ"],
+    binding: ["KeyU"],
   } as const satisfies UnitDataAction,
 };
 
@@ -182,7 +182,7 @@ export const items: Record<string, Item> = {
     description: "Increases attack speed by 15%.",
     icon: "claw",
     gold: 110,
-    binding: ["KeyV"],
+    binding: ["KeyW"],
     buffs: [{ attackSpeedMultiplier: 1.15 }],
   },
   boots: {
@@ -302,6 +302,25 @@ export const items: Record<string, Item> = {
       binding: ["KeyX"],
       castDuration: 0.25,
       range: 5,
+    }],
+  },
+  beam: {
+    id: "beam",
+    name: "Beam",
+    description: "Casts a beam that destroys structures in its path.",
+    icon: "beamStart",
+    gold: 100,
+    binding: ["KeyQ"],
+    charges: 1,
+    actions: [{
+      name: "Cast Beam",
+      type: "target",
+      order: "beam",
+      icon: "beamStart",
+      targeting: [["structure"]],
+      aoe: 0,
+      binding: ["KeyQ"],
+      castDuration: 0.4,
     }],
   },
 };
@@ -796,7 +815,7 @@ export const prefabs: Record<string, DataEntity> = {
     completionTime: 10,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
-    bounty: 2,
+    bounty: 4,
     buffs: [{
       radius: 7,
       auraBuff: "totemMovementAura",

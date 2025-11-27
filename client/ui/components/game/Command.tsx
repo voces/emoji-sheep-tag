@@ -142,7 +142,7 @@ export const Command = ({
 
   return (
     <CommandButton
-      role="button"
+      role={binding?.length ? "button" : undefined}
       aria-label={name}
       aria-disabled={disabled}
       aria-pressed={pressed}

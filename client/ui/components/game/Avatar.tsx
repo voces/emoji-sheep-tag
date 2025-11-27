@@ -147,6 +147,7 @@ export const Avatar = (
   return (
     <HStack $gap="sm">
       <Command
+        role="button"
         name={entity.name ?? entity.id}
         icon={entity.icon ?? entity.model ?? entity.prefab}
         iconProps={iconProps}

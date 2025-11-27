@@ -96,8 +96,8 @@ it("can move an action into a menu", async () => {
         .map((b) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
     ).toEqual([
       ["Wolf", undefined],
-      ["Give to Enemy", "Q"],
       ["Place Sentry", "W"],
+      ["Give to Enemy", "U"],
       ["Attack", "A"],
       ["Shadowstep", "D"],
       ["Hold position", "H"],
@@ -123,7 +123,8 @@ it("can move an action into a menu", async () => {
         .map((b) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
     ).toEqual([
       ["Wolf", undefined],
-      ["Back", "`"],
+      ["Purchase Beam", "Q"],
+      ["Purchase Swift Claws +15%", "W"],
       ["Purchase Bomber", "E"],
       ["Mirror Image", "R"],
       ["Purchase Locate Sheep", "T"],
@@ -135,9 +136,9 @@ it("can move an action into a menu", async () => {
       ["Purchase Potion of Strength", "G"],
       ["Purchase Hay Trap", "X"],
       ["Purchase Claws +20", "C"],
-      ["Purchase Swift Claws +15%", "V"],
       ["Purchase Boots +30", "B"],
       ["Purchase Mana Potion", "M"],
+      ["Back", "`"],
     ])
   );
 });

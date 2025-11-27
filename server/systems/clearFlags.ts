@@ -4,6 +4,8 @@ import { Entity } from "@/shared/types.ts";
 addSystem({
   props: ["lastAttacker"],
   updateEntity: (e) => {
-    delete (e as Entity).lastAttacker;
+    if (typeof e.health === "number" && e.health > 0) {
+      delete (e as Entity).lastAttacker;
+    }
   },
 });

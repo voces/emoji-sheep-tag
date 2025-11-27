@@ -21,7 +21,7 @@ export const CommandButton = styled.div`
     filter: saturate(0.3) brightness(0.7);
   }
 
-  &.hover:not([aria-disabled="true"]) {
+  &.hover[role="button"]:not([aria-disabled="true"]) {
     border-style: inset;
   }
 `;

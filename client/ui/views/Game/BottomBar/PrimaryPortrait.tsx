@@ -162,6 +162,7 @@ export const PrimaryPortrait = () => {
   return (
     <PrimaryPortraitContainer>
       <StyledCommand
+        role="button"
         icon={icon}
         iconProps={iconProps}
         name={selection.name ?? selection.id}
