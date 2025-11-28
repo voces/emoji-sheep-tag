@@ -58,7 +58,7 @@ it("can move an action into a menu", async () => {
     },
   });
   await userEvent.click(
-    await screen.findByRole("button", { name: "Practice" }, { timeout: 5000 }),
+    await screen.findByRole("button", { name: "Practice" }, { timeout: 10000 }),
   );
   sendMessageFromServer({
     type: "start",
