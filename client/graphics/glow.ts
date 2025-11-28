@@ -1,16 +1,31 @@
 import {
+  BufferAttribute,
   DoubleSide,
-  Group,
-  Mesh,
   MeshBasicMaterial,
   PlaneGeometry,
 } from "three";
-import { InstancedGroup } from "./InstancedGroup.ts";
+import { InstancedSvg } from "./InstancedSvg.ts";
 import { onRender, scene } from "./three.ts";
 
-// Create glow mesh with complex non-uniform radial fade
-const g = new Group();
+// Create glow geometry with required attributes
 const glowGeometry = new PlaneGeometry(1.0, 1.0);
+
+// Add required attributes for InstancedSvg compatibility
+const vertexCount = glowGeometry.attributes.position.count;
+
+// Color attribute (white)
+const colors = new Float32Array(vertexCount * 3).fill(1);
+glowGeometry.setAttribute("color", new BufferAttribute(colors, 3));
+
+// Intrinsic opacity (full opacity)
+const opacities = new Float32Array(vertexCount).fill(1);
+glowGeometry.setAttribute(
+  "intrinsicOpacity",
+  new BufferAttribute(opacities, 1),
+);
+
+// Player mask (all player-colored)
+glowGeometry.userData = { player: true };
 
 const glowMaterial = new MeshBasicMaterial({
   color: 0xffffff,
@@ -27,12 +42,14 @@ glowMaterial.onBeforeCompile = (shader) => {
   // Add time uniform
   shader.uniforms.time = { value: 0 };
 
-  // Add instanceAlpha attribute and varying
+  // Add instanceAlpha and instancePlayerColor attributes and varyings
   shader.vertexShader = "attribute float instanceAlpha;\n" +
+    "attribute vec3 instancePlayerColor;\n" +
     "varying float vInstanceAlpha;\n" +
+    "varying vec3 vPlayerColor;\n" +
     shader.vertexShader;
 
-  // Pass position and instanceAlpha to fragment shader
+  // Pass position, instanceAlpha, and playerColor to fragment shader
   shader.vertexShader = shader.vertexShader.replace(
     "void main() {",
     `
@@ -40,11 +57,13 @@ glowMaterial.onBeforeCompile = (shader) => {
     void main() {
       vLocalPosition = position;
       vInstanceAlpha = instanceAlpha;
+      vPlayerColor = instancePlayerColor;
     `,
   );
 
   // Add complex radial fade to diffuse color calculation with pulsing
   shader.fragmentShader = "varying float vInstanceAlpha;\n" +
+    "varying vec3 vPlayerColor;\n" +
     shader.fragmentShader;
 
   shader.fragmentShader = shader.fragmentShader.replace(
@@ -86,7 +105,7 @@ glowMaterial.onBeforeCompile = (shader) => {
       // Modulate radial fade by arm pattern (0.4 to 1.0 range to keep some base brightness)
       float fadeAlpha = radialFade * (0.4 + armPattern * 0.6 * armInfluence + (1.0 - armInfluence) * 0.2);
 
-      vec4 diffuseColor = vec4( diffuse, opacity * fadeAlpha * vInstanceAlpha );
+      vec4 diffuseColor = vec4( diffuse * vPlayerColor, opacity * fadeAlpha * vInstanceAlpha );
     `,
   );
 
@@ -94,11 +113,8 @@ glowMaterial.onBeforeCompile = (shader) => {
   glowMaterial.userData.shader = shader;
 };
 
-const glowMesh = new Mesh(glowGeometry, glowMaterial);
-g.add(glowMesh);
-
-export const glow = new InstancedGroup(g, 1, "glow");
-glow.traverse((o) => o.layers.set(2));
+export const glow = new InstancedSvg([glowGeometry], glowMaterial, 1, "glow");
+glow.layers.set(2);
 scene.add(glow);
 
 // Update glow shader time uniform for pulsing animation

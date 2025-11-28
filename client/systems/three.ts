@@ -1,7 +1,7 @@
 import { Color } from "three";
 
 import { app, Entity, SystemEntity } from "../ecs.ts";
-import { InstancedGroup } from "../graphics/InstancedGroup.ts";
+import { InstancedSvg } from "../graphics/InstancedSvg.ts";
 import { loadSvg } from "../graphics/loadSvg.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { getPlayer } from "@/shared/api/player.ts";
@@ -197,7 +197,7 @@ const svg = (
   options?: Parameters<typeof loadSvg>[2],
 ): SvgConfig => ({ svg: svgText, scale, options });
 
-const svgConfigs: Record<string, SvgConfig | InstancedGroup> = {
+const svgConfigs: Record<string, SvgConfig | InstancedSvg> = {
   // Background elements (lowest z-order)
   flowers: svg(flowers, 0.25, { layer: 2 }),
   grass: svg(grass, 0.75, { layer: 2 }),
@@ -285,10 +285,10 @@ const modelRenderOrders = new Map<string, number>(
   Object.keys(svgConfigs).map((key, index) => [key, index]),
 );
 
-const getCollection = (model: string): InstancedGroup | undefined => {
+const getCollection = (model: string): InstancedSvg | undefined => {
   const config = svgConfigs[model];
   if (!config) return undefined;
-  if (config instanceof InstancedGroup) return config;
+  if (config instanceof InstancedSvg) return config;
 
   const renderOrder = modelRenderOrders.get(model);
   const group = loadSvg(
@@ -301,8 +301,8 @@ const getCollection = (model: string): InstancedGroup | undefined => {
   return group;
 };
 
-const collections: Record<string, InstancedGroup | undefined> = new Proxy(
-  {} as Record<string, InstancedGroup | undefined>,
+const collections: Record<string, InstancedSvg | undefined> = new Proxy(
+  {} as Record<string, InstancedSvg | undefined>,
   {
     get: (_target, prop: string) => getCollection(prop),
   },
@@ -341,8 +341,9 @@ const updateColor = (e: Entity) => {
   }
 
   if (e.alpha) collection.setAlphaAt(e.id, e.alpha, false);
-  else if (e.progress) collection.setAlphaAt(e.id, e.progress, true);
-  else collection.setAlphaAt(e.id, 1);
+  else if (typeof e.progress === "number") {
+    collection.setAlphaAt(e.id, e.progress, true);
+  } else collection.setAlphaAt(e.id, 1);
 };
 
 addSystem({
@@ -707,7 +708,7 @@ addSystem({
 });
 
 const minimapColor = new Color();
-const savedColors = new Map<string, Array<Color | null>>();
+const savedColors = new Map<string, Color | null>();
 
 export const setMinimapMask = (entity: Entity, mask: boolean) => {
   const collection = entity.model ?? entity.prefab;

@@ -26,6 +26,7 @@
     "react": "npm:react",
     "styled-components": "npm:styled-components",
     "three": "npm:three",
+    "three/BufferGeometryUtils": "npm:three/examples/jsm/utils/BufferGeometryUtils.js",
     "three/SVGLoader": "npm:three/examples/jsm/loaders/SVGLoader.js",
     "typed-event-target": "https://deno.land/x/typescript_event_target@v1.0.5/mod.ts",
     "zod": "npm:zod"

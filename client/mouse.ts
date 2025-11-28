@@ -1,7 +1,7 @@
 import { TypedEventTarget } from "typed-event-target";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { camera, scene } from "./graphics/three.ts";
-import { InstancedGroup } from "./graphics/InstancedGroup.ts";
+import { InstancedSvg } from "./graphics/InstancedSvg.ts";
 import { Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
@@ -125,7 +125,7 @@ const updateIntersects = () => {
     const set = new Set<Entity>();
     for (const intersect of intersects) {
       if (
-        !(intersect.object instanceof InstancedGroup) ||
+        !(intersect.object instanceof InstancedSvg) ||
         typeof intersect.instanceId !== "number"
       ) continue;
       const id = intersect.object.getId(intersect.instanceId);

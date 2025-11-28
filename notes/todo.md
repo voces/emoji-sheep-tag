@@ -54,10 +54,6 @@
 # Perf
 
 - Improvement on mass delete/add
-- InstancedGroup
-  - Automatic split into "static" and "dynamic"
-  - Use `updateRange`
-  - Per-mirror instances
 
 # Code quality
 
