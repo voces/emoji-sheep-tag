@@ -10,12 +10,10 @@ import { send } from "../messaging.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { isAlly } from "@/shared/api/unit.ts";
 import { Color } from "three";
+import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 
 // X'd farms not removed from selection
 export const selection = new ExtendedSet<SystemEntity<"selected">>();
-
-let primary: Entity | undefined;
-export const getPrimaryUnit = () => primary;
 
 export const foxes = new ExtendedSet<Entity>();
 export const mirrors = new ExtendedSet<Entity>();
@@ -105,8 +103,11 @@ addSystem({
         )
       )
     );
-    if (!selection.size && primary) {
-      queueMicrotask(() => !selection.size && primary && selectEntity(primary));
+    const primaryUnit = primaryUnitVar();
+    if (!selection.size && primaryUnit) {
+      queueMicrotask(() =>
+        !selection.size && primaryUnitVar() && selectEntity(primaryUnitVar()!)
+      );
     }
   },
 });
@@ -169,8 +170,8 @@ addSystem({
           camera.position.y = e.position.y;
         }
       }
-      if (!primary) {
-        primary = e;
+      if (!primaryUnitVar()) {
+        primaryUnitVar(e);
         applyZoom();
       }
     }
@@ -179,7 +180,7 @@ addSystem({
     if (e.prefab === "fox") foxes.add(e);
   },
   onRemove: (e) => {
-    if (e === primary) primary = undefined;
+    if (e === primaryUnitVar()) primaryUnitVar(undefined);
     mirrors.delete(e);
     foxes.delete(e);
   },

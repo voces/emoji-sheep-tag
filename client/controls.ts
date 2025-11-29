@@ -88,6 +88,14 @@ export const cancelOrder = (
   cancelBlueprint();
 };
 
+/** Checks if an element should pass through clicks to the game canvas */
+const isGameElement = (element: Element | null): boolean => {
+  if (!element) return false;
+  const gameUiAncestor = element.closest("[data-game-ui]");
+  return gameUiAncestor !== null &&
+    (gameUiAncestor === element || gameUiAncestor.id !== "ui");
+};
+
 // Set getters on mouse object for event state capture
 mouse.getActiveOrder = getActiveOrder;
 mouse.getBlueprint = getBlueprint;
@@ -114,9 +122,8 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   if (
     (e.element instanceof HTMLElement || e.element instanceof SVGElement)
   ) {
-    const isGameElement = e.element.id === "ui" ||
-      e.element.hasAttribute("data-minimap");
-    if (!isGameElement) e.element.focus();
+    const passThrough = isGameElement(e.element);
+    if (!passThrough) e.element.focus();
     if ("click" in e.element) e.element.click();
     else {
       e.element.dispatchEvent(
@@ -127,7 +134,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
         }),
       );
     }
-    if (!isGameElement) return;
+    if (!passThrough) return;
   }
 
   if (e.button === "right") {
@@ -707,11 +714,7 @@ globalThis.addEventListener("blur", clearKeyboard);
 let zoomTimeout = 0;
 globalThis.addEventListener("wheel", (e) => {
   const element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
-  const isGameElement = element?.id === "ui" ||
-    (element instanceof HTMLElement && element.hasAttribute("data-minimap"));
-  if (!isGameElement) {
-    return false;
-  }
+  if (!isGameElement(element)) return;
   if (e.ctrlKey) return;
   camera.position.z = Math.max(camera.position.z + (e.deltaY > 0 ? 1 : -1), 1);
   if (zoomTimeout) clearTimeout(zoomTimeout);

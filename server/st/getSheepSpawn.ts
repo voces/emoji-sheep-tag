@@ -1,4 +1,4 @@
-import { getPenAreas } from "./penAreas.ts";
+import { getPenAreas } from "@/shared/penAreas.ts";
 import { pathable, pathingMap } from "../systems/pathing.ts";
 import { mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { Entity } from "@/shared/types.ts";

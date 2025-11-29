@@ -3,7 +3,9 @@ import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { getPlayers, Player } from "@/shared/api/player.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
-import { getPrimaryUnit } from "../systems/selection.ts";
+// Import triggers module resolution order that prevents circular dependency issues
+import "../systems/selection.ts";
+import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { onInit } from "@/shared/context.ts";
 
 export const getLocalPlayer = (): Player | undefined =>
@@ -29,14 +31,7 @@ export const isLocalPlayer = (player: Player | string): boolean => {
 export const applyZoom = () => {
   const settings = gameplaySettingsVar();
   const localPlayer = getLocalPlayer();
-
-  // Try to get primary unit, but handle case where module isn't loaded yet
-  let primaryUnit;
-  try {
-    primaryUnit = getPrimaryUnit();
-  } catch {
-    // getPrimaryUnit not available yet during initialization
-  }
+  const primaryUnit = primaryUnitVar();
 
   if (localPlayer && primaryUnit && primaryUnit.owner === localPlayer.id) {
     if (primaryUnit.prefab === "sheep") {
@@ -56,5 +51,5 @@ export const applyZoom = () => {
   }
 };
 
-// Apply zoom on initial load (safe because we handle getPrimaryUnit not being ready)
+// Apply zoom on initial load
 onInit(applyZoom);

@@ -1,11 +1,7 @@
 import { Entity } from "../ecs.ts";
 import { camera } from "../graphics/three.ts";
-import {
-  foxes,
-  getPrimaryUnit,
-  mirrors,
-  selection,
-} from "../systems/selection.ts";
+import { foxes, mirrors, selection } from "../systems/selection.ts";
+import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { closeMenusForUnit } from "@/vars/menuState.ts";
 import { focusGroup } from "./camera.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
@@ -99,7 +95,7 @@ export const selectAllMirrors = () => {
  * Select the primary unit (sheep, wolf, or spirit) owned by the local player
  */
 export const selectPrimaryUnit = () => {
-  const primaryUnit = getPrimaryUnit();
+  const primaryUnit = primaryUnitVar();
   if (primaryUnit) {
     if (primaryUnit.selected && primaryUnit.position && selection.size === 1) {
       camera.position.x = primaryUnit.position.x;

@@ -56,14 +56,12 @@ export const useListenToEntityProp = <P extends keyof Entity, T = Entity[P]>(
       if (!entity) return undefined;
 
       const { throttledCallback, cleanup } = throttle(setValue, 100);
-      const unsubscribe = listen(
-        entity,
-        prop,
-        (e) =>
-          throttledCallback(
-            transform ? transform(e[prop]) : (e[prop] as T),
-          ),
-      );
+      const cb = (e: Entity) =>
+        throttledCallback(
+          transform ? transform(e[prop]) : (e[prop] as T),
+        );
+      const unsubscribe = listen(entity, prop, cb);
+      cb(entity);
 
       return () => {
         cleanup();
@@ -97,18 +95,16 @@ export const useListenToEntityProps = <
       if (!entity) return undefined;
 
       const { throttledCallback, cleanup } = throttle(setValue, 100);
-      const unsubscribe = listen(
-        entity,
-        props,
-        (e) => {
-          const propsValue = Object.fromEntries(
-            props.map((prop) => [prop, e?.[prop]]),
-          ) as { [K in P]: Entity[K] };
-          throttledCallback(
-            transform ? transform(propsValue) : (propsValue as T),
-          );
-        },
-      );
+      const cb = (e: Entity) => {
+        const propsValue = Object.fromEntries(
+          props.map((prop) => [prop, e?.[prop]]),
+        ) as { [K in P]: Entity[K] };
+        throttledCallback(
+          transform ? transform(propsValue) : (propsValue as T),
+        );
+      };
+      const unsubscribe = listen(entity, props, cb);
+      cb(entity);
 
       return () => {
         cleanup();
@@ -136,6 +132,7 @@ export const useListenToEntities = (
         entities,
         (e) => listen(e, props, () => throttledCallback(undefined)),
       );
+      setValue((v) => v + 1);
       return () => {
         cleanup();
         unsubs.forEach((fn) => fn());

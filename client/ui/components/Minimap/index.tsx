@@ -128,5 +128,5 @@ export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
     };
   }, [canvas]);
 
-  return <MinimapCanvas ref={setCanvas} data-minimap {...props} />;
+  return <MinimapCanvas ref={setCanvas} data-minimap data-game-ui {...props} />;
 };

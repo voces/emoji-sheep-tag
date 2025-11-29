@@ -106,3 +106,67 @@ export const clearPenAreasCache = () => {
   cachedPenAreas = null;
   cachedMapId = null;
 };
+
+// Returns a multiplier for gold generation based on distance from pen
+// 2.5 inside pen, 1.5 just outside, down to 0.25 at map edge
+export const getDistanceMultiplier = (x: number, y: number): number => {
+  const map = getMap();
+  const pens = getPenAreas();
+  const bounds = map.bounds;
+
+  // Check if inside any pen
+  for (const pen of pens) {
+    if (
+      x >= pen.x &&
+      x < pen.x + pen.width &&
+      y >= pen.y &&
+      y < pen.y + pen.height
+    ) return 2.5;
+  }
+
+  // If no pens exist, return 1 (no penalty)
+  if (pens.length === 0) return 1;
+
+  // Find closest pen edge (clamped point on pen boundary)
+  let minDelta = Infinity;
+
+  for (const pen of pens) {
+    const penMinX = pen.x;
+    const penMaxX = pen.x + pen.width;
+    const penMinY = pen.y;
+    const penMaxY = pen.y + pen.height;
+
+    // Calculate delta for each axis (0 to 1, where 1 is at pen edge, 0 is at map edge)
+    let xDelta = 1;
+    let yDelta = 1;
+
+    if (x < penMinX) {
+      // Left of pen
+      xDelta = (x - bounds.min.x) / (penMinX - bounds.min.x);
+    } else if (x > penMaxX) {
+      // Right of pen
+      xDelta = (bounds.max.x - x) / (bounds.max.x - penMaxX);
+    }
+
+    if (y < penMinY) {
+      // Below pen
+      yDelta = (y - bounds.min.y) / (penMinY - bounds.min.y);
+    } else if (y > penMaxY) {
+      // Above pen
+      yDelta = (bounds.max.y - y) / (bounds.max.y - penMaxY);
+    }
+
+    // Use minimum of x and y deltas (worst axis determines penalty)
+    const delta = Math.min(xDelta, yDelta);
+    minDelta = Math.min(minDelta, 1 - delta); // Track closest pen (smallest distance)
+  }
+
+  // Convert back: minDelta is distance from closest pen (0 = at pen, 1 = at edge)
+  const closestDelta = 1 - minDelta;
+
+  // Clamp to valid range
+  const clampedDelta = Math.max(0, Math.min(1, closestDelta));
+
+  // Exponential drop off: tween between 0.25 and 1.5
+  return clampedDelta ** 2 * 1.25 + 0.25;
+};
