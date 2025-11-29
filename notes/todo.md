@@ -39,8 +39,6 @@
 - Should be able to Tab between types in a selection
 - Share Gold functionality
 - Buff stack id & max stack
-- The Beam is hardcoded blue. Should be the player's color, but need to support
-  different blending modes
 
 # Bugs
 
@@ -61,5 +59,3 @@
   intrinsic type with fields that modify that. The order handler should be
   generic, based on the fields being used.
 - WebGPU
-- Convert player + vertex color to be computer CPU-side; support highlights in
-  additional to lowlights (multiply)

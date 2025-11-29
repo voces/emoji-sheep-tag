@@ -95,6 +95,9 @@ export const swapOrder = {
     const unitPos = { x: unit.position.x, y: unit.position.y };
     const mirrorPos = { x: mirror.position.x, y: mirror.position.y };
 
+    // Swap facing immediately (no pathing concerns)
+    [unit.facing, mirror.facing] = [mirror.facing, unit.facing];
+
     // Move both units to infinity to clear pathing map
     unit.position = { x: Infinity, y: Infinity };
     mirror.position = { x: Infinity, y: Infinity };

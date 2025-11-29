@@ -53,6 +53,7 @@ export const SvgIcon = ({
     }
 
     if (!color) return;
+    const playerColor = new Color(color);
     ref.current.querySelectorAll("[data-player]").forEach((n) => {
       if (!(n instanceof SVGElement)) return;
       const current = getComputedStyle(n).fill;
@@ -69,22 +70,33 @@ export const SvgIcon = ({
           rgbOnly = `rgb(${values[0]}, ${values[1]}, ${values[2]})`;
           alpha = parseFloat(values[3]);
         }
-      } else if (current.match(/^#[0-9a-fA-F]{8}$/)) {
-        // 8-digit hex with alpha
-        alpha = parseInt(current.slice(7, 9), 16) / 255;
-        rgbOnly = "#" + current.slice(1, 7);
       }
 
-      const newColor = "#" +
-        new Color(rgbOnly).multiply(new Color(color)).getHexString();
+      // Luminosity blend: 0=black, 0.5=playerColor, 1=white
+      // Three.js converts colors to linear space; convert back to sRGB for luminosity calc
+      const baseColor = new Color(rgbOnly).convertLinearToSRGB();
+      const lum = (baseColor.r + baseColor.g + baseColor.b) / 3;
+      let newColor: Color;
+      if (lum < 0.5) {
+        // 0 -> 0.5 maps to black -> playerColor
+        newColor = playerColor.clone().multiplyScalar(lum * 2);
+      } else {
+        // 0.5 -> 1 maps to playerColor -> white
+        newColor = playerColor.clone().lerp(
+          new Color(1, 1, 1),
+          (lum - 0.5) * 2,
+        );
+      }
+
+      const hexColor = "#" + newColor.getHexString();
 
       // Apply color with alpha if present
       if (alpha !== undefined) {
-        n.style.fill = `rgba(${parseInt(newColor.slice(1, 3), 16)}, ${
-          parseInt(newColor.slice(3, 5), 16)
-        }, ${parseInt(newColor.slice(5, 7), 16)}, ${alpha})`;
+        n.style.fill = `rgba(${parseInt(hexColor.slice(1, 3), 16)}, ${
+          parseInt(hexColor.slice(3, 5), 16)
+        }, ${parseInt(hexColor.slice(5, 7), 16)}, ${alpha})`;
       } else {
-        n.style.fill = newColor;
+        n.style.fill = hexColor;
       }
     });
   }, [icon, color]);

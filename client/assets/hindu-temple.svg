@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">
   <path
     data-player="true"
-    fill="#ffffff"
+    fill="#808080"
     d="M25 2.875L18 2v5.25l7-.875-2.8-1.75z"
   />
   <path fill="#C7521E" d="M0 36h36l-2-2H2z" />

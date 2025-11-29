@@ -52,7 +52,7 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
       "  vPlayerColor = instancePlayerColor;",
   );
 
-  // Apply colors: base vertex color * instanceColor (all vertices) * playerColor (player vertices only)
+  // Apply colors: base vertex color, then either instanceColor or playerColor luminosity blend
   shader.vertexShader = shader.vertexShader.replace(
     /#include <color_vertex>/,
     `#if defined( USE_COLOR_ALPHA )
@@ -63,12 +63,31 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     #ifdef USE_COLOR
       vColor *= color;
     #endif
+    // playerColor: luminosity blend for player-masked vertices
+    // vertex color encodes luminosity: 0=black, 0.5=playerColor, 1=white
+    // Colors are in linear space; convert to sRGB for luminosity calculation
+    if (vPlayerMask > 0.5) {
+      // sRGB transfer function (matches Three.js LinearToSRGB)
+      vec3 srgb = mix(
+        vColor.xyz * 12.92,
+        pow(vColor.xyz, vec3(1.0 / 2.4)) * 1.055 - 0.055,
+        step(0.0031308, vColor.xyz)
+      );
+      float lum = (srgb.r + srgb.g + srgb.b) / 3.0;
+      if (lum < 0.5) {
+        // 0 -> 0.5 maps to black -> playerColor
+        vColor.xyz = instancePlayerColor * (lum * 2.0);
+      } else {
+        // 0.5 -> 1 maps to playerColor -> white
+        vColor.xyz = mix(instancePlayerColor, vec3(1.0), (lum - 0.5) * 2.0);
+      }
+    }
     #ifdef USE_INSTANCING_COLOR
-      // instanceColor applies to ALL vertices
+    else {
+      // instanceColor only applies to non-player vertices
       vColor.xyz *= instanceColor.xyz;
-    #endif
-    // playerColor applies only to player-masked vertices
-    vColor.xyz *= vPlayerMask > 0.5 ? instancePlayerColor : vec3(1.0);`,
+    }
+    #endif`,
   );
 
   shader.fragmentShader = "varying float vInstanceAlpha;\n" +

@@ -8,6 +8,7 @@ import { testClassification } from "@/shared/api/unit.ts";
 import { newSfx } from "../api/sfx.ts";
 import { Point } from "@/shared/pathing/math.ts";
 import { addSystem } from "@/shared/context.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 const BEAM_LENGTH = 6;
 const BEAM_START_WIDTH = 1;
@@ -102,7 +103,10 @@ export const beamOrder = {
       unit.order.remaining,
       "ease-in",
       undefined,
-      { sounds: { "birth": ["charging1"] } },
+      {
+        sounds: { "birth": ["charging1"] },
+        playerColor: unit.playerColor ?? getPlayer(unit.owner)?.playerColor,
+      },
     );
   },
 
@@ -137,7 +141,10 @@ export const beamOrder = {
       BEAM_DURATION,
       "ease-in",
       undefined,
-      { sounds: { "birth": ["laser1"] } },
+      {
+        sounds: { "birth": ["laser1"] },
+        playerColor: unit.playerColor ?? getPlayer(unit.owner)?.playerColor,
+      },
     );
   },
 } satisfies OrderDefinition;

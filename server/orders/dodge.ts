@@ -68,11 +68,14 @@ export const dodgeOrder = {
           a.type === "target" && a.order === "move"
         ),
         order: { type: "walk", target: { x: targetX, y: targetY } },
-        buffs: [{
-          remainingDuration: action.buffDuration,
-          totalDuration: action.buffDuration,
-          expiration: "DodgeImage",
-        }],
+        buffs: [
+          ...(unit.buffs ?? []),
+          {
+            remainingDuration: action.buffDuration,
+            totalDuration: action.buffDuration,
+            expiration: "DodgeImage",
+          },
+        ],
         trueOwner: unit.trueOwner,
       },
     );
