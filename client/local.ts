@@ -70,11 +70,11 @@ export class LocalWebSocket {
     } else {
       // Wait for broadcast channel response or loadLocal to create worker
       if (!worker) loadLocal();
-      this.initTimeout = setTimeout(() => {
+      this.initTimeout = setTimeout(async () => {
         this.initTimeout = undefined;
-        if (worker) {
-          this.initializePort();
-        }
+        // Wait for worker promise if it exists
+        if (workerPromise && !worker) worker = await workerPromise;
+        if (worker) this.initializePort();
       }, 100); // Wait a bit longer than loadLocal's timeout
     }
   }
@@ -173,23 +173,31 @@ export class LocalWebSocket {
 }
 
 let started = false;
+let workerPromise: Promise<SharedWorker> | undefined;
+
+const createWorker = async (): Promise<SharedWorker> => {
+  const workerScript = await fetch("local.js").then((r) => r.text());
+  const blob = new Blob([workerScript], { type: "application/javascript" });
+  sharedBlobURL = URL.createObjectURL(blob);
+  channel?.postMessage({ type: "blobUrl", url: sharedBlobURL });
+  return new SharedWorker(sharedBlobURL, {
+    name: "emoji-sheep-tag",
+    type: "module",
+  });
+};
+
 export const loadLocal = () => {
   initChannel();
 
   // Wait briefly for broadcast channel response before creating new worker
-  setTimeout(() => {
-    if (!worker) {
-      const workerScript = document.querySelector("script#worker")?.textContent;
-      if (!workerScript) throw new Error("Could not locate worker script");
-      const blob = new Blob([workerScript], { type: "application/javascript" });
-      sharedBlobURL = URL.createObjectURL(blob);
-      channel!.postMessage({ type: "blobUrl", url: sharedBlobURL });
-      worker = new SharedWorker(sharedBlobURL, {
-        name: "emoji-sheep-tag",
-        type: "module",
-      });
+  setTimeout(async () => {
+    if (!worker && !workerPromise) {
+      workerPromise = createWorker();
+      worker = await workerPromise;
+    } else if (workerPromise && !worker) {
+      worker = await workerPromise;
     }
-    if (!started) {
+    if (!started && worker) {
       worker.port.start();
       started = true;
     }
@@ -204,6 +212,7 @@ export const __testing_cleanup_local = () => {
     worker.port.close();
     worker = undefined;
   }
+  workerPromise = undefined;
   started = false;
   if (sharedBlobURL) {
     URL.revokeObjectURL(sharedBlobURL);

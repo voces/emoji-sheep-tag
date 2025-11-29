@@ -1,4 +1,3 @@
-import jsdom from "jsdom";
 import { ensureDir } from "@std/fs";
 import esbuild, { type Plugin } from "esbuild";
 import { denoPlugins } from "@luca/esbuild-deno-loader";
@@ -25,8 +24,6 @@ const assetInlinePlugin = {
   },
 } satisfies Plugin;
 
-const decoder = new TextDecoder();
-
 const copyMaps = async () => {
   const srcDir = "shared/maps";
   const destDir = "dist/maps";
@@ -37,65 +34,47 @@ const copyMaps = async () => {
   }
 };
 
-const buildHtml = async (env: "dev" | "prod") => {
-  // Load HTML first (needed for subsequent steps)
-  const dom = new jsdom.JSDOM(
-    await Deno.readTextFile("./client/index.html"),
-  );
-  const document: Document = dom.window.document;
+const buildJs = async (env: "dev" | "prod") => {
+  await ensureDir("dist");
 
-  const main = document.querySelector("script#main");
-  if (!main) throw new Error("Could not find main script");
+  await esbuild.build({
+    bundle: true,
+    target: "chrome123",
+    format: "esm",
+    entryPoints: ["client/index.ts", "server/local.ts"],
+    outdir: "dist",
+    entryNames: "[name]",
+    sourcemap: true,
+    plugins: [
+      assetInlinePlugin,
+      // Type-incompatible after upgrade, but still functions
+      // deno-lint-ignore no-explicit-any
+      ...denoPlugins({ configPath: await Deno.realPath("deno.json") }) as any,
+    ],
+    jsx: "automatic",
+    jsxFactory: "React.createElement",
+    jsxFragment: "React.Fragment",
+    jsxImportSource: "npm:react",
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(
+        env === "dev" ? "development" : "production",
+      ),
+    },
+    minify: env !== "dev",
+  });
+};
 
-  const worker = document.querySelector("script#worker");
-  if (!worker) throw new Error("Could not find worker script");
-
-  // Run esbuild and ensure dist directory in parallel
-  const [files] = await Promise.all([
-    // esbuild bundling
-    esbuild.build({
-      bundle: true,
-      target: "chrome123",
-      format: "esm",
-      entryPoints: ["client/index.ts", "server/local.ts"],
-      write: false,
-      publicPath: "/",
-      sourcemap: env === "dev" ? "inline" : false,
-      plugins: [
-        assetInlinePlugin,
-        // Type-incompatible after upgrade, but still functions
-        // deno-lint-ignore no-explicit-any
-        ...denoPlugins({ configPath: await Deno.realPath("deno.json") }) as any,
-      ],
-      jsx: "automatic",
-      jsxFactory: "React.createElement",
-      jsxFragment: "React.Fragment",
-      jsxImportSource: "npm:react",
-      outdir: "dist",
-      define: {
-        "process.env.NODE_ENV": JSON.stringify(
-          env === "dev" ? "development" : "production",
-        ),
-      },
-      minify: env === "dev" ? false : true,
-    }),
-    ensureDir("dist"),
-  ]);
-
-  main.textContent = decoder.decode(files.outputFiles[0].contents);
-  worker.textContent = decoder.decode(files.outputFiles[1].contents);
-
-  // Write HTML file as final step (can't be parallelized with DOM manipulation above)
-  await Deno.writeTextFile("dist/index.html", dom.serialize());
+const copyHtml = async () => {
+  await Deno.copyFile("client/index.html", "dist/index.html");
 };
 
 export const build = async (env: "dev" | "prod") => {
   const start = performance.now();
 
   try {
-    // Run HTML/JS building and sound asset copying in true parallel
     await Promise.all([
-      buildHtml(env),
+      buildJs(env),
+      copyHtml(),
       processSoundAssets(),
       copyMaps(),
     ]);
