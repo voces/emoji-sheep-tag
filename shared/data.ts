@@ -667,6 +667,7 @@ export const prefabs: Record<string, DataEntity> = {
         binding: ["KeyD"],
         manaCost: 5,
         buffDuration: 0.4,
+        cooldown: 0.25,
       },
       {
         name: "Mirror Image",

@@ -163,6 +163,9 @@ export const createMinimapRenderer = (
   return {
     renderScene,
     renderFogAndOverlay,
+    setDisableFogOfWar: (disable: boolean) => {
+      minimapFogPass.setDisableFogOfWar(disable);
+    },
     dispose: () => {
       unsubscribeFog();
       sceneRenderTarget.dispose();

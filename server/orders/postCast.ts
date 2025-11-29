@@ -10,13 +10,22 @@ export const postCast = (
 ): boolean => {
   if (item) consumeItem(entity, item);
 
-  if (entity.owner) {
-    const a = action ??
-      findActionByOrder(
-        entity,
-        entity.order?.type === "cast" ? entity.order.orderId : "",
-      );
-    if (a?.goldCost) deductPlayerGold(entity.owner, a.goldCost);
+  const a = action ??
+    findActionByOrder(
+      entity,
+      entity.order?.type === "cast" ? entity.order.orderId : "",
+    );
+
+  if (entity.owner && a?.goldCost) {
+    deductPlayerGold(entity.owner, a.goldCost);
+  }
+
+  // Set action cooldown
+  if (a && "cooldown" in a && a.cooldown && "order" in a) {
+    entity.actionCooldowns = {
+      ...entity.actionCooldowns,
+      [a.order]: a.cooldown,
+    };
   }
 
   return true;

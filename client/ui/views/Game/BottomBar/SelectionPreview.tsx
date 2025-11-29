@@ -16,11 +16,28 @@ import { styled } from "styled-components";
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { Buffs, Inventory } from "@/components/game/Avatar.tsx";
+import { useTooltip } from "@/hooks/useTooltip.tsx";
 
 const StatsContainer = styled(VStack)`
   min-width: 134px;
   gap: ${({ theme }) => theme.spacing.sm};
 `;
+
+const AttackSpeedStat = ({ attackSpeed }: { attackSpeed: number }) => {
+  const { tooltipContainerProps, tooltip } = useTooltip(
+    "Cooldown between attacks (seconds)",
+  );
+
+  return (
+    <HStack $align="center" $gap="sm" {...tooltipContainerProps}>
+      <span style={{ width: 29, height: 29 }}>
+        <SvgIcon icon="claw" />
+      </span>
+      <span>{attackSpeed}</span>
+      {tooltip}
+    </HStack>
+  );
+};
 
 const UnitStats = () => {
   const selection = useReactiveVar(selectionVar);
@@ -74,12 +91,7 @@ const UnitStats = () => {
         </HStack>
       )}
       {typeof attackSpeed === "number" && (
-        <HStack $align="center" $gap="sm">
-          <span style={{ width: 29, height: 29 }}>
-            <SvgIcon icon="claw" />
-          </span>
-          <span>{attackSpeed}</span>
-        </HStack>
+        <AttackSpeedStat attackSpeed={attackSpeed} />
       )}
       {typeof movementSpeed === "number" && (
         <HStack $align="center" $gap="sm">

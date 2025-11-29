@@ -40,7 +40,17 @@ export const Action = ({ action, current, entity }: {
     ({ progress }) => typeof progress === "number",
   );
 
-  const disabled = !hasMana || !hasGold || blockedByConstructing;
+  // Check if action is on cooldown (for auto actions with cooldowns)
+  const orderId = "order" in action ? action.order : undefined;
+  const actionCooldown = "cooldown" in action ? action.cooldown : undefined;
+  const cooldownRemaining = useListenToEntityProps(
+    entity,
+    orderId && actionCooldown ? ["actionCooldowns"] : [],
+    ({ actionCooldowns }) => actionCooldowns?.[orderId!] ?? 0,
+  );
+  const onCooldown = cooldownRemaining > 0;
+
+  const disabled = !hasMana || !hasGold || blockedByConstructing || onCooldown;
 
   switch (action.type) {
     case "auto":
@@ -59,6 +69,8 @@ export const Action = ({ action, current, entity }: {
             ? iconEffects[action.iconEffect](owningPlayer?.id)
             : undefined}
           count={action.count}
+          cooldownRemaining={cooldownRemaining}
+          cooldownTotal={actionCooldown}
         />
       );
     case "build":

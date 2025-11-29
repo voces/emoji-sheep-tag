@@ -114,6 +114,7 @@ const zBaseAction = z.discriminatedUnion("type", [
     goldCost: z.number().optional(),
     castDuration: z.number().optional(),
     buffDuration: z.number().optional(),
+    cooldown: z.number().optional(),
     attackSpeedMultiplier: z.number().optional(),
     movementSpeedBonus: z.number().optional(),
     movementSpeedMultiplier: z.number().optional(),
@@ -359,6 +360,10 @@ export const zUpdate = z.object({
   // Orders
   order: zOrder.nullable().optional(),
   queue: zOrder.array().readonly().nullable().optional(),
+
+  // Action cooldowns (keyed by order ID)
+  actionCooldowns: z.record(z.string(), z.number()).readonly().nullable()
+    .optional(),
 
   // Art
   model: z.string().nullable().optional(),

@@ -22,6 +22,7 @@ import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { useEffect, useMemo } from "react";
 import { playSound } from "../../../api/sound.ts";
 import { pick } from "../../../util/pick.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 const MiniIconWrapper = styled.div<{ $rows: number }>`
   display: grid;
@@ -44,6 +45,7 @@ export const Inventory = (
   { entity, rows = 1 }: { entity: Entity; rows?: number },
 ) => {
   const items = useListenToEntityProp(entity, "inventory");
+  const ownerColor = getPlayer(entity.owner)?.playerColor ?? undefined;
   const grouped = useMemo(() => {
     const grouped: Record<string, Item[]> = {};
     for (const item of items ?? []) {
@@ -63,6 +65,7 @@ export const Inventory = (
           description={g[0].description}
           icon={g[0].icon ?? g[0].id}
           count={g[0].charges ?? (g.length > 1 ? g.length : undefined)}
+          accentColor={ownerColor}
         />
       ))}
     </MiniIconWrapper>
@@ -81,6 +84,7 @@ export const Buffs = (
   },
 ) => {
   const buffs = useListenToEntityProp(entity, "buffs");
+  const ownerColor = getPlayer(entity.owner)?.playerColor ?? undefined;
   if (!buffs?.length) return null;
 
   return (
@@ -94,6 +98,7 @@ export const Buffs = (
               description={buff.description}
               icon={buff.icon ?? buff.model ?? ""}
               flashDuration={getFlashDuration(buff.remainingDuration)}
+              accentColor={ownerColor}
             />
           ),
         )}
@@ -122,6 +127,7 @@ export const Avatar = (
   const hasProgress = typeof entity.progress === "number";
 
   const iconProps = useEntityIconProps(entity);
+  const ownerColor = getPlayer(entity.owner)?.playerColor ?? undefined;
 
   // Get expiring buffs for timers
   const expiringBuffs =
@@ -168,6 +174,7 @@ export const Avatar = (
         hideTooltip
         count={count}
         onClick={handleClick}
+        accentColor={ownerColor}
       />
       <HStack $gap="xs">
         {expiringBuffs.map((buff, i) => (

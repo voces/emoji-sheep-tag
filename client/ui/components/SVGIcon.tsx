@@ -30,13 +30,13 @@ const Overlay = styled.div`
 
 export const SvgIcon = ({
   icon,
-  color,
+  accentColor,
   scale,
   overlayStyle,
   ...rest
 }: {
   icon: string;
-  color?: string;
+  accentColor?: string;
   scale?: number | null;
   overlayStyle?: React.CSSProperties;
 } & React.HTMLAttributes<HTMLDivElement>) => {
@@ -52,8 +52,8 @@ export const SvgIcon = ({
       svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
     }
 
-    if (!color) return;
-    const playerColor = new Color(color);
+    if (!accentColor) return;
+    const playerColor = new Color(accentColor);
     ref.current.querySelectorAll("[data-player]").forEach((n) => {
       if (!(n instanceof SVGElement)) return;
       const current = getComputedStyle(n).fill;
@@ -99,7 +99,7 @@ export const SvgIcon = ({
         n.style.fill = hexColor;
       }
     });
-  }, [icon, color]);
+  }, [icon, accentColor]);
 
   if (!(icon in svgs)) return null;
 
@@ -109,7 +109,7 @@ export const SvgIcon = ({
         ref={ref}
         {...rest}
         style={{
-          color,
+          color: accentColor,
           transform: scale ? `scale(${scale})` : undefined,
           ...rest.style,
         }}

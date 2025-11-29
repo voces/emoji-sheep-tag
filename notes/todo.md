@@ -39,6 +39,7 @@
 - Should be able to Tab between types in a selection
 - Share Gold functionality
 - Buff stack id & max stack
+- Captains
 
 # Bugs
 

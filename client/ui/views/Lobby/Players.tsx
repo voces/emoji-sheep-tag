@@ -169,7 +169,10 @@ const PlayerIcon = (
         title={canEdit ? "Click to open menu" : ""}
       >
         {teamIcon && (
-          <SvgIcon icon={teamIcon} color={player.playerColor ?? undefined} />
+          <SvgIcon
+            icon={teamIcon}
+            accentColor={player.playerColor ?? undefined}
+          />
         )}
       </PlayerMenuButton>
 

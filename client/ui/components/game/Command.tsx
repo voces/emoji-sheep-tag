@@ -54,6 +54,18 @@ const IconContainer = styled.span`
   display: inline-block;
 `;
 
+const CooldownOverlay = styled.div<{ $progress: number }>`
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent ${({ $progress }) => $progress * 360}deg,
+    rgba(0, 0, 0, 0.7) ${({ $progress }) => $progress * 360}deg
+  );
+  border-radius: inherit;
+`;
+
 export const Command = ({
   name,
   description,
@@ -69,6 +81,9 @@ export const Command = ({
   count,
   onClick,
   flashDuration,
+  accentColor,
+  cooldownRemaining,
+  cooldownTotal,
   ...rest
 }: {
   name: string;
@@ -85,6 +100,9 @@ export const Command = ({
   count?: number;
   onClick?: () => void;
   flashDuration?: number;
+  accentColor?: string;
+  cooldownRemaining?: number;
+  cooldownTotal?: number;
 } & React.ComponentProps<typeof CommandButton>) => {
   const localPlayer = useLocalPlayer();
 
@@ -170,7 +188,7 @@ export const Command = ({
       {icon && (
         <SvgIcon
           icon={icon}
-          color={localPlayer?.playerColor ?? undefined}
+          accentColor={accentColor ?? localPlayer?.playerColor ?? undefined}
           scale={(iconScale ?? 1) * 0.9}
           {...iconProps}
         />
@@ -179,6 +197,9 @@ export const Command = ({
         <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>
       )}
       {typeof count === "number" && <CommandCount>{count}</CommandCount>}
+      {cooldownRemaining && cooldownTotal && cooldownRemaining > 0 && (
+        <CooldownOverlay $progress={1 - cooldownRemaining / cooldownTotal} />
+      )}
       {!hideTooltip && tooltip}
     </FlashingCommandButton>
   );

@@ -13,6 +13,7 @@ import { addSystem } from "@/shared/context.ts";
 import { createCameraMovement } from "./cameraMovement.ts";
 import { createMinimapRaycast } from "./raycasting.ts";
 import { createMinimapRenderer } from "./rendering.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 
 const minimapUnits = new Set<Entity>();
 const minimapPlayerEntities = new Set<Entity>();
@@ -76,6 +77,12 @@ export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
       pixelRatio,
     );
 
+    // Sync fog disable setting with lobby settings
+    minimapRenderer.setDisableFogOfWar(lobbySettingsVar().view);
+    const unsubscribeLobbySettings = lobbySettingsVar.subscribe((settings) => {
+      minimapRenderer.setDisableFogOfWar(settings.view);
+    });
+
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
@@ -113,6 +120,7 @@ export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
     return () => {
       resizeObserver.disconnect();
       unsubscribeMapChange();
+      unsubscribeLobbySettings();
       disposeRender();
       cameraMovement.dispose();
       raycast.dispose();

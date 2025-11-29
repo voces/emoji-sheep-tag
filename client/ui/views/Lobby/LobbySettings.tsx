@@ -152,6 +152,31 @@ export const LobbySettings = () => {
           Game Settings
         </SettingsHeader>
 
+        {/* TODO: remove this if once we have multiple maps */}
+        {mapOptions.length > 1 && (
+          <SettingsRow>
+            <SettingsLabel htmlFor="map-select">
+              Map
+            </SettingsLabel>
+            <Select
+              id="map-select"
+              value={lobbySettings.map}
+              options={mapOptions}
+              onChange={(map) => {
+                if (map.startsWith("local:")) {
+                  const localId = map.replace("local:", "");
+                  uploadAndSelectCustomMap(localId).catch((err) => {
+                    console.error("Failed to upload custom map:", err);
+                  });
+                } else {
+                  send({ type: "lobbySettings", map });
+                }
+              }}
+              disabled={!isHost}
+            />
+          </SettingsRow>
+        )}
+
         <SettingsRow>
           <SettingsLabel htmlFor="mode">
             Mode
@@ -184,28 +209,21 @@ export const LobbySettings = () => {
           </ButtonGroup>
         </SettingsRow>
 
-        {/* TODO: remove this if once we have multiple maps */}
-        {mapOptions.length > 1 && (
+        {lobbySettings.mode === "switch" && (
           <SettingsRow>
-            <SettingsLabel htmlFor="map-select">
-              Map
-            </SettingsLabel>
-            <Select
-              id="map-select"
-              value={lobbySettings.map}
-              options={mapOptions}
-              onChange={(map) => {
-                if (map.startsWith("local:")) {
-                  const localId = map.replace("local:", "");
-                  uploadAndSelectCustomMap(localId).catch((err) => {
-                    console.error("Failed to upload custom map:", err);
-                  });
-                } else {
-                  send({ type: "lobbySettings", map });
-                }
-              }}
-              disabled={!isHost}
-            />
+            <HStack $align="center" style={{ gap: "4px" }}>
+              <Checkbox
+                id="view"
+                checked={lobbySettings.view}
+                onChange={(e) =>
+                  send({
+                    type: "lobbySettings",
+                    view: e.currentTarget.checked,
+                  })}
+                disabled={!isHost}
+              />
+              <SettingsLabel htmlFor="view">View (Disable Fog)</SettingsLabel>
+            </HStack>
           </SettingsRow>
         )}
 
@@ -333,19 +351,6 @@ export const LobbySettings = () => {
               income: { ...lobbySettings.income, wolves: value },
             })}
         />
-
-        <SettingsRow>
-          <HStack $align="center" style={{ gap: "4px" }}>
-            <Checkbox
-              id="view"
-              checked={lobbySettings.view}
-              onChange={(e) =>
-                send({ type: "lobbySettings", view: e.currentTarget.checked })}
-              disabled={!isHost}
-            />
-            <SettingsLabel htmlFor="view">View (Disable Fog)</SettingsLabel>
-          </HStack>
-        </SettingsRow>
       </GameSettingsContainer>
 
       <GameSettingsContainer>

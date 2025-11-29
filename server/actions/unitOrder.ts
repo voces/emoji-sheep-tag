@@ -77,6 +77,18 @@ export const unitOrder = (
         }
       }
 
+      // Generic cooldown validation for all orders with cooldowns
+      if (
+        action && "cooldown" in action && action.cooldown && "order" in action
+      ) {
+        if ((unit.actionCooldowns?.[action.order] ?? 0) > 0) {
+          console.warn(
+            `Cannot execute order ${order} for unit ${unit.id} - on cooldown`,
+          );
+          continue;
+        }
+      }
+
       // Order-specific validation
       if (orderDef.canExecute && !orderDef.canExecute(unit, target)) continue;
 

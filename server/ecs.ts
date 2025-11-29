@@ -192,6 +192,7 @@ export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
 
 import("./systems/clearFlags.ts");
 import("./systems/action/action.ts");
+import("./systems/actionCooldowns.ts");
 import("./systems/auras.ts");
 import("./systems/autoAttack.ts");
 import("./systems/buffs.ts");

@@ -77,6 +77,7 @@ export const dodgeOrder = {
           },
         ],
         trueOwner: unit.trueOwner,
+        inventory: unit.inventory,
       },
     );
 

@@ -189,6 +189,7 @@ export type UnitDataAction =
     readonly allowAllies?: boolean;
     readonly prefab?: string;
     readonly canExecuteWhileConstructing?: boolean;
+    readonly cooldown?: number;
   }
   | {
     readonly name: string;
@@ -365,6 +366,9 @@ export type Entity = {
   // Orders
   order?: Order | null;
   queue?: ReadonlyArray<Order> | null;
+
+  // Action cooldowns (keyed by order ID)
+  actionCooldowns?: Readonly<Record<string, number>> | null;
 };
 
 export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;

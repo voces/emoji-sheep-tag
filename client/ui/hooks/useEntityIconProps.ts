@@ -20,11 +20,12 @@ export const useEntityIconProps = (entity: Entity | undefined) => {
     const iconEffectProps = iconEffect
       ? iconEffects[iconEffect](entity.owner)
       : (entity.alpha ? { style: { opacity: entity.alpha } } : undefined);
-    const color = entity.playerColor ?? getPlayer(entity.owner)?.playerColor ??
+    const accentColor = entity.playerColor ??
+      getPlayer(entity.owner)?.playerColor ??
       undefined;
     const iconProps: React.ComponentProps<typeof Command>["iconProps"] = {
       ...iconEffectProps,
-      color,
+      accentColor,
     };
     if (
       entity.vertexColor && iconProps &&

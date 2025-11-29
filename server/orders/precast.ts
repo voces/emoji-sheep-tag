@@ -20,6 +20,11 @@ export const precast = (
     if (getPlayerGold(entity.owner) < a.goldCost) return false;
   }
 
+  // Check if action is on cooldown
+  if ("cooldown" in a && a.cooldown && "order" in a) {
+    if ((entity.actionCooldowns?.[a.order] ?? 0) > 0) return false;
+  }
+
   // Check and consume mana
   if ("manaCost" in a && a.manaCost) {
     if ((entity.mana ?? 0) < a.manaCost) return false;
