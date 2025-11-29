@@ -1,15 +1,9 @@
 import { tileDefs } from "@/shared/data.ts";
 
-const neighbors = [
-  { x: -1, y: -1 },
-  { x: 0, y: -1 },
-  { x: 1, y: -1 },
-  { x: -1, y: 0 },
-  { x: 1, y: 0 },
-  { x: -1, y: 1 },
-  { x: 0, y: 1 },
-  { x: 1, y: 1 },
-];
+// Neighbor offsets as flat arrays for faster iteration (dx, dy pairs)
+// Diagonals first (indices 0-3), then cardinals (indices 4-7)
+const neighborDx = [-1, 1, -1, 1, 0, -1, 1, 0];
+const neighborDy = [-1, -1, 1, 1, -1, 0, 0, 1];
 
 const getCliffFlag = (
   cliffs: (number | "r")[][],
@@ -19,63 +13,55 @@ const getCliffFlag = (
   const cur = cliffs[y][x];
   let rampNeighbors = 0;
   let firstNonRampNeighborHeight: number | undefined;
-  let firstDiagRamp: { x: number; y: number } | undefined;
+  let firstDiagDx = 0;
+  let firstDiagDy = 0;
 
-  for (const neighbor of neighbors) {
-    const tile = cliffs[y + neighbor.y]?.[x + neighbor.x];
+  for (let i = 0; i < 8; i++) {
+    const dx = neighborDx[i];
+    const dy = neighborDy[i];
+    const tile = cliffs[y + dy]?.[x + dx];
 
-    // Edges are ???
     if (tile === undefined) continue;
 
     if (tile !== "r") {
       if (firstNonRampNeighborHeight !== undefined) {
-        // Cliff changes are not pathable
         if (firstNonRampNeighborHeight !== tile) return true;
       } else firstNonRampNeighborHeight = tile;
     } else {
       rampNeighbors++;
-      // diag
-      if (neighbor.x !== 0 && neighbor.y !== 0) firstDiagRamp = neighbor;
+      // diag (first 4 indices are diagonals)
+      if (i < 4) {
+        firstDiagDx = dx;
+        firstDiagDy = dy;
+      }
     }
   }
 
   if (
-    // 1 ramp means we're flat and a ramp is diag
     rampNeighbors === 1 ||
-    // 2 ramps mean we're flat and a ramp is adj+diag
     rampNeighbors === 2 ||
-    // 3 ramps + we're ramp means we're a corner ramp
     (cur === "r" && rampNeighbors === 3)
   ) {
     if (
-      cliffs[y + firstDiagRamp!.y]?.[x + firstDiagRamp!.x * 3] !== "r" ||
-      cliffs[y + firstDiagRamp!.y * 3]?.[x + firstDiagRamp!.x] !== "r"
+      cliffs[y + firstDiagDy]?.[x + firstDiagDx * 3] !== "r" ||
+      cliffs[y + firstDiagDy * 3]?.[x + firstDiagDx] !== "r"
     ) return true;
   }
 
-  // Otherwise it is pathable
   return false;
 };
 
 // Turns [[x]] into [[x, x], [x, x]]
-const double = <T>(arr: T[][]): T[][] => {
-  const newArr: T[][] = [];
+const double = <T>(arr: T[][]): T[][] =>
+  arr.flatMap((row) => {
+    const r = row.flatMap((v) => [v, v]);
+    return [r, r];
+  });
 
-  for (const row of arr) {
-    const newRow: T[] = [];
-    for (const value of row) newRow.push(value, value);
-    newArr.push(newRow, [...newRow]);
-  }
-
-  return newArr;
-};
-
-export const getCliffMapFromCliffMask = (cliffMask: (number | "r")[][]) => {
-  const parsedCliffs = double(cliffMask);
-  return parsedCliffs.map((r, y) =>
-    r.map((_, x) => getCliffFlag(parsedCliffs, x, y))
+export const getCliffMapFromCliffMask = (cliffMask: (number | "r")[][]) =>
+  double(cliffMask).map((row, y, parsedCliffs) =>
+    row.map((_, x) => getCliffFlag(parsedCliffs, x, y))
   );
-};
 
 export const getPathingMaskFromTerrainMasks = (
   tileMask: number[][],
@@ -85,26 +71,17 @@ export const getPathingMaskFromTerrainMasks = (
   const parsedTiles = double(tileMask);
   const cliffMap = getCliffMapFromCliffMask(cliffMask);
 
-  return parsedTiles.map((r, y) =>
-    r.map((tileIndex, x) => {
-      // Check if outside bounds - treat as fully blocked (0xFF)
+  return parsedTiles.map((tileRow, y) =>
+    tileRow.map((tileIndex, x) => {
       if (bounds) {
-        const worldX = x / 2; // tileResolution is 2
+        const worldX = x / 2;
         const worldY = (parsedTiles.length - 1 - y) / 2;
         if (
           worldX < bounds.min.x || worldX >= bounds.max.x ||
           worldY < bounds.min.y || worldY >= bounds.max.y
-        ) {
-          return 0xFF;
-        }
+        ) return 0xFF;
       }
-
-      try {
-        return tileDefs[tileIndex].pathing | (cliffMap[y]?.[x] ? 3 : 0);
-      } catch (err) {
-        console.log(tileIndex);
-        throw err;
-      }
+      return tileDefs[tileIndex].pathing | (cliffMap[y][x] ? 3 : 0);
     })
   );
 };
