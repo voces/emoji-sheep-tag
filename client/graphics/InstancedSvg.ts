@@ -57,6 +57,11 @@ export class InstancedSvg extends InstancedMesh {
     super(mergedGeometry, material, count);
 
     this.bvh = new BVH(svgName);
+    this.bvh.setGetBoundingBox((index) => {
+      this.getMatrixAt(index, _instanceLocalMatrix);
+      if (!this.isFiniteMatrix(_instanceLocalMatrix)) return null;
+      return this.computeInstanceBoundingBox(index);
+    });
     this.innerCount = count;
     this.skipBoundsRecalc = options?.skipBoundsRecalc ?? false;
     this.mapUtilizationThreshold = options?.mapUtilizationThreshold ?? 0.5;
@@ -337,10 +342,10 @@ export class InstancedSvg extends InstancedMesh {
     if (this.layers.mask & 4 && !editorVar()) return;
 
     if (!this.isFiniteMatrix(matrix)) {
-      this.bvh.removeInstance(index);
+      this.bvh.queueUpdate(index, null);
     } else {
       const bbox = this.computeInstanceBoundingBox(index);
-      this.bvh.addOrUpdateInstance(index, bbox);
+      this.bvh.queueUpdate(index, bbox);
     }
   }
 

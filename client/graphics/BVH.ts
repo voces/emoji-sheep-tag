@@ -15,8 +15,173 @@ export class BVH {
   private freeList: number = -1;
   private map: number[] = [];
 
+  // Batching state
+  private pendingUpdates: Map<number, Box3 | null> = new Map(); // null = remove
+  private flushScheduled = false;
+  private getBoundingBox?: (index: number) => Box3 | null;
+
   constructor(readonly name?: string) {
     // Pre-allocate some nodes if desired, or grow dynamically
+  }
+
+  /** Set a callback to get bounding boxes for indices during rebuild */
+  setGetBoundingBox(fn: (index: number) => Box3 | null) {
+    this.getBoundingBox = fn;
+  }
+
+  /** Queue an update to be applied in the next microtask */
+  queueUpdate(index: number, boundingBox: Box3 | null) {
+    this.pendingUpdates.set(index, boundingBox);
+    this.scheduleFlush();
+  }
+
+  private scheduleFlush() {
+    if (this.flushScheduled) return;
+    this.flushScheduled = true;
+    queueMicrotask(() => this.flush());
+  }
+
+  private flush() {
+    this.flushScheduled = false;
+    if (this.pendingUpdates.size === 0) return;
+
+    // Decide whether to rebuild or apply individually
+    // Rebuild if > 100 updates or updating > 50% of current entries
+    const currentCount = this.map.filter((x) => x !== undefined).length;
+    const updateCount = this.pendingUpdates.size;
+    const shouldRebuild = updateCount > 100 ||
+      (currentCount > 0 && updateCount / currentCount > 0.5);
+
+    if (shouldRebuild && this.getBoundingBox) {
+      // Collect all entries for rebuild
+      const entries: { index: number; boundingBox: Box3 }[] = [];
+
+      // First, gather indices that exist or will exist
+      const allIndices = new Set<number>();
+      for (let i = 0; i < this.map.length; i++) {
+        if (this.map[i] !== undefined) allIndices.add(i);
+      }
+      for (const [index] of this.pendingUpdates) {
+        allIndices.add(index);
+      }
+
+      for (const i of allIndices) {
+        if (this.pendingUpdates.has(i)) {
+          const box = this.pendingUpdates.get(i);
+          if (box) {
+            entries.push({ index: i, boundingBox: box });
+          }
+          // null means remove, skip it
+        } else {
+          // Not in pending updates, get current bounding box
+          const box = this.getBoundingBox(i);
+          if (box) {
+            entries.push({ index: i, boundingBox: box });
+          }
+        }
+      }
+
+      this.rebuild(entries);
+    } else {
+      // Apply updates individually
+      for (const [index, box] of this.pendingUpdates) {
+        if (box === null) {
+          this.removeInstance(index);
+        } else {
+          this.addOrUpdateInstance(index, box);
+        }
+      }
+    }
+
+    this.pendingUpdates.clear();
+  }
+
+  /** Rebuild the entire BVH from a list of entries. Much faster than individual insertions for bulk updates. */
+  rebuild(entries: { index: number; boundingBox: Box3 }[]): void {
+    // Clear existing state
+    this.nodes.length = 0;
+    this.root = -1;
+    this.freeList = -1;
+    this.map = [];
+
+    if (entries.length === 0) return;
+
+    // Build leaf nodes
+    const leaves = entries.map((entry) => {
+      const leaf = this.allocateNode();
+      const node = this.nodes[leaf];
+      node.box.copy(entry.boundingBox);
+      node.index = entry.index;
+      node.left = -1;
+      node.right = -1;
+      node.height = 0;
+      this.map[entry.index] = leaf;
+      return leaf;
+    });
+
+    // Build tree top-down using median split
+    this.root = this.buildTopDown(leaves);
+  }
+
+  private buildTopDown(leaves: number[]): number {
+    if (leaves.length === 0) return -1;
+    if (leaves.length === 1) return leaves[0];
+
+    // Compute combined bounding box
+    const combined = new Box3();
+    for (const leaf of leaves) {
+      combined.union(this.nodes[leaf].box);
+    }
+
+    // Find longest axis
+    const size = new Vector3();
+    combined.getSize(size);
+    const axis = size.x > size.y
+      ? (size.x > size.z ? "x" : "z")
+      : (size.y > size.z ? "y" : "z");
+
+    // Sort by center along axis
+    leaves.sort((a, b) => {
+      const centerA = new Vector3();
+      const centerB = new Vector3();
+      this.nodes[a].box.getCenter(centerA);
+      this.nodes[b].box.getCenter(centerB);
+      return centerA[axis] - centerB[axis];
+    });
+
+    // Split at median
+    const mid = Math.floor(leaves.length / 2);
+    const leftLeaves = leaves.slice(0, mid);
+    const rightLeaves = leaves.slice(mid);
+
+    const left = this.buildTopDown(leftLeaves);
+    const right = this.buildTopDown(rightLeaves);
+
+    // Create parent node
+    const parent = this.allocateNode();
+    const node = this.nodes[parent];
+    node.left = left;
+    node.right = right;
+
+    if (left !== -1) this.nodes[left].parent = parent;
+    if (right !== -1) this.nodes[right].parent = parent;
+
+    // Compute height and bounding box
+    const leftHeight = left !== -1 ? this.nodes[left].height : 0;
+    const rightHeight = right !== -1 ? this.nodes[right].height : 0;
+    node.height = 1 + Math.max(leftHeight, rightHeight);
+
+    const leftBox = left !== -1 ? this.nodes[left].box : null;
+    const rightBox = right !== -1 ? this.nodes[right].box : null;
+    if (leftBox && rightBox) {
+      node.box = this.unionBoxes(leftBox, rightBox);
+    } else if (leftBox) {
+      node.box.copy(leftBox);
+    } else if (rightBox) {
+      node.box.copy(rightBox);
+    }
+
+    return parent;
   }
 
   addOrUpdateInstance(index: number, boundingBox: Box3): void {
