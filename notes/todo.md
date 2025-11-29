@@ -47,8 +47,6 @@
 - Pathing falls over with lots of foxes
   - Falls over when spam clicking movement orders
   - Per-player pathing calc limits?
-- When move targeting a unit, the order clears when the target is reached; it
-  should keep following
 
 # Perf
 

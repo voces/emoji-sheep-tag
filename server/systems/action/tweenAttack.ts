@@ -58,9 +58,7 @@ export const tweenAttack = (e: Entity, delta: number) => {
         // Path blocked, try to regenerate
         const currentPath = "path" in e.order ? e.order.path : undefined;
         if (currentPath) {
-          const shouldCancel = handleBlockedPath(e, target.id, currentPath, {
-            mode: "attack",
-          });
+          const shouldCancel = handleBlockedPath(e, target.id, currentPath);
           if (shouldCancel) {
             delete e.order;
             return delta;
@@ -84,7 +82,7 @@ export const tweenAttack = (e: Entity, delta: number) => {
         e.order.path[0].y === e.position?.y;
 
       if (tweenResult.delta < delta || reachedPathEnd) {
-        const path = calcPath(e, target.id, { mode: "attack" });
+        const path = calcPath(e, target.id);
         if (path.length) {
           e.order = { ...e.order, path, lastRepath: now };
         } else if (distanceBetweenEntities(e, target) > e.attack.range) {
@@ -102,7 +100,7 @@ export const tweenAttack = (e: Entity, delta: number) => {
     }
 
     // No path yet or need to regenerate - always calculate
-    const path = calcPath(e, target.id, { mode: "attack" });
+    const path = calcPath(e, target.id);
     if (!path.length) {
       if (distanceBetweenEntities(e, target) > e.attack.range) {
         // Target unreachable and out of attack range

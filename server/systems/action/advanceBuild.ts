@@ -15,7 +15,7 @@ export const advanceBuild = (e: Entity, delta: number): number => {
 
   const d = computeBuildDistance(e.order.unitType);
 
-  // No longer in range; get in range
+  // Not in range; get in range
   if (distanceBetweenPoints(e.position, e.order) > d) {
     if (!e.order.path) {
       const path = calcPath(e, e.order, { distanceFromTarget: d });

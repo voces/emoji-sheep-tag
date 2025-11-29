@@ -5,7 +5,10 @@ import { Entity } from "@/shared/types.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 import { handleBlockedPath, shouldRepath } from "./pathRetry.ts";
-import { angleDifference } from "@/shared/pathing/math.ts";
+import {
+  angleDifference,
+  distanceBetweenEntities,
+} from "@/shared/pathing/math.ts";
 
 export const advanceWalk = (e: Entity, delta: number): number => {
   if (e.order?.type !== "walk") return delta;
@@ -20,15 +23,28 @@ export const advanceWalk = (e: Entity, delta: number): number => {
       return delta;
     }
 
-    // Always recompute for moving targets
-    const path = calcPath(e, e.order.targetId, {
-      distanceFromTarget: FOLLOW_DISTANCE,
-    });
-    if (!path.length) {
-      delete e.order;
+    const distance = e.position && target.position
+      ? distanceBetweenEntities(e, target)
+      : Infinity;
+
+    // Check if already within follow distance
+    if (distance <= FOLLOW_DISTANCE) {
+      // Already in range - clear path and set lastRepath to add delay before following again
+      if (e.order.path?.length) {
+        e.order = { ...e.order, path: [], lastRepath: now };
+      }
       return delta;
     }
-    e.order = { ...e.order, path, lastRepath: now };
+
+    // Only repath if we have no path
+    const hasPath = e.order.path && e.order.path.length > 0;
+
+    if (!hasPath) {
+      const path = calcPath(e, e.order.targetId, {
+        distanceFromTarget: FOLLOW_DISTANCE,
+      });
+      e.order = { ...e.order, path, lastRepath: now };
+    }
   } else if (!e.order.path || shouldRepath(e, now)) {
     // Periodic repath for static targets
     const path = calcPath(e, e.order.target);
@@ -53,6 +69,20 @@ export const advanceWalk = (e: Entity, delta: number): number => {
       return delta;
     }
     return delta;
+  }
+
+  // For moving targets, repath when we make progress or reach path end
+  if ("targetId" in e.order && e.order.path && e.order.path.length > 0) {
+    const reachedPathEnd = e.order.path.length === 1 &&
+      e.order.path[0].x === e.position?.x &&
+      e.order.path[0].y === e.position?.y;
+
+    if (tweenResult.delta < delta || reachedPathEnd) {
+      const path = calcPath(e, e.order.targetId, {
+        distanceFromTarget: FOLLOW_DISTANCE,
+      });
+      e.order = { ...e.order, path, lastRepath: now };
+    }
   }
 
   // Reached end

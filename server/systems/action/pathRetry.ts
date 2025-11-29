@@ -44,6 +44,7 @@ export const handleBlockedPath = (
   ) {
     const finalPath = calcPath(entity, target, {
       ...options,
+      lead: false,
       removeMovingEntities: false,
     });
 

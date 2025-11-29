@@ -25,9 +25,9 @@ export const withPathingMap = <T>(fn: (pathingMap: PathingMap) => T) =>
 export const calcPath = (
   entity: Entity,
   target: string | { x: number; y: number },
-  { distanceFromTarget, mode, removeMovingEntities }: {
+  { distanceFromTarget, lead, removeMovingEntities }: {
     distanceFromTarget?: number;
-    mode?: "attack";
+    lead?: boolean;
     removeMovingEntities?: boolean;
   } = {},
 ) => {
@@ -38,12 +38,15 @@ export const calcPath = (
     const targetEntity = lookup(target);
     if (!targetEntity?.position) return [];
 
+    // Default lead to true for entity targets
+    const shouldLead = lead ?? true;
+
     try {
       const path = pathingMap().path(
         entity,
         targetEntity as TargetEntity,
         {
-          distanceFromTarget: (mode === "attack"
+          distanceFromTarget: (shouldLead
             ? Math.max(
               0,
               (distanceFromTarget ?? entity.attack?.range ?? 0) -

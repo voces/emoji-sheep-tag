@@ -205,9 +205,7 @@ const isReachableTarget = (attacker: Entity, target: Entity) => {
   // Cannot walk
   if (!attacker.movementSpeed) return false;
 
-  const path = calcPath(attacker, "id" in target ? target.id : target, {
-    mode: "attack",
-  });
+  const path = calcPath(attacker, "id" in target ? target.id : target);
 
   return path.length > 0 &&
     (path.at(-1)?.x !== attacker.position.x ||
