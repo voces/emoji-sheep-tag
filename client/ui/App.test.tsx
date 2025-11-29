@@ -29,7 +29,7 @@ it("can move an action into a menu", async () => {
   await userEvent.click(screen.getByText("Save"));
   await userEvent.click(screen.getByTitle("Close settings"));
   await userEvent.click(screen.getByText("Multiplayer"));
-  sendMessageFromServer({
+  await sendMessageFromServer({
     type: "join",
     lobby: "Strong Spirit",
     status: "lobby",
@@ -58,9 +58,9 @@ it("can move an action into a menu", async () => {
     },
   });
   await userEvent.click(
-    await screen.findByRole("button", { name: "Practice" }, { timeout: 10000 }),
+    await screen.findByRole("button", { name: "Practice" }),
   );
-  sendMessageFromServer({
+  await sendMessageFromServer({
     type: "start",
     updates: [
       { id: "player-0", sheepCount: 1 },
@@ -74,7 +74,7 @@ it("can move an action into a menu", async () => {
       },
     ],
   });
-  sendMessageFromServer({
+  await sendMessageFromServer({
     type: "updates",
     updates: [
       {
