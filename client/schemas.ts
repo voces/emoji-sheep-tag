@@ -428,14 +428,36 @@ const zLobbySettings = z.object({
 
 export type LobbySettings = z.input<typeof zLobbySettings>;
 
+const zCaptainsDraft = z.object({
+  phase: z.union([
+    z.literal("selecting-captains"),
+    z.literal("drafting"),
+    z.literal("drafted"),
+    z.literal("reversed"),
+  ]),
+  captains: z.string().array().readonly(),
+  picks: z.tuple([
+    z.string().array().readonly(),
+    z.string().array().readonly(),
+  ]),
+  currentPicker: z.union([z.literal(0), z.literal(1)]),
+  picksThisTurn: z.number(),
+});
+
+export type CaptainsDraft = z.input<typeof zCaptainsDraft> | undefined;
+
 const zJoin = z.object({
   type: z.literal("join"),
   lobby: z.string(),
-  status: z.union([z.literal("lobby"), z.literal("playing")]),
+  status: z.union([
+    z.literal("lobby"),
+    z.literal("playing"),
+  ]),
   updates: zUpdate.array().readonly(),
   rounds: zRound.array().readonly().optional(),
   lobbySettings: zLobbySettings,
   localPlayer: z.string().optional(),
+  captainsDraft: zCaptainsDraft.nullable(),
 });
 
 const zLeave = z.object({
@@ -468,10 +490,28 @@ const zLobbySettingsMessage = zLobbySettings.extend({
   type: z.literal("lobbySettings"),
 });
 
+const zCaptainsDraftMessage = z.object({
+  type: z.literal("captainsDraft"),
+  phase: z.union([
+    z.literal("selecting-captains"),
+    z.literal("drafting"),
+    z.literal("drafted"),
+    z.literal("reversed"),
+  ]).optional(),
+  captains: z.string().array().readonly().optional(),
+  picks: z.tuple([z.string().array().readonly(), z.string().array().readonly()])
+    .optional(),
+  currentPicker: z.union([z.literal(0), z.literal(1)]).optional(),
+  picksThisTurn: z.number().optional(),
+});
+
 const zLobby = z.object({
   name: z.string(),
   playerCount: z.number(),
-  status: z.union([z.literal("lobby"), z.literal("playing")]),
+  status: z.union([
+    z.literal("lobby"),
+    z.literal("playing"),
+  ]),
   isOpen: z.boolean(),
 });
 
@@ -510,6 +550,7 @@ export const zMessage = z.discriminatedUnion("type", [
   zPong,
   zChat,
   zLobbySettingsMessage,
+  zCaptainsDraftMessage,
   zHubState,
   zMapUpdate,
   zUploadCustomMap,

@@ -43,6 +43,20 @@ type LobbySettings = {
 
 type LobbyStatus = "lobby" | "playing";
 
+export type CaptainsDraft = {
+  /**
+   * - "selecting-captains": host is picking captains
+   * - "drafting": captains are picking teams
+   * - "drafted": teams are set, waiting for first round
+   * - "reversed": first round complete, teams reversed, waiting for second round
+   */
+  phase: "selecting-captains" | "drafting" | "drafted" | "reversed";
+  captains: string[]; // player IDs, 0-2 captains
+  picks: [string[], string[]]; // picks[0] = captain 0's team, picks[1] = captain 1's team
+  currentPicker: 0 | 1;
+  picksThisTurn: number; // for snake draft (1 or 2)
+};
+
 type Round = {
   ecs: Game;
   start?: number;
@@ -61,6 +75,7 @@ export type Lobby = {
   status: LobbyStatus;
   round?: Round;
   rounds: { sheep: string[]; wolves: string[]; duration: number }[];
+  captainsDraft?: CaptainsDraft;
 };
 
 export const lobbies = new Set<Lobby>();

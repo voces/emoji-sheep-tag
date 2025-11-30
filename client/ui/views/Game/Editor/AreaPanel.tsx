@@ -19,7 +19,7 @@ const ArrowButton = styled.button<{ $position: string }>`
   padding: 4px;
   line-height: 1;
 
-  &:hover {
+  &.hover {
     color: rgba(255, 255, 255, 1);
   }
 

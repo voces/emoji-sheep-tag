@@ -45,6 +45,20 @@ import {
   updateSelection,
   zUpdateSelection,
 } from "./actions/updateSelection.ts";
+import {
+  cancelCaptains,
+  captainPick,
+  randomCaptains,
+  reverseTeams,
+  selectCaptain,
+  startCaptains,
+  zCancelCaptains,
+  zCaptainPick,
+  zRandomCaptains,
+  zReverseTeams,
+  zSelectCaptain,
+  zStartCaptains,
+} from "./actions/captains.ts";
 
 export type SocketEventMap = {
   close: unknown;
@@ -176,6 +190,12 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zJoinLobby,
   zCreateLobby,
   zUpdateSelection,
+  zStartCaptains,
+  zSelectCaptain,
+  zRandomCaptains,
+  zCaptainPick,
+  zCancelCaptains,
+  zReverseTeams,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -202,6 +222,12 @@ const actions = {
   joinLobby,
   createLobby,
   updateSelection,
+  startCaptains,
+  selectCaptain,
+  randomCaptains,
+  captainPick,
+  cancelCaptains,
+  reverseTeams,
 };
 
 export const handleSocket = (socket: Socket, url?: URL) => {

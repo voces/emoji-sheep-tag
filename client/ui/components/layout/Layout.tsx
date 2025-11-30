@@ -23,7 +23,6 @@ export const HStack = styled.div<
 export const HoverHighlight = styled.div`
   color: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 10));
 
-  &:hover,
   &.hover {
     color: ${({ theme }) => theme.colors.body};
   }

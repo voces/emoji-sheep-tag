@@ -37,6 +37,7 @@ it("switch wolf -> sheep", () => {
     ],
     lobbySettings: lobbySettingsVar(),
     localPlayer: "player-0",
+    captainsDraft: null,
   });
   app.update();
 

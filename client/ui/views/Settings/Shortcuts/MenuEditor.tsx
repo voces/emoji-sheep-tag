@@ -18,7 +18,7 @@ const IconPreview = styled.div`
   align-items: center;
   justify-content: center;
 
-  &:hover {
+  &.hover {
     border-style: inset;
   }
 
@@ -30,7 +30,7 @@ const IconPreview = styled.div`
 
 const IconGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(8, 48px);
+  grid-template-columns: repeat(9, 1fr);
   gap: 4px;
   padding: 8px;
   max-height: 300px;
@@ -54,7 +54,7 @@ const IconOption = styled.div<{ $selected: boolean }>`
   align-items: center;
   justify-content: center;
 
-  &:hover {
+  &.hover {
     border-style: inset;
   }
 

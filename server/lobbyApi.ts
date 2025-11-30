@@ -15,6 +15,11 @@ import type { Entity } from "@/shared/types.ts";
 import { autoAssignSheepOrWolf } from "./st/roundHelpers.ts";
 import { getCustomMapForLobby } from "./actions/uploadCustomMap.ts";
 import type { Lobby } from "./lobby.ts";
+import {
+  handleCaptainsPlayerLeave,
+  isActiveCaptainsDraft,
+  serializeCaptainsDraft,
+} from "./actions/captains.ts";
 
 const convertPendingPlayersToTeams = (lobby: Lobby) => {
   const pendingPlayers = Array.from(lobby.players).filter((p) =>
@@ -57,6 +62,33 @@ export const endRound = (canceled = false) => {
       ? createRoundSummary(lobby)
       : undefined;
 
+  // Handle captains draft phases
+  const inFirstCaptainsRound = !canceled &&
+    !lobby.round.practice &&
+    lobby.captainsDraft?.phase === "drafted";
+
+  const inSecondCaptainsRound = !canceled &&
+    !lobby.round.practice &&
+    lobby.captainsDraft?.phase === "reversed";
+
+  if (inFirstCaptainsRound) {
+    // After first round: swap teams and move to "reversed" phase
+    for (const player of lobby.players) {
+      if (player.team === "sheep") player.team = "wolf";
+      else if (player.team === "wolf") player.team = "sheep";
+    }
+
+    const sheepCount = Array.from(lobby.players).filter((p) =>
+      p.team === "sheep"
+    ).length;
+    lobby.settings.sheep = sheepCount;
+
+    lobby.captainsDraft!.phase = "reversed";
+  } else if (inSecondCaptainsRound) {
+    // After second round: clear captains draft
+    lobby.captainsDraft = undefined;
+  }
+
   // Don't want to clear the round in middle of a cycle
   queueMicrotask(() => {
     clearUpdatesCache();
@@ -67,6 +99,14 @@ export const endRound = (canceled = false) => {
   if (round) lobby.rounds.push(round);
 
   send({ type: "stop", updates: Array.from(lobby.players), round });
+
+  if (inFirstCaptainsRound || inSecondCaptainsRound) {
+    send({
+      type: "captainsDraft",
+      phase: inSecondCaptainsRound ? undefined : "reversed",
+    });
+    send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
+  }
 
   if (canceled) send({ type: "chat", message: "Round canceled." });
 };
@@ -110,6 +150,7 @@ export const sendJoinMessage = (client: Client) => {
     rounds: lobby.rounds,
     lobbySettings: serializeLobbySettings(lobby),
     localPlayer: client.id,
+    captainsDraft: serializeCaptainsDraft(lobby.captainsDraft),
   });
 };
 
@@ -179,6 +220,11 @@ export const leave = (client?: Client) => {
     const next = lobby.players.values().next();
     if (next.done) throw new Error("Expected lobby to be non-empty");
     lobby.host = next.value;
+  }
+
+  // Handle captains draft when a non-observer player leaves during active draft
+  if (isActiveCaptainsDraft(lobby) && client.team !== "observer") {
+    handleCaptainsPlayerLeave(lobby, client.id);
   }
 
   // Send leave event

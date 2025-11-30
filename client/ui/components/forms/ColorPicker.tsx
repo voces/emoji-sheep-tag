@@ -13,8 +13,7 @@ const Wrapper = styled.div`
   font-size: inherit;
   position: relative;
 
-  &.hover,
-  &:hover {
+  &.hover {
     box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) =>
       theme.shadows.sm};
   }

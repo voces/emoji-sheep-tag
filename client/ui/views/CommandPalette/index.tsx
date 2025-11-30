@@ -44,7 +44,6 @@ const CommandOption = styled.div<{ $focused?: boolean }>`
   padding: ${({ $focused, theme }) => $focused ? `0 ${theme.spacing.lg}` : "0"};
   cursor: pointer;
 
-  &:hover,
   &.hover {
     background-color: ${({ theme }) => theme.colors.shadow};
     margin: ${({ theme }) => `0 -${theme.spacing.lg}`};

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useIsLocalPlayerHost, usePlayers } from "@/hooks/usePlayers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { send } from "../../../client.ts";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { TimeInput } from "@/components/forms/TimeInput.tsx";
@@ -35,6 +36,7 @@ const formatDate = (timestamp: number): string => {
 
 export const LobbySettings = () => {
   const lobbySettings = useReactiveVar(lobbySettingsVar);
+  const captainsDraft = useReactiveVar(captainsDraftVar);
   const players = usePlayers();
   useListenToEntities(players, ["team"]);
   const isHost = useIsLocalPlayerHost();
@@ -294,6 +296,7 @@ export const LobbySettings = () => {
         buttonsDisabled={buttonsDisabled}
         isHost={isHost}
         nonObserversCount={nonObservers.length}
+        captainsDraft={captainsDraft}
       />
     </SettingsCard>
   );

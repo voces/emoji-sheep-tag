@@ -51,11 +51,6 @@ export const ModeButton = styled(Button)<{ $active: boolean }>`
     border-right: 1px solid ${({ theme }) => theme.colors.border};
   }
 
-  &:hover:not([disabled]) {
-    background: ${({ theme }) => theme.colors.body};
-    box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
-  }
-
   &:disabled {
     background: ${({ $active, theme }) =>
       $active

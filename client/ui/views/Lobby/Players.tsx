@@ -50,7 +50,6 @@ const MenuItem = styled.div`
   padding: 0;
   cursor: pointer;
 
-  &:hover,
   &.hover {
     background-color: ${({ theme }) => theme.colors.shadow};
     margin: ${({ theme }) => `0 -${theme.spacing.lg}`};

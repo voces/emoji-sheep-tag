@@ -9,7 +9,6 @@ const StyledButton = styled.button`
   cursor: pointer;
   outline: none;
 
-  &:hover:not([disabled]),
   &.hover:not([disabled]) {
     background: ${({ theme }) => theme.colors.body};
     box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;

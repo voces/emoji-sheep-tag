@@ -45,6 +45,7 @@ const createJoinMessage = (
   status: "lobby" as const,
   updates: [],
   lobbySettings: DEFAULT_LOBBY_SETTINGS,
+  captainsDraft: null,
   ...overrides,
 });
 

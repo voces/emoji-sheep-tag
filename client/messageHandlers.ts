@@ -14,6 +14,7 @@ import { stats } from "./util/Stats.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { roundsVar } from "@/vars/rounds.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import type { ServerToClientMessage, Update } from "./schemas.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { send } from "./client.ts";
@@ -130,6 +131,7 @@ export const handlers = {
     stateVar(data.status);
     ensureMapLoaded(data.lobbySettings.map);
     lobbySettingsVar(data.lobbySettings);
+    captainsDraftVar(data.captainsDraft ?? undefined);
     processUpdates(data.updates);
 
     if (data.rounds) roundsVar(data.rounds);
@@ -186,6 +188,21 @@ export const handlers = {
   ) => {
     ensureMapLoaded(lobbySettings.map);
     lobbySettingsVar(lobbySettings);
+  },
+  captainsDraft: (
+    data: Extract<ServerToClientMessage, { type: "captainsDraft" }>,
+  ) => {
+    if (!data.phase) {
+      captainsDraftVar(undefined);
+    } else {
+      captainsDraftVar({
+        phase: data.phase,
+        captains: data.captains!,
+        picks: data.picks!,
+        currentPicker: data.currentPicker!,
+        picksThisTurn: data.picksThisTurn!,
+      });
+    }
   },
   mapUpdate: (data: Extract<ServerToClientMessage, { type: "mapUpdate" }>) => {
     const currentMap = getMap();

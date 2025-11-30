@@ -11,6 +11,7 @@ import { appContext } from "@/shared/context.ts";
 import { flushUpdates } from "../updates.ts";
 import { serializeLobbySettings } from "./lobbySettings.ts";
 import { autoAssignSheepOrWolf, initializePlayer } from "../st/roundHelpers.ts";
+import { serializeCaptainsDraft } from "./captains.ts";
 
 export const zJoinLobby = z.object({
   type: z.literal("joinLobby"),
@@ -79,6 +80,7 @@ export const joinLobby = (
       status: lobby.status,
       updates: lobby.round ? flushUpdates(false) : [client],
       lobbySettings: serializeLobbySettings(lobby, 1),
+      captainsDraft: serializeCaptainsDraft(lobby.captainsDraft),
     });
 
     // Add player to lobby

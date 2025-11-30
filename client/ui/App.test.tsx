@@ -57,6 +57,7 @@ it("can move an action into a menu", async () => {
       teamGold: true,
       host: "player-0",
     },
+    captainsDraft: null,
   });
   await userEvent.click(
     await screen.findByRole("button", { name: "Practice" }),
