@@ -1,13 +1,10 @@
-import { styled } from "styled-components";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useIsLocalPlayerHost, usePlayers } from "@/hooks/usePlayers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { send } from "../../../client.ts";
-import { HStack, VStack } from "@/components/layout/Layout.tsx";
-import { Card } from "@/components/layout/Card.tsx";
+import { HStack } from "@/components/layout/Layout.tsx";
 import { TimeInput } from "@/components/forms/TimeInput.tsx";
-import { Button } from "@/components/forms/Button.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
 import { NumericSettingInput } from "./NumericSettingInput.tsx";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
@@ -19,129 +16,21 @@ import {
 } from "../../../storage/localMaps.ts";
 import { uploadAndSelectCustomMap } from "../../../actions/uploadCustomMap.ts";
 import { localMapsRefreshVar } from "@/vars/localMapsRefresh.ts";
-import { useTooltip } from "@/hooks/useTooltip.tsx";
+import {
+  ButtonGroup,
+  GameSettingsContainer,
+  ModeButton,
+  SettingsCard,
+  SettingsHeader,
+  SettingsLabel,
+  SettingsRow,
+} from "./lobbyStyles.tsx";
+import { StartButtons } from "./StartButtons.tsx";
+import { TeamGoldSetting } from "./TeamGoldSetting.tsx";
 
 const formatDate = (timestamp: number): string => {
   const date = new Date(timestamp);
   return date.toLocaleDateString();
-};
-
-const SettingsCard = styled(Card)`
-  width: 40%;
-  justify-content: space-between;
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
-`;
-
-const GameSettingsContainer = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const SettingsRow = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.xs};
-`;
-
-const SettingsHeader = styled.h3`
-  margin: 0;
-  font-size: 14px;
-  font-weight: bold;
-`;
-
-const SettingsLabel = styled.label`
-  font-size: 12px;
-  font-weight: bold;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 0;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 2px;
-  overflow: hidden;
-`;
-
-const ModeButton = styled(Button)<{ $active: boolean }>`
-  flex: 1;
-  border-radius: 0;
-  border: none;
-  background: ${({ $active, theme }) =>
-    $active
-      ? theme.colors.body
-      : `hsl(from ${theme.colors.body} h s calc(l - 20))`};
-
-  &:not(:last-child) {
-    border-right: 1px solid ${({ theme }) => theme.colors.border};
-  }
-
-  &:hover:not([disabled]) {
-    background: ${({ theme }) => theme.colors.body};
-    box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
-  }
-
-  &:disabled {
-    background: ${({ $active, theme }) =>
-      $active
-        ? `hsl(from ${theme.colors.body} h s calc(l - 20))`
-        : `hsl(from ${theme.colors.body} h s calc(l - 30))`};
-  }
-`;
-
-const StartButtonRow = styled.div`
-  display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
-  align-items: center;
-`;
-
-const SecondaryButton = styled(Button)`
-  flex: 1;
-`;
-
-const TertiaryButton = styled(Button)`
-  flex: 1;
-`;
-
-const TeamGoldTooltip = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const TeamGoldSetting = ({ isHost }: { isHost: boolean }) => {
-  const lobbySettings = useReactiveVar(lobbySettingsVar);
-  const { tooltipContainerProps, tooltip } = useTooltip(
-    <TeamGoldTooltip>
-      <div>
-        <strong>Sheep:</strong> Individual gold up to 20, rest shared with team.
-      </div>
-      <div>
-        <strong>Wolves:</strong> All gold shared with team.
-      </div>
-    </TeamGoldTooltip>,
-  );
-
-  return (
-    <SettingsRow>
-      <HStack
-        $align="center"
-        style={{ gap: "4px" }}
-        {...tooltipContainerProps}
-      >
-        <Checkbox
-          id="teamGold"
-          checked={lobbySettings.teamGold}
-          onChange={(e) =>
-            send({
-              type: "lobbySettings",
-              teamGold: e.currentTarget.checked,
-            })}
-          disabled={!isHost}
-        />
-        <SettingsLabel htmlFor="teamGold">Team Gold</SettingsLabel>
-      </HStack>
-      {tooltip}
-    </SettingsRow>
-  );
 };
 
 export const LobbySettings = () => {
@@ -401,35 +290,11 @@ export const LobbySettings = () => {
         />
       </GameSettingsContainer>
 
-      <GameSettingsContainer>
-        <StartButtonRow>
-          <SecondaryButton
-            type="button"
-            accessKey="a"
-            onClick={() => send({ type: "start", fixedTeams: true })}
-            disabled={buttonsDisabled || !isHost || nonObservers.length < 2}
-          >
-            Manual
-          </SecondaryButton>
-          <TertiaryButton
-            type="button"
-            accessKey="r"
-            onClick={() => send({ type: "start", practice: true })}
-            disabled={buttonsDisabled || !isHost || nonObservers.length < 1}
-          >
-            Practice
-          </TertiaryButton>
-        </StartButtonRow>
-
-        <Button
-          type="button"
-          accessKey="s"
-          onClick={() => send({ type: "start", fixedTeams: false })}
-          disabled={buttonsDisabled || !isHost || nonObservers.length < 2}
-        >
-          Smart Draft
-        </Button>
-      </GameSettingsContainer>
+      <StartButtons
+        buttonsDisabled={buttonsDisabled}
+        isHost={isHost}
+        nonObserversCount={nonObservers.length}
+      />
     </SettingsCard>
   );
 };

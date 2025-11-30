@@ -147,7 +147,7 @@ export const handlers = {
     const center = getMapCenter();
     camera.position.x = center.x;
     camera.position.y = center.y;
-    applyZoom();
+    applyZoom(true);
   },
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");

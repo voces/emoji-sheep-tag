@@ -25,32 +25,36 @@ const Collapse: React.FC<CollapseProps> = ({
     const el = containerRef.current;
     if (!el) return;
 
+    let animation: Animation | undefined;
+
     // First mount: snap to end state with no animation
     if (!hasMounted.current) {
       el.style.overflow = "hidden";
       el.style.height = isOpen ? "auto" : "0px";
       hasMounted.current = true;
-      return;
+    } else {
+      // On updates: run animation
+      el.getAnimations?.().forEach((a) => a.cancel());
+      el.style.overflow = "hidden";
+
+      const fullHeight = `${el.scrollHeight}px`;
+      const keyframes = isOpen
+        ? [{ height: "0px" }, { height: fullHeight }]
+        : [{ height: fullHeight }, { height: "0px" }];
+
+      animation = el.animate?.(keyframes, { duration, easing });
+      if (animation) {
+        animation.onfinish = () => {
+          el.style.height = isOpen ? "auto" : "0px";
+          el.style.overflow = isOpen ? "" : "hidden";
+        };
+      }
     }
 
-    // On updates: run animation
-    el.getAnimations?.().forEach((a) => a.cancel());
-    el.style.overflow = "hidden";
-
-    const fullHeight = `${el.scrollHeight}px`;
-    const keyframes = isOpen
-      ? [{ height: "0px" }, { height: fullHeight }]
-      : [{ height: fullHeight }, { height: "0px" }];
-
-    const animation = el.animate?.(keyframes, { duration, easing });
-    if (animation) {
-      animation.onfinish = () => {
-        el.style.height = isOpen ? "auto" : "0px";
-        el.style.overflow = isOpen ? "" : "hidden";
-      };
-
-      return () => animation.cancel();
-    }
+    return () => {
+      animation?.cancel();
+      hasMounted.current = false;
+    };
   }, [isOpen, duration, easing]);
 
   // Ensure initial render matches the collapsed/open state

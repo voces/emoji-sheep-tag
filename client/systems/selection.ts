@@ -3,7 +3,7 @@ import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
 import { camera, onRender } from "../graphics/three.ts";
-import { applyZoom, getLocalPlayer, isLocalPlayer } from "../api/player.ts";
+import { getLocalPlayer, isLocalPlayer } from "../api/player.ts";
 import { addSystem } from "@/shared/context.ts";
 import type { Buff } from "@/shared/types.ts";
 import { send } from "../messaging.ts";
@@ -170,10 +170,7 @@ addSystem({
           camera.position.y = e.position.y;
         }
       }
-      if (!primaryUnitVar()) {
-        primaryUnitVar(e);
-        applyZoom();
-      }
+      if (!primaryUnitVar()) primaryUnitVar(e);
     }
 
     if (e.prefab === "wolf" && e.isMirror) mirrors.add(e);

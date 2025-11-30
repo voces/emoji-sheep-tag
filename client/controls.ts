@@ -28,7 +28,12 @@ import {
   selectEntity,
   selectPrimaryUnit,
 } from "./api/selection.ts";
-import { applyZoom, getLocalPlayer } from "./api/player.ts";
+import {
+  applyZoom,
+  getLocalPlayer,
+  setZoom,
+  showZoomMessage,
+} from "./api/player.ts";
 import { getEntitiesInRect } from "@/shared/systems/kd.ts";
 import {
   closeAllMenus,
@@ -69,7 +74,6 @@ import { getMap } from "@/shared/map.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { isStructure } from "@/shared/api/unit.ts";
-import { addChatMessage } from "@/vars/chat.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
 import { pathingMap } from "./systems/pathing.ts";
@@ -715,25 +719,11 @@ globalThis.addEventListener("wheel", (e) => {
   const element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
   if (!isGameElement(element)) return;
   if (e.ctrlKey) return;
-  camera.position.z = Math.max(camera.position.z + (e.deltaY > 0 ? 1 : -1), 1);
+  const newZoom = Math.max(camera.position.z + (e.deltaY > 0 ? 1 : -1), 1);
+  if (newZoom === camera.position.z) return;
+  setZoom(newZoom, true);
   if (zoomTimeout) clearTimeout(zoomTimeout);
-  zoomTimeout = setTimeout(() => {
-    const settings = gameplaySettingsVar();
-    const labels = [];
-
-    if (camera.position.z === settings.sheepZoom) labels.push("sheep");
-    if (camera.position.z === settings.wolfZoom) labels.push("wolf");
-    if (camera.position.z === settings.spiritZoom) labels.push("spirit");
-    if (camera.position.z === 9) labels.push("default");
-
-    const labelText = labels.length === 4
-      ? ` (default)`
-      : labels.length > 0
-      ? ` (${labels.join(", ")})`
-      : "";
-
-    addChatMessage(`Zoom set to ${camera.position.z}${labelText}.`);
-  }, 250);
+  zoomTimeout = setTimeout(showZoomMessage, 250);
 });
 
 // Camera panning

@@ -8,6 +8,8 @@ import "../systems/selection.ts";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { onInit } from "@/shared/context.ts";
 import { lookup } from "../systems/lookup.ts";
+import { addChatMessage } from "@/vars/chat.ts";
+import { stateVar } from "@/vars/state.ts";
 
 export const getLocalPlayer = (): Player | undefined =>
   getPlayers().find((p) => p.id === localPlayerIdVar());
@@ -23,37 +25,69 @@ export const isLocalPlayer = (player: Player | string): boolean => {
 };
 
 /**
+ * Displays a message indicating the current zoom level.
+ * Skips the message if not in a game.
+ */
+export const showZoomMessage = () => {
+  if (stateVar() !== "playing") return;
+
+  const zoom = camera.position.z;
+  const settings = gameplaySettingsVar();
+  const labels = [];
+
+  if (zoom === settings.sheepZoom) labels.push("sheep");
+  if (zoom === settings.wolfZoom) labels.push("wolf");
+  if (zoom === settings.spiritZoom) labels.push("spirit");
+
+  const labelText = labels.length ? ` (${labels.join(", ")})` : "";
+
+  addChatMessage(`Zoom set to ${zoom}${labelText}.`);
+};
+
+/**
+ * Sets camera zoom and optionally displays a message.
+ * Skips if the zoom level didn't change.
+ */
+export const setZoom = (zoom: number, silent = false) => {
+  if (camera.position.z === zoom) return;
+
+  camera.position.z = zoom;
+
+  if (!silent) showZoomMessage();
+};
+
+/**
  * Applies the appropriate zoom level based on the local player's state.
  * Priority:
  * 1. If player has a primary unit (sheep/wolf/spirit), use that unit's zoom
  * 2. If player is on a team, use that team's zoom
  * 3. Otherwise, use spirit zoom (spectator/observer)
  */
-export const applyZoom = () => {
+export const applyZoom = (silent = false) => {
   const settings = gameplaySettingsVar();
   const localPlayer = getLocalPlayer();
   const primaryUnit = primaryUnitVar();
 
   if (localPlayer && primaryUnit && primaryUnit.owner === localPlayer.id) {
     if (primaryUnit.prefab === "sheep") {
-      camera.position.z = settings.sheepZoom;
+      setZoom(settings.sheepZoom, silent);
     } else if (primaryUnit.prefab === "wolf") {
-      camera.position.z = settings.wolfZoom;
+      setZoom(settings.wolfZoom, silent);
     } else if (primaryUnit.prefab === "spirit") {
-      camera.position.z = settings.spiritZoom;
+      setZoom(settings.spiritZoom, silent);
     }
   } else if (localPlayer?.team === "sheep") {
-    camera.position.z = settings.sheepZoom;
+    setZoom(settings.sheepZoom, silent);
   } else if (localPlayer?.team === "wolf") {
-    camera.position.z = settings.wolfZoom;
+    setZoom(settings.wolfZoom, silent);
   } else {
     // Spectator/observer or no team assigned (or no local player yet)
-    camera.position.z = settings.spiritZoom;
+    setZoom(settings.spiritZoom, silent);
   }
 };
 
-// Apply zoom on initial load
-onInit(applyZoom);
+// Apply zoom on initial load (silent)
+onInit(() => applyZoom(true));
 
 const TEAM_ENTITY_IDS = {
   sheep: "team-sheep",
