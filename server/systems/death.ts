@@ -1,7 +1,7 @@
 import { endRound, send } from "../lobbyApi.ts";
 import { lobbyContext } from "../contexts.ts";
 import { timeout } from "../api/timing.ts";
-import { grantPlayerGold, sendPlayerGold } from "../api/player.ts";
+import { grantPlayerGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getSheep } from "./sheep.ts";
@@ -20,6 +20,7 @@ import { formatDuration } from "@/util/formatDuration.ts";
 import { colorName, getPlayer } from "@/shared/api/player.ts";
 import { getMapCenter } from "@/shared/map.ts";
 import { PATHING_NONE } from "@/shared/constants.ts";
+import { isTeamGoldEnabled } from "../api/teamGold.ts";
 
 const onLose = () =>
   timeout(() => {
@@ -138,12 +139,31 @@ const onSheepDeath = (sheep: Entity) => {
     });
   }
 
-  for (const wolf of getTeams().wolves) {
-    const bounty = (wolf.owner === killingPlayerId ? 40 : 15) *
-      lobbyContext.current.settings.income.wolves;
+  const wolves = Array.from(getTeams().wolves);
+  const incomeMultiplier = lobbyContext.current.settings.income.wolves;
+
+  // Calculate total bounty (40 for killer + 15 for each other wolf)
+  const killerBounty = 40 * incomeMultiplier;
+  const assistBounty = 15 * incomeMultiplier;
+  const totalBounty = killerBounty + assistBounty * (wolves.length - 1);
+
+  for (const wolf of wolves) {
+    const bounty = wolf.id === killingPlayerId ? killerBounty : assistBounty;
     grantPlayerGold(wolf.id, bounty);
-    const wolfUnit = findPlayerUnit(wolf.id, (fn) => fn.prefab === "wolf");
-    if (wolfUnit) debouncedGoldText(wolfUnit, bounty);
+  }
+
+  // Show floating text: with team gold, show total on killer only; otherwise show individual amounts
+  if (isTeamGoldEnabled()) {
+    const killerUnit = killingPlayerId
+      ? findPlayerUnit(killingPlayerId, (fn) => fn.prefab === "wolf")
+      : undefined;
+    if (killerUnit) debouncedGoldText(killerUnit, totalBounty);
+  } else {
+    for (const wolf of wolves) {
+      const bounty = wolf.id === killingPlayerId ? killerBounty : assistBounty;
+      const wolfUnit = findPlayerUnit(wolf.id, (fn) => fn.prefab === "wolf");
+      if (wolfUnit) debouncedGoldText(wolfUnit, bounty);
+    }
   }
 
   if (isPractice()) {
@@ -169,7 +189,9 @@ const onSheepDeath = (sheep: Entity) => {
         : undefined,
     );
 
-    const dyingSheepGold = getPlayer(sheep.owner)?.gold ?? 0;
+    // Redistribute the dying sheep's individual gold to surviving allies
+    const dyingSheepPlayer = getPlayer(sheep.owner);
+    const dyingSheepGold = dyingSheepPlayer?.gold ?? 0;
     if (dyingSheepGold > 0) {
       const survivingAllies = Array.from(getSheep())
         .filter((s) => s.health && s.health > 0 && s.owner !== sheep.owner);
@@ -185,7 +207,11 @@ const onSheepDeath = (sheep: Entity) => {
           const share = shares[i];
           if (!ally.owner || share === 0) continue;
 
-          sendPlayerGold(sheep.owner, ally.owner, share);
+          // Directly transfer individual gold to avoid team gold deduction logic
+          if (dyingSheepPlayer) {
+            dyingSheepPlayer.gold = (dyingSheepPlayer.gold ?? 0) - share;
+          }
+          grantPlayerGold(ally.owner, share);
         }
       }
     }

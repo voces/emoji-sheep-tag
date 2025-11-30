@@ -3,9 +3,9 @@ import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { send } from "./client.ts";
 import { Entity } from "./ecs.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
-import { getPlayer } from "@/shared/api/player.ts";
 import { selection } from "./systems/selection.ts";
 import { camera, terrain } from "./graphics/three.ts";
+import { getEffectivePlayerGold } from "./api/player.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { canBuild } from "./api/unit.ts";
@@ -597,8 +597,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   if (action.type === "build" || action.type === "purchase") {
     const goldCost = action.goldCost ?? 0;
     if (goldCost > 0 && units.length > 0) {
-      const owningPlayer = getPlayer(units[0].owner);
-      const playerGold = owningPlayer?.gold ?? 0;
+      const playerGold = getEffectivePlayerGold(units[0].owner);
 
       if (playerGold < goldCost) {
         playSound("ui", pick("error1"), { volume: 0.3 });

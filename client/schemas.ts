@@ -267,6 +267,7 @@ export const zUpdate = z.object({
 
   // Player data
   isPlayer: z.boolean().optional(),
+  isTeam: z.boolean().optional(),
   team: z.union([
     z.literal("pending"),
     z.literal("observer"),
@@ -422,6 +423,7 @@ const zLobbySettings = z.object({
     wolves: z.number(),
   }),
   view: z.boolean(),
+  teamGold: z.boolean(),
 });
 
 export type LobbySettings = z.input<typeof zLobbySettings>;

@@ -3,11 +3,14 @@ import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useLocalPlayer } from "@/hooks/usePlayers.ts";
 import { Entity } from "../../../ecs.ts";
+import { lookup } from "../../../systems/lookup.ts";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { getDistanceMultiplier } from "@/shared/penAreas.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { getEffectivePlayerGold } from "../../../api/player.ts";
 
 const Container = styled.div(({ theme }) => ({
   width: 120,
@@ -50,10 +53,34 @@ const useGoldTooltip = (team: string | undefined) => {
   return null;
 };
 
+const TEAM_ENTITY_IDS = {
+  sheep: "team-sheep",
+  wolf: "team-wolf",
+} as const;
+
 const InnerGold = (
   { entity, team }: { entity: Entity; team: string | undefined },
 ) => {
-  const gold = useListenToEntityProp(entity, "gold", (g) => Math.floor(g ?? 0));
+  const lobbySettings = useReactiveVar(lobbySettingsVar);
+  const isTeamGoldEnabled = lobbySettings.mode === "survival" &&
+    lobbySettings.teamGold;
+
+  // Listen to gold changes to trigger rerenders, flooring to avoid unnecessary rerenders
+  useListenToEntityProp(entity, "gold", (g) => Math.floor(g ?? 0));
+
+  // Get team entity for team gold display
+  const teamEntityId = (team === "sheep" || team === "wolf")
+    ? TEAM_ENTITY_IDS[team]
+    : undefined;
+  const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
+  useListenToEntityProp(
+    isTeamGoldEnabled ? teamEntity : undefined,
+    "gold",
+    (g) => Math.floor(g ?? 0),
+  );
+
+  const displayGold = Math.floor(getEffectivePlayerGold(entity.id));
+
   const tooltipContent = useGoldTooltip(team);
   const { tooltipContainerProps, tooltip } = useTooltip(tooltipContent);
 
@@ -62,7 +89,7 @@ const InnerGold = (
       <span style={{ width: 24, height: 24 }}>
         <SvgIcon icon="gold" />
       </span>
-      <span>{gold}</span>
+      <span>{displayGold}</span>
       {tooltip}
     </Container>
   );

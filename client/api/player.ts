@@ -1,12 +1,13 @@
 import { camera } from "../graphics/three.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
-import { getPlayers, Player } from "@/shared/api/player.ts";
+import { getPlayer, getPlayers, Player } from "@/shared/api/player.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 // Import triggers module resolution order that prevents circular dependency issues
 import "../systems/selection.ts";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { onInit } from "@/shared/context.ts";
+import { lookup } from "../systems/lookup.ts";
 
 export const getLocalPlayer = (): Player | undefined =>
   getPlayers().find((p) => p.id === localPlayerIdVar());
@@ -53,3 +54,49 @@ export const applyZoom = () => {
 
 // Apply zoom on initial load
 onInit(applyZoom);
+
+const TEAM_ENTITY_IDS = {
+  sheep: "team-sheep",
+  wolf: "team-wolf",
+} as const;
+
+/**
+ * Check if team gold is enabled for the current game
+ */
+export const isTeamGoldEnabled = (): boolean => {
+  const settings = lobbySettingsVar();
+  if (settings.mode === "vip") return true;
+  return settings.mode === "survival" && settings.teamGold;
+};
+
+/**
+ * Get the effective gold available to a player (considering team gold)
+ * - Wolves: Returns team gold (individual gold is not used)
+ * - Sheep: Returns individual gold + team gold
+ */
+export const getEffectivePlayerGold = (
+  playerId: string | undefined,
+): number => {
+  if (!playerId) return 0;
+
+  const player = getPlayer(playerId);
+  if (!player) return 0;
+
+  if (!isTeamGoldEnabled()) {
+    return player.gold ?? 0;
+  }
+
+  const teamEntityId = (player.team === "sheep" || player.team === "wolf")
+    ? TEAM_ENTITY_IDS[player.team]
+    : undefined;
+  const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
+  const teamGold = teamEntity?.gold ?? 0;
+
+  if (player.team === "wolf") {
+    return teamGold;
+  } else if (player.team === "sheep") {
+    return (player.gold ?? 0) + teamGold;
+  }
+
+  return player.gold ?? 0;
+};

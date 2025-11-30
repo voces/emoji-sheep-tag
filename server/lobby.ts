@@ -37,6 +37,8 @@ type LobbySettings = {
   startingGold: { sheep: number; wolves: number };
   income: { sheep: number; wolves: number };
   view: boolean;
+  /** Pool gold at team level. Only applies to survival mode. */
+  teamGold: boolean;
 };
 
 type LobbyStatus = "lobby" | "playing";
@@ -87,6 +89,7 @@ export const newLobby = (host?: Client) => {
       startingGold: { sheep: 0, wolves: 0 },
       income: { sheep: 1, wolves: 1 },
       view: false,
+      teamGold: true,
     },
     status: "lobby",
     rounds: [],

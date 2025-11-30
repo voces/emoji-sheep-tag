@@ -9,6 +9,7 @@ import {
 import { getPlayer } from "@/shared/api/player.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 import { Client } from "../client.ts";
+import { getTeamGold, SHEEP_INDIVIDUAL_GOLD_CAP } from "./teamGold.ts";
 
 afterEach(cleanupTest);
 
@@ -171,5 +172,114 @@ describe("player API", () => {
         expect(newClient.team).toBe("pending");
       },
     );
+  });
+
+  describe("team gold", () => {
+    describe("wolves", () => {
+      it("should grant gold to team pool instead of individual", {
+        wolves: ["wolf-player"],
+        gold: 0,
+        teamGold: true,
+      }, function* () {
+        const player = getPlayer("wolf-player")!;
+        expect(player.gold).toBe(0);
+
+        grantPlayerGold("wolf-player", 50);
+        yield;
+
+        // Wolf individual gold should remain 0
+        expect(player.gold).toBe(0);
+        // Team gold should have the amount (using toBeCloseTo due to gold generation)
+        expect(getTeamGold("wolf")).toBeCloseTo(50, 0);
+        // Effective gold should return team gold
+        expect(getPlayerGold("wolf-player")).toBeCloseTo(50, 0);
+      });
+
+      it("should deduct gold from team pool", {
+        wolves: ["wolf-player"],
+        gold: 100,
+        teamGold: true,
+      }, function* () {
+        // Team starts with 100 gold (from setup)
+        expect(getTeamGold("wolf")).toBe(100);
+
+        deductPlayerGold("wolf-player", 30);
+        yield;
+
+        expect(getTeamGold("wolf")).toBeCloseTo(70, 0);
+        expect(getPlayerGold("wolf-player")).toBeCloseTo(70, 0);
+      });
+    });
+
+    describe("sheep", () => {
+      it("should fill individual gold up to cap, overflow to team", {
+        sheep: ["sheep-player"],
+        gold: 0,
+        teamGold: true,
+      }, function* () {
+        const player = getPlayer("sheep-player")!;
+        expect(player.gold).toBe(0);
+
+        // Grant more than the cap
+        grantPlayerGold("sheep-player", 50);
+        yield;
+
+        // Individual should be at cap
+        expect(player.gold).toBeCloseTo(SHEEP_INDIVIDUAL_GOLD_CAP, 0);
+        // Overflow should go to team
+        expect(getTeamGold("sheep")).toBeCloseTo(
+          50 - SHEEP_INDIVIDUAL_GOLD_CAP,
+          0,
+        );
+        // Effective gold = individual + team
+        expect(getPlayerGold("sheep-player")).toBeCloseTo(50, 0);
+      });
+
+      it("should deduct from team pool first, then individual", {
+        sheep: ["sheep-player"],
+        gold: SHEEP_INDIVIDUAL_GOLD_CAP,
+        teamGold: true,
+      }, function* () {
+        const player = getPlayer("sheep-player")!;
+        // Start with cap individual gold
+        expect(player.gold).toBe(SHEEP_INDIVIDUAL_GOLD_CAP);
+
+        // Add some team gold
+        grantPlayerGold("sheep-player", 30);
+        yield;
+
+        // Should have cap individual + 30 team
+        expect(player.gold).toBeCloseTo(SHEEP_INDIVIDUAL_GOLD_CAP, 0);
+        expect(getTeamGold("sheep")).toBeCloseTo(30, 0);
+
+        // Deduct 40 (more than team gold)
+        deductPlayerGold("sheep-player", 40);
+        yield;
+
+        // Should deduct all 30 from team, then 10 from individual
+        expect(getTeamGold("sheep")).toBeCloseTo(0, 0);
+        expect(player.gold).toBeCloseTo(SHEEP_INDIVIDUAL_GOLD_CAP - 10, 0);
+      });
+
+      it("should return combined individual and team gold", {
+        sheep: ["sheep-player"],
+        gold: 15,
+        teamGold: true,
+      }, function* () {
+        const player = getPlayer("sheep-player")!;
+        expect(player.gold).toBe(15);
+
+        // Add gold that overflows to team
+        grantPlayerGold("sheep-player", 10);
+        yield;
+
+        // Individual should be at cap (15 + 5 = 20)
+        expect(player.gold).toBeCloseTo(SHEEP_INDIVIDUAL_GOLD_CAP, 0);
+        // Overflow to team (5)
+        expect(getTeamGold("sheep")).toBeCloseTo(5, 0);
+        // Effective = 20 + 5 = 25
+        expect(getPlayerGold("sheep-player")).toBeCloseTo(25, 0);
+      });
+    });
   });
 });

@@ -268,6 +268,7 @@ export type Entity = {
 
   // Player data
   isPlayer?: boolean;
+  isTeam?: boolean;
   team?: "pending" | "observer" | "sheep" | "wolf";
   gold?: number;
   handicap?: number;

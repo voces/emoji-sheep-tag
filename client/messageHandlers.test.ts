@@ -27,6 +27,7 @@ const DEFAULT_LOBBY_SETTINGS = {
   startingGold: { sheep: 25, wolves: 100 },
   income: { sheep: 1, wolves: 1 },
   view: false,
+  teamGold: true,
   host: null,
 } as const;
 
@@ -613,6 +614,7 @@ describe("lobbySettings", () => {
       startingGold: { sheep: 50, wolves: 75 },
       income: { sheep: 1, wolves: 1 },
       view: false,
+      teamGold: true,
       host: null,
     });
 
@@ -634,6 +636,7 @@ describe("lobbySettings", () => {
       startingGold: { sheep: 25, wolves: 100 },
       income: { sheep: 1, wolves: 1 },
       view: false,
+      teamGold: true,
       host: "player-1",
     });
 
@@ -649,6 +652,7 @@ describe("lobbySettings", () => {
       startingGold: { sheep: 75, wolves: 50 },
       income: { sheep: 1, wolves: 1 },
       view: false,
+      teamGold: true,
       host: "player-2",
     });
 

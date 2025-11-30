@@ -26,6 +26,7 @@ describe("Lobby Settings UI", () => {
       startingGold: { sheep: 100, wolves: 150 },
       income: { sheep: 1, wolves: 1 },
       view: false,
+      teamGold: true,
       host: "player-0",
     });
   });
@@ -103,6 +104,7 @@ describe("Lobby Settings UI", () => {
       startingGold: { sheep: 500, wolves: 750 },
       income: { sheep: 1, wolves: 1 },
       view: false,
+      teamGold: true,
       host: "player-0",
     });
 

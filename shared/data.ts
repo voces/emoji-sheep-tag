@@ -119,12 +119,12 @@ export const items: Record<string, Item> = {
     id: "echoFang",
     name: "Echo Fang",
     description:
-      "Adds +5 damage and creates a splash that deals +15 damage to nearby enemy structures.",
+      "Adds +6 damage and creates a splash that deals +15 damage to nearby enemy structures.",
     icon: "fangs",
     gold: 250,
     binding: ["KeyA"],
     buffs: [{
-      damageBonus: 5,
+      damageBonus: 6,
       splashDamage: 15,
       splashRadius: 2,
       splashTargets: [["enemy", "structure"]],

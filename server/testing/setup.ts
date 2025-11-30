@@ -11,6 +11,7 @@ export type TestSetupOptions = {
   wolves?: string[];
   sheep?: string[];
   gold?: number;
+  teamGold?: boolean;
 };
 
 export type TestSetup = {
@@ -26,7 +27,7 @@ export type TestSetup = {
  * @returns Test setup with ecs, lobby, and clients map
  */
 export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
-  const { wolves = [], sheep = [], gold = 10 } = options;
+  const { wolves = [], sheep = [], gold = 10, teamGold = false } = options;
 
   const ecs = newEcs(buildDefaultMap());
   const clients = new Map<string, Client>();
@@ -88,6 +89,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     },
     income: { sheep: 1, wolves: 1 },
     view: false,
+    teamGold,
   };
   lobbyContext.current = lobby;
 
@@ -118,6 +120,22 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     client.team = "wolf";
     client.gold = gold;
     ecs.addEntity(client);
+  }
+
+  // Create team entities when teamGold is enabled
+  if (teamGold) {
+    ecs.addEntity({
+      id: "team-sheep",
+      isTeam: true,
+      team: "sheep",
+      gold: 0,
+    });
+    ecs.addEntity({
+      id: "team-wolf",
+      isTeam: true,
+      team: "wolf",
+      gold: gold * wolfClients.length,
+    });
   }
 
   return {

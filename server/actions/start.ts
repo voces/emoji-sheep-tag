@@ -133,10 +133,36 @@ const createPlayerEntities = (
   wolves: Set<Client>,
   practice: boolean,
 ) => {
+  const isTeamGold = !practice &&
+    (lobby.settings.mode === "vip" ||
+      (lobby.settings.mode === "survival" && lobby.settings.teamGold));
+
+  // Create team entities for team gold mode
+  if (isTeamGold) {
+    ecs.addEntity({
+      id: "team-sheep",
+      isTeam: true,
+      team: "sheep",
+      gold: 0,
+    });
+    ecs.addEntity({
+      id: "team-wolf",
+      isTeam: true,
+      team: "wolf",
+      gold: lobby.settings.startingGold.wolves,
+    });
+  }
+
   for (const c of sheep) {
     const player = ecs.addEntity(c);
     player.team = "sheep";
-    player.gold = practice ? 100_000 : lobby.settings.startingGold.sheep;
+    // In team gold mode, starting gold goes to team pool (already set above as 0)
+    // Individual sheep get 0 starting gold in team mode
+    player.gold = practice
+      ? 100_000
+      : isTeamGold
+      ? 0
+      : lobby.settings.startingGold.sheep;
     if (lobby.settings.mode !== "switch") {
       player.sheepCount = (player.sheepCount ?? 0) + 1;
     }
@@ -145,7 +171,8 @@ const createPlayerEntities = (
   for (const c of wolves) {
     const player = ecs.addEntity(c);
     player.team = "wolf";
-    player.gold = lobby.settings.startingGold.wolves;
+    // In team gold mode, wolves have no individual gold (all team pooled)
+    player.gold = isTeamGold ? 0 : lobby.settings.startingGold.wolves;
   }
 
   // In practice mode, create an additional enemy player entity

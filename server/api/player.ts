@@ -6,39 +6,106 @@ import type { Client } from "../client.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { practiceModeActions } from "@/shared/data.ts";
+import {
+  deductTeamGold,
+  getTeamGold,
+  grantTeamGold,
+  isTeamGoldEnabled,
+  SHEEP_INDIVIDUAL_GOLD_CAP,
+} from "./teamGold.ts";
 
 /**
- * Gets the gold amount for a player by their ID
- * @param playerId The player's ID
- * @returns The player's gold amount, or 0 if not found
+ * Get the gold available to a player (considering team gold)
+ * - Wolves: Returns team gold (individual gold is not used)
+ * - Sheep: Returns individual gold + team gold
  */
 export const getPlayerGold = (playerId: string): number => {
+  if (!isTeamGoldEnabled()) {
+    return getPlayer(playerId)?.gold ?? 0;
+  }
+
   const player = getPlayer(playerId);
-  return player?.gold ?? 0;
+  if (!player) return 0;
+
+  if (player.team === "wolf") {
+    return getTeamGold("wolf");
+  } else if (player.team === "sheep") {
+    return (player.gold ?? 0) + getTeamGold("sheep");
+  }
+
+  return player.gold ?? 0;
 };
 
 /**
- * Deducts gold from a player's entity
- * @param playerId The player's ID
- * @param amount The amount of gold to deduct
+ * Deduct gold from a player, using team gold rules when enabled
+ * - Wolves: Deduct from team pool
+ * - Sheep: Deduct from team pool first, then individual gold
  */
 export const deductPlayerGold = (playerId: string, amount: number) => {
+  if (!isTeamGoldEnabled()) {
+    const player = getPlayer(playerId);
+    if (player?.gold !== undefined) {
+      player.gold = Math.max(player.gold - amount, 0);
+    }
+    return;
+  }
+
   const player = getPlayer(playerId);
-  if (player?.gold !== undefined) {
+  if (!player) return;
+
+  if (player.team === "wolf") {
+    deductTeamGold("wolf", amount);
+  } else if (player.team === "sheep") {
+    // Deduct from team pool first
+    const deductedFromTeam = deductTeamGold("sheep", amount);
+    const remaining = amount - deductedFromTeam;
+
+    // Deduct remainder from individual gold
+    if (remaining > 0 && player.gold !== undefined) {
+      player.gold = Math.max(player.gold - remaining, 0);
+    }
+  } else if (player.gold !== undefined) {
     player.gold = Math.max(player.gold - amount, 0);
   }
 };
 
 /**
- * Grants gold to a player's entity
- * @param playerId The player's ID
- * @param amount The amount of gold to grant
+ * Grant gold to a player/team, using team gold rules when enabled
+ * - Wolves: Grant to team pool
+ * - Sheep: Fill individual gold up to cap, overflow to team pool
  */
 export const grantPlayerGold = (playerId: string, amount: number) => {
+  if (!isTeamGoldEnabled()) {
+    const player = getPlayer(playerId);
+    if (player) {
+      player.gold = (player.gold ?? 0) + amount;
+    }
+    return;
+  }
+
   const player = getPlayer(playerId);
   if (!player) return;
 
-  player.gold = Math.max((player.gold ?? 0) + amount, 0);
+  if (player.team === "wolf") {
+    grantTeamGold("wolf", amount);
+  } else if (player.team === "sheep") {
+    const currentGold = player.gold ?? 0;
+    const roomInIndividual = Math.max(
+      0,
+      SHEEP_INDIVIDUAL_GOLD_CAP - currentGold,
+    );
+    const toIndividual = Math.min(amount, roomInIndividual);
+    const toTeam = amount - toIndividual;
+
+    if (toIndividual > 0) {
+      player.gold = currentGold + toIndividual;
+    }
+    if (toTeam > 0) {
+      grantTeamGold("sheep", toTeam);
+    }
+  } else {
+    player.gold = (player.gold ?? 0) + amount;
+  }
 };
 
 export const sendPlayerGold = (

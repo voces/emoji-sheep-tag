@@ -38,6 +38,7 @@ export const zLobbySettings = z.object({
     ),
   }).optional(),
   view: z.boolean().optional(),
+  teamGold: z.boolean().optional(),
 });
 
 // S->C
@@ -69,15 +70,24 @@ export const serializeLobbySettings = (
     startingGold: lobby.settings.startingGold,
     income: lobby.settings.income,
     view: lobby.settings.view,
+    teamGold: lobby.settings.teamGold,
     host: lobby.host?.id ?? null,
   };
 };
 
 export const lobbySettings = (
   client: Client,
-  { mode, vipHandicap, sheep, startingGold, time, income, map, view }: z.TypeOf<
-    typeof zLobbySettings
-  >,
+  {
+    mode,
+    vipHandicap,
+    sheep,
+    startingGold,
+    time,
+    income,
+    map,
+    view,
+    teamGold,
+  }: z.TypeOf<typeof zLobbySettings>,
 ) => {
   const lobby = client.lobby;
   if (!lobby || lobby.host !== client) {
@@ -93,6 +103,7 @@ export const lobbySettings = (
   if (time !== undefined) lobby.settings.time = time;
   if (income !== undefined) lobby.settings.income = income;
   if (view !== undefined) lobby.settings.view = view;
+  if (teamGold !== undefined) lobby.settings.teamGold = teamGold;
   if (map && (getMapMeta(map) || map.startsWith("local:"))) {
     lobby.settings.map = map;
   }

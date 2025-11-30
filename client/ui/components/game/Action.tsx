@@ -1,4 +1,5 @@
 import { Entity } from "../../../ecs.ts";
+import { lookup } from "../../../systems/lookup.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { items, prefabs } from "@/shared/data.ts";
 import { absurd } from "@/shared/util/absurd.ts";
@@ -6,6 +7,14 @@ import { Command } from "./Command.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
 import { getPlayer } from "@/shared/api/player.ts";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { getEffectivePlayerGold } from "../../../api/player.ts";
+
+const TEAM_ENTITY_IDS = {
+  sheep: "team-sheep",
+  wolf: "team-wolf",
+} as const;
 
 export const Action = ({ action, current, entity }: {
   action: UnitDataAction & { count?: number };
@@ -21,14 +30,31 @@ export const Action = ({ action, current, entity }: {
   );
 
   const owningPlayer = getPlayer(entity.owner);
+  const lobbySettings = useReactiveVar(lobbySettingsVar);
+  const isTeamGoldEnabled = lobbySettings.mode === "survival" &&
+    lobbySettings.teamGold;
+
+  // Get team entity for team gold checks
+  const teamEntityId =
+    (owningPlayer?.team === "sheep" || owningPlayer?.team === "wolf")
+      ? TEAM_ENTITY_IDS[owningPlayer.team]
+      : undefined;
+  const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
 
   // Check if action is disabled due to insufficient gold
   const goldCost = action.goldCost ?? 0;
-  const hasGold = useListenToEntityProps(
+  // Listen to gold changes to trigger rerenders, flooring to avoid unnecessary rerenders
+  useListenToEntityProps(
     owningPlayer,
     goldCost > 0 ? ["gold"] : [],
-    ({ gold }) => (gold ?? 0) >= goldCost,
+    ({ gold }) => Math.floor(gold ?? 0),
   );
+  useListenToEntityProps(
+    teamEntity,
+    goldCost > 0 && isTeamGoldEnabled ? ["gold"] : [],
+    ({ gold }) => Math.floor(gold ?? 0),
+  );
+  const hasGold = getEffectivePlayerGold(entity.owner) >= goldCost;
 
   // Check if action is disabled during construction
   const blockedByConstructing = useListenToEntityProps(
