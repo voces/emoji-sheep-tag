@@ -129,15 +129,11 @@ export const PrimaryPortrait = () => {
     return () => mouse.removeEventListener("mouseButtonUp", handleMouseUp);
   }, []);
 
-  if (!selection) return null;
-
-  const icon = selection.icon || selection.model || selection.prefab;
-
-  if (!icon) return null;
+  const icon = selection?.icon || selection?.model || selection?.prefab;
 
   const handleClick = () => {
     const activeOrder = getActiveOrder();
-    if (activeOrder) {
+    if (activeOrder && selection) {
       // If there's an active order, create a synthetic mouse event to execute it on this entity
       const syntheticEvent = Object.assign(
         new MouseButtonEvent("down", "left"),
@@ -165,7 +161,7 @@ export const PrimaryPortrait = () => {
         role="button"
         icon={icon}
         iconProps={iconProps}
-        name={selection.name ?? selection.id}
+        name={selection?.name ?? selection?.id ?? ""}
         hideTooltip
         onClick={handleClick}
       />

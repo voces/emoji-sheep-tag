@@ -25,6 +25,7 @@ import { Entity } from "@/shared/types.ts";
 import { clearUpdatesCache, flushUpdates } from "../updates.ts";
 import { Lobby } from "../lobby.ts";
 import { createServerMap } from "../maps.ts";
+import { colorName } from "@/shared/api/player.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -195,17 +196,6 @@ const setupVipMode = (
   }
 };
 
-const addWolvesSpawnTimer = () => {
-  addEntity({
-    isTimer: true,
-    buffs: [{
-      expiration: "Time until wolves spawn:",
-      remainingDuration: 1.8,
-      totalDuration: 1.8,
-    }],
-  });
-};
-
 const spawnWolves = (wolves: Set<Client>) => {
   const center = getMapCenter();
   for (const owner of wolves) {
@@ -322,6 +312,44 @@ export const start = (
     createPlayerEntities(ecs, lobby, sheep, wolves, practice);
     send({ type: "start", updates: flushUpdates(false) });
 
+    if (!practice) {
+      send({ type: "chat", message: "\u202f" });
+      send({
+        type: "chat",
+        message: `${
+          new Intl.ListFormat().format(
+            Array.from(sheep).map((s) =>
+              colorName({
+                color: s.playerColor ?? "#ffffff",
+                name: s.name ?? "<unknown>",
+              })
+            ),
+          )
+        } vs ${
+          new Intl.ListFormat().format(
+            Array.from(wolves).map((s) =>
+              colorName({
+                color: s.playerColor ?? "#ffffff",
+                name: s.name ?? "<unknown>",
+              })
+            ),
+          )
+        }`,
+      });
+
+      addEntity({
+        isTimer: true,
+        buffs: [{
+          expiration: "Time until sheep spawn:",
+          remainingDuration: 3,
+          totalDuration: 3,
+        }],
+      });
+      send({ type: "chat", message: "Starting in 3…" });
+      timeout(() => send({ type: "chat", message: "Starting in 2…" }), 1);
+      timeout(() => send({ type: "chat", message: "Starting in 1…" }), 2);
+    }
+
     timeout(() => {
       const lobby2 = lobbyContext.current;
       if (!lobby2.round) return;
@@ -332,22 +360,29 @@ export const start = (
         if (lobby.settings.mode === "vip") {
           setupVipMode(lobby, sheep, sheepPool);
         }
-        addWolvesSpawnTimer();
+        addEntity({
+          isTimer: true,
+          buffs: [{
+            expiration: "Time until wolves spawn:",
+            remainingDuration: 18,
+            totalDuration: 18,
+          }],
+        });
       }
+    }, practice ? 0 : 3);
 
-      timeout(() => {
-        const lobby = lobbyContext.current;
-        if (!lobby.round) return;
+    timeout(() => {
+      const lobby = lobbyContext.current;
+      if (!lobby.round) return;
 
-        if (!practice) {
-          lobby.round.start = Date.now();
-          spawnWolves(wolves);
+      if (!practice) {
+        lobby.round.start = Date.now();
+        spawnWolves(wolves);
 
-          if (lobby.settings.mode !== "switch") {
-            setupSurvivalTimer(lobby, sheep);
-          }
+        if (lobby.settings.mode !== "switch") {
+          setupSurvivalTimer(lobby, sheep);
         }
-      }, practice ? 0 : 1.8);
-    }, practice ? 0 : 0.3);
+      }
+    }, practice ? 0 : 21);
   });
 };

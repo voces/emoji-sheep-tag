@@ -277,9 +277,9 @@ const PlayerRow = (props: PlayerRowProps) => {
 
 export const Players = () => {
   const players = usePlayers();
-  useListenToEntities(players, ["playerColor", "name", "team"]);
+  useListenToEntities(players, ["playerColor", "name", "team", "sheepCount"]);
   const rounds = useReactiveVar(roundsVar);
-  const { sheep, host } = useReactiveVar(lobbySettingsVar);
+  const { host } = useReactiveVar(lobbySettingsVar);
   const localPlayer = useLocalPlayer();
 
   return (
@@ -290,8 +290,11 @@ export const Players = () => {
         <GridHeader $align="right">Average time</GridHeader>
         {players.map((p) => {
           const playerRounds = rounds.filter((r) =>
-            r.sheep.includes(p.id) && r.sheep.length === sheep &&
-            r.wolves.length === players.length - sheep
+            r.sheep.includes(p.id) && r.sheep.length === players.filter((p) =>
+                p.team === "sheep"
+              ).length &&
+            r.wolves.length ===
+              players.filter((p) => p.team === "wolf").length
           );
 
           return (

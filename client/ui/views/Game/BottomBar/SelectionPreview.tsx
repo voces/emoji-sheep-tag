@@ -74,7 +74,7 @@ const UnitStats = () => {
 
   useListenToEntityProp(selection, "name");
 
-  if (!selection) return null;
+  if (!selection) return <StatsContainer />;
 
   return (
     <StatsContainer>
@@ -109,12 +109,9 @@ const UnitStats = () => {
 };
 
 export const SelectionPreview = () => {
-  const primary = useReactiveVar(selectionVar);
   useSet(selection);
 
-  if (!primary) return null;
-
-  if (selection.size === 1) return <UnitStats />;
+  if (selection.size <= 1) return <UnitStats />;
 
   return <Avatars />;
 };

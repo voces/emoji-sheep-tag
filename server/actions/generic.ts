@@ -7,6 +7,7 @@ import { getPlayer } from "@/shared/api/player.ts";
 import { autoAssignSheepOrWolf, getIdealSheep } from "../st/roundHelpers.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { serializeLobbySettings } from "./lobbySettings.ts";
+import type { Entity } from "@/shared/types.ts";
 
 export const zGenericEvent = z.object({
   type: z.literal("generic"),
@@ -48,20 +49,18 @@ type TeamChangeEvent = Extract<
   { type: "teamChange" }
 >;
 
-const updatePlayerProperty = (
+const updatePlayerProperties = (
   playerId: string,
-  property: string,
-  value: unknown,
+  properties: Partial<Entity>,
 ) => {
   try {
     const p = getPlayer(playerId);
     if (!p) throw p;
-    // deno-lint-ignore no-explicit-any
-    (p as any)[property] = value;
+    Object.assign(p, properties);
   } catch {
     send({
       type: "updates",
-      updates: [{ id: playerId, [property]: value }],
+      updates: [{ id: playerId, ...properties }],
     });
   }
 };
@@ -108,7 +107,7 @@ const handleColorChange = (client: Client, event: ColorChangeEvent) => {
     targetClient.playerColor = requestedColor;
   }
 
-  updatePlayerProperty(targetPlayerId, "playerColor", requestedColor);
+  updatePlayerProperties(targetPlayerId, { playerColor: requestedColor });
 };
 
 const handleNameChange = (client: Client, event: NameChangeEvent) => {
@@ -119,7 +118,7 @@ const handleNameChange = (client: Client, event: NameChangeEvent) => {
   );
 
   client.name = uniqueName;
-  updatePlayerProperty(client.id, "name", uniqueName);
+  updatePlayerProperties(client.id, { name: uniqueName });
 };
 
 const handleTeamChange = (client: Client, event: TeamChangeEvent) => {
@@ -177,9 +176,27 @@ const handleTeamChange = (client: Client, event: TeamChangeEvent) => {
     ? autoAssignSheepOrWolf(client.lobby)
     : requestedTeam;
 
+  const wasObserver = targetClient.team === "observer" ||
+    targetClient.team === "pending";
+  const joiningGame = newTeam !== "observer";
+
+  // When coming back from observer, set sheepCount to max of active players
+  const updates: Partial<Entity> = { team: newTeam };
+  if (wasObserver && joiningGame) {
+    const activePlayers = Array.from(client.lobby.players).filter((p) =>
+      p.team !== "observer" && p.team !== "pending"
+    );
+    const maxSheepCount = Math.max(
+      0,
+      ...activePlayers.map((p) => p.sheepCount),
+    );
+    targetClient.sheepCount = maxSheepCount;
+    updates.sheepCount = maxSheepCount;
+  }
+
   // Update the team
   targetClient.team = newTeam;
-  updatePlayerProperty(targetPlayerId, "team", newTeam);
+  updatePlayerProperties(targetPlayerId, updates);
 
   // Calculate current team state after the change
   const nonObserverCount =

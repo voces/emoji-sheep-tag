@@ -55,8 +55,10 @@ const calculatePosition = (
   return position;
 };
 
-export const useTooltip = (tooltip: React.ReactNode) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+export const useTooltip = <T extends HTMLElement = HTMLDivElement>(
+  tooltip: React.ReactNode,
+) => {
+  const containerRef = useRef<T>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const [coords, setCoords] = useState<TooltipPosition | null>(null);
@@ -94,7 +96,7 @@ export const useTooltip = (tooltip: React.ReactNode) => {
   return useMemo(
     () => ({
       tooltipContainerProps: { onMouseEnter, onMouseLeave, ref: containerRef },
-      tooltip: coords
+      tooltip: coords && tooltip
         ? createPortal(
           <Tooltip role="tooltip" style={coords} ref={tooltipRef}>
             {tooltip}

@@ -355,16 +355,14 @@ export const ActionBar = () => {
     [selection, currentMenu],
   );
 
-  if (!selection || !localPlayer) return null;
-
   // Filter actions based on ownership and ally permissions
-  const executableActions = getExecutableActions(
-    localPlayer.id,
-    selection,
-    displayActions,
-  );
-
-  if (executableActions.length === 0) return null;
+  const executableActions = selection && localPlayer
+    ? getExecutableActions(
+      localPlayer.id,
+      selection,
+      displayActions,
+    )
+    : [];
 
   const rows = actionsToRows(executableActions, preferredActionsPerRow);
 
@@ -377,7 +375,7 @@ export const ActionBar = () => {
           $preferredActionsPerRow={Math.min(preferredActionsPerRow, 10)}
         >
           {r.map((action, x) =>
-            action
+            action && selection
               ? (
                 <Action
                   key={`${selection.id}-${action.type}-${action.name}`}
@@ -386,8 +384,7 @@ export const ActionBar = () => {
                   current={currentActionCheck(action)}
                 />
               )
-              : <Command key={`${selection.id}-${y}-${x}`} name="" disabled />
-            // <div key={`${selection.id}-${y}-${x}`} style={{ width: 64 }} />
+              : <Command key={`${selection?.id}-${y}-${x}`} name="" disabled />
           )}
         </Row>
       ))}

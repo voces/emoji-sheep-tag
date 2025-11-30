@@ -3,6 +3,7 @@ import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import { Input } from "@/components/forms/Input.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
 import { useEffect, useState } from "react";
+import { useTooltip } from "@/hooks/useTooltip.tsx";
 
 const SettingsRow = styled(VStack)`
   gap: ${({ theme }) => theme.spacing.xs};
@@ -33,6 +34,7 @@ type NumericSettingInputProps = {
   onChange: (value: number) => void;
   autoChecked?: boolean;
   onAutoChange?: (checked: boolean) => void;
+  tooltip?: React.ReactNode;
 };
 
 export const NumericSettingInput = ({
@@ -47,8 +49,12 @@ export const NumericSettingInput = ({
   onChange,
   autoChecked,
   onAutoChange,
+  tooltip: tooltipContent,
 }: NumericSettingInputProps) => {
   const [localValue, setLocalValue] = useState(value.toString());
+  const { tooltipContainerProps, tooltip } = useTooltip<HTMLLabelElement>(
+    tooltipContent,
+  );
 
   useEffect(() => setLocalValue(value.toString()), [value]);
 
@@ -85,8 +91,9 @@ export const NumericSettingInput = ({
 
   return (
     <SettingsRow>
-      <SettingsLabel htmlFor={id}>
+      <SettingsLabel htmlFor={id} {...tooltipContainerProps}>
         {label}
+        {tooltip}
       </SettingsLabel>
       {autoChecked !== undefined
         ? (

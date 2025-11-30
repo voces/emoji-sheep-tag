@@ -261,9 +261,7 @@ export const LobbySettings = () => {
         />
 
         <SettingsRow>
-          <SettingsLabel htmlFor="time">
-            Round Duration
-          </SettingsLabel>
+          <SettingsLabel htmlFor="time">Survival Time</SettingsLabel>
           <HStack $align="center">
             <TimeInput
               id="time"
@@ -334,6 +332,7 @@ export const LobbySettings = () => {
               type: "lobbySettings",
               income: { ...lobbySettings.income, sheep: value },
             })}
+          tooltip="Multiplier on passive income."
         />
 
         <NumericSettingInput
@@ -350,6 +349,7 @@ export const LobbySettings = () => {
               type: "lobbySettings",
               income: { ...lobbySettings.income, wolves: value },
             })}
+          tooltip="Multiplier on passive income and kill bounties."
         />
       </GameSettingsContainer>
 

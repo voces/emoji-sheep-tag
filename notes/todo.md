@@ -48,10 +48,6 @@
   - Falls over when spam clicking movement orders
   - Per-player pathing calc limits?
 
-# Perf
-
-- Improvement on mass delete/add
-
 # Code quality
 
 - Update the order system so that actions are more generic, based around their

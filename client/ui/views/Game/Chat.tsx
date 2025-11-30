@@ -35,12 +35,9 @@ const ChatMessage = styled.div<{
         transition-delay: 0s;
       `;
     } else if (ageInSeconds < 7) {
-      // Message is fresh - calculate remaining delay before fade
-      const remainingDelay = Math.max(0, 7 - ageInSeconds);
+      // Message is fresh - stay visible, will fade after delay
       return `
-        opacity: 0;
-        transition: opacity 3s ease;
-        transition-delay: ${remainingDelay}s;
+        opacity: 1;
       `;
     } else if (ageInSeconds < 10) {
       // Message is fading - calculate remaining fade
@@ -130,18 +127,35 @@ export const Chat = () => {
     }
   }, [showChatBox]);
 
-  // Detect new messages and trigger a re-render on next frame
+  // Track which messages are new for this render
+  const newMessageIds = chatLog
+    .filter((log) => !seenMessagesRef.current.has(log.id))
+    .map((log) => log.id);
+
+  // Mark messages as seen and trigger re-render after paint
   useEffect(() => {
-    const newMessages = chatLog.filter((log) =>
-      !seenMessagesRef.current.has(log.id)
-    );
-    if (newMessages.length > 0) {
-      newMessages.forEach((log) => seenMessagesRef.current.add(log.id));
+    if (newMessageIds.length > 0) {
+      newMessageIds.forEach((id) => seenMessagesRef.current.add(id));
       requestAnimationFrame(() => forceUpdate({}));
     }
-  }, [chatLog]);
+  }, [newMessageIds.join(",")]);
 
   const now = Date.now();
+
+  // Schedule re-renders for fade timing
+  useEffect(() => {
+    if (showChatBox === "open" || showChatBox === "dismissed") return;
+
+    const timers: number[] = [];
+    for (const log of chatLog) {
+      const age = now - log.timestamp;
+      // Schedule re-render at 7s mark to start fade
+      if (age < 7000) {
+        timers.push(setTimeout(() => forceUpdate({}), 7000 - age + 50));
+      }
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [chatLog, showChatBox]);
 
   return (
     <ChatContainer>
@@ -153,7 +167,7 @@ export const Chat = () => {
             key={log.id}
             $showChat={showChatBox}
             $messageAge={now - log.timestamp}
-            $isNew={!seenMessagesRef.current.has(log.id)}
+            $isNew={newMessageIds.includes(log.id)}
           >
             <ColorMarkdown text={log.message} />
           </ChatMessage>

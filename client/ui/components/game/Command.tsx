@@ -193,11 +193,13 @@ export const Command = ({
           {...iconProps}
         />
       )}
-      {binding?.length && (
-        <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>
-      )}
+      {binding?.length
+        ? <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>
+        : null}
       {typeof count === "number" && <CommandCount>{count}</CommandCount>}
-      {cooldownRemaining && cooldownTotal && cooldownRemaining > 0 && (
+      {typeof cooldownRemaining === "number" &&
+        typeof cooldownTotal === "number" &&
+        cooldownRemaining > 0 && cooldownTotal > 0 && (
         <CooldownOverlay $progress={1 - cooldownRemaining / cooldownTotal} />
       )}
       {!hideTooltip && tooltip}
