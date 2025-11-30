@@ -36,7 +36,7 @@ describe("ActionBar", () => {
     expect(getAllTexts()).toEqual([]);
   });
 
-  it.only("should render toolbar when selection is owned by local player", () => {
+  it("should render toolbar when selection is owned by local player", () => {
     addEntity(createTestPlayer());
     localPlayerIdVar("player-0");
     selectionVar({
