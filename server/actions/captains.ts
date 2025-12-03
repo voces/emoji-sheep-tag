@@ -85,8 +85,13 @@ export const selectCaptain = (
   const player = nonObservers.find((p) => p.id === playerId);
   if (!player) return;
 
-  // Don't allow selecting the same captain twice
-  if (lobby.captainsDraft.captains.includes(playerId)) return;
+  // Toggle selection if already selected
+  const captainIndex = lobby.captainsDraft.captains.indexOf(playerId);
+  if (captainIndex !== -1) {
+    lobby.captainsDraft.captains.splice(captainIndex, 1);
+    broadcastCaptainsState();
+    return;
+  }
 
   lobby.captainsDraft.captains.push(playerId);
 

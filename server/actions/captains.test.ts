@@ -133,13 +133,17 @@ describe("selectCaptain", () => {
     expect(lobby.captainsDraft?.phase).toBe("drafting");
   });
 
-  it("should not allow selecting the same captain twice", () => {
+  it("should toggle captain selection when clicking the same player", () => {
     const { lobby, host, players } = setupLobby(4);
     startCaptains(host);
 
     selectCaptain(host, { type: "selectCaptain", playerId: players[1].id });
-    selectCaptain(host, { type: "selectCaptain", playerId: players[1].id });
+    expect(lobby.captainsDraft?.captains).toEqual(["player-1"]);
 
+    selectCaptain(host, { type: "selectCaptain", playerId: players[1].id });
+    expect(lobby.captainsDraft?.captains).toEqual([]);
+
+    selectCaptain(host, { type: "selectCaptain", playerId: players[1].id });
     expect(lobby.captainsDraft?.captains).toEqual(["player-1"]);
   });
 

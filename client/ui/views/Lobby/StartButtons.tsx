@@ -52,7 +52,7 @@ export const StartButtons = ({
         <StartButtonRow>
           <SecondaryButton
             type="button"
-            accessKey="a"
+            accessKey="r"
             onClick={() => send({ type: "reverseTeams" })}
             disabled={buttonsDisabled || !isHost || nonObserversCount < 2}
             {...reverseProps}
@@ -62,7 +62,7 @@ export const StartButtons = ({
           {reverseTooltip}
           <TertiaryButton
             type="button"
-            accessKey="c"
+            accessKey="a"
             onClick={() => send({ type: "start", fixedTeams: false })}
             disabled={buttonsDisabled || !isHost || nonObserversCount < 2}
             {...smartProps}
@@ -72,7 +72,7 @@ export const StartButtons = ({
           {smartTooltip}
           <TertiaryButton
             type="button"
-            accessKey="r"
+            accessKey="p"
             onClick={() => send({ type: "start", practice: true })}
             disabled={buttonsDisabled || !isHost || nonObserversCount < 1}
           >
@@ -119,7 +119,7 @@ export const StartButtons = ({
         {captainsTooltip}
         <TertiaryButton
           type="button"
-          accessKey="r"
+          accessKey="p"
           onClick={() => send({ type: "start", practice: true })}
           disabled={buttonsDisabled || !isHost || nonObserversCount < 1}
         >

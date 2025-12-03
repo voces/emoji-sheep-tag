@@ -192,6 +192,7 @@ export const handlers = {
   captainsDraft: (
     data: Extract<ServerToClientMessage, { type: "captainsDraft" }>,
   ) => {
+    console.log("[captainsDraft]", data.phase ?? "(clearing)");
     if (!data.phase) {
       captainsDraftVar(undefined);
     } else {

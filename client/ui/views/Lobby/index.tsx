@@ -3,7 +3,7 @@ import { Positional, VStack } from "@/components/layout/Layout.tsx";
 import { Players } from "./Players.tsx";
 import { Chat } from "./Chat.tsx";
 import { LobbySettings } from "./LobbySettings.tsx";
-import { CaptainsDraft } from "./CaptainsDraft.tsx";
+import { CaptainsDraft } from "./CaptainsDraft/index.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 

@@ -208,7 +208,15 @@ const setupVipMode = (
   sheep: Set<Client>,
   sheepPool: Entity[],
 ) => {
-  const vip = sheepPool[Math.floor(Math.random() * sheepPool.length)];
+  // In captains mode, the sheep captain is always VIP
+  const draft = lobby.captainsDraft;
+  const sheepCaptainId = draft?.captains.find((captainId) =>
+    sheep.values().some((p) => p.id === captainId)
+  );
+  const vip = sheepCaptainId
+    ? sheepPool.find((s) => s.owner === sheepCaptainId) ??
+      sheepPool[Math.floor(Math.random() * sheepPool.length)]
+    : sheepPool[Math.floor(Math.random() * sheepPool.length)];
   vip.buffs = [...(vip.buffs ?? []), {
     model: "vip",
     modelOffset: { y: 0.5 },
@@ -280,6 +288,12 @@ export const start = (
   if (activePlayers.length === 1) practice = true;
 
   lobby.status = "playing";
+
+  // Clear captains draft when using Smart (randomized teams)
+  if (!fixedTeams && lobby.captainsDraft) {
+    lobby.captainsDraft = undefined;
+    send({ type: "captainsDraft", phase: undefined });
+  }
 
   const { sheep, wolves } = determineTeams(lobby, practice, fixedTeams);
 

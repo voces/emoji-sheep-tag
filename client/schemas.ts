@@ -444,7 +444,8 @@ const zCaptainsDraft = z.object({
   picksThisTurn: z.number(),
 });
 
-export type CaptainsDraft = z.input<typeof zCaptainsDraft> | undefined;
+export type DefinedCaptainsDraft = z.input<typeof zCaptainsDraft>;
+export type CaptainsDraft = DefinedCaptainsDraft | undefined;
 
 const zJoin = z.object({
   type: z.literal("join"),

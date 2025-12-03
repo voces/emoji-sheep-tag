@@ -40,6 +40,7 @@
 - Buff stack id & max stack
 - Redirect?
 - Pub functionality
+- Pausing?
 
 # Bugs
 
