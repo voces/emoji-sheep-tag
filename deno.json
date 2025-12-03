@@ -21,7 +21,7 @@
     "@verit/ecs": "jsr:@verit/ecs",
     "esbuild": "npm:esbuild",
     "global-jsdom/register": "npm:global-jsdom/register",
-    "jsdom": "npm:jsdom@24.1.0",
+    "jsdom": "npm:jsdom",
     "react-dom": "npm:react-dom",
     "react": "npm:react",
     "styled-components": "npm:styled-components",
