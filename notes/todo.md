@@ -22,7 +22,6 @@
 - Modes
   - Bulldog
   - Kat'ma
-  - Vamp
 - Fire sound? https://freesound.org/people/Sadisticu/sounds/570695/
 - Matchmaking
   - 2v4 - 15 rounds

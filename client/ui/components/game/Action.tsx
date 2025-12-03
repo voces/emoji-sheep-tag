@@ -31,14 +31,16 @@ export const Action = ({ action, current, entity }: {
 
   const owningPlayer = getPlayer(entity.owner);
   const lobbySettings = useReactiveVar(lobbySettingsVar);
-  const isTeamGoldEnabled = lobbySettings.mode === "survival" &&
-    lobbySettings.teamGold;
+  const ownerTeam = owningPlayer?.team === "wolf" ||
+      owningPlayer?.team === "sheep"
+    ? owningPlayer.team
+    : undefined;
+  const teamGoldEnabled = lobbySettings.mode === "vip" ||
+    (lobbySettings.mode === "vamp" && ownerTeam === "wolf") ||
+    (lobbySettings.mode === "survival" && lobbySettings.teamGold);
 
   // Get team entity for team gold checks
-  const teamEntityId =
-    (owningPlayer?.team === "sheep" || owningPlayer?.team === "wolf")
-      ? TEAM_ENTITY_IDS[owningPlayer.team]
-      : undefined;
+  const teamEntityId = ownerTeam ? TEAM_ENTITY_IDS[ownerTeam] : undefined;
   const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
 
   // Check if action is disabled due to insufficient gold
@@ -51,7 +53,7 @@ export const Action = ({ action, current, entity }: {
   );
   useListenToEntityProps(
     teamEntity,
-    goldCost > 0 && isTeamGoldEnabled ? ["gold"] : [],
+    goldCost > 0 && teamGoldEnabled ? ["gold"] : [],
     ({ gold }) => Math.floor(gold ?? 0),
   );
   const hasGold = getEffectivePlayerGold(entity.owner) >= goldCost;

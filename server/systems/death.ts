@@ -30,12 +30,7 @@ const onLose = () =>
       type: "chat",
       message: `${
         new Intl.ListFormat().format(
-          Array.from(getTeams().sheep).map((s) =>
-            colorName({
-              color: s.playerColor ?? "#ffffff",
-              name: s.name ?? "<unknown>",
-            })
-          ),
+          Array.from(getTeams().sheep).map((s) => colorName(s)),
         )
       } lasted ${
         formatDuration(Date.now() - (lobby.round?.start ?? Date.now()))
@@ -82,18 +77,40 @@ const handleSwitchDeath = (sheep: Entity) => {
   // Send switch message
   send({
     type: "chat",
-    message: `${
-      colorName({
-        color: killingPlayer.playerColor ?? "#ffffff",
-        name: killingPlayer.name ?? "<unknown>",
-      })
-    } switched with ${
-      colorName({
-        color: victimPlayer.playerColor ?? "#ffffff",
-        name: victimPlayer.name ?? "<unknown>",
-      })
+    message: `${colorName(killingPlayer)} switched with ${
+      colorName(victimPlayer)
     }!`,
   });
+};
+
+const handleVampDeath = (sheep: Entity) => {
+  const killingPlayer = getPlayer(lookup(sheep.lastAttacker)?.owner);
+  const victimPlayer = getPlayer(sheep.owner);
+  if (!victimPlayer) return;
+
+  // Victim becomes a wolf
+  victimPlayer.team = "wolf";
+  for (const entity of getPlayerUnits(victimPlayer.id)) {
+    if (isStructure(entity)) entity.health = 0;
+  }
+  const wolf = newUnit(
+    victimPlayer.id,
+    "wolf",
+    sheep.position?.x ?? 0,
+    sheep.position?.y ?? 0,
+  );
+  wolf.facing = sheep.facing;
+
+  if (killingPlayer) {
+    send({
+      type: "chat",
+      message: `${colorName(killingPlayer)} has turned ${
+        colorName(victimPlayer)
+      }!`,
+    });
+  }
+
+  if (!getSheep().some((u) => u.health)) timeout(() => endRound(), 0.05);
 };
 
 const onSheepDeath = (sheep: Entity) => {
@@ -101,6 +118,10 @@ const onSheepDeath = (sheep: Entity) => {
 
   if (lobby.settings.mode === "switch" && !isPractice()) {
     return handleSwitchDeath(sheep);
+  }
+
+  if (lobby.settings.mode === "vamp" && !isPractice()) {
+    return handleVampDeath(sheep);
   }
 
   if (!sheep.owner) return;
@@ -125,17 +146,7 @@ const onSheepDeath = (sheep: Entity) => {
   if (!roundOver && !isPractice() && killingPlayer && victimPlayer) {
     send({
       type: "chat",
-      message: `${
-        colorName({
-          color: killingPlayer.playerColor ?? "#ffffff",
-          name: killingPlayer.name ?? "<unknown>",
-        })
-      } killed ${
-        colorName({
-          color: victimPlayer.playerColor ?? "#ffffff",
-          name: victimPlayer.name ?? "<unknown>",
-        })
-      }`,
+      message: `${colorName(killingPlayer)} killed ${colorName(victimPlayer)}`,
     });
   }
 
@@ -153,7 +164,7 @@ const onSheepDeath = (sheep: Entity) => {
   }
 
   // Show floating text: with team gold, show total on killer only; otherwise show individual amounts
-  if (isTeamGoldEnabled()) {
+  if (isTeamGoldEnabled("wolf")) {
     const killerUnit = killingPlayerId
       ? findPlayerUnit(killingPlayerId, (fn) => fn.prefab === "wolf")
       : undefined;

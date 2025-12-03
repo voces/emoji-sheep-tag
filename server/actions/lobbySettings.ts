@@ -12,7 +12,13 @@ export const zLobbySettings = z.object({
   map: z.string().refine((value) =>
     !!getMapMeta(value) || value.startsWith("local:")
   ).optional(),
-  mode: z.union([z.literal("survival"), z.literal("vip"), z.literal("switch")])
+  mode: z
+    .union([
+      z.literal("survival"),
+      z.literal("vip"),
+      z.literal("switch"),
+      z.literal("vamp"),
+    ])
     .optional(),
   vipHandicap: z.number().min(0.01).max(10).transform((v) =>
     Math.round(v * 100) / 100

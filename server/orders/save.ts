@@ -93,16 +93,8 @@ export const saveOrder = {
         if (savingPlayer && savedPlayer && !isPractice()) {
           send({
             type: "chat",
-            message: `${
-              colorName({
-                color: savingPlayer.playerColor ?? "#ffffff",
-                name: savingPlayer.name ?? "<unknown>",
-              })
-            } saved ${
-              colorName({
-                color: savedPlayer.playerColor ?? "#ffffff",
-                name: savedPlayer.name ?? "<unknown>",
-              })
+            message: `${colorName(savingPlayer)} saved ${
+              colorName(savedPlayer)
             }`,
           });
         }

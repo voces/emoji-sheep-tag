@@ -62,19 +62,19 @@ const InnerGold = (
   { entity, team }: { entity: Entity; team: string | undefined },
 ) => {
   const lobbySettings = useReactiveVar(lobbySettingsVar);
-  const isTeamGoldEnabled = lobbySettings.mode === "survival" &&
-    lobbySettings.teamGold;
+  const validTeam = team === "wolf" || team === "sheep" ? team : undefined;
+  const teamGoldEnabled = lobbySettings.mode === "vip" ||
+    (lobbySettings.mode === "vamp" && validTeam === "wolf") ||
+    (lobbySettings.mode === "survival" && lobbySettings.teamGold);
 
   // Listen to gold changes to trigger rerenders, flooring to avoid unnecessary rerenders
   useListenToEntityProp(entity, "gold", (g) => Math.floor(g ?? 0));
 
   // Get team entity for team gold display
-  const teamEntityId = (team === "sheep" || team === "wolf")
-    ? TEAM_ENTITY_IDS[team]
-    : undefined;
+  const teamEntityId = validTeam ? TEAM_ENTITY_IDS[validTeam] : undefined;
   const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
   useListenToEntityProp(
-    isTeamGoldEnabled ? teamEntity : undefined,
+    teamGoldEnabled ? teamEntity : undefined,
     "gold",
     (g) => Math.floor(g ?? 0),
   );

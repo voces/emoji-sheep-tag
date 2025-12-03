@@ -37,7 +37,7 @@ addSystem({
     const goldAmount = goldPerSecond * delta;
 
     // Handle team gold distribution
-    if (isTeamGoldEnabled()) {
+    if (isTeamGoldEnabled(team)) {
       if (team === "wolf") {
         // Wolves: all gold goes to team pool
         grantTeamGold("wolf", goldAmount);

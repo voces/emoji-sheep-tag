@@ -20,12 +20,15 @@ import {
  * - Sheep: Returns individual gold + team gold
  */
 export const getPlayerGold = (playerId: string): number => {
-  if (!isTeamGoldEnabled()) {
-    return getPlayer(playerId)?.gold ?? 0;
-  }
-
   const player = getPlayer(playerId);
   if (!player) return 0;
+
+  const team = player.team === "wolf" || player.team === "sheep"
+    ? player.team
+    : undefined;
+  if (!isTeamGoldEnabled(team)) {
+    return player.gold ?? 0;
+  }
 
   if (player.team === "wolf") {
     return getTeamGold("wolf");
@@ -42,16 +45,18 @@ export const getPlayerGold = (playerId: string): number => {
  * - Sheep: Deduct from team pool first, then individual gold
  */
 export const deductPlayerGold = (playerId: string, amount: number) => {
-  if (!isTeamGoldEnabled()) {
-    const player = getPlayer(playerId);
-    if (player?.gold !== undefined) {
+  const player = getPlayer(playerId);
+  if (!player) return;
+
+  const team = player.team === "wolf" || player.team === "sheep"
+    ? player.team
+    : undefined;
+  if (!isTeamGoldEnabled(team)) {
+    if (player.gold !== undefined) {
       player.gold = Math.max(player.gold - amount, 0);
     }
     return;
   }
-
-  const player = getPlayer(playerId);
-  if (!player) return;
 
   if (player.team === "wolf") {
     deductTeamGold("wolf", amount);
@@ -75,16 +80,16 @@ export const deductPlayerGold = (playerId: string, amount: number) => {
  * - Sheep: Fill individual gold up to cap, overflow to team pool
  */
 export const grantPlayerGold = (playerId: string, amount: number) => {
-  if (!isTeamGoldEnabled()) {
-    const player = getPlayer(playerId);
-    if (player) {
-      player.gold = (player.gold ?? 0) + amount;
-    }
-    return;
-  }
-
   const player = getPlayer(playerId);
   if (!player) return;
+
+  const team = player.team === "wolf" || player.team === "sheep"
+    ? player.team
+    : undefined;
+  if (!isTeamGoldEnabled(team)) {
+    player.gold = (player.gold ?? 0) + amount;
+    return;
+  }
 
   if (player.team === "wolf") {
     grantTeamGold("wolf", amount);

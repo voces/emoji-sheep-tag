@@ -39,7 +39,7 @@ export const ButtonGroup = styled.div`
 `;
 
 export const ModeButton = styled(Button)<{ $active: boolean }>`
-  flex: 1;
+  flex: 1 1 auto;
   border-radius: 0;
   border: none;
   background: ${({ $active, theme }) =>

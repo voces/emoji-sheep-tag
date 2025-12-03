@@ -12,11 +12,13 @@ const TEAM_ENTITY_IDS = {
 
 /**
  * Check if team gold is enabled for the current game
+ * @param team - Optional team to check. In vamp mode, wolves have team gold but sheep don't.
  */
-export const isTeamGoldEnabled = (): boolean => {
+export const isTeamGoldEnabled = (team?: "sheep" | "wolf"): boolean => {
   const lobby = lobbyContext.current;
   if (lobby.round?.practice) return false;
   if (lobby.settings.mode === "vip") return true;
+  if (lobby.settings.mode === "vamp") return team === "wolf";
   return lobby.settings.mode === "survival" && lobby.settings.teamGold;
 };
 

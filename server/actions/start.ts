@@ -359,21 +359,11 @@ export const start = (
         type: "chat",
         message: `${
           new Intl.ListFormat().format(
-            Array.from(sheep).map((s) =>
-              colorName({
-                color: s.playerColor ?? "#ffffff",
-                name: s.name ?? "<unknown>",
-              })
-            ),
+            Array.from(sheep).map((s) => colorName(s)),
           )
         } vs ${
           new Intl.ListFormat().format(
-            Array.from(wolves).map((s) =>
-              colorName({
-                color: s.playerColor ?? "#ffffff",
-                name: s.name ?? "<unknown>",
-              })
-            ),
+            Array.from(wolves).map((w) => colorName(w)),
           )
         }`,
       });

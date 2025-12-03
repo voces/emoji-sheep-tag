@@ -141,6 +141,14 @@ export const LobbySettings = () => {
             >
               Switch
             </ModeButton>
+            <ModeButton
+              type="button"
+              $active={lobbySettings.mode === "vamp"}
+              onClick={() => send({ type: "lobbySettings", mode: "vamp" })}
+              disabled={!isHost}
+            >
+              Vamp
+            </ModeButton>
           </ButtonGroup>
         </SettingsRow>
 

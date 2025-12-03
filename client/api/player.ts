@@ -96,10 +96,12 @@ const TEAM_ENTITY_IDS = {
 
 /**
  * Check if team gold is enabled for the current game
+ * @param team - Optional team to check. In vamp mode, wolves have team gold but sheep don't.
  */
-export const isTeamGoldEnabled = (): boolean => {
+export const isTeamGoldEnabled = (team?: "sheep" | "wolf"): boolean => {
   const settings = lobbySettingsVar();
   if (settings.mode === "vip") return true;
+  if (settings.mode === "vamp") return team === "wolf";
   return settings.mode === "survival" && settings.teamGold;
 };
 
@@ -116,13 +118,14 @@ export const getEffectivePlayerGold = (
   const player = getPlayer(playerId);
   if (!player) return 0;
 
-  if (!isTeamGoldEnabled()) {
+  const team = player.team === "wolf" || player.team === "sheep"
+    ? player.team
+    : undefined;
+  if (!isTeamGoldEnabled(team)) {
     return player.gold ?? 0;
   }
 
-  const teamEntityId = (player.team === "sheep" || player.team === "wolf")
-    ? TEAM_ENTITY_IDS[player.team]
-    : undefined;
+  const teamEntityId = team ? TEAM_ENTITY_IDS[team] : undefined;
   const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
   const teamGold = teamEntity?.gold ?? 0;
 

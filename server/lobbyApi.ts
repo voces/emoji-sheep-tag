@@ -57,10 +57,12 @@ export const endRound = (canceled = false) => {
 
   convertPendingPlayersToTeams(lobby);
 
-  const round =
-    !canceled && !lobby.round.practice && lobby.settings.mode !== "switch"
-      ? createRoundSummary(lobby)
-      : undefined;
+  const round = !canceled &&
+      !lobby.round.practice &&
+      lobby.settings.mode !== "switch" &&
+      lobby.settings.mode !== "vamp"
+    ? createRoundSummary(lobby)
+    : undefined;
 
   // Handle captains draft phases
   const inFirstCaptainsRound = !canceled &&
