@@ -1,8 +1,10 @@
 {
   "tasks": {
-    "dev": "deno run -A --watch --inspect server/index.ts --dev",
+    "dev": "deno run -A --watch server/index.ts --dev",
     "test": "deno test --no-check --allow-env --allow-net --allow-read --allow-write --unstable-broadcast-channel",
     "build": "deno run --allow-env --allow-read --allow-write --allow-run scripts/build.ts",
+    "shard": "PRIMARY_SERVER=ws://localhost:8000 SHARD_PORT=8001 deno run -A --watch server/shard.ts",
+    "shard:compile": "deno compile -A --output dist/shard server/shard.ts",
     "setup-hooks": "mkdir -p .hooks && cp .git/hooks/* .hooks/ 2>/dev/null || true && rm -f .hooks/*.sample 2>/dev/null || true && git config core.hooksPath .hooks",
     "pre-commit": "deno fmt && deno lint && deno check"
   },

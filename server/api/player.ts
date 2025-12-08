@@ -1,11 +1,7 @@
 import { lobbyContext } from "../contexts.ts";
-import { newUnit } from "./unit.ts";
-import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
-import { getMapCenter } from "@/shared/map.ts";
 import type { Client } from "../client.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { getPlayer } from "@/shared/api/player.ts";
-import { practiceModeActions } from "@/shared/data.ts";
 import {
   deductTeamGold,
   getTeamGold,
@@ -13,6 +9,7 @@ import {
   isTeamGoldEnabled,
   SHEEP_INDIVIDUAL_GOLD_CAP,
 } from "./teamGold.ts";
+import { spawnPracticeUnits } from "../st/gameStartHelpers.ts";
 
 /**
  * Get the gold available to a player (considering team gold)
@@ -128,31 +125,6 @@ export const sendPlayerGold = (
 
   deductPlayerGold(senderId, amount);
   grantPlayerGold(recipientId, amount);
-};
-
-/**
- * Spawns practice mode units for a player (sheep, spirit, and wolf)
- * @param playerId The player's ID
- */
-export const spawnPracticeUnits = (playerId: string) => {
-  const sheep = newUnit(playerId, "sheep", ...getSheepSpawn());
-  newUnit(playerId, "spirit", ...getSpiritSpawn());
-  const { x, y } = getMapCenter();
-  const wolf = newUnit(playerId, "wolf", x, y);
-  if (wolf.manaRegen) wolf.manaRegen *= 10;
-
-  // Set trueOwner so the player retains control even when transferring ownership
-  wolf.trueOwner = playerId;
-
-  // Add practice mode "Give to Enemy" action (will be swapped to "Reclaim" when given)
-  if (wolf.actions) {
-    wolf.actions = [
-      ...wolf.actions,
-      practiceModeActions.giveToEnemy,
-    ];
-  }
-
-  return sheep;
 };
 
 /**

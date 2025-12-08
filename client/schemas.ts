@@ -1,5 +1,7 @@
 import z from "zod";
 import { Entity } from "@/shared/types.ts";
+import { zShardInfo } from "@/shared/shard.ts";
+export type { ShardInfo } from "@/shared/shard.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() }).readonly();
 
@@ -429,6 +431,8 @@ const zLobbySettings = z.object({
   }),
   view: z.boolean(),
   teamGold: z.boolean(),
+  shard: z.string().nullable(),
+  shards: z.array(zShardInfo).readonly(),
 });
 
 export type LobbySettings = z.input<typeof zLobbySettings>;
@@ -547,6 +551,18 @@ const zUploadCustomMap = z.object({
   mapData: z.unknown(),
 });
 
+const zConnectToShard = z.object({
+  type: z.literal("connectToShard"),
+  shardUrl: z.string(),
+  token: z.string(),
+  lobbyId: z.string(),
+});
+
+const zShards = z.object({
+  type: z.literal("shards"),
+  shards: z.array(zShardInfo).readonly(),
+});
+
 export const zMessage = z.discriminatedUnion("type", [
   zStart,
   zUpdates,
@@ -560,6 +576,8 @@ export const zMessage = z.discriminatedUnion("type", [
   zHubState,
   zMapUpdate,
   zUploadCustomMap,
+  zConnectToShard,
+  zShards,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;

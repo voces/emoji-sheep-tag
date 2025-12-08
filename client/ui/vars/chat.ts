@@ -26,7 +26,7 @@ export const chatValueVar = makeVar<string>("");
 
 onInit(() =>
   playerEntities().addEventListener("delete", (p) => {
-    if (p.id === localPlayerIdVar()) return;
+    if (p.id === localPlayerIdVar() || p.id === "practice-enemy") return;
     addChatMessage(`${colorName(p)} has left the game!`);
   })
 );

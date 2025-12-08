@@ -1,5 +1,6 @@
 import type { ClientToServerMessage } from "../server/client.ts";
 import { getWebSocket } from "./connection.ts";
+import { getShardSocket } from "./shardConnection.ts";
 import { flags } from "./flags.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { editorMapModifiedVar } from "@/vars/editor.ts";
@@ -13,6 +14,21 @@ const delay = (fn: () => void) => {
     (typeof noise === "number" ? Math.random() * noise : 0);
   setTimeout(fn, delay);
 };
+
+// Message types that should go through the shard during gameplay
+// Note: "generic" goes to primary server (lobby-level operations)
+// "cancel" goes to shard which then notifies primary to handle draft undo
+const SHARD_MESSAGE_TYPES = new Set([
+  "build",
+  "upgrade",
+  "unitOrder",
+  "ping",
+  "mapPing",
+  "chat",
+  "cancel",
+  "purchase",
+  "updateSelection",
+]);
 
 export const send = (message: ClientToServerMessage) => {
   // Track editor modifications
@@ -29,8 +45,19 @@ export const send = (message: ClientToServerMessage) => {
 
   delay(() => {
     try {
+      // Route game messages through shard if connected
+      const shardWs = getShardSocket();
+      if (
+        shardWs?.readyState === WebSocket.OPEN &&
+        SHARD_MESSAGE_TYPES.has(message.type)
+      ) {
+        shardWs.send(JSON.stringify(message));
+        return;
+      }
+
+      // Otherwise send through primary connection
       const ws = getWebSocket();
-      if (ws?.readyState === 1) { // 1 = OPEN
+      if (ws?.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(message));
       }
     } catch (err) {
@@ -52,7 +79,7 @@ export const startPing = () => {
       (!flags.debug || !flags.debugStats) && !gameplaySettingsVar().showPing
     ) return;
     const ws = getWebSocket();
-    if (ws?.readyState !== 1) return; // 1 = OPEN
+    if (ws?.readyState !== WebSocket.OPEN) return;
     const time = performance.now();
     send({ type: "ping", data: time });
   }, 1000);

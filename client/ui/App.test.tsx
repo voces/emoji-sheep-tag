@@ -56,6 +56,8 @@ it("can move an action into a menu", async () => {
       view: false,
       teamGold: true,
       host: "player-0",
+      shard: null,
+      shards: [],
     },
     captainsDraft: null,
   });

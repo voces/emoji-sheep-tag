@@ -69,6 +69,8 @@ describe("lobbySettings action", () => {
       view: false,
       teamGold: true,
       host: "host-client",
+      shard: null,
+      shards: [],
     });
   });
 
@@ -141,6 +143,8 @@ describe("lobbySettings action", () => {
       view: false,
       teamGold: true,
       host: "host-client",
+      shard: null,
+      shards: [],
     });
   });
 
@@ -182,6 +186,8 @@ describe("lobbySettings action", () => {
       view: false,
       teamGold: true,
       host: "host-client",
+      shard: null,
+      shards: [],
     });
   });
 
@@ -251,6 +257,8 @@ describe("lobbySettings action", () => {
         view: false,
         teamGold: true,
         host: "host-client",
+        shard: null,
+        shards: [],
       });
     });
   });
@@ -291,6 +299,8 @@ describe("lobbySettings action", () => {
       view: false,
       teamGold: true,
       host: "host-client",
+      shard: null,
+      shards: [],
     });
   });
 

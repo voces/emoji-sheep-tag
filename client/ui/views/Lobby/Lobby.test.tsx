@@ -28,6 +28,8 @@ describe("Lobby Settings UI", () => {
       view: false,
       teamGold: true,
       host: "player-0",
+      shard: null,
+      shards: [],
     });
   });
 
@@ -106,6 +108,8 @@ describe("Lobby Settings UI", () => {
       view: false,
       teamGold: true,
       host: "player-0",
+      shard: null,
+      shards: [],
     });
 
     rerender(<Lobby />);

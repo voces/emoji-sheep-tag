@@ -5,6 +5,7 @@ import { Lobby } from "../lobby.ts";
 import { LobbySettings } from "../../client/schemas.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
 import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
+import { getShard, getShardInfoList } from "../shardRegistry.ts";
 
 // C->S
 export const zLobbySettings = z.object({
@@ -45,6 +46,7 @@ export const zLobbySettings = z.object({
   }).optional(),
   view: z.boolean().optional(),
   teamGold: z.boolean().optional(),
+  shard: z.string().nullable().optional(),
 });
 
 // S->C
@@ -78,6 +80,8 @@ export const serializeLobbySettings = (
     view: lobby.settings.view,
     teamGold: lobby.settings.teamGold,
     host: lobby.host?.id ?? null,
+    shard: lobby.settings.shard ?? null,
+    shards: getShardInfoList(),
   };
 };
 
@@ -93,6 +97,7 @@ export const lobbySettings = (
     map,
     view,
     teamGold,
+    shard,
   }: z.TypeOf<typeof zLobbySettings>,
 ) => {
   const lobby = client.lobby;
@@ -112,6 +117,9 @@ export const lobbySettings = (
   if (teamGold !== undefined) lobby.settings.teamGold = teamGold;
   if (map && (getMapMeta(map) || map.startsWith("local:"))) {
     lobby.settings.map = map;
+  }
+  if (shard !== undefined && (shard === null || getShard(shard))) {
+    lobby.settings.shard = shard ?? undefined;
   }
 
   // Send updated settings to all players in the lobby

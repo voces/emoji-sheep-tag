@@ -1,8 +1,8 @@
 import { type Client } from "./client.ts";
-import { Game } from "./ecs.ts";
 import { broadcastLobbyList } from "./hub.ts";
 import { generateLobbyName } from "./util/lobbyNames.ts";
 import { cleanupSmartDrafter } from "./st/roundHelpers.ts";
+import type { Game } from "./ecs.ts";
 
 /**
  * Contexts:
@@ -40,6 +40,8 @@ type LobbySettings = {
   view: boolean;
   /** Pool gold at team level. Only applies to survival mode. */
   teamGold: boolean;
+  /** Shard ID to run the game on, or undefined for primary server */
+  shard?: string;
 };
 
 type LobbyStatus = "lobby" | "playing";
@@ -58,14 +60,14 @@ export type CaptainsDraft = {
   picksThisTurn: number; // for snake draft (1 or 2)
 };
 
-type Round = {
+export type Round = {
   ecs: Game;
-  start?: number;
-  duration?: number;
-  clearInterval: () => void;
   practice: boolean;
   editor: boolean;
+  clearInterval: () => void;
   vip?: string;
+  start?: number;
+  duration?: number;
 };
 
 export type Lobby = {
@@ -79,7 +81,9 @@ export type Lobby = {
   captainsDraft?: CaptainsDraft;
 };
 
+// Global lobbies set for the primary server
 export const lobbies = new Set<Lobby>();
+
 Object.assign(globalThis, { lobbies });
 
 export const deleteLobby = (lobby: Lobby) => {

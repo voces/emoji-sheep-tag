@@ -1,6 +1,7 @@
 import { serveFile } from "@std/http/file-server";
 import { resolve } from "@std/path";
 import { handleSocket } from "./client.ts";
+import { handleShardSocket } from "./shardRegistry.ts";
 import { startWatchdog } from "./watchdog.ts";
 import { ensureDir } from "@std/fs";
 
@@ -24,12 +25,20 @@ Deno.serve({
       `[Server] Server ready on port ${path.transport}://${path.hostname}:${path.port}`,
     );
   },
-}, async (req) => {
+}, async (req, info) => {
   const url = new URL(req.url);
 
   if (req.headers.get("upgrade") === "websocket") {
     const { socket, response } = Deno.upgradeWebSocket(req);
-    handleSocket(socket, url);
+    // Route shard connections to shard handler
+    if (url.pathname === "/shard") {
+      const remoteIp = info.remoteAddr.hostname;
+      const isSecure = url.protocol === "https:" ||
+        req.headers.get("x-forwarded-proto") === "https";
+      handleShardSocket(socket, remoteIp, isSecure);
+    } else {
+      handleSocket(socket, url);
+    }
     return response;
   }
 

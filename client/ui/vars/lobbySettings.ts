@@ -14,4 +14,6 @@ export const lobbySettingsVar = makeVar<LobbySettings>({
   income: { sheep: 1, wolves: 1 },
   view: false,
   teamGold: true,
+  shard: null,
+  shards: [],
 });

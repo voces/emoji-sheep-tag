@@ -1,5 +1,5 @@
 import { Client } from "../client.ts";
-import { Lobby } from "../lobby.ts";
+import type { Lobby } from "../lobby.ts";
 import { smart } from "../util/smart.ts";
 import { lobbyContext } from "../contexts.ts";
 

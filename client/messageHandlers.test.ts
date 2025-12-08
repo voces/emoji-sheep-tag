@@ -29,6 +29,8 @@ const DEFAULT_LOBBY_SETTINGS = {
   view: false,
   teamGold: true,
   host: null,
+  shard: null,
+  shards: [],
 } as const;
 
 const EMPTY_LOBBY_SETTINGS = {
@@ -617,6 +619,8 @@ describe("lobbySettings", () => {
       view: false,
       teamGold: true,
       host: null,
+      shard: null,
+      shards: [],
     });
 
     expect(lobbySettingsVar().startingGold).toEqual({ sheep: 50, wolves: 75 });
@@ -639,6 +643,8 @@ describe("lobbySettings", () => {
       view: false,
       teamGold: true,
       host: "player-1",
+      shard: null,
+      shards: [],
     });
 
     handlers.lobbySettings({
@@ -655,6 +661,8 @@ describe("lobbySettings", () => {
       view: false,
       teamGold: true,
       host: "player-2",
+      shard: null,
+      shards: [],
     });
 
     expect(lobbySettingsVar().startingGold).toEqual({ sheep: 75, wolves: 50 });

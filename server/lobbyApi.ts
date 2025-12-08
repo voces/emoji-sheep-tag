@@ -32,18 +32,21 @@ const convertPendingPlayersToTeams = (lobby: Lobby) => {
   }
 };
 
-const createRoundSummary = (lobby: Lobby) => ({
-  sheep: Array.from(lobby.players).filter((p) => p.team === "sheep").map((p) =>
-    p.id
-  ),
-  wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((p) =>
-    p.id
-  ),
-  duration: Math.min(
-    (lobby.round?.duration ?? 0) * 1000,
-    Date.now() - (lobby.round?.start ?? Date.now()),
-  ),
-});
+export const createRoundSummary = () => {
+  const lobby = lobbyContext.current;
+  return {
+    sheep: Array.from(lobby.players).filter((p) => p.team === "sheep").map((
+      p,
+    ) => p.id),
+    wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((
+      p,
+    ) => p.id),
+    duration: Math.min(
+      (lobby.round?.duration ?? 0) * 1000,
+      Date.now() - (lobby.round?.start ?? Date.now()),
+    ),
+  };
+};
 
 export const endRound = (canceled = false) => {
   const lobby = lobbyContext.current;
@@ -61,7 +64,7 @@ export const endRound = (canceled = false) => {
       !lobby.round.practice &&
       lobby.settings.mode !== "switch" &&
       lobby.settings.mode !== "vamp"
-    ? createRoundSummary(lobby)
+    ? createRoundSummary()
     : undefined;
 
   // Handle captains draft phases
@@ -89,6 +92,16 @@ export const endRound = (canceled = false) => {
   } else if (inSecondCaptainsRound) {
     // After second round: clear captains draft
     lobby.captainsDraft = undefined;
+  }
+
+  // Sync sheepCount from ECS entities back to Client objects (before clearing round)
+  if (!canceled) {
+    for (const player of lobby.players) {
+      const ecsPlayer = getPlayer(player.id);
+      if (ecsPlayer?.sheepCount !== undefined) {
+        player.sheepCount = ecsPlayer.sheepCount;
+      }
+    }
   }
 
   // Don't want to clear the round in middle of a cycle

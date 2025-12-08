@@ -9,7 +9,6 @@ import { build, zBuild } from "./actions/build.ts";
 import { start, zStart } from "./actions/start.ts";
 import { colors } from "@/shared/data.ts";
 import { unitOrder, zOrderEvent } from "./actions/unitOrder.ts";
-import { flushUpdates } from "./updates.ts";
 import { ping, zPing } from "./actions/ping.ts";
 import { mapPing, zMapPing } from "./actions/mapPing.ts";
 import { generic, zGenericEvent } from "./actions/generic.ts";
@@ -21,7 +20,6 @@ import {
   uploadCustomMap,
   zUploadCustomMap,
 } from "./actions/uploadCustomMap.ts";
-import { appContext } from "@/shared/context.ts";
 import { generateUniqueName } from "./util/uniqueName.ts";
 import {
   editorAdjustBounds,
@@ -59,45 +57,14 @@ import {
   zSelectCaptain,
   zStartCaptains,
 } from "./actions/captains.ts";
+import {
+  handleMessage,
+  type Socket,
+  type SocketEventMap,
+  wrapWithContext,
+} from "./util/socketHandler.ts";
 
-export type SocketEventMap = {
-  close: unknown;
-  error: unknown;
-  message: { data: unknown };
-  open: unknown;
-};
-
-export type Socket = {
-  readyState: number;
-  send: (data: string) => void;
-  close: () => void;
-  addEventListener: <K extends keyof SocketEventMap>(
-    type: K,
-    listener: (this: Socket, ev: SocketEventMap[K]) => void,
-  ) => void;
-};
-
-// deno-lint-ignore no-explicit-any
-const wrap = <T extends (...args: any[]) => unknown>(
-  client: Client,
-  fn: (...args: Parameters<T>) => ReturnType<T>,
-) =>
-(...args: Parameters<T>) => {
-  if (client.lobby) {
-    if (client.lobby.round) {
-      return appContext.with(client.lobby.round.ecs, () =>
-        lobbyContext.with(
-          client.lobby!,
-          () => clientContext.with(client, () => fn(...args)),
-        ));
-    }
-    return lobbyContext.with(
-      client.lobby!,
-      () => clientContext.with(client, () => fn(...args)),
-    );
-  }
-  return clientContext.with(client, () => fn(...args));
-};
+export type { Socket, SocketEventMap };
 
 let clientIndex = 0;
 
@@ -243,7 +210,7 @@ export const handleSocket = (socket: Socket, url?: URL) => {
 
   socket.addEventListener(
     "open",
-    wrap(client, () => {
+    wrapWithContext(client, () => {
       if (client.lobby) {
         // Auto-rejoin lobby - send full state
         lobbyContext.with(client.lobby, () => sendJoinMessage(client));
@@ -256,53 +223,19 @@ export const handleSocket = (socket: Socket, url?: URL) => {
 
   socket.addEventListener(
     "message",
-    wrap<(e: SocketEventMap["message"]) => void>(client, (e) => {
-      let batch = (fn: () => void) => fn();
-      try {
-        batch = appContext.current.batch;
-      } catch { /* do nothing */ }
-      try {
-        batch(() => {
-          try {
-            if (typeof e.data !== "string") {
-              throw new Error("Expected data to be a string");
-            }
-            const json = JSON.parse(e.data);
-            // console.log("C->S", json);
-            const message = zClientToServerMessage.parse(json);
-            try {
-              // deno-lint-ignore no-explicit-any
-              actions[message.type](client, message as any);
-            } catch (err) {
-              console.error(err);
-            }
-          } catch (err) {
-            console.error(err);
-            clientContext.with(client, () => leave());
-          }
-        });
-      } finally {
-        flushUpdates();
-      }
+    wrapWithContext(client, (e: { data: unknown }) => {
+      handleMessage(e, zClientToServerMessage, actions, client, () => {
+        clientContext.with(client, () => leave());
+      });
     }),
   );
 
   socket.addEventListener(
     "close",
-    wrap(client, () => {
-      let batch = (fn: () => void) => fn();
-      try {
-        batch = appContext.current.batch;
-      } catch { /* do nothing */ }
-
-      try {
-        if (client.lobby) batch(leave);
-        // Client was in hub
-        else leaveHub(client);
-        allClients.delete(client);
-      } finally {
-        flushUpdates();
-      }
+    wrapWithContext(client, () => {
+      if (client.lobby) leave();
+      else leaveHub(client);
+      allClients.delete(client);
     }),
   );
 };

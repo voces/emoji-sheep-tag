@@ -21,6 +21,7 @@ import { send } from "./client.ts";
 import { colorName, getPlayer, getPlayers } from "@/shared/api/player.ts";
 import { getWebSocket } from "./connection.ts";
 import { LocalWebSocket } from "./local.ts";
+import { connectToShard, disconnectFromShard } from "./shardConnection.ts";
 import { lobbiesVar } from "@/vars/lobbies.ts";
 import { applyZoom } from "./api/player.ts";
 import { loadClientMap } from "./maps.ts";
@@ -154,6 +155,7 @@ export const handlers = {
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");
     unloadEcs();
+    disconnectFromShard(); // Clean up shard connection when round ends
     generateDoodads(["dynamic"]);
     if (d.updates) processUpdates(d.updates);
     if (d.round) roundsVar((r) => [...r, d.round!]);
@@ -286,4 +288,13 @@ export const handlers = {
       }
     }
   },
+  connectToShard: (
+    { shardUrl, token, lobbyId }: Extract<
+      ServerToClientMessage,
+      { type: "connectToShard" }
+    >,
+  ) => connectToShard(shardUrl, token, lobbyId),
+  shards: (
+    { shards }: Extract<ServerToClientMessage, { type: "shards" }>,
+  ) => lobbySettingsVar({ ...lobbySettingsVar(), shards }),
 };

@@ -68,6 +68,19 @@ export const LobbySettings = () => {
     [localMaps],
   );
 
+  const shardOptions = useMemo(
+    () => [
+      { value: "", label: "est.w3x.io" },
+      ...lobbySettings.shards
+        .filter((s) => s.isOnline)
+        .map((s) => ({
+          value: s.id,
+          label: s.region ? `${s.name} (${s.region})` : s.name,
+        })),
+    ],
+    [lobbySettings.shards],
+  );
+
   // Filter out observers and pending players
   const nonObservers = players.filter((p) =>
     p.team !== "observer" && p.team !== "pending"
@@ -87,30 +100,43 @@ export const LobbySettings = () => {
           Game Settings
         </SettingsHeader>
 
-        {/* TODO: remove this if once we have multiple maps */}
-        {mapOptions.length > 1 && (
+        {shardOptions.length > 1 && (
           <SettingsRow>
-            <SettingsLabel htmlFor="map-select">
-              Map
+            <SettingsLabel htmlFor="shard-select">
+              Server
             </SettingsLabel>
             <Select
-              id="map-select"
-              value={lobbySettings.map}
-              options={mapOptions}
-              onChange={(map) => {
-                if (map.startsWith("local:")) {
-                  const localId = map.replace("local:", "");
-                  uploadAndSelectCustomMap(localId).catch((err) => {
-                    console.error("Failed to upload custom map:", err);
-                  });
-                } else {
-                  send({ type: "lobbySettings", map });
-                }
-              }}
+              id="shard-select"
+              value={lobbySettings.shard ?? ""}
+              options={shardOptions}
+              onChange={(shard) =>
+                send({ type: "lobbySettings", shard: shard || null })}
               disabled={!isHost}
             />
           </SettingsRow>
         )}
+
+        <SettingsRow>
+          <SettingsLabel htmlFor="map-select">
+            Map
+          </SettingsLabel>
+          <Select
+            id="map-select"
+            value={lobbySettings.map}
+            options={mapOptions}
+            onChange={(map) => {
+              if (map.startsWith("local:")) {
+                const localId = map.replace("local:", "");
+                uploadAndSelectCustomMap(localId).catch((err) => {
+                  console.error("Failed to upload custom map:", err);
+                });
+              } else {
+                send({ type: "lobbySettings", map });
+              }
+            }}
+            disabled={!isHost}
+          />
+        </SettingsRow>
 
         <SettingsRow>
           <SettingsLabel htmlFor="mode">

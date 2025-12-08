@@ -47,6 +47,8 @@
 - Pathing falls over with lots of foxes
   - Falls over when spam clicking movement orders
   - Per-player pathing calc limits?
+- Turning is not correctly interpolated when building
+- Runaway number of canvas/renderers?
 
 # Code quality
 
