@@ -21,11 +21,11 @@ export const connectToShard = (
   // Close any existing shard connection
   disconnectFromShard();
 
-  const url = `${shardUrl}?token=${encodeURIComponent(token)}&lobby=${
-    encodeURIComponent(lobbyId)
-  }`;
+  const url = new URL(shardUrl);
+  url.searchParams.set("token", token);
+  url.searchParams.set("lobby", lobbyId);
 
-  shardSocket = new WebSocket(url);
+  shardSocket = new WebSocket(url.toString());
 
   shardSocket.addEventListener("message", (e) => {
     let data: ServerToClientMessage;
