@@ -96,7 +96,9 @@ const validateShardConnectivity = (
       resolve("Connection timeout");
     }, timeout);
 
-    const ws = new WebSocket(publicUrl);
+    const healthUrl = new URL(publicUrl);
+    healthUrl.searchParams.set("healthcheck", "1");
+    const ws = new WebSocket(healthUrl.toString());
 
     ws.addEventListener("open", () => {
       clearTimeout(timer);
