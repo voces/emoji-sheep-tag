@@ -132,8 +132,9 @@ export const handleShardSocket = (
       case "register": {
         // Derive public URL - use same scheme as primary server
         const scheme = primaryIsSecure ? "wss" : "ws";
-        const publicUrl = message.publicUrl ??
-          `${scheme}://${remoteIp}:${message.port}`;
+        // For IPv6, wrap in brackets; don't include port for standard ports (443/80)
+        const ipForUrl = remoteIp.includes(":") ? `[${remoteIp}]` : remoteIp;
+        const publicUrl = message.publicUrl ?? `${scheme}://${ipForUrl}`;
 
         // Derive name from provided name, publicUrl hostname, or remote IP
         const deriveHostname = () => {
