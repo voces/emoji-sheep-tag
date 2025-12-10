@@ -20,6 +20,6 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Build and push image
-        run: fly deploy -c shard/fly.toml --build-only
+        run: flyctl deploy -c shard/fly.toml --build-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
