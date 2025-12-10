@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . .
 
 # Compile the shard binary
-RUN deno compile -A --output shard server/shard.ts
+RUN deno compile -A --output shard-bin server/shard.ts
 
 FROM debian:bookworm-slim
 
@@ -14,7 +14,7 @@ FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy the compiled binary from builder
-COPY --from=builder /app/shard /usr/local/bin/shard
+COPY --from=builder /app/shard-bin /usr/local/bin/shard
 
 # Set environment variables (can be overridden at runtime)
 ENV SHARD_PORT=8080
