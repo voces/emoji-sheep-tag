@@ -2,10 +2,8 @@ FROM denoland/deno:debian AS builder
 
 WORKDIR /app
 
-# Copy source files needed for compilation
-COPY deno.json deno.lock ./
-COPY server/ server/
-COPY shared/ shared/
+# Copy all source files
+COPY . .
 
 # Compile the shard binary
 RUN deno compile -A --output shard server/shard.ts
