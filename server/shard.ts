@@ -15,7 +15,23 @@ import {
 const SHARD_NAME = Deno.env.get("SHARD_NAME"); // Optional - derived from hostname/IP by primary if not provided
 const SHARD_PORT = parseInt(Deno.env.get("SHARD_PORT") || "");
 const PRIMARY_SERVER = Deno.env.get("PRIMARY_SERVER") || "wss://est.w3x.io";
-const SHARD_PUBLIC_URL = Deno.env.get("SHARD_PUBLIC_URL");
+const FLY_MACHINE_ID = Deno.env.get("FLY_MACHINE_ID");
+const FLY_APP_NAME = Deno.env.get("FLY_APP_NAME");
+
+// Build public URL with machine ID for fly-replay routing
+const getPublicUrl = (): string | undefined => {
+  const explicit = Deno.env.get("SHARD_PUBLIC_URL");
+  if (explicit) return explicit;
+
+  // On Fly.io, use the app URL with machine param for fly-replay routing
+  if (FLY_APP_NAME && FLY_MACHINE_ID) {
+    return `wss://${FLY_APP_NAME}.fly.dev?machine=${FLY_MACHINE_ID}`;
+  }
+
+  return undefined;
+};
+
+const SHARD_PUBLIC_URL = getPublicUrl();
 
 if (!SHARD_PORT) {
   throw new Error("SHARD_PORT environment variable required");
@@ -156,8 +172,27 @@ Deno.serve({
 }, (req) => {
   const url = new URL(req.url);
 
+  // Fly.io fly-replay routing: if request has a machine param that doesn't match us, replay to correct machine
+  const targetMachine = url.searchParams.get("machine");
+  if (targetMachine && FLY_MACHINE_ID && targetMachine !== FLY_MACHINE_ID) {
+    return new Response("Replaying to correct machine", {
+      status: 307,
+      headers: { "fly-replay": `instance=${targetMachine}` },
+    });
+  }
+
   if (req.headers.get("upgrade") === "websocket") {
     const { socket, response } = Deno.upgradeWebSocket(req);
+
+    const isHealthCheck = url.searchParams.has("healthcheck");
+
+    // Health check from primary server - close cleanly after open
+    if (isHealthCheck) {
+      socket.addEventListener("open", () => {
+        socket.close(1000, "Health check OK");
+      });
+      return response;
+    }
 
     const token = url.searchParams.get("token");
     const lobbyId = url.searchParams.get("lobby");
@@ -207,6 +242,8 @@ Deno.serve({
       JSON.stringify({
         status: "ok",
         shardId,
+        machineId: FLY_MACHINE_ID,
+        publicUrl: SHARD_PUBLIC_URL,
         connected: primarySocket?.readyState === WebSocket.OPEN,
       }),
       { headers: { "content-type": "application/json" } },

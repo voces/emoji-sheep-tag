@@ -1,0 +1,5 @@
+app = "est-shards"
+primary_region = "lax"
+
+[build]
+  dockerfile = "shard/Dockerfile"
