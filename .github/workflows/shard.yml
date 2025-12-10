@@ -9,6 +9,7 @@ on:
       - "shard/**"
       - "deno.json"
       - "deno.lock"
+      - ".github/workflows/shard.yml"
 
 jobs:
   build:
