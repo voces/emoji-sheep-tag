@@ -42,6 +42,8 @@ type LobbySettings = {
   teamGold: boolean;
   /** Shard ID to run the game on, or undefined for primary server */
   shard?: string;
+  /** If true, shard is auto-selected based on player locations. Set to false when host explicitly chooses. */
+  shardAutoSelect?: boolean;
 };
 
 type LobbyStatus = "lobby" | "playing";
@@ -110,6 +112,7 @@ export const newLobby = (host?: Client) => {
       income: { sheep: 1, wolves: 1 },
       view: false,
       teamGold: true,
+      shardAutoSelect: true,
     },
     status: "lobby",
     rounds: [],

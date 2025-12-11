@@ -120,6 +120,8 @@ export const lobbySettings = (
   }
   if (shard !== undefined && (shard === null || isValidShardId(shard))) {
     lobby.settings.shard = shard ?? undefined;
+    // Host explicitly chose a server, disable auto-select
+    lobby.settings.shardAutoSelect = false;
   }
 
   // Send updated settings to all players in the lobby

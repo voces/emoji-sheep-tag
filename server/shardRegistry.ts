@@ -88,6 +88,15 @@ const sendShardListToLobbies = () => {
 
       const shardList = buildShardInfoList(regions, playerCoordinates);
 
+      // Auto-select best shard if enabled and we have player coordinates
+      if (lobby.settings.shardAutoSelect && playerCoordinates.length > 0) {
+        const bestShard = shardList[0];
+        if (bestShard && (lobby.settings.shard ?? "") !== bestShard.id) {
+          lobby.settings.shard = bestShard.id || undefined;
+          settingsChanged = true;
+        }
+      }
+
       if (settingsChanged) {
         send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
       } else {
@@ -389,6 +398,7 @@ const buildShardInfoList = (
   result.push({
     id: "",
     name: "est.w3x.io",
+    region: "Dublin, Ohio (US)",
     playerCount: 0,
     lobbyCount: 0,
     isOnline: true,

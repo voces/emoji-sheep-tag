@@ -90,6 +90,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     income: { sheep: 1, wolves: 1 },
     view: false,
     teamGold,
+    shardAutoSelect: true,
   };
   lobbyContext.current = lobby;
 
