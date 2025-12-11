@@ -13,6 +13,7 @@ import { serializeLobbySettings } from "./actions/lobbySettings.ts";
 import {
   type FlyRegion,
   getFlyMachineForRegion,
+  getFlyRegionForMachine,
   getFlyRegions,
   isFlyEnabled,
   isFlyRegionLaunching,
@@ -58,11 +59,7 @@ const geolocateIp = async (ip: string): Promise<string | undefined> => {
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=city,country`);
     if (!res.ok) return undefined;
     const data = await res.json();
-    if (data.city && data.country) {
-      return `${data.city}, ${data.country}`;
-    } else if (data.country) {
-      return data.country;
-    }
+    return [data.city, data.country].filter(Boolean).join(", ") || undefined;
   } catch {
     // Geolocation is best-effort, don't fail registration
   }
@@ -76,9 +73,29 @@ export const isValidShardId = (id: string): boolean =>
 const sendShardListToLobbies = (shardList: ShardInfo[]) => {
   for (const lobby of lobbies) {
     lobbyContext.with(lobby, () => {
-      // If lobby's shard no longer exists, clear it and send full settings update
+      let settingsChanged = false;
+
+      // If lobby has a fly region selected, check if there's now a real shard for it
+      if (lobby.settings.shard?.startsWith("fly:")) {
+        const regionCode = lobby.settings.shard.slice(4);
+        const machineId = getFlyMachineForRegion(regionCode);
+        if (machineId) {
+          const shard = getShardByMachineId(machineId);
+          if (shard) {
+            // Upgrade from fly region to actual shard
+            lobby.settings.shard = shard.id;
+            settingsChanged = true;
+          }
+        }
+      }
+
+      // If lobby's shard no longer exists, clear it
       if (lobby.settings.shard && !isValidShardId(lobby.settings.shard)) {
         lobby.settings.shard = undefined;
+        settingsChanged = true;
+      }
+
+      if (settingsChanged) {
         send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
       } else {
         send({ type: "shards", shards: shardList });
@@ -198,8 +215,18 @@ export const handleShardSocket = (
           return;
         }
 
-        // Look up region from IP (best-effort, non-blocking for registration)
-        const region = await geolocateIp(remoteIp);
+        // Look up region - use Fly.io region for managed machines, otherwise IP geolocation
+        let region: string | undefined;
+        if (flyMachineId) {
+          const regionCode = getFlyRegionForMachine(flyMachineId);
+          if (regionCode) {
+            const flyRegion = getFlyRegions().find((r) =>
+              r.code === regionCode
+            );
+            region = flyRegion?.name ?? regionCode;
+          }
+        }
+        if (!region) region = await geolocateIp(remoteIp);
 
         // Ensure unique name+region combination
         const isNameTaken = (n: string) =>

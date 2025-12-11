@@ -144,7 +144,10 @@ const fetchFlyRegions = async (): Promise<FlyRegion[]> => {
  * If data is stale, triggers a background fetch that broadcasts updates when complete.
  */
 export const getFlyRegions = (): FlyRegion[] => {
-  if (!cachedRegions || Date.now() - regionsLastFetched >= REGIONS_CACHE_TTL) {
+  if (
+    isFlyEnabled() &&
+    (!cachedRegions || Date.now() - regionsLastFetched >= REGIONS_CACHE_TTL)
+  ) {
     fetchFlyRegions().then(() => broadcastShards()).catch((err) => {
       console.error(new Date(), "[Fly] Failed to fetch regions:", err);
     });
