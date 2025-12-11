@@ -11,9 +11,20 @@ import {
 import { initializeGame } from "../st/gameStartHelpers.ts";
 import { Lobby } from "../lobby.ts";
 import { createServerMap } from "../maps.ts";
-import { getShard, sendToShard } from "../shardRegistry.ts";
+import {
+  broadcastShards,
+  getShard,
+  getShardOrFlyRegion,
+  sendToShard,
+  waitForShardByMachineId,
+} from "../shardRegistry.ts";
 import { getCustomMapForLobby } from "./uploadCustomMap.ts";
 import { id as generateId } from "@/shared/util/id.ts";
+import {
+  addLobbyToFlyMachine,
+  destroyFlyMachine,
+  launchFlyMachine,
+} from "../flyMachines.ts";
 
 export const zStart = z.object({
   type: z.literal("start"),
@@ -116,13 +127,17 @@ const determineTeams = (
 
 type Shard = NonNullable<ReturnType<typeof getShard>>;
 
+type StartOnShardParams = {
+  lobby: Lobby;
+  sheep: Set<Client>;
+  wolves: Set<Client>;
+  practice: boolean;
+  editor: boolean;
+};
+
 const startOnShard = (
-  lobby: Lobby,
   shard: Shard,
-  sheep: Set<Client>,
-  wolves: Set<Client>,
-  practice: boolean,
-  editor: boolean,
+  { lobby, sheep, wolves, practice, editor }: StartOnShardParams,
 ) => {
   // Generate auth tokens for each player
   const playerTokens = new Map<Client, string>();
@@ -190,7 +205,60 @@ const startOnShard = (
   );
 };
 
-export const start = (
+const launchAndStartOnFlyMachine = async (
+  flyRegion: string,
+  params: StartOnShardParams,
+) => {
+  const { lobby } = params;
+  send({ type: "chat", message: `Launching server in ${flyRegion}...` });
+
+  // Broadcast that we're launching
+  broadcastShards();
+
+  let machineId: string | undefined;
+  try {
+    // Launch machine and wait for it to start
+    machineId = await launchFlyMachine(flyRegion);
+
+    // Track this lobby on the machine
+    addLobbyToFlyMachine(machineId, lobby.name);
+
+    // Wait for shard to register with the primary server
+    send({ type: "chat", message: "Waiting for server to connect..." });
+    const shard = await waitForShardByMachineId(machineId, 30000);
+
+    // Broadcast updated shard list (region now shows as online)
+    broadcastShards();
+
+    // Start the game on the shard (lobby keeps fly:region setting for seamless reuse)
+    startOnShard(shard, params);
+  } catch (err) {
+    console.error(
+      new Date(),
+      `[Fly] Failed to launch machine for ${lobby.name}:`,
+      err,
+    );
+    send({
+      type: "chat",
+      message: `Failed to launch server: ${
+        err instanceof Error ? err.message : "Unknown error"
+      }`,
+    });
+
+    // Clean up failed machine (e.g., if shard never registered)
+    if (machineId) {
+      destroyFlyMachine(machineId);
+    }
+
+    // Reset lobby status
+    lobby.status = "lobby";
+
+    // Broadcast updated shard list
+    broadcastShards();
+  }
+};
+
+export const start = async (
   client: Client,
   { practice = false, editor = false, fixedTeams = true }: z.TypeOf<
     typeof zStart
@@ -238,12 +306,19 @@ export const start = (
     undoDraft();
   }
 
-  // If a shard is selected, redirect to it instead of running locally
-  const shard = lobby.settings.shard
-    ? getShard(lobby.settings.shard)
+  // Check if a shard or fly region is selected
+  const shardSelection = lobby.settings.shard
+    ? getShardOrFlyRegion(lobby.settings.shard)
     : undefined;
-  if (shard) {
-    startOnShard(lobby, shard, sheep, wolves, practice, editor);
+
+  const shardParams = { lobby, sheep, wolves, practice, editor };
+
+  if (shardSelection) {
+    if ("shard" in shardSelection) {
+      startOnShard(shardSelection.shard, shardParams);
+    } else {
+      await launchAndStartOnFlyMachine(shardSelection.flyRegion, shardParams);
+    }
     return;
   }
 

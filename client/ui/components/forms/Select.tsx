@@ -58,6 +58,7 @@ const SelectMenu = styled(Card)`
 // TODO: Add styling for aria-selected, maybe a checkbox?
 const Option = styled.option`
   width: 100%;
+  flex-shrink: 0;
   text-align: left;
   border: none;
   background: transparent;

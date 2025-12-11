@@ -68,18 +68,28 @@ export const LobbySettings = () => {
     [localMaps],
   );
 
-  const shardOptions = useMemo(
-    () => [
-      { value: "", label: "est.w3x.io" },
-      ...lobbySettings.shards
-        .filter((s) => s.isOnline)
-        .map((s) => ({
+  const shardOptions = useMemo(() => {
+    const options = [{ value: "", label: "est.w3x.io" }];
+
+    for (const s of lobbySettings.shards) {
+      // For fly regions, show status indicator
+      if (s.flyRegion) {
+        const statusLabel = s.status === "launching" ? " (launching...)" : "";
+        options.push({
+          value: s.id,
+          label: `fly.io (${s.region})${statusLabel}`,
+        });
+      } else if (s.isOnline) {
+        // Regular shards - only show if online
+        options.push({
           value: s.id,
           label: s.region ? `${s.name} (${s.region})` : s.name,
-        })),
-    ],
-    [lobbySettings.shards],
-  );
+        });
+      }
+    }
+
+    return options;
+  }, [lobbySettings.shards]);
 
   // Filter out observers and pending players
   const nonObservers = players.filter((p) =>

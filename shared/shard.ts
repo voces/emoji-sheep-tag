@@ -94,6 +94,9 @@ export const zShardInfo = z.object({
   playerCount: z.number(),
   lobbyCount: z.number(),
   isOnline: z.boolean(),
+  // For Fly.io regions that can be launched on-demand
+  flyRegion: z.string().optional(), // e.g., "lax", "ewr"
+  status: z.enum(["online", "launching", "offline"]).optional(), // undefined = use isOnline
 });
 
 export type ShardInfo = z.infer<typeof zShardInfo>;

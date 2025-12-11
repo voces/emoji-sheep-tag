@@ -55,7 +55,8 @@ describe("lobbySettings action", () => {
 
     // Should broadcast to all players
     expect(mockMessages).toHaveLength(1);
-    expect(mockMessages[0]).toEqual({
+    const { shards: _shards, ...messageWithoutShards } = mockMessages[0];
+    expect(messageWithoutShards).toEqual({
       type: "lobbySettings",
       map: "revo",
       mode: "survival",
@@ -70,7 +71,6 @@ describe("lobbySettings action", () => {
       teamGold: true,
       host: "host-client",
       shard: null,
-      shards: [],
     });
   });
 
@@ -129,7 +129,8 @@ describe("lobbySettings action", () => {
 
     // Should still broadcast current settings
     expect(mockMessages).toHaveLength(1);
-    expect(mockMessages[0]).toEqual({
+    const { shards: _shards, ...messageWithoutShards } = mockMessages[0];
+    expect(messageWithoutShards).toEqual({
       type: "lobbySettings",
       map: "revo",
       mode: "survival",
@@ -144,7 +145,6 @@ describe("lobbySettings action", () => {
       teamGold: true,
       host: "host-client",
       shard: null,
-      shards: [],
     });
   });
 
@@ -172,7 +172,8 @@ describe("lobbySettings action", () => {
 
     // Should broadcast updated settings
     expect(mockMessages).toHaveLength(1);
-    expect(mockMessages[0]).toEqual({
+    const { shards: _shards, ...messageWithoutShards } = mockMessages[0];
+    expect(messageWithoutShards).toEqual({
       type: "lobbySettings",
       map: "revo",
       mode: "survival",
@@ -187,7 +188,6 @@ describe("lobbySettings action", () => {
       teamGold: true,
       host: "host-client",
       shard: null,
-      shards: [],
     });
   });
 
@@ -243,7 +243,8 @@ describe("lobbySettings action", () => {
     // Note: The send function broadcasts to all players in the lobby
     expect(mockMessages).toHaveLength(3);
     mockMessages.forEach((message) => {
-      expect(message).toEqual({
+      const { shards: _shards, ...messageWithoutShards } = message;
+      expect(messageWithoutShards).toEqual({
         type: "lobbySettings",
         map: "revo",
         mode: "survival",
@@ -258,7 +259,6 @@ describe("lobbySettings action", () => {
         teamGold: true,
         host: "host-client",
         shard: null,
-        shards: [],
       });
     });
   });
@@ -285,7 +285,8 @@ describe("lobbySettings action", () => {
 
     // Should broadcast the boundary values
     expect(mockMessages).toHaveLength(1);
-    expect(mockMessages[0]).toEqual({
+    const { shards: _shards, ...messageWithoutShards } = mockMessages[0];
+    expect(messageWithoutShards).toEqual({
       type: "lobbySettings",
       map: "revo",
       mode: "survival",
@@ -300,7 +301,6 @@ describe("lobbySettings action", () => {
       teamGold: true,
       host: "host-client",
       shard: null,
-      shards: [],
     });
   });
 
