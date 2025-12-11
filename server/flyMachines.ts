@@ -3,6 +3,8 @@
  * Handles launching and destroying shard machines on-demand
  */
 
+import { broadcastShards } from "./shardRegistry.ts";
+
 const FLY_API_TOKEN = Deno.env.get("FLY_API_TOKEN");
 const FLY_APP_NAME = Deno.env.get("FLY_APP_NAME") || "est-shards";
 const PRIMARY_SERVER = Deno.env.get("PRIMARY_SERVER") || "wss://est.w3x.io";
@@ -67,6 +69,8 @@ const launchingMachines = new Map<string, Promise<string>>();
 
 export const isFlyEnabled = () => Boolean(FLY_API_TOKEN);
 
+console.log(new Date(), "[Fly]", isFlyEnabled() ? "Enabled" : "Disabled");
+
 const flyRequest = (
   path: string,
   options: RequestInit = {},
@@ -97,19 +101,9 @@ const flyPlatformRequest = (path: string): Promise<Response> => {
 };
 
 /**
- * Get cached regions (synchronous). Returns empty array if not yet fetched.
- * Use getFlyRegions() to fetch fresh data.
+ * Fetch regions from API and update cache
  */
-export const getCachedFlyRegions = (): FlyRegion[] => cachedRegions ?? [];
-
-/**
- * Fetch available regions from Fly.io API (cached for 1 hour)
- */
-export const getFlyRegions = async (): Promise<FlyRegion[]> => {
-  if (cachedRegions && Date.now() - regionsLastFetched < REGIONS_CACHE_TTL) {
-    return cachedRegions;
-  }
-
+const fetchFlyRegions = async (): Promise<FlyRegion[]> => {
   const response = await flyPlatformRequest("/platform/regions");
   if (!response.ok) {
     console.error(
@@ -140,6 +134,19 @@ export const getFlyRegions = async (): Promise<FlyRegion[]> => {
     `[Fly] Fetched ${cachedRegions.length} regions from API`,
   );
   return cachedRegions;
+};
+
+/**
+ * Get Fly.io regions (synchronous). Returns cached data immediately.
+ * If data is stale, triggers a background fetch that broadcasts updates when complete.
+ */
+export const getFlyRegions = (): FlyRegion[] => {
+  if (!cachedRegions || Date.now() - regionsLastFetched >= REGIONS_CACHE_TTL) {
+    fetchFlyRegions().then(() => broadcastShards()).catch((err) => {
+      console.error(new Date(), "[Fly] Failed to fetch regions:", err);
+    });
+  }
+  return cachedRegions ?? [];
 };
 
 const getMachine = async (machineId: string): Promise<Machine> => {

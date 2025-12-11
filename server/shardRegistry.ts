@@ -12,7 +12,6 @@ import { send } from "./lobbyApi.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
 import {
   type FlyRegion,
-  getCachedFlyRegions,
   getFlyMachineForRegion,
   getFlyRegions,
   isFlyEnabled,
@@ -90,21 +89,7 @@ const sendShardListToLobbies = (shardList: ShardInfo[]) => {
 
 /** Broadcast updated shard list to all lobby clients */
 export const broadcastShards = () => {
-  // Send immediately with cached regions
   sendShardListToLobbies(getShardInfoList());
-
-  // Fetch fresh regions in background and send again if changed
-  if (isFlyEnabled()) {
-    getShardInfoListAsync().then((freshList) => {
-      const cachedList = getShardInfoList();
-      // Only re-send if the lists differ (fresh fetch may have updated the cache)
-      if (JSON.stringify(freshList) !== JSON.stringify(cachedList)) {
-        sendShardListToLobbies(freshList);
-      }
-    }).catch((err) => {
-      console.error(new Date(), "[Fly] Failed to fetch regions:", err);
-    });
-  }
 };
 
 export const sendToShard = (
@@ -387,13 +372,9 @@ const buildShardInfoList = (regions: FlyRegion[]): ShardInfo[] => {
   return result;
 };
 
-/** Get shard info list using cached regions (synchronous) */
+/** Get shard info list (triggers background refresh if regions are stale) */
 export const getShardInfoList = (): ShardInfo[] =>
-  buildShardInfoList(getCachedFlyRegions());
-
-/** Get shard info list, fetching fresh regions from API if needed */
-export const getShardInfoListAsync = async (): Promise<ShardInfo[]> =>
-  buildShardInfoList(await getFlyRegions());
+  buildShardInfoList(getFlyRegions());
 
 /** Get a shard by ID, including fly region lookup */
 export const getShardOrFlyRegion = (
