@@ -69,7 +69,7 @@ export const LobbySettings = () => {
   );
 
   const shardOptions = useMemo(() => {
-    const options = [{ value: "", label: "est.w3x.io" }];
+    const options: { value: string; label: string }[] = [];
 
     for (const s of lobbySettings.shards) {
       // For fly regions, show status indicator
@@ -80,7 +80,7 @@ export const LobbySettings = () => {
           label: `fly.io (${s.region})${statusLabel}`,
         });
       } else if (s.isOnline) {
-        // Regular shards - only show if online
+        // Regular shards & primary server - show if online
         options.push({
           value: s.id,
           label: s.region ? `${s.name} (${s.region})` : s.name,
@@ -219,7 +219,7 @@ export const LobbySettings = () => {
         )}
 
         {lobbySettings.mode === "survival" && (
-          <TeamGoldSetting isHost={isHost} disabled={isShardLaunching} />
+          <TeamGoldSetting isHost={isHost} disabled={settingsDisabled} />
         )}
 
         {lobbySettings.mode === "vip" && (
@@ -349,7 +349,7 @@ export const LobbySettings = () => {
       </GameSettingsContainer>
 
       <StartButtons
-        buttonsDisabled={buttonsDisabled || isShardLaunching}
+        buttonsDisabled={buttonsDisabled || settingsDisabled}
         isHost={isHost}
         nonObserversCount={nonObservers.length}
         captainsDraft={captainsDraft}

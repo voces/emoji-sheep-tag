@@ -81,7 +81,7 @@ export const serializeLobbySettings = (
     teamGold: lobby.settings.teamGold,
     host: lobby.host?.id ?? null,
     shard: lobby.settings.shard ?? null,
-    shards: getShardInfoList(),
+    shards: getShardInfoList(lobby),
   };
 };
 

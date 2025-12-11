@@ -376,11 +376,24 @@ export const getShard = (id: string): RegisteredShard | undefined =>
 
 type ShardInfoWithCoords = ShardInfo & { coordinates?: Coordinates };
 
+// Primary server coordinates (Columbus, OH)
+const PRIMARY_SERVER_COORDS: Coordinates = { lat: 40.0992, lon: -83.1141 };
+
 const buildShardInfoList = (
   regions: FlyRegion[],
   playerCoordinates?: Coordinates[],
 ): ShardInfo[] => {
   const result: ShardInfoWithCoords[] = [];
+
+  // Add primary server
+  result.push({
+    id: "",
+    name: "est.w3x.io",
+    playerCount: 0,
+    lobbyCount: 0,
+    isOnline: true,
+    coordinates: PRIMARY_SERVER_COORDS,
+  });
 
   // Add registered shards
   for (const s of shards.values()) {
@@ -448,8 +461,21 @@ const buildShardInfoList = (
 };
 
 /** Get shard info list (triggers background refresh if regions are stale) */
-export const getShardInfoList = (): ShardInfo[] =>
-  buildShardInfoList(getFlyRegions());
+export const getShardInfoList = (
+  lobby?: { players: Set<Client> },
+): ShardInfo[] => {
+  // Collect player coordinates from lobby if provided
+  const playerCoordinates: Coordinates[] = [];
+  if (lobby) {
+    for (const player of lobby.players) {
+      if (player.ip) {
+        const coords = getIpCoordinates(player.ip);
+        if (coords) playerCoordinates.push(coords);
+      }
+    }
+  }
+  return buildShardInfoList(getFlyRegions(), playerCoordinates);
+};
 
 /** Get a shard by ID, including fly region lookup */
 export const getShardOrFlyRegion = (
