@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { Client } from "../client.ts";
+import { lobbyContext } from "../contexts.ts";
 import { endRound, send } from "../lobbyApi.ts";
 import {
   draftTeams,
@@ -220,41 +221,64 @@ const launchAndStartOnFlyMachine = async (
     // Launch machine and wait for it to start
     machineId = await launchFlyMachine(flyRegion);
 
-    // Track this lobby on the machine
-    addLobbyToFlyMachine(machineId, lobby.name);
+    // Re-enter lobby context after await
+    lobbyContext.with(lobby, () => {
+      // Track this lobby on the machine
+      addLobbyToFlyMachine(machineId!, lobby.name);
 
-    // Wait for shard to register with the primary server
-    send({ type: "chat", message: "Waiting for server to connect..." });
+      // Wait for shard to register with the primary server
+      send({ type: "chat", message: "Waiting for server to connect..." });
+    });
+
     const shard = await waitForShardByMachineId(machineId, 30000);
 
-    // Broadcast updated shard list (region now shows as online)
-    broadcastShards();
+    // Re-enter lobby context after await
+    lobbyContext.with(lobby, () => {
+      // Broadcast updated shard list (region now shows as online)
+      broadcastShards();
 
-    // Start the game on the shard (lobby keeps fly:region setting for seamless reuse)
-    startOnShard(shard, params);
+      // Start the game on the shard (lobby keeps fly:region setting for seamless reuse)
+      startOnShard(shard, params);
+    });
   } catch (err) {
     console.error(
       new Date(),
       `[Fly] Failed to launch machine for ${lobby.name}:`,
       err,
     );
-    send({
-      type: "chat",
-      message: `Failed to launch server: ${
-        err instanceof Error ? err.message : "Unknown error"
-      }`,
-    });
 
-    // Clean up failed machine (e.g., if shard never registered)
-    if (machineId) {
-      destroyFlyMachine(machineId);
+    // Map technical errors to user-friendly messages
+    let userMessage = "Unknown error";
+    if (err instanceof Error) {
+      if (err.message.includes("Timeout waiting for shard")) {
+        userMessage =
+          "Server started but failed to connect. Please try again or choose a different region.";
+      } else if (err.message.includes("Failed to launch machine")) {
+        userMessage =
+          "Could not start a server in that region. Please try again or choose a different region.";
+      } else {
+        userMessage = err.message;
+      }
     }
 
-    // Reset lobby status
-    lobby.status = "lobby";
+    // Re-enter lobby context after await for error handling
+    lobbyContext.with(lobby, () => {
+      send({
+        type: "chat",
+        message: `Failed to launch server: ${userMessage}`,
+      });
 
-    // Broadcast updated shard list
-    broadcastShards();
+      // Clean up failed machine (e.g., if shard never registered)
+      if (machineId) {
+        destroyFlyMachine(machineId);
+      }
+
+      // Reset lobby status
+      lobby.status = "lobby";
+
+      // Broadcast updated shard list
+      broadcastShards();
+    });
   }
 };
 

@@ -5,7 +5,7 @@ import { Lobby } from "../lobby.ts";
 import { LobbySettings } from "../../client/schemas.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
 import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
-import { getShard, getShardInfoList } from "../shardRegistry.ts";
+import { getShardInfoList, isValidShardId } from "../shardRegistry.ts";
 
 // C->S
 export const zLobbySettings = z.object({
@@ -118,7 +118,7 @@ export const lobbySettings = (
   if (map && (getMapMeta(map) || map.startsWith("local:"))) {
     lobby.settings.map = map;
   }
-  if (shard !== undefined && (shard === null || getShard(shard))) {
+  if (shard !== undefined && (shard === null || isValidShardId(shard))) {
     lobby.settings.shard = shard ?? undefined;
   }
 

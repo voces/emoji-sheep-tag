@@ -70,7 +70,7 @@ const geolocateIp = async (ip: string): Promise<string | undefined> => {
 };
 
 /** Check if a shard ID is valid (either a registered shard or a fly region) */
-const isValidShardId = (id: string): boolean =>
+export const isValidShardId = (id: string): boolean =>
   shards.has(id) || (isFlyEnabled() && id.startsWith("fly:"));
 
 const sendShardListToLobbies = (shardList: ShardInfo[]) => {

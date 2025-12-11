@@ -5,9 +5,12 @@
 
 import { broadcastShards } from "./shardRegistry.ts";
 
-const FLY_API_TOKEN = Deno.env.get("FLY_API_TOKEN");
-const FLY_APP_NAME = Deno.env.get("FLY_APP_NAME") || "est-shards";
-const PRIMARY_SERVER = Deno.env.get("PRIMARY_SERVER") || "wss://est.w3x.io";
+const env = (key: string) =>
+  typeof Deno !== "undefined" ? Deno.env.get(key) : undefined;
+
+const FLY_API_TOKEN = env("FLY_API_TOKEN");
+const FLY_APP_NAME = env("FLY_APP_NAME") || "est-shards";
+const PRIMARY_SERVER = env("PRIMARY_SERVER") || "wss://est.w3x.io";
 const FLY_API_BASE = "https://api.machines.dev/v1";
 
 type MachineState =
