@@ -263,6 +263,7 @@ export const launchFlyMachine = async (region: string): Promise<string> => {
     return machine.id;
   })();
 
+  // Set synchronously BEFORE awaiting so broadcastShards() sees it immediately
   launchingMachines.set(region, launchPromise);
 
   try {

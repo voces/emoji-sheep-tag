@@ -213,13 +213,14 @@ const launchAndStartOnFlyMachine = async (
   const { lobby } = params;
   send({ type: "chat", message: `Launching server in ${flyRegion}...` });
 
-  // Broadcast that we're launching
-  broadcastShards();
-
   let machineId: string | undefined;
   try {
-    // Launch machine and wait for it to start
-    machineId = await launchFlyMachine(flyRegion);
+    // Start launch (synchronously marks region as launching), then broadcast
+    const launchPromise = launchFlyMachine(flyRegion);
+    broadcastShards();
+
+    // Wait for machine to start
+    machineId = await launchPromise;
 
     // Re-enter lobby context after await
     lobbyContext.with(lobby, () => {
