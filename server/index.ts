@@ -31,16 +31,15 @@ Deno.serve({
   if (req.headers.get("upgrade") === "websocket") {
     const { socket, response } = Deno.upgradeWebSocket(req);
     // Route shard connections to shard handler
+    const remoteIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+      req.headers.get("x-real-ip") ??
+      info.remoteAddr.hostname;
     if (url.pathname === "/shard") {
-      const remoteIp =
-        req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-          req.headers.get("x-real-ip") ??
-          info.remoteAddr.hostname;
       const isSecure = url.protocol === "https:" ||
         req.headers.get("x-forwarded-proto") === "https";
       handleShardSocket(socket, remoteIp, isSecure);
     } else {
-      handleSocket(socket, url);
+      handleSocket(socket, url, remoteIp);
     }
     return response;
   }

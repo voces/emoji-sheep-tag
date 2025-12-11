@@ -21,11 +21,20 @@ import {
   removeLobbyFromFlyMachine,
   setShardIdForFlyMachine,
 } from "./flyMachines.ts";
+import {
+  type Coordinates,
+  fetchIpCoordinates,
+  geolocateIp,
+  getIpCoordinates,
+  squaredDistance,
+} from "./util/geolocation.ts";
+import type { Client } from "./client.ts";
 
 type RegisteredShard = {
   id: string;
   name: string;
   region?: string;
+  coordinates?: Coordinates;
   publicUrl: string;
   socket: Socket;
   lobbyCount: number;
@@ -37,40 +46,13 @@ type RegisteredShard = {
 const shards = new Map<string, RegisteredShard>();
 let shardIndex = 0;
 
-/** Check if an IP is localhost or private (non-routable) */
-const isPrivateIp = (ip: string): boolean => {
-  // Localhost
-  if (ip === "localhost" || ip === "127.0.0.1" || ip === "::1") return true;
-  // IPv4 private ranges
-  if (
-    ip.startsWith("192.168.") || ip.startsWith("10.") ||
-    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(ip)
-  ) return true;
-  // IPv6 link-local (fe80::) and unique local (fc00::/fd00::)
-  if (/^fe80:/i.test(ip) || /^f[cd][0-9a-f]{2}:/i.test(ip)) return true;
-  return false;
-};
-
-/** Look up approximate location for an IP address */
-const geolocateIp = async (ip: string): Promise<string | undefined> => {
-  if (isPrivateIp(ip)) return undefined;
-
-  try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=city,country`);
-    if (!res.ok) return undefined;
-    const data = await res.json();
-    return [data.city, data.country].filter(Boolean).join(", ") || undefined;
-  } catch {
-    // Geolocation is best-effort, don't fail registration
-  }
-  return undefined;
-};
-
 /** Check if a shard ID is valid (either a registered shard or a fly region) */
 export const isValidShardId = (id: string): boolean =>
   shards.has(id) || (isFlyEnabled() && id.startsWith("fly:"));
 
-const sendShardListToLobbies = (shardList: ShardInfo[]) => {
+const sendShardListToLobbies = () => {
+  const regions = getFlyRegions();
+
   for (const lobby of lobbies) {
     lobbyContext.with(lobby, () => {
       let settingsChanged = false;
@@ -95,6 +77,17 @@ const sendShardListToLobbies = (shardList: ShardInfo[]) => {
         settingsChanged = true;
       }
 
+      // Collect player coordinates for sorting
+      const playerCoordinates: Coordinates[] = [];
+      for (const player of lobby.players) {
+        if (player.ip) {
+          const coords = getIpCoordinates(player.ip);
+          if (coords) playerCoordinates.push(coords);
+        }
+      }
+
+      const shardList = buildShardInfoList(regions, playerCoordinates);
+
       if (settingsChanged) {
         send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
       } else {
@@ -106,7 +99,27 @@ const sendShardListToLobbies = (shardList: ShardInfo[]) => {
 
 /** Broadcast updated shard list to all lobby clients */
 export const broadcastShards = () => {
-  sendShardListToLobbies(getShardInfoList());
+  sendShardListToLobbies();
+};
+
+/**
+ * Fetch geolocation for a client's IP and broadcast updated shard list if new data.
+ * Call this when a client joins a lobby to ensure sorting is based on player locations.
+ */
+export const fetchClientGeoAndBroadcast = (client: Client) => {
+  if (!client.ip || !client.lobby) return;
+
+  // Check if already cached
+  if (getIpCoordinates(client.ip)) return;
+
+  // Fetch in background and broadcast when complete
+  fetchIpCoordinates(client.ip).then((coords) => {
+    if (coords && client.lobby) {
+      broadcastShards();
+    }
+  }).catch(() => {
+    // Geolocation is best-effort
+  });
 };
 
 export const sendToShard = (
@@ -217,6 +230,7 @@ export const handleShardSocket = (
 
         // Look up region - use Fly.io region for managed machines, otherwise IP geolocation
         let region: string | undefined;
+        let coordinates: Coordinates | undefined;
         if (flyMachineId) {
           const regionCode = getFlyRegionForMachine(flyMachineId);
           if (regionCode) {
@@ -224,9 +238,19 @@ export const handleShardSocket = (
               r.code === regionCode
             );
             region = flyRegion?.name ?? regionCode;
+            if (flyRegion) {
+              coordinates = {
+                lat: flyRegion.latitude,
+                lon: flyRegion.longitude,
+              };
+            }
           }
         }
-        if (!region) region = await geolocateIp(remoteIp);
+        if (!region) {
+          const geo = await geolocateIp(remoteIp);
+          region = geo.name;
+          coordinates = geo.coordinates;
+        }
 
         // Ensure unique name+region combination
         const isNameTaken = (n: string) =>
@@ -246,6 +270,7 @@ export const handleShardSocket = (
           id,
           name: uniqueName,
           region,
+          coordinates,
           publicUrl,
           socket,
           lobbyCount: 0,
@@ -349,8 +374,13 @@ export const getShards = (): RegisteredShard[] => Array.from(shards.values());
 export const getShard = (id: string): RegisteredShard | undefined =>
   shards.get(id);
 
-const buildShardInfoList = (regions: FlyRegion[]): ShardInfo[] => {
-  const result: ShardInfo[] = [];
+type ShardInfoWithCoords = ShardInfo & { coordinates?: Coordinates };
+
+const buildShardInfoList = (
+  regions: FlyRegion[],
+  playerCoordinates?: Coordinates[],
+): ShardInfo[] => {
+  const result: ShardInfoWithCoords[] = [];
 
   // Add registered shards
   for (const s of shards.values()) {
@@ -361,6 +391,7 @@ const buildShardInfoList = (regions: FlyRegion[]): ShardInfo[] => {
       playerCount: s.playerCount,
       lobbyCount: s.lobbyCount,
       isOnline: s.socket.readyState === WebSocket.OPEN,
+      coordinates: s.coordinates,
     });
   }
 
@@ -392,11 +423,28 @@ const buildShardInfoList = (regions: FlyRegion[]): ShardInfo[] => {
         isOnline: false,
         flyRegion: region.code,
         status: launching ? "launching" : "offline",
+        coordinates: { lat: region.latitude, lon: region.longitude },
       });
     }
   }
 
-  return result;
+  // Sort by summed squared distance to players if we have player coordinates
+  if (playerCoordinates && playerCoordinates.length > 0) {
+    const summedDistance = (coords: Coordinates | undefined): number => {
+      if (!coords) return Infinity;
+      return playerCoordinates.reduce(
+        (sum, pc) => sum + squaredDistance(coords, pc),
+        0,
+      );
+    };
+
+    result.sort((a, b) =>
+      summedDistance(a.coordinates) - summedDistance(b.coordinates)
+    );
+  }
+
+  // Remove coordinates from final result (not part of ShardInfo)
+  return result.map(({ coordinates: _, ...info }) => info);
 };
 
 /** Get shard info list (triggers background refresh if regions are stale) */

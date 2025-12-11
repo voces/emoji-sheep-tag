@@ -42,6 +42,8 @@ type Machine = {
 export type FlyRegion = {
   code: string;
   name: string;
+  latitude: number;
+  longitude: number;
   deprecated: boolean;
   requiresPaidPlan: boolean;
 };
@@ -120,6 +122,8 @@ const fetchFlyRegions = async (): Promise<FlyRegion[]> => {
   cachedRegions = (data.Regions as Array<{
     code: string;
     name: string;
+    latitude: number;
+    longitude: number;
     deprecated: boolean;
     requires_paid_plan: boolean;
   }>)
@@ -127,6 +131,8 @@ const fetchFlyRegions = async (): Promise<FlyRegion[]> => {
     .map((r) => ({
       code: r.code,
       name: r.name,
+      latitude: r.latitude,
+      longitude: r.longitude,
       deprecated: r.deprecated,
       requiresPaidPlan: r.requires_paid_plan,
     }));

@@ -12,6 +12,7 @@ import { flushUpdates } from "../updates.ts";
 import { serializeLobbySettings } from "./lobbySettings.ts";
 import { autoAssignSheepOrWolf, initializePlayer } from "../st/roundHelpers.ts";
 import { serializeCaptainsDraft } from "./captains.ts";
+import { fetchClientGeoAndBroadcast } from "../shardRegistry.ts";
 
 export const zJoinLobby = z.object({
   type: z.literal("joinLobby"),
@@ -92,5 +93,8 @@ export const joinLobby = (
 
     // Update lobby list for hub
     broadcastLobbyList();
+
+    // Fetch geolocation for shard sorting (async, broadcasts when complete)
+    fetchClientGeoAndBroadcast(client);
   });
 };

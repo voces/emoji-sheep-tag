@@ -91,12 +91,24 @@ export const LobbySettings = () => {
     return options;
   }, [lobbySettings.shards]);
 
+  // Check if selected shard is currently launching
+  const isShardLaunching = useMemo(() => {
+    if (!lobbySettings.shard) return false;
+    const shard = lobbySettings.shards.find((s) =>
+      s.id === lobbySettings.shard
+    );
+    return shard?.status === "launching";
+  }, [lobbySettings.shard, lobbySettings.shards]);
+
   // Filter out observers and pending players
   const nonObservers = players.filter((p) =>
     p.team !== "observer" && p.team !== "pending"
   );
 
   const maxSheep = Math.max(nonObservers.length - 1, 1);
+
+  // Disable all settings if not host or if a fly machine is launching
+  const settingsDisabled = !isHost || isShardLaunching;
 
   useLayoutEffect(() => {
     const timeout = setTimeout(() => setButtonsDisabled(false), 250);
@@ -121,7 +133,7 @@ export const LobbySettings = () => {
               options={shardOptions}
               onChange={(shard) =>
                 send({ type: "lobbySettings", shard: shard || null })}
-              disabled={!isHost}
+              disabled={settingsDisabled}
             />
           </SettingsRow>
         )}
@@ -144,7 +156,7 @@ export const LobbySettings = () => {
                 send({ type: "lobbySettings", map });
               }
             }}
-            disabled={!isHost}
+            disabled={settingsDisabled}
           />
         </SettingsRow>
 
@@ -157,7 +169,7 @@ export const LobbySettings = () => {
               type="button"
               $active={lobbySettings.mode === "survival"}
               onClick={() => send({ type: "lobbySettings", mode: "survival" })}
-              disabled={!isHost}
+              disabled={settingsDisabled}
             >
               Survival
             </ModeButton>
@@ -165,7 +177,7 @@ export const LobbySettings = () => {
               type="button"
               $active={lobbySettings.mode === "vip"}
               onClick={() => send({ type: "lobbySettings", mode: "vip" })}
-              disabled={!isHost}
+              disabled={settingsDisabled}
             >
               VIP
             </ModeButton>
@@ -173,7 +185,7 @@ export const LobbySettings = () => {
               type="button"
               $active={lobbySettings.mode === "switch"}
               onClick={() => send({ type: "lobbySettings", mode: "switch" })}
-              disabled={!isHost}
+              disabled={settingsDisabled}
             >
               Switch
             </ModeButton>
@@ -181,7 +193,7 @@ export const LobbySettings = () => {
               type="button"
               $active={lobbySettings.mode === "vamp"}
               onClick={() => send({ type: "lobbySettings", mode: "vamp" })}
-              disabled={!isHost}
+              disabled={settingsDisabled}
             >
               Vamp
             </ModeButton>
@@ -199,7 +211,7 @@ export const LobbySettings = () => {
                     type: "lobbySettings",
                     view: e.currentTarget.checked,
                   })}
-                disabled={!isHost}
+                disabled={settingsDisabled}
               />
               <SettingsLabel htmlFor="view">View (Disable Fog)</SettingsLabel>
             </HStack>
@@ -207,7 +219,7 @@ export const LobbySettings = () => {
         )}
 
         {lobbySettings.mode === "survival" && (
-          <TeamGoldSetting isHost={isHost} />
+          <TeamGoldSetting isHost={isHost} disabled={isShardLaunching} />
         )}
 
         {lobbySettings.mode === "vip" && (
@@ -219,7 +231,7 @@ export const LobbySettings = () => {
             max={10}
             step={0.01}
             defaultValue="0.75"
-            disabled={!isHost}
+            disabled={settingsDisabled}
             onChange={(value) =>
               send({ type: "lobbySettings", vipHandicap: value })}
           />
@@ -233,7 +245,7 @@ export const LobbySettings = () => {
           max={maxSheep}
           step={1}
           defaultValue="1"
-          disabled={!isHost}
+          disabled={settingsDisabled}
           autoChecked={lobbySettings.autoSheep}
           onChange={(value) => send({ type: "lobbySettings", sheep: value })}
           onAutoChange={(checked) =>
@@ -252,7 +264,7 @@ export const LobbySettings = () => {
               max={3599}
               value={lobbySettings.time}
               onChange={(value) => send({ type: "lobbySettings", time: value })}
-              disabled={!isHost || lobbySettings.autoTime}
+              disabled={settingsDisabled || lobbySettings.autoTime}
               style={{ flex: 1 }}
             />
             <SettingsLabel htmlFor="autoTime">Auto</SettingsLabel>
@@ -264,7 +276,7 @@ export const LobbySettings = () => {
                   type: "lobbySettings",
                   time: e.currentTarget.checked ? "auto" : lobbySettings.time,
                 })}
-              disabled={!isHost}
+              disabled={settingsDisabled}
             />
           </HStack>
         </SettingsRow>
@@ -277,7 +289,7 @@ export const LobbySettings = () => {
           max={100000}
           step={1}
           defaultValue="0"
-          disabled={!isHost}
+          disabled={settingsDisabled}
           onChange={(value) =>
             send({
               type: "lobbySettings",
@@ -293,7 +305,7 @@ export const LobbySettings = () => {
           max={100000}
           step={1}
           defaultValue="0"
-          disabled={!isHost}
+          disabled={settingsDisabled}
           onChange={(value) =>
             send({
               type: "lobbySettings",
@@ -309,7 +321,7 @@ export const LobbySettings = () => {
           max={100}
           step={0.01}
           defaultValue="1"
-          disabled={!isHost}
+          disabled={settingsDisabled}
           onChange={(value) =>
             send({
               type: "lobbySettings",
@@ -326,7 +338,7 @@ export const LobbySettings = () => {
           max={100}
           step={0.01}
           defaultValue="1"
-          disabled={!isHost}
+          disabled={settingsDisabled}
           onChange={(value) =>
             send({
               type: "lobbySettings",
@@ -337,7 +349,7 @@ export const LobbySettings = () => {
       </GameSettingsContainer>
 
       <StartButtons
-        buttonsDisabled={buttonsDisabled}
+        buttonsDisabled={buttonsDisabled || isShardLaunching}
         isHost={isHost}
         nonObserversCount={nonObservers.length}
         captainsDraft={captainsDraft}

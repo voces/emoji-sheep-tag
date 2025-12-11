@@ -38,6 +38,7 @@ import {
 import { joinLobby, zJoinLobby } from "./actions/joinLobby.ts";
 import { createLobby, zCreateLobby } from "./actions/createLobby.ts";
 import { joinHub, leaveHub, serializeLobbyList } from "./hub.ts";
+import { fetchClientGeoAndBroadcast } from "./shardRegistry.ts";
 import { upgrade, zUpgrade } from "./actions/upgrade.ts";
 import {
   updateSelection,
@@ -82,12 +83,13 @@ export class Client implements Entity {
   handicap?: number;
 
   // Client-specific properties (not part of ECS)
-  // Note: socket and lobby are defined non-enumerable in constructor to prevent JSON serialization
+  // Note: socket, lobby, ip are defined non-enumerable in constructor to prevent JSON serialization
   socket!: Socket;
   lobby?: Lobby;
+  ip?: string; // Client's IP address for geolocation
   sheepCount = 0;
 
-  constructor(socket: Socket, providedName?: string) {
+  constructor(socket: Socket, providedName?: string, ip?: string) {
     this.playerColor = colors[0];
     this.id = `player-${clientIndex++}`;
     this.name = providedName || `Player ${clientIndex}`;
@@ -95,7 +97,7 @@ export class Client implements Entity {
     // Make name unique server-wide
     this.name = generateUniqueName(this.name, allClients, this);
 
-    // Make socket and lobby properties non-enumerable to prevent JSON serialization issues
+    // Make socket, lobby, ip properties non-enumerable to prevent JSON serialization issues
     Object.defineProperty(this, "socket", {
       value: socket,
       writable: false,
@@ -108,6 +110,13 @@ export class Client implements Entity {
       writable: true,
       enumerable: false,
       configurable: true,
+    });
+
+    Object.defineProperty(this, "ip", {
+      value: ip,
+      writable: false,
+      enumerable: false,
+      configurable: false,
     });
 
     // Add to global client tracking
@@ -197,14 +206,20 @@ const actions = {
   reverseTeams,
 };
 
-export const handleSocket = (socket: Socket, url?: URL) => {
-  const client = new Client(socket, url?.searchParams.get("name") || undefined);
+export const handleSocket = (socket: Socket, url?: URL, ip?: string) => {
+  const client = new Client(
+    socket,
+    url?.searchParams.get("name") || undefined,
+    ip,
+  );
   console.log(new Date(), "Client", client.id, "connected");
 
   // If no lobbies exist, create one and add client to it
   if (lobbies.size === 0) {
     const lobby = newLobby(client);
     client.lobby = lobby;
+    // Fetch geolocation for shard sorting (async, broadcasts when complete)
+    fetchClientGeoAndBroadcast(client);
     // Otherwise, add client to hub (lobby browser)
   } else joinHub(client);
 

@@ -13,7 +13,9 @@ const TeamGoldTooltip = styled.div`
   gap: 4px;
 `;
 
-export const TeamGoldSetting = ({ isHost }: { isHost: boolean }) => {
+export const TeamGoldSetting = (
+  { isHost, disabled = false }: { isHost: boolean; disabled?: boolean },
+) => {
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const { tooltipContainerProps, tooltip } = useTooltip(
     <TeamGoldTooltip>
@@ -41,7 +43,7 @@ export const TeamGoldSetting = ({ isHost }: { isHost: boolean }) => {
               type: "lobbySettings",
               teamGold: e.currentTarget.checked,
             })}
-          disabled={!isHost}
+          disabled={!isHost || disabled}
         />
         <SettingsLabel htmlFor="teamGold">Team Gold</SettingsLabel>
       </HStack>

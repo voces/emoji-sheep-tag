@@ -4,6 +4,7 @@ import { newLobby } from "../lobby.ts";
 import { leaveHub } from "../hub.ts";
 import { lobbyContext } from "../contexts.ts";
 import { sendJoinMessage } from "../lobbyApi.ts";
+import { fetchClientGeoAndBroadcast } from "../shardRegistry.ts";
 
 export const zCreateLobby = z.object({
   type: z.literal("createLobby"),
@@ -30,4 +31,7 @@ export const createLobby = (
 
   // Send full lobby state to client
   lobbyContext.with(lobby, () => sendJoinMessage(client));
+
+  // Fetch geolocation for shard sorting (async, broadcasts when complete)
+  fetchClientGeoAndBroadcast(client);
 };
