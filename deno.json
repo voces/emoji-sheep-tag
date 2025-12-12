@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run -A --watch server/index.ts --dev",
+    "dev": "deno run -A --watch --env-file server/index.ts --dev",
     "test": "FLY_API_TOKEN= deno test --no-check --allow-env --allow-net --allow-read --allow-write --unstable-broadcast-channel",
     "build": "deno run --allow-env --allow-read --allow-write --allow-run scripts/build.ts",
     "shard": "PRIMARY_SERVER=ws://localhost:8000 SHARD_PORT=8001 deno run -A --watch server/shard.ts",

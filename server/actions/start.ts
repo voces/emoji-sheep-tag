@@ -217,7 +217,7 @@ const launchAndStartOnFlyMachine = async (
   try {
     // Start launch (synchronously marks region as launching), then broadcast
     const launchPromise = launchFlyMachine(flyRegion);
-    broadcastShards();
+    broadcastShards(lobby);
 
     // Wait for machine to start
     machineId = await launchPromise;
@@ -236,7 +236,7 @@ const launchAndStartOnFlyMachine = async (
     // Re-enter lobby context after await
     lobbyContext.with(lobby, () => {
       // Broadcast updated shard list (region now shows as online)
-      broadcastShards();
+      broadcastShards(lobby);
 
       // Start the game on the shard (lobby keeps fly:region setting for seamless reuse)
       startOnShard(shard, params);
@@ -278,7 +278,7 @@ const launchAndStartOnFlyMachine = async (
       lobby.status = "lobby";
 
       // Broadcast updated shard list
-      broadcastShards();
+      broadcastShards(lobby);
     });
   }
 };

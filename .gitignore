@@ -1,2 +1,3 @@
 dist
 client/testing/test-port-registry.json
+.env

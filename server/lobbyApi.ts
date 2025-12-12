@@ -20,6 +20,7 @@ import {
   isActiveCaptainsDraft,
   serializeCaptainsDraft,
 } from "./actions/captains.ts";
+import { broadcastShards } from "./shardRegistry.ts";
 
 const convertPendingPlayersToTeams = (lobby: Lobby) => {
   const pendingPlayers = Array.from(lobby.players).filter((p) =>
@@ -271,4 +272,7 @@ export const leave = (client?: Client) => {
 
   // Update lobby list for hub
   broadcastLobbyList();
+
+  // Update shard list (player set changed, may affect auto-select)
+  broadcastShards(lobby);
 };

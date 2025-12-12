@@ -74,11 +74,7 @@ export const LobbySettings = () => {
     for (const s of lobbySettings.shards) {
       // For fly regions, show status indicator
       if (s.flyRegion) {
-        const statusLabel = s.status === "launching" ? " (launching...)" : "";
-        options.push({
-          value: s.id,
-          label: `fly.io (${s.region})${statusLabel}`,
-        });
+        options.push({ value: s.id, label: `fly.io (${s.region})` });
       } else if (s.isOnline) {
         // Regular shards & primary server - show if online
         options.push({

@@ -7,7 +7,7 @@ import type {
 import { zShardToServerMessage } from "@/shared/shard.ts";
 import { undoDraft } from "./st/roundHelpers.ts";
 import { lobbyContext } from "./contexts.ts";
-import { lobbies } from "./lobby.ts";
+import { lobbies, type Lobby } from "./lobby.ts";
 import { send } from "./lobbyApi.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
 import {
@@ -50,81 +50,93 @@ let shardIndex = 0;
 export const isValidShardId = (id: string): boolean =>
   shards.has(id) || (isFlyEnabled() && id.startsWith("fly:"));
 
-const sendShardListToLobbies = () => {
-  const regions = getFlyRegions();
+const sendShardListToLobby = (lobby: Lobby, regions: FlyRegion[]) => {
+  lobbyContext.with(lobby, () => {
+    let settingsChanged = false;
 
-  for (const lobby of lobbies) {
-    lobbyContext.with(lobby, () => {
-      let settingsChanged = false;
-
-      // If lobby has a fly region selected, check if there's now a real shard for it
-      if (lobby.settings.shard?.startsWith("fly:")) {
-        const regionCode = lobby.settings.shard.slice(4);
-        const machineId = getFlyMachineForRegion(regionCode);
-        if (machineId) {
-          const shard = getShardByMachineId(machineId);
-          if (shard) {
-            // Upgrade from fly region to actual shard
-            lobby.settings.shard = shard.id;
-            settingsChanged = true;
-          }
-        }
-      }
-
-      // If lobby's shard no longer exists, clear it
-      if (lobby.settings.shard && !isValidShardId(lobby.settings.shard)) {
-        lobby.settings.shard = undefined;
-        settingsChanged = true;
-      }
-
-      // Collect player coordinates for sorting
-      const playerCoordinates: Coordinates[] = [];
-      for (const player of lobby.players) {
-        if (player.ip) {
-          const coords = getIpCoordinates(player.ip);
-          if (coords) playerCoordinates.push(coords);
-        }
-      }
-
-      const shardList = buildShardInfoList(regions, playerCoordinates);
-
-      // Auto-select best shard if enabled and we have player coordinates
-      if (lobby.settings.shardAutoSelect && playerCoordinates.length > 0) {
-        const bestShard = shardList[0];
-        if (bestShard && (lobby.settings.shard ?? "") !== bestShard.id) {
-          lobby.settings.shard = bestShard.id || undefined;
+    // If lobby has a fly region selected, check if there's now a real shard for it
+    if (lobby.settings.shard?.startsWith("fly:")) {
+      const regionCode = lobby.settings.shard.slice(4);
+      const machineId = getFlyMachineForRegion(regionCode);
+      if (machineId) {
+        const shard = getShardByMachineId(machineId);
+        if (shard) {
+          // Upgrade from fly region to actual shard
+          lobby.settings.shard = shard.id;
           settingsChanged = true;
         }
       }
+    }
 
-      if (settingsChanged) {
-        send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
-      } else {
-        send({ type: "shards", shards: shardList });
+    // If lobby's shard no longer exists, clear it
+    if (lobby.settings.shard && !isValidShardId(lobby.settings.shard)) {
+      lobby.settings.shard = undefined;
+      settingsChanged = true;
+    }
+
+    // Collect player coordinates for sorting
+    const playerCoordinates: Coordinates[] = [];
+    for (const player of lobby.players) {
+      if (player.ip) {
+        const coords = getIpCoordinates(player.ip);
+        if (coords) playerCoordinates.push(coords);
       }
-    });
-  }
-};
+    }
 
-/** Broadcast updated shard list to all lobby clients */
-export const broadcastShards = () => {
-  sendShardListToLobbies();
+    const shardList = buildShardInfoList(regions, playerCoordinates);
+
+    // Auto-select best shard if enabled and we have player coordinates
+    if (lobby.settings.shardAutoSelect && playerCoordinates.length > 0) {
+      const bestShard = shardList[0];
+      if (bestShard && (lobby.settings.shard ?? "") !== bestShard.id) {
+        lobby.settings.shard = bestShard.id || undefined;
+        settingsChanged = true;
+      }
+    }
+
+    if (settingsChanged) {
+      send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
+    } else {
+      send({ type: "shards", shards: shardList });
+    }
+  });
 };
 
 /**
- * Fetch geolocation for a client's IP and broadcast updated shard list if new data.
+ * Broadcast updated shard list.
+ * If lobby is provided, only broadcasts to that lobby.
+ * If lobby is omitted, broadcasts to all lobbies (for global shard changes).
+ */
+export const broadcastShards = (lobby?: Lobby) => {
+  const regions = getFlyRegions();
+  if (lobby) {
+    sendShardListToLobby(lobby, regions);
+  } else {
+    for (const l of lobbies) {
+      sendShardListToLobby(l, regions);
+    }
+  }
+};
+
+/**
+ * Fetch geolocation for a client's IP and broadcast updated shard list.
  * Call this when a client joins a lobby to ensure sorting is based on player locations.
+ * Always broadcasts immediately (player set changed), and fetches geo async if not cached.
  */
 export const fetchClientGeoAndBroadcast = (client: Client) => {
-  if (!client.ip || !client.lobby) return;
+  const lobby = client.lobby;
+  if (!lobby) return;
 
-  // Check if already cached
-  if (getIpCoordinates(client.ip)) return;
+  // Always broadcast when player set changes (for auto-select)
+  broadcastShards(lobby);
 
-  // Fetch in background and broadcast when complete
+  // If no IP or already cached, nothing more to do
+  if (!client.ip || getIpCoordinates(client.ip)) return;
+
+  // Fetch geo in background and broadcast again when complete
   fetchIpCoordinates(client.ip).then((coords) => {
     if (coords && client.lobby) {
-      broadcastShards();
+      broadcastShards(client.lobby);
     }
   }).catch(() => {
     // Geolocation is best-effort
@@ -388,6 +400,30 @@ type ShardInfoWithCoords = ShardInfo & { coordinates?: Coordinates };
 // Primary server coordinates (Columbus, OH)
 const PRIMARY_SERVER_COORDS: Coordinates = { lat: 40.0992, lon: -83.1141 };
 
+// Override Fly.io region names (code -> display name)
+const REGION_NAME_OVERRIDES: Record<string, string> = {
+  ams: "Amsterdam",
+  arn: "Stockholm",
+  bom: "Mumbai",
+  cdg: "Paris",
+  dfw: "Dallas",
+  ewr: "New York",
+  fra: "Frankfurt",
+  gru: "Sao Paulo",
+  iad: "Washington DC",
+  jnb: "Johannesburg",
+  lax: "Los Angeles",
+  lhr: "London",
+  nrt: "Tokyo",
+  ord: "Chicago",
+  sin: "Singapore",
+  sjc: "San Jose",
+  yyz: "Toronto",
+};
+
+const getRegionDisplayName = (code: string, defaultName: string): string =>
+  REGION_NAME_OVERRIDES[code] ?? defaultName;
+
 const buildShardInfoList = (
   regions: FlyRegion[],
   playerCoordinates?: Coordinates[],
@@ -398,7 +434,7 @@ const buildShardInfoList = (
   result.push({
     id: "",
     name: "est.w3x.io",
-    region: "Dublin, Ohio (US)",
+    region: "Columbus",
     playerCount: 0,
     lobbyCount: 0,
     isOnline: true,
@@ -440,7 +476,7 @@ const buildShardInfoList = (
       result.push({
         id: `fly:${region.code}`,
         name: "fly.io",
-        region: region.name,
+        region: getRegionDisplayName(region.code, region.name),
         playerCount: 0,
         lobbyCount: 0,
         isOnline: false,
