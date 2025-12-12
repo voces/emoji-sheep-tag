@@ -14,6 +14,7 @@ import { Lobby } from "../lobby.ts";
 import { createServerMap } from "../maps.ts";
 import {
   broadcastShards,
+  getFlyRegionDisplayName,
   getShard,
   getShardOrFlyRegion,
   sendToShard,
@@ -140,6 +141,9 @@ const startOnShard = (
   shard: Shard,
   { lobby, sheep, wolves, practice, editor }: StartOnShardParams,
 ) => {
+  // If this shard is on a Fly machine, track the lobby and cancel any pending destruction
+  if (shard.flyMachineId) addLobbyToFlyMachine(shard.flyMachineId, lobby.name);
+
   // Generate auth tokens for each player
   const playerTokens = new Map<Client, string>();
   for (const player of lobby.players) {
@@ -211,7 +215,8 @@ const launchAndStartOnFlyMachine = async (
   params: StartOnShardParams,
 ) => {
   const { lobby } = params;
-  send({ type: "chat", message: `Launching server in ${flyRegion}...` });
+  const regionName = getFlyRegionDisplayName(flyRegion);
+  send({ type: "chat", message: `Launching server in ${regionName}...` });
 
   let machineId: string | undefined;
   try {

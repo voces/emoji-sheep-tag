@@ -424,6 +424,10 @@ const REGION_NAME_OVERRIDES: Record<string, string> = {
 const getRegionDisplayName = (code: string, defaultName: string): string =>
   REGION_NAME_OVERRIDES[code] ?? defaultName;
 
+/** Get display name for a Fly.io region code (e.g., "lax" -> "Los Angeles") */
+export const getFlyRegionDisplayName = (code: string): string =>
+  REGION_NAME_OVERRIDES[code] ?? code.toUpperCase();
+
 const buildShardInfoList = (
   regions: FlyRegion[],
   playerCoordinates?: Coordinates[],
