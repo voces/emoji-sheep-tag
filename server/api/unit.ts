@@ -330,10 +330,13 @@ export const orderAttack = (
 // We can compute a minimum RELATIVE from √½-0.25x = √10/4-0.5x
 //                                               x = √10-2√2
 // We can then compute ABSOLUTE from √½-0.25*RELATIVE
-const RELATIVE = 0.3340;
-const ABSOLUTE = 0.6236;
-export const computeBuildDistance = (prefab: string) =>
-  ABSOLUTE + ((prefabs[prefab].radius ?? 0) * RELATIVE);
+// (0.25, 0.7071), (0.5, 0.7906)
+// const RELATIVE = 0.3340;
+// const ABSOLUTE = 0.6236;
+export const computeBuildDistance = (prefab: string) => {
+  const r = Math.max(prefabs[prefab].radius ?? 0.125, 0.125);
+  return r < 0.5 ? 0.7071 : 0.7906;
+};
 
 export const orderBuild = (
   builder: Entity,

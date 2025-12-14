@@ -93,7 +93,9 @@ app.addSystem({
       const lookTarget = "path" in e.order && e.order.path?.[0] ||
         "targetId" in e.order && e.order.targetId &&
           lookup[e.order.targetId]?.position ||
-        "target" in e.order && e.order.target || undefined;
+        "target" in e.order && e.order.target ||
+        ("x" in e.order && "y" in e.order && { x: e.order.x, y: e.order.y }) ||
+        undefined;
 
       if (
         lookTarget &&

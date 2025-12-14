@@ -43,6 +43,15 @@ export const advanceBuild = (e: Entity, delta: number): number => {
       return delta;
     }
 
+    // Path exhausted but still out of range - cancel order
+    if (
+      tweenResult.delta === delta &&
+      distanceBetweenPoints(e.position, e.order) > d
+    ) {
+      delete e.order;
+      return delta;
+    }
+
     return tweenResult.delta;
   }
 
