@@ -42,7 +42,6 @@
 - Pausing?
 - Editor improvements
   - Brush size
-- Spacebar for last ping
 
 # Bugs
 
@@ -52,7 +51,6 @@
   - Per-player pathing calc limits?
 - Turning is not correctly interpolated when building
 - Runaway number of canvas/renderers?
-- Katama issue: Chat etc does not work after going to Settings > Shortcut?
 
 # Code quality
 

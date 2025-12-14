@@ -413,7 +413,7 @@ export const CommandPalette = () => {
             );
           }
         }}
-        onBlur={() => showCommandPaletteVar("dismissed")}
+        onBlur={() => setTimeout(() => showCommandPaletteVar("dismissed"))}
       />
       {!promptCallback &&
         filteredCommands.map((c) => (
