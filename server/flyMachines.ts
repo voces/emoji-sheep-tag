@@ -384,6 +384,20 @@ export const setShardIdForFlyMachine = (
     if (!regionToMachine.has(machine.region)) {
       regionToMachine.set(machine.region, machineId);
     }
+
+    // If shard registers with no lobbies, schedule destruction
+    // This handles the case where all launch retries failed
+    if (machine.lobbies.size === 0 && !machine.destroyTimer) {
+      const DESTROY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
+      console.log(
+        new Date(),
+        `[Fly] Machine ${machineId} registered with no lobbies, scheduling destruction in 5 minutes`,
+      );
+
+      machine.destroyTimer = setTimeout(() => {
+        destroyFlyMachine(machineId);
+      }, DESTROY_BUFFER_MS);
+    }
   }
 };
 
