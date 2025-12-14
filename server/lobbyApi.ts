@@ -52,6 +52,7 @@ export const createRoundSummary = () => {
 export const endRound = (canceled = false) => {
   const lobby = lobbyContext.current;
   if (!lobby.round) return;
+  const wasPractice = lobby.round.practice;
   console.log(new Date(), "Round ended in lobby", lobby.name);
   lobby.round.clearInterval();
 
@@ -124,7 +125,9 @@ export const endRound = (canceled = false) => {
     send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
   }
 
-  if (canceled) send({ type: "chat", message: "Round canceled." });
+  if (canceled && !wasPractice) {
+    send({ type: "chat", message: "Round canceled." });
+  }
 };
 
 export const send = (message: ServerToClientMessage) => {

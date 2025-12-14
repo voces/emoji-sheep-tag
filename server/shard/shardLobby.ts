@@ -47,6 +47,7 @@ export class ShardLobby {
   onEnd?: (
     round?: { sheep: string[]; wolves: string[]; duration: number },
     canceled?: boolean,
+    practice?: boolean,
   ) => void;
 
   /** Broadcast a message to all clients in this lobby */
@@ -218,6 +219,6 @@ export class ShardLobby {
     delete this.round;
 
     // Notify primary server
-    this.onEnd?.(round, canceled);
+    this.onEnd?.(round, canceled, this.practice);
   }
 }

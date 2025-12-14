@@ -353,7 +353,7 @@ export const handleShardSocket = (
             }
 
             // Notify clients (shard already sent stop, but primary clients need update)
-            if (message.canceled) {
+            if (message.canceled && !message.practice) {
               for (const p of lobby.players) {
                 p.send({ type: "chat", message: "Round canceled." });
               }

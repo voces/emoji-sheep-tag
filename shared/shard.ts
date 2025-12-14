@@ -21,6 +21,7 @@ export const zShardToServerMessage = z.discriminatedUnion("type", [
     type: z.literal("lobbyEnded"),
     lobbyId: z.string(),
     canceled: z.boolean().optional(), // True if host canceled the round
+    practice: z.boolean().optional(), // True if practice mode
     round: z.object({
       sheep: z.array(z.string()),
       wolves: z.array(z.string()),

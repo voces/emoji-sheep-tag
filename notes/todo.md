@@ -53,7 +53,6 @@
   - Per-player pathing calc limits?
 - Turning is not correctly interpolated when building
 - Runaway number of canvas/renderers?
-- Wolf spawn time on switch
 - Katama issue: Chat etc does not work after going to Settings > Shortcut?
 
 # Code quality

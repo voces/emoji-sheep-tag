@@ -230,13 +230,13 @@ export const setupSurvivalTimer = (
   timeout(onSheepWin, round.duration);
 };
 
-export const addWolfSpawnTimer = () => {
+export const addWolfSpawnTimer = (duration: number) => {
   addEntity({
     isTimer: true,
     buffs: [{
       expiration: "Time until wolves spawn:",
-      remainingDuration: 18,
-      totalDuration: 18,
+      remainingDuration: duration,
+      totalDuration: duration,
     }],
   });
 };
@@ -310,7 +310,9 @@ export const initializeGame = <T extends PlayerLike>(
       send({ type: "start", updates: flushUpdates(false) });
 
       if (!practice) {
-        broadcastTeamAnnouncement(sheep, wolves);
+        if (settings.mode !== "switch") {
+          broadcastTeamAnnouncement(sheep, wolves);
+        }
         broadcastCountdown();
       }
 
@@ -328,7 +330,7 @@ export const initializeGame = <T extends PlayerLike>(
               sheepCaptainId,
             );
           }
-          addWolfSpawnTimer();
+          addWolfSpawnTimer(settings.mode === "switch" ? 2 : 18);
         }
       }, practice ? 0 : 3);
 
@@ -349,7 +351,7 @@ export const initializeGame = <T extends PlayerLike>(
             );
           }
         }
-      }, practice ? 0 : 21);
+      }, practice ? 0 : settings.mode === "switch" ? 5 : 21);
     }));
 
   return round;
