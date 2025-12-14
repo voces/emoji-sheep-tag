@@ -26,7 +26,7 @@ import {
   fetchIpCoordinates,
   geolocateIp,
   getIpCoordinates,
-  squaredDistance,
+  haversineDistance,
 } from "./util/geolocation.ts";
 import type { Client } from "./client.ts";
 
@@ -491,12 +491,12 @@ const buildShardInfoList = (
     }
   }
 
-  // Sort by summed squared distance to players if we have player coordinates
+  // Sort by summed distance to players if we have player coordinates
   if (playerCoordinates && playerCoordinates.length > 0) {
     const summedDistance = (coords: Coordinates | undefined): number => {
       if (!coords) return Infinity;
       return playerCoordinates.reduce(
-        (sum, pc) => sum + squaredDistance(coords, pc),
+        (sum, pc) => sum + haversineDistance(coords, pc) ** 2,
         0,
       );
     };

@@ -269,7 +269,7 @@ export const getNearestMajorCity = (coords: Coordinates): string => {
   let nearestDist = Infinity;
 
   for (const city of MAJOR_CITIES) {
-    const dist = squaredDistance(coords, { lat: city.lat, lon: city.lon });
+    const dist = haversineDistance(coords, { lat: city.lat, lon: city.lon });
     if (dist < nearestDist) {
       nearestDist = dist;
       nearestCity = city;
@@ -356,8 +356,9 @@ export const fetchIpCoordinates = async (
   return result.coordinates;
 };
 
-/** Calculate Haversine distance metric between two coordinate pairs (for sorting) */
-export const squaredDistance = (a: Coordinates, b: Coordinates): number => {
+/** Calculate Haversine distance between two coordinate pairs in kilometers */
+export const haversineDistance = (a: Coordinates, b: Coordinates): number => {
+  const R = 6371; // Earth radius in km
   const toRad = (deg: number) => deg * Math.PI / 180;
   const latA = toRad(a.lat);
   const latB = toRad(b.lat);
@@ -366,5 +367,6 @@ export const squaredDistance = (a: Coordinates, b: Coordinates): number => {
 
   const sinLat = Math.sin(dLat / 2);
   const sinLon = Math.sin(dLon / 2);
-  return sinLat * sinLat + Math.cos(latA) * Math.cos(latB) * sinLon * sinLon;
+  const h = sinLat * sinLat + Math.cos(latA) * Math.cos(latB) * sinLon * sinLon;
+  return 2 * R * Math.asin(Math.sqrt(h));
 };

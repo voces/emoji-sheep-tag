@@ -28,7 +28,7 @@ const Wrapper = styled(Card)<{ $preferredActionsPerRow: number }>`
       )
     )
   );
-  padding: 12px;
+  padding: 12px 12px 8px;
 
   display: flex;
   gap: 8px;
