@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . .
 
 # Compile the shard binary (include map files for runtime reading)
-RUN deno compile -A --include=shared/maps/*.json --output shard-bin server/shard.ts
+RUN deno compile -A --include=shared/maps --output shard-bin server/shard.ts
 
 FROM debian:bookworm-slim
 
