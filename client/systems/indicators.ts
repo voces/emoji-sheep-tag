@@ -2,11 +2,32 @@ import { SystemEntity } from "../ecs.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
+import { panCameraTo } from "../api/camera.ts";
 
 const indicators = new Map<
   SystemEntity<"prefab" | "modelScale">,
   { birth: number; initialScale: number }
 >();
+
+// Track recent ping locations for "jump to ping" feature
+const MAX_PINGS = 10;
+const pingPositions: { x: number; y: number }[] = [];
+let currentPingIndex = -1;
+
+export const jumpToNextPing = (): boolean => {
+  if (pingPositions.length === 0) return false;
+
+  // Move to next ping (cycling backwards through history)
+  currentPingIndex = (currentPingIndex + 1) % pingPositions.length;
+  const ping = pingPositions[currentPingIndex];
+  panCameraTo(ping.x, ping.y);
+  return true;
+};
+
+export const clearPingHistory = () => {
+  pingPositions.length = 0;
+  currentPingIndex = -1;
+};
 
 addSystem({
   props: ["prefab", "modelScale"],
@@ -16,6 +37,13 @@ addSystem({
         birth: appContext.current.lastUpdate,
         initialScale: e.modelScale,
       });
+
+      // Track map pings (model: "location") for jump-to-ping feature
+      if (e.model === "location" && e.position) {
+        pingPositions.unshift({ x: e.position.x, y: e.position.y });
+        if (pingPositions.length > MAX_PINGS) pingPositions.pop();
+        currentPingIndex = -1; // Reset index when new ping arrives
+      }
     }
   },
   onChange: (e) => {

@@ -5,23 +5,18 @@ import {
   type MouseButtonEvent,
   type MouseMoveEvent,
 } from "../../../mouse.ts";
+import { panCameraTo } from "../../../api/camera.ts";
 
 type State = {
-  isInterpolating: boolean;
   isDragging: boolean;
-  targetX: number;
-  targetY: number;
 };
 
 export const createCameraMovement = (
   canvas: HTMLCanvasElement,
-  mainCamera: PerspectiveCamera,
+  _mainCamera: PerspectiveCamera,
 ) => {
   const state: State = {
-    isInterpolating: false,
     isDragging: false,
-    targetX: mainCamera.position.x,
-    targetY: mainCamera.position.y,
   };
 
   const handleMouseButtonDown = (e: MouseButtonEvent) => {
@@ -45,10 +40,8 @@ export const createCameraMovement = (
       const worldX = map.bounds.min.x + (x / rect.width) * mapWidth;
       const worldY = map.bounds.max.y - (y / rect.height) * mapHeight;
 
-      state.targetX = worldX;
-      state.targetY = worldY;
+      panCameraTo(worldX, worldY);
       state.isDragging = true;
-      state.isInterpolating = true;
     }
   };
 
@@ -82,27 +75,11 @@ export const createCameraMovement = (
       ),
     );
 
-    state.targetX = worldX;
-    state.targetY = worldY;
-    state.isInterpolating = true;
+    panCameraTo(worldX, worldY);
   };
 
-  const updateCameraSmooth = (delta: number) => {
-    if (!state.isInterpolating) return;
-
-    const lerpFactor = Math.min(1, delta * 15);
-    mainCamera.position.x += (state.targetX - mainCamera.position.x) *
-      lerpFactor;
-    mainCamera.position.y += (state.targetY - mainCamera.position.y) *
-      lerpFactor;
-
-    const dx = state.targetX - mainCamera.position.x;
-    const dy = state.targetY - mainCamera.position.y;
-    const distSq = dx * dx + dy * dy;
-    if (distSq < 0.001) {
-      state.isInterpolating = false;
-    }
-  };
+  // No longer needed - interpolation is now handled by camera.ts onRender
+  const updateCameraSmooth = (_delta: number) => {};
 
   mouse.addEventListener("mouseButtonDown", handleMouseButtonDown);
   mouse.addEventListener("mouseButtonUp", handleMouseButtonUp);

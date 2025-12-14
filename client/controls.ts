@@ -4,6 +4,7 @@ import { send } from "./client.ts";
 import { Entity } from "./ecs.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 import { selection } from "./systems/selection.ts";
+import { jumpToNextPing } from "./systems/indicators.ts";
 import { camera, terrain } from "./graphics/three.ts";
 import { getEffectivePlayerGold } from "./api/player.ts";
 import { UnitDataAction } from "@/shared/types.ts";
@@ -700,6 +701,15 @@ const handleUIShortcuts = (
   ) {
     e.preventDefault();
     selectAllFoxes();
+  }
+
+  if (
+    checkShortcut(shortcuts.misc.jumpToPing, e.code) &&
+    showChatBoxVar() !== "open" &&
+    showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing"
+  ) {
+    if (jumpToNextPing()) e.preventDefault();
   }
 
   if (

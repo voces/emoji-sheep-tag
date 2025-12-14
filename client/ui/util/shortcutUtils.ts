@@ -55,6 +55,7 @@ export const miscNames = {
   queueModifier: "Queue actions modifier",
   addToSelectionModifier: "Add to selection modifier",
   ping: "Ping location",
+  jumpToPing: "Jump to ping",
   applyZoom: "Apply zoom",
 };
 
@@ -107,6 +108,7 @@ export const defaultBindings: Shortcuts = {
     queueModifier: ["ShiftLeft"],
     addToSelectionModifier: ["ShiftLeft"],
     ping: ["AltLeft", "KeyG"],
+    jumpToPing: ["Space"],
     applyZoom: ["Backquote"],
   },
   ...Object.fromEntries(
@@ -175,6 +177,7 @@ export const createInitialShortcuts = (): Shortcuts => ({
     addToSelectionModifier: pluckShortcut("misc.addToSelectionModifier") ??
       ["ShiftLeft"],
     ping: pluckShortcut("misc.ping") ?? ["AltLeft", "KeyG"],
+    jumpToPing: pluckShortcut("misc.jumpToPing") ?? ["Space"],
     applyZoom: pluckShortcut("misc.applyZoom") ?? ["Backquote"],
   },
   ...Object.fromEntries(
