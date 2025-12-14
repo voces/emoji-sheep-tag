@@ -92,7 +92,7 @@ export const tweenSwing = (e: Entity, delta: number): number => {
       // Otherwise damage target (melee, entity attacks only)
       if (target.health) damageEntity(e, target);
 
-      applyAndConsumeBuffs([e], target);
+      applyAndConsumeBuffs(e, target);
     }
   }
 

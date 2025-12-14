@@ -35,7 +35,7 @@ addSystem({
             e.projectile.splashRadius
         ) {
           if (entity.health) damageEntity(attacker, entity);
-          applyAndConsumeBuffs([attacker, e], entity);
+          applyAndConsumeBuffs(e, entity);
         }
       }
 

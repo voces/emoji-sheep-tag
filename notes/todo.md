@@ -43,7 +43,6 @@
 - Editor improvements
   - Brush size
 - Spacebar for last ping
-- Add "miss" for using dodge on an attack
 
 # Bugs
 

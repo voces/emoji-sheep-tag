@@ -463,87 +463,108 @@ const applyDamageModifiers = (
 };
 
 /**
- * Applies buffs from source entities to a target and consumes buffs marked as consumeOnAttack
- * @param sources Entities whose buffs should be checked (e.g., attacker, projectile)
+ * Applies buffs from a source entity to a target and consumes buffs marked as consumeOnAttack
+ * @param source Entity whose buffs should be checked (e.g., attacker or projectile)
  * @param target Entity that should receive imparted buffs
  */
 export const applyAndConsumeBuffs = (
-  sources: ReadonlyArray<Entity>,
+  source: Entity,
   target: Entity,
 ): void => {
-  for (const source of sources) {
-    // Apply splash damage from buffs (including item buffs)
-    for (const buff of iterateBuffs(source)) {
-      if (
-        buff.splashDamage && buff.splashRadius && buff.splashTargets &&
-        target.position
-      ) {
-        const nearbyEntities = getEntitiesInRange(
-          target.position.x,
-          target.position.y,
-          buff.splashRadius,
-        );
+  // Apply splash damage from buffs (including item buffs)
+  for (const buff of iterateBuffs(source)) {
+    if (
+      buff.splashDamage && buff.splashRadius && buff.splashTargets &&
+      target.position
+    ) {
+      const nearbyEntities = getEntitiesInRange(
+        target.position.x,
+        target.position.y,
+        buff.splashRadius,
+      );
 
-        for (const splashTarget of nearbyEntities) {
-          if (!testClassification(source, splashTarget, buff.splashTargets)) {
-            continue;
-          }
+      for (const splashTarget of nearbyEntities) {
+        if (!testClassification(source, splashTarget, buff.splashTargets)) {
+          continue;
+        }
 
-          if (splashTarget.health) {
-            damageEntity(source, splashTarget, buff.splashDamage, false);
-          }
+        if (splashTarget.health) {
+          damageEntity(source, splashTarget, buff.splashDamage, false);
         }
       }
     }
+  }
 
-    // Apply buffs to target (from all buffs including item buffs)
-    for (const buff of iterateBuffs(source)) {
-      if (buff.impartedBuffOnAttack) {
-        const buffToApply = buffs[buff.impartedBuffOnAttack];
+  // Apply buffs to target (from all buffs including item buffs)
+  for (const buff of iterateBuffs(source)) {
+    if (buff.impartedBuffOnAttack) {
+      const buffToApply = buffs[buff.impartedBuffOnAttack];
 
-        // Check if target has immunity to this buff
-        const hasImmunity = (target.buffs ?? []).some((targetBuff) =>
-          targetBuff.preventsBuffs?.includes(buff.impartedBuffOnAttack!)
-        );
+      // Check if target has immunity to this buff
+      const hasImmunity = (target.buffs ?? []).some((targetBuff) =>
+        targetBuff.preventsBuffs?.includes(buff.impartedBuffOnAttack!)
+      );
 
-        if (!hasImmunity) {
-          target.buffs = [
-            ...(target.buffs ?? []),
-            buffToApply,
-          ];
+      if (hasImmunity) {
+        // Show shield SFX offset from target towards attacker
+        if (target.position && source.position) {
+          const dx = source.position.x - target.position.x;
+          const dy = source.position.y - target.position.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const offset = 0.3;
+          newSfx(
+            {
+              x: target.position.x + (dist > 0 ? (dx / dist) * offset : 0),
+              y: target.position.y + (dist > 0 ? (dy / dist) * offset : 0),
+            },
+            "shield",
+            undefined,
+            0.5,
+            "ease-out",
+            undefined,
+            {
+              playerColor: target.playerColor ??
+                getPlayer(target.owner)?.playerColor,
+            },
+          );
         }
+      } else {
+        target.buffs = [
+          ...(target.buffs ?? []),
+          buffToApply,
+        ];
       }
     }
+  }
 
-    // Consume buffs from source (direct buffs only)
-    if (source.buffs) {
-      const updatedBuffs = source.buffs.filter((buff) => !buff.consumeOnAttack);
-      if (updatedBuffs.length !== source.buffs.length) {
-        source.buffs = updatedBuffs.length ? updatedBuffs : null;
-      }
+  // Consume buffs from source (direct buffs only)
+  if (source.buffs) {
+    const updatedBuffs = source.buffs.filter((buff) => !buff.consumeOnAttack);
+    if (updatedBuffs.length !== source.buffs.length) {
+      source.buffs = updatedBuffs.length ? updatedBuffs : null;
     }
+  }
 
-    // Consume buffs from inventory items
-    if (source.inventory) {
-      let inventoryChanged = false;
-      const updatedInventory = source.inventory.map((item) => {
-        if (!item.buffs) return item;
+  // Consume buffs from inventory items
+  if (source.inventory) {
+    let inventoryChanged = false;
+    const updatedInventory = source.inventory.map((item) => {
+      if (!item.buffs) return item;
 
-        const updatedItemBuffs = item.buffs.filter((buff) =>
-          !buff.consumeOnAttack
-        );
-        if (updatedItemBuffs.length !== item.buffs.length) {
-          inventoryChanged = true;
-          return updatedItemBuffs.length > 0
-            ? { ...item, buffs: updatedItemBuffs }
-            : item; // Keep item even if no buffs remain
-        }
-        return item;
-      });
-
-      if (inventoryChanged) {
-        source.inventory = updatedInventory;
+      const updatedItemBuffs = item.buffs.filter((buff) =>
+        !buff.consumeOnAttack
+      );
+      if (updatedItemBuffs.length !== item.buffs.length) {
+        inventoryChanged = true;
+        return updatedItemBuffs.length > 0
+          ? { ...item, buffs: updatedItemBuffs }
+          : item; // Keep item even if no buffs remain
       }
+      return item;
+    });
+
+    if (inventoryChanged) {
+      source.inventory = updatedInventory;
     }
   }
 };
