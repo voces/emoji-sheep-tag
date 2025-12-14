@@ -132,8 +132,10 @@ const updateIntersects = () => {
       if (!id) continue;
       const entity = lookup[id];
       if (!entity || (!editorVar() && entity.isDoodad)) continue;
-      // Filter out entities hidden by fog
-      if (entity.hiddenByFog) continue;
+      // Filter out entities hidden by fog (but allow in editor mode)
+      if (entity.hiddenByFog && !editorVar()) continue;
+      // Never allow picking effect entities (glow, birds, etc.)
+      if (entity.isEffect) continue;
       set.add(entity);
     }
     if (set.size || mouse.intersects.size) mouse.intersects = set;

@@ -51,13 +51,7 @@ export const unitOrder = (
     if (isConstructing) {
       const canExecute = "canExecuteWhileConstructing" in action &&
         action.canExecuteWhileConstructing === true;
-      if (!canExecute) {
-        console.warn("Cannot execute action during construction", {
-          unitId: unit.id,
-          order,
-        });
-        continue;
-      }
+      if (!canExecute) continue;
     }
 
     // Handle the action based on order type
@@ -71,22 +65,14 @@ export const unitOrder = (
       const action = findActionByOrder(unit, order);
       if (action && "manaCost" in action && action.manaCost) {
         const manaCost = action.manaCost;
-        if (manaCost > 0 && (unit.mana ?? 0) < manaCost) {
-          console.warn(`Cannot execute order ${order} for unit ${unit.id}`);
-          continue;
-        }
+        if (manaCost > 0 && (unit.mana ?? 0) < manaCost) continue;
       }
 
       // Generic cooldown validation for all orders with cooldowns
       if (
         action && "cooldown" in action && action.cooldown && "order" in action
       ) {
-        if ((unit.actionCooldowns?.[action.order] ?? 0) > 0) {
-          console.warn(
-            `Cannot execute order ${order} for unit ${unit.id} - on cooldown`,
-          );
-          continue;
-        }
+        if ((unit.actionCooldowns?.[action.order] ?? 0) > 0) continue;
       }
 
       // Order-specific validation

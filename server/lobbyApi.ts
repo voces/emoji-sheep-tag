@@ -219,8 +219,9 @@ export const leave = (client?: Client) => {
 
   // Clean up player entities (including sheep and spirits)
   if (lobby.round?.ecs) {
-    // Remove all entities owned by this player (sheep, spirits, etc.)
-    for (const entity of getPlayerUnits(client.id)) {
+    // Collect entities first to avoid iterator invalidation during removal
+    const entities = Array.from(getPlayerUnits(client.id));
+    for (const entity of entities) {
       lobby.round.ecs.removeEntity(entity);
     }
     lobby.round.ecs.removeEntity(client);

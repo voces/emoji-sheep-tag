@@ -8,7 +8,7 @@ import { showChatBoxVar } from "@/vars/showChatBox.ts";
 
 const ChatContainer = styled.div`
   position: absolute;
-  bottom: 130px;
+  bottom: 195px;
   left: 20px;
   pointer-events: none;
 `;
@@ -68,6 +68,7 @@ const ChatInput = styled.input<{ $state: string }>`
   padding-left: ${({ theme }) => theme.spacing.sm};
   margin-left: -${({ theme }) => theme.spacing.sm};
   border: 0;
+  width: 300px;
 
   ${({ $state, theme }) =>
     $state === "open" && `

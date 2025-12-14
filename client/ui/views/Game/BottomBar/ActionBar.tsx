@@ -38,13 +38,22 @@ selection.addEventListener(
   "add",
   (e) => selectionVar((v) => v?.selected && app.entities.has(v) ? v : e),
 );
+// Batch selection updates to avoid React update cascades when deleting many entities
+let pendingSelectionUpdate = false;
 selection.addEventListener(
   "delete",
   (e) => {
     closeMenusForUnit(e.id);
-    selectionVar((v) =>
-      v !== e && v?.selected && app.entities.has(v) ? v : selection.first()
-    );
+    if (!pendingSelectionUpdate) {
+      pendingSelectionUpdate = true;
+      // Use setTimeout(0) instead of queueMicrotask to defer until after React's render cycle
+      setTimeout(() => {
+        pendingSelectionUpdate = false;
+        selectionVar((v) =>
+          v?.selected && app.entities.has(v) ? v : selection.first()
+        );
+      }, 0);
+    }
   },
 );
 

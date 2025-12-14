@@ -16,6 +16,7 @@ import { practiceModeActions } from "@/shared/data.ts";
 import { send } from "../lobbyApi.ts";
 import type { Round } from "../lobby.ts";
 import { interval, timeout } from "../api/timing.ts";
+import { lobbyContext } from "../contexts.ts";
 
 type PlayerLike = {
   id: string;
@@ -281,6 +282,9 @@ export const initializeGame = <T extends PlayerLike>(
     },
   };
 
+  // Set round early so isEditor() works during entity generation
+  lobbyContext.current.round = round;
+
   let clearIntervalFn: () => void;
 
   appContext.with(ecs, () =>
@@ -296,6 +300,7 @@ export const initializeGame = <T extends PlayerLike>(
         const center = getMapCenter();
         addEntity({
           id: "map-center-marker",
+          name: "Center",
           position: { x: center.x, y: center.y },
           model: "atom",
         });

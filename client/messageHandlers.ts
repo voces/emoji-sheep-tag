@@ -130,6 +130,12 @@ export const handlers = {
     }
 
     stateVar(data.status);
+    // Set editor mode if joining an editor session
+    if (data.lobbySettings.editor) {
+      editorVar(true);
+      // Clear locally-generated doodads since server will send them
+      clearDoodads();
+    }
     ensureMapLoaded(data.lobbySettings.map);
     lobbySettingsVar(data.lobbySettings);
     captainsDraftVar(data.captainsDraft ?? undefined);
@@ -139,7 +145,10 @@ export const handlers = {
 
     if (editorVar()) {
       stateVar("playing");
-      send({ type: "start", practice: true, editor: true });
+      // Only send start if we're the one starting the editor, not joining
+      if (!data.lobbySettings.editor) {
+        send({ type: "start", practice: true, editor: true });
+      }
     }
   },
   start: (e: Extract<ServerToClientMessage, { type: "start" }>) => {

@@ -1,6 +1,32 @@
 import { addSystem } from "@/shared/context.ts";
 import { lobbyContext } from "../contexts.ts";
 
+const editorMoveActions = [{
+  type: "auto" as const,
+  name: "Move down",
+  icon: "down",
+  order: "editorMoveEntityDown",
+  binding: ["Numpad2"],
+}, {
+  type: "auto" as const,
+  name: "Move up",
+  icon: "up",
+  order: "editorMoveEntityUp",
+  binding: ["Numpad8"],
+}, {
+  type: "auto" as const,
+  name: "Move left",
+  icon: "left",
+  order: "editorMoveEntityLeft",
+  binding: ["Numpad4"],
+}, {
+  type: "auto" as const,
+  name: "Move right",
+  icon: "right",
+  order: "editorMoveEntityRight",
+  binding: ["Numpad6"],
+}];
+
 addSystem({
   props: ["id"],
   onAdd: (e) => {
@@ -11,36 +37,19 @@ addSystem({
         a.type === "auto" && a.order === "editorRemoveEntity"
       )
     ) return;
+
+    // map-center-marker can be moved but not deleted
+    if (e.id === "map-center-marker") {
+      e.actions = [...e.actions ?? [], ...editorMoveActions];
+      return;
+    }
+
     e.actions = [...e.actions ?? [], {
       type: "auto",
       name: "Remove",
       order: "editorRemoveEntity",
       icon: "collision",
       binding: ["Delete"],
-    }, {
-      type: "auto",
-      name: "Move down",
-      icon: "down",
-      order: "editorMoveEntityDown",
-      binding: ["Numpad2"],
-    }, {
-      type: "auto",
-      name: "Move up",
-      icon: "up",
-      order: "editorMoveEntityUp",
-      binding: ["Numpad8"],
-    }, {
-      type: "auto",
-      name: "Move left",
-      icon: "left",
-      order: "editorMoveEntityLeft",
-      binding: ["Numpad4"],
-    }, {
-      type: "auto",
-      name: "Move right",
-      icon: "right",
-      order: "editorMoveEntityRight",
-      binding: ["Numpad6"],
-    }];
+    }, ...editorMoveActions];
   },
 });

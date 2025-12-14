@@ -76,9 +76,28 @@ import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { isStructure } from "@/shared/api/unit.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
-import { pathingMap } from "./systems/pathing.ts";
 import { tileDefs } from "@/shared/data.ts";
-import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
+import {
+  batchCommand,
+  createEntityCommand,
+  deleteEntityCommand,
+  type EditorCommand,
+  executeCommand,
+  keyboardMoveCommand,
+  moveEntitiesCommand,
+  redo,
+  setCliffCommand,
+  setPathingCommand,
+  undo,
+} from "./editor/commands.ts";
+import {
+  cancelPaste,
+  confirmPaste,
+  copySelectedDoodads,
+  isPasting,
+  startPaste,
+  updatePasteBlueprints,
+} from "./editor/clipboard.ts";
 
 // Re-export for external use
 export { getActiveOrder, keyboard };
@@ -107,6 +126,13 @@ mouse.getBlueprint = getBlueprint;
 // Selection drag state
 let dragStart: { x: number; y: number } | null = null;
 let selectionEntity: Entity | null = null;
+
+// Editor doodad drag state
+let editorDragAnchor: Entity | null = null;
+let editorDragEntities: Array<{
+  entity: Entity;
+  startPos: { x: number; y: number };
+}> = [];
 
 // Middle-click camera panning state
 let panGrabPixels: { x: number; y: number } | null = null;
@@ -142,6 +168,11 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   }
 
   if (e.button === "right") {
+    // Cancel paste on right click
+    if (editorVar() && isPasting()) {
+      cancelPaste();
+      return;
+    }
     if (gameplaySettingsVar().clearOrderOnRightClick) cancelOrder();
     if (selection.size) {
       playOrderSound(e.world.x, e.world.y);
@@ -154,6 +185,12 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 });
 
 const handleLeftClick = (e: MouseButtonEvent) => {
+  // Handle editor paste confirmation
+  if (editorVar() && isPasting()) {
+    confirmPaste();
+    return;
+  }
+
   const blueprint = getBlueprint();
 
   // Don't handle entity selection/deselection on minimap
@@ -174,6 +211,33 @@ const handleLeftClick = (e: MouseButtonEvent) => {
     const additive = addToSelection();
     const isDoubleClick = clickedEntity === lastClickedEntity &&
       now - lastEntityClickTime <= DOUBLE_CLICK_THRESHOLD_MS;
+
+    // In editor mode, start dragging if clicking on a doodad
+    if (editorVar() && clickedEntity.isDoodad && clickedEntity.position) {
+      // If clicked entity is already selected, drag all selected doodads
+      // Otherwise, select just this entity and drag it
+      if (clickedEntity.selected && selection.size > 1) {
+        editorDragEntities = [];
+        for (const e of selection) {
+          if (e.isDoodad && e.position) {
+            editorDragEntities.push({
+              entity: e,
+              startPos: { x: e.position.x, y: e.position.y },
+            });
+          }
+        }
+      } else {
+        editorDragEntities = [{
+          entity: clickedEntity,
+          startPos: { ...clickedEntity.position },
+        }];
+        selectEntity(clickedEntity, true, false);
+      }
+      editorDragAnchor = clickedEntity;
+      lastEntityClickTime = now;
+      lastClickedEntity = clickedEntity;
+      return;
+    }
 
     if (isDoubleClick) {
       selectEntitiesByPrefabInRadius(
@@ -208,16 +272,17 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   if (editorVar() && !blueprint.owner) {
     const { id: _, position, ...entity } = blueprint;
     if (blueprint.prefab !== "tile") {
-      send({
-        type: "editorCreateEntity",
-        entity: {
+      const command = createEntityCommand(
+        {
           ...entity,
           position: {
             x: Math.round(position!.x * 1000) / 1000,
             y: Math.round(position!.y * 1000) / 1000,
           },
         },
-      });
+        entity.prefab,
+      );
+      executeCommand(command);
       pickDoodad(entity.prefab);
       return;
     }
@@ -225,44 +290,33 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
     const x = blueprint.position!.x - 0.5;
     const y = blueprint.position!.y - 0.5;
 
-    // Helper to update client pathing after cliff changes
-    const updateClientPathingForCliff = (worldX: number, worldY: number) => {
-      updatePathingForCliff(
-        pathingMap,
-        terrain.masks.groundTile,
-        terrain.masks.cliff,
-        worldX,
-        worldY,
-      );
-    };
-
     if (blueprint.vertexColor === 0xff01ff) {
-      const newHeight = terrain.getCliff(x, y) + 1;
-      terrain.setCliff(x, y, newHeight);
-      updateClientPathingForCliff(x, y);
-      send({ type: "editorSetCliff", x, y, cliff: newHeight });
+      const oldHeight = terrain.getCliff(x, y);
+      const newHeight = oldHeight + 1;
+      executeCommand(setCliffCommand(x, y, oldHeight, newHeight));
     } else if (blueprint.vertexColor === 0xff02ff) {
-      const newHeight = terrain.getCliff(x, y) - 1;
-      terrain.setCliff(x, y, newHeight);
-      updateClientPathingForCliff(x, y);
-      send({ type: "editorSetCliff", x, y, cliff: newHeight });
+      const oldHeight = terrain.getCliff(x, y);
+      const newHeight = oldHeight - 1;
+      executeCommand(setCliffCommand(x, y, oldHeight, newHeight));
     } else if (blueprint.vertexColor === 0xff03ff) {
-      terrain.setCliff(x, y, "r");
-      updateClientPathingForCliff(x, y);
-      send({ type: "editorSetCliff", x, y, cliff: "r" });
+      const oldHeight = terrain.getCliff(x, y);
+      executeCommand(setCliffCommand(x, y, oldHeight, "r"));
     } else {
       const tileIndex = tileDefs.findIndex((t) =>
         t.color === blueprint.vertexColor
       );
-      terrain.setGroundTile(x, y, tileIndex);
-      send({
-        type: "editorSetPathing",
-        x,
-        y,
-        pathing: blueprint.pathing!,
-        tile: tileIndex,
-      });
-      pathingMap.setPathing(x, y, blueprint.pathing!);
+      const oldTile = terrain.masks.groundTile[y]?.[x] ?? 0;
+      const oldPathing = tileDefs[oldTile]?.pathing ?? 0;
+      executeCommand(
+        setPathingCommand(
+          x,
+          y,
+          oldPathing,
+          blueprint.pathing!,
+          oldTile,
+          tileIndex,
+        ),
+      );
     }
 
     return;
@@ -301,7 +355,29 @@ const addToSelection = () =>
 
 mouse.addEventListener("mouseButtonUp", (e) => {
   if (e.button === "middle") panGrabPixels = null;
-  else if (e.button === "left" && selectionEntity && dragStart) {
+  else if (e.button === "left" && editorDragEntities.length > 0) {
+    // Finish editor doodad drag - send updates to server for entities that moved
+    const movedEntities = editorDragEntities.filter(({ entity, startPos }) =>
+      entity.position &&
+      (entity.position.x !== startPos.x || entity.position.y !== startPos.y)
+    );
+
+    if (movedEntities.length > 0) {
+      executeCommand(
+        moveEntitiesCommand(
+          movedEntities.map(({ entity, startPos }) => ({
+            entityId: entity.id,
+            fromX: startPos.x,
+            fromY: startPos.y,
+            toX: Math.round(entity.position!.x * 1000) / 1000,
+            toY: Math.round(entity.position!.y * 1000) / 1000,
+          })),
+        ),
+      );
+    }
+    editorDragAnchor = null;
+    editorDragEntities = [];
+  } else if (e.button === "left" && selectionEntity && dragStart) {
     // Calculate selection bounds
     const minX = Math.min(dragStart.x, e.world.x);
     const maxX = Math.max(dragStart.x, e.world.x);
@@ -365,6 +441,46 @@ let hovers: Element[] = [];
 
 mouse.addEventListener("mouseMove", (e) => {
   updateBlueprint(e.world.x, e.world.y);
+
+  // Handle editor paste preview
+  if (editorVar() && isPasting()) {
+    updatePasteBlueprints(e.world.x, e.world.y);
+  }
+
+  // Handle editor doodad dragging
+  if (editorDragAnchor && editorDragEntities.length > 0) {
+    // Find the anchor's entry to calculate delta
+    const anchorEntry = editorDragEntities.find((d) =>
+      d.entity === editorDragAnchor
+    );
+    if (anchorEntry) {
+      // Calculate snapped position for anchor based on its prefab
+      const anchorPrefab = editorDragAnchor.prefab;
+      const [anchorX, anchorY] = anchorPrefab
+        ? normalizeBuildPosition(e.world.x, e.world.y, anchorPrefab)
+        : [e.world.x, e.world.y];
+
+      // Calculate delta from anchor's start position
+      const deltaX = anchorX - anchorEntry.startPos.x;
+      const deltaY = anchorY - anchorEntry.startPos.y;
+
+      // Move each entity by the anchor's delta, then re-snap if it has its own snapping
+      for (const { entity, startPos } of editorDragEntities) {
+        if (entity.position) {
+          // Apply anchor's delta
+          let newX = startPos.x + deltaX;
+          let newY = startPos.y + deltaY;
+
+          // If entity has its own snapping, re-snap to ensure alignment
+          if (entity.prefab && entity !== editorDragAnchor) {
+            [newX, newY] = normalizeBuildPosition(newX, newY, entity.prefab);
+          }
+
+          entity.position = { x: newX, y: newY };
+        }
+      }
+    }
+  }
 
   // Handle selection rectangle dragging
   if (dragStart && !getBlueprint() && !getActiveOrder()) {
@@ -460,6 +576,33 @@ document.addEventListener("keydown", (e) => {
 
   if (document.activeElement?.tagName === "INPUT") return false;
 
+  // Handle editor undo/redo (Ctrl+Z / Ctrl+Shift+Z)
+  if (editorVar() && (e.ctrlKey || e.metaKey) && e.code === "KeyZ") {
+    e.preventDefault();
+    if (e.shiftKey) redo();
+    else undo();
+    return false;
+  }
+
+  // Handle editor copy/cut/paste (Ctrl+C / Ctrl+X / Ctrl+V)
+  if (editorVar() && (e.ctrlKey || e.metaKey)) {
+    if (e.code === "KeyC") {
+      e.preventDefault();
+      copySelectedDoodads(false);
+      return false;
+    }
+    if (e.code === "KeyX") {
+      e.preventDefault();
+      copySelectedDoodads(true);
+      return false;
+    }
+    if (e.code === "KeyV") {
+      e.preventDefault();
+      startPaste();
+      return false;
+    }
+  }
+
   // Handle UI shortcuts
   if (handleUIShortcuts(e, shortcuts)) return false;
 
@@ -480,6 +623,11 @@ document.addEventListener("keydown", (e) => {
   if (!action) {
     // Handle cancel
     if (checkShortcut(shortcuts.misc.cancel, e.code)) {
+      // Cancel paste mode if active
+      if (editorVar() && isPasting()) {
+        cancelPaste();
+        return false;
+      }
       cancelOrder();
       return false;
     }
@@ -684,6 +832,74 @@ const handleAutoAction = (
     });
     closeMenu();
     return;
+  }
+
+  // Handle editor-specific orders through the command system
+  if (editorVar() && units.length > 0) {
+    const order = action.order;
+
+    // Editor delete - batch multiple deletes into one command
+    if (order === "editorRemoveEntity") {
+      const commands: EditorCommand[] = units.map((unit) => {
+        // Only include safe properties for delete command
+        const entityData: Record<string, unknown> = {};
+        const safeProps = [
+          "prefab",
+          "position",
+          "facing",
+          "modelScale",
+          "playerColor",
+          "vertexColor",
+          "model",
+          "isDoodad",
+          "radius",
+          "type",
+        ];
+        for (const prop of safeProps) {
+          if ((unit as Record<string, unknown>)[prop] !== undefined) {
+            entityData[prop] = (unit as Record<string, unknown>)[prop];
+          }
+        }
+        return deleteEntityCommand(unit.id, entityData);
+      });
+
+      if (commands.length > 0) {
+        executeCommand(
+          commands.length === 1 ? commands[0] : batchCommand(commands),
+        );
+      }
+      return;
+    }
+
+    // Editor keyboard move - batch multiple moves into one command
+    const moveDir = order === "editorMoveEntityUp"
+      ? "up"
+      : order === "editorMoveEntityDown"
+      ? "down"
+      : order === "editorMoveEntityLeft"
+      ? "left"
+      : order === "editorMoveEntityRight"
+      ? "right"
+      : null;
+    if (moveDir) {
+      const commands: EditorCommand[] = units
+        .filter((unit) => unit.position)
+        .map((unit) =>
+          keyboardMoveCommand(
+            unit.id,
+            moveDir,
+            unit.position!.x,
+            unit.position!.y,
+          )
+        );
+
+      if (commands.length > 0) {
+        executeCommand(
+          commands.length === 1 ? commands[0] : batchCommand(commands),
+        );
+      }
+      return;
+    }
   }
 
   if (units.length > 0 && units[0].position) {

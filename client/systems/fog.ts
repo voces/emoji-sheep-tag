@@ -36,6 +36,7 @@ const FOG_RESOLUTION_MULTIPLIER = 4;
 const alwaysVisible = (entity: Entity) =>
   entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
   entity.id.startsWith("blueprint-") ||
+  entity.id.startsWith("paste-blueprint-") ||
   entity.id === "selection-rectangle" ||
   // TODO: this is a hack; find an alternative?
   entity.model === "glow";

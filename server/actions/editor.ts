@@ -24,9 +24,9 @@ export const editorCreateEntity = (
 ) => {
   if (entity.id) {
     const existing = lookup(entity.id);
-    if (!existing) return;
-    Object.assign(existing, entity);
-  } else addEntity(entity);
+    if (existing) return Object.assign(existing, entity);
+  }
+  addEntity(entity);
 };
 
 export const zEditorUpdateEntities = z.object({

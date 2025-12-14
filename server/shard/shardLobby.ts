@@ -159,7 +159,7 @@ export class ShardLobby {
       );
 
     // Initialize game using lobbyContext so APIs work correctly
-    this.round = lobbyContext.with(this, () =>
+    lobbyContext.with(this, () =>
       initializeGame({
         map,
         settings: this.settings,

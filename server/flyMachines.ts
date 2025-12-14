@@ -296,6 +296,10 @@ export const addLobbyToFlyMachine = (machineId: string, lobbyId: string) => {
 
   // Cancel any pending destruction
   if (machine.destroyTimer) {
+    console.log(
+      new Date(),
+      `[Fly] Machine ${machineId} destruction canceled (lobby ${lobbyId} added)`,
+    );
     clearTimeout(machine.destroyTimer);
     machine.destroyTimer = undefined;
   }
@@ -376,6 +380,10 @@ export const setShardIdForFlyMachine = (
   const machine = managedMachines.get(machineId);
   if (machine) {
     machine.shardId = shardId;
+    // Re-establish region mapping if shard reconnected
+    if (!regionToMachine.has(machine.region)) {
+      regionToMachine.set(machine.region, machineId);
+    }
   }
 };
 
@@ -399,15 +407,18 @@ export const getFlyRegionForMachine = (
 ): string | undefined => managedMachines.get(machineId)?.region;
 
 /**
- * Handle a shard disconnecting - clean up machine tracking
+ * Handle a shard disconnecting - clear shard association but keep machine tracking
+ * so destruction timers can still fire
  */
 export const onFlyShardDisconnected = (shardId: string) => {
   const machineId = getFlyMachineIdForShard(shardId);
   if (machineId) {
     const machine = managedMachines.get(machineId);
     if (machine) {
+      // Clear shard association but keep machine tracking for destruction timer
+      machine.shardId = undefined;
+      // Clear region mapping so a new shard can be launched if needed
       regionToMachine.delete(machine.region);
-      managedMachines.delete(machineId);
     }
   }
 };

@@ -429,6 +429,7 @@ const zLobbySettings = z.object({
     sheep: z.number(),
     wolves: z.number(),
   }),
+  editor: z.boolean().optional(),
   view: z.boolean(),
   teamGold: z.boolean(),
   shard: z.string().nullable(),

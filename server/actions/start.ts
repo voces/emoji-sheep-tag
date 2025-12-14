@@ -374,7 +374,7 @@ export const start = async (
   const sheepArr = Array.from(sheep);
   const wolvesArr = Array.from(wolves);
 
-  lobby.round = initializeGame({
+  initializeGame({
     map,
     settings: lobby.settings,
     sheep: sheepArr,
