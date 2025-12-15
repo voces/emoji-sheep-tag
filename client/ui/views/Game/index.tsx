@@ -6,6 +6,8 @@ import { HStack } from "@/components/layout/Layout.tsx";
 import { Editor } from "./Editor/index.tsx";
 import { SimpleStats } from "./SimpleStats.tsx";
 import { BottomBar } from "./BottomBar/index.tsx";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
+import { editorHideUIVar, editorVar } from "@/vars/editor.ts";
 
 const TopRight = styled(HStack)`
   position: fixed;
@@ -15,20 +17,27 @@ const TopRight = styled(HStack)`
   align-items: start;
 `;
 
-export const Game = () => (
-  <>
-    <Chat />
+export const Game = () => {
+  const isEditor = useReactiveVar(editorVar);
+  const hideUI = useReactiveVar(editorHideUIVar);
 
-    {/* <Avatars /> */}
+  if (isEditor && hideUI) return null;
 
-    <SimpleStats />
+  return (
+    <>
+      <Chat />
 
-    <TopRight>
-      <Gold />
-      <Timers />
-      <Editor />
-    </TopRight>
+      {/* <Avatars /> */}
 
-    <BottomBar />
-  </>
-);
+      <SimpleStats />
+
+      <TopRight>
+        <Gold />
+        <Timers />
+        <Editor />
+      </TopRight>
+
+      <BottomBar />
+    </>
+  );
+};

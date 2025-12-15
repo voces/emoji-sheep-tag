@@ -41,11 +41,12 @@ describe("updatePathingForCliff", () => {
     // Verify initial layer height
     expect(pm.layers![10][10]).toBe(2);
 
-    // Change cliff at tile (5, 5) from height 2 to height 3
+    // Change cliff at map tile (5, 5) from height 2 to height 3
+    // Map y=5 corresponds to world y=4 (10 - 1 - 5 = 4)
     cliffs[5][5] = 3;
 
-    // Update pathing
-    updatePathingForCliff(pm, tiles, cliffs, 5, 5);
+    // Update pathing (expects world coordinates)
+    updatePathingForCliff(pm, tiles, cliffs, 5, 4);
 
     // Verify that pathing was updated in the affected area
     // Grid tiles at the cliff edge should be blocked (11 = 8 | 3)
@@ -63,12 +64,12 @@ describe("updatePathingForCliff", () => {
     expect(foundUpdatedPathing).toBe(true);
 
     // Verify layers were updated
-    // Tile (5,5) -> pathing indices (10,10) to (11,11)
-    // The center should now have height 3
-    expect(pm.layers![10][10]).toBe(3);
-    expect(pm.layers![10][11]).toBe(3);
-    expect(pm.layers![11][10]).toBe(3);
-    expect(pm.layers![11][11]).toBe(3);
+    // Map tile (5,5) corresponds to world y=4, pathing y = 8-9
+    // The layers should now have height 3 at pathing rows 8-9
+    expect(pm.layers![8][10]).toBe(3);
+    expect(pm.layers![8][11]).toBe(3);
+    expect(pm.layers![9][10]).toBe(3);
+    expect(pm.layers![9][11]).toBe(3);
   });
 
   it("updates a 5x5 area around the changed cliff", {}, function* () {
@@ -89,11 +90,12 @@ describe("updatePathingForCliff", () => {
     });
     yield;
 
-    // Set cliff at (10, 10) to height 2, leaving neighbors at 0
+    // Set cliff at map (10, 10) to height 2, leaving neighbors at 0
+    // Map y=10 corresponds to world y=9 (20 - 1 - 10 = 9)
     cliffs[10][10] = 2;
 
-    // Update pathing
-    updatePathingForCliff(pm, tiles, cliffs, 10, 10);
+    // Update pathing (expects world coordinates)
+    updatePathingForCliff(pm, tiles, cliffs, 10, 9);
 
     // Check that tiles in a reasonable area were updated
     // The 5x5 tile area (8-12, 8-12) times 4 grid cells per tile = grid area (32-51, 32-51)

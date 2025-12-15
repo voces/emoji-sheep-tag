@@ -84,15 +84,16 @@ export const editorSetCliff = (
 ) => {
   const cliffs = getCliffs();
   const tiles = getTiles();
+  const { bounds } = getMap();
 
-  // Convert from terrain coordinates (terrain[0] = bottom) to map coordinates (map[0] = top)
+  // Convert from world coordinates (y=0 is bottom) to map coordinates (map[0] = top)
   const mapY = cliffs.length - 1 - y;
 
   // Update server's cliff data
   if (cliffs[mapY]?.[x] !== undefined) cliffs[mapY][x] = cliff;
 
-  // Update pathing map for the changed cliff (updatePathingForCliff expects map coordinates)
-  updatePathingForCliff(pathingMap(), tiles, cliffs, x, mapY);
+  // Update pathing map for the changed cliff (updatePathingForCliff expects world coordinates)
+  updatePathingForCliff(pathingMap(), tiles, cliffs, x, y, bounds);
 };
 
 export const zEditorResizeMap = z.object({

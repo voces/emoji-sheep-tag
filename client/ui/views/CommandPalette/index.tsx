@@ -13,6 +13,7 @@ import { Input } from "@/components/forms/Input.tsx";
 import { isLocalPlayerHost } from "../../../api/player.ts";
 import {
   editorCurrentMapVar,
+  editorHideUIVar,
   editorMapModifiedVar,
   editorVar,
 } from "@/vars/editor.ts";
@@ -21,8 +22,10 @@ import { useSelectMap } from "./useSelectMap.ts";
 import { useSaveMapAs } from "./useSaveMapAs.ts";
 import { useQuickSaveMap } from "./useQuickSaveMap.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { openEditor } from "@/util/openEditor.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
+import { mouse, MouseButtonEvent } from "../../../mouse.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -120,9 +123,11 @@ const highlightText = (text: string, query: string) => {
 export const CommandPalette = () => {
   const showCommandPalette = useReactiveVar(showCommandPaletteVar);
   const gameplaySettings = useReactiveVar(gameplaySettingsVar);
+  const lobbySettings = useReactiveVar(lobbySettingsVar);
   const currentMap = useReactiveVar(editorCurrentMapVar);
   const mapModified = useReactiveVar(editorMapModifiedVar);
   const isEditor = useReactiveVar(editorVar);
+  const hideUI = useReactiveVar(editorHideUIVar);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [focused, setFocused] = useState<string | undefined>();
@@ -164,11 +169,28 @@ export const CommandPalette = () => {
       ? [saveMapAs, copyMap, selectMap]
       : [selectMap, copyMap]),
     ...(isEditor
-      ? [{
-        name: "Open settings",
-        description: "Open setting menu",
-        callback: () => showSettingsVar(true),
-      }]
+      ? [
+        {
+          name: `${lobbySettings.view ? "Enable" : "Disable"} fog`,
+          description: `${
+            lobbySettings.view ? "Enable" : "Disable"
+          } fog of war in the editor`,
+          callback: () =>
+            send({ type: "lobbySettings", view: !lobbySettings.view }),
+        },
+        {
+          name: `${hideUI ? "Show" : "Hide"} UI`,
+          description: `${
+            hideUI ? "Show" : "Hide"
+          } game UI elements in the editor`,
+          callback: () => editorHideUIVar(!hideUI),
+        },
+        {
+          name: "Open settings",
+          description: "Open setting menu",
+          callback: () => showSettingsVar(true),
+        },
+      ]
       : []),
     {
       name: `${gameplaySettings.showPing ? "Hide" : "Show"} ping`,
@@ -272,6 +294,8 @@ export const CommandPalette = () => {
     currentMap,
     mapModified,
     isEditor,
+    hideUI,
+    lobbySettings.view,
     flags.debug,
     flags.debugStats,
     flags.debugPathing,
@@ -361,19 +385,17 @@ export const CommandPalette = () => {
       if (command) {
         const result = command.callback();
         Promise.resolve(result).then((res) => {
-          if (!res) {
-            close();
-          } else if (res.type === "prompt") {
+          if (res?.type === "prompt") {
             setPrompt(res.placeholder);
             setPromptCallback(() => res.callback);
             setInput("");
             showCommandPaletteVar("open");
-          } else if (res.type === "options") {
+          } else if (res?.type === "options") {
             setPrompt(res.placeholder);
             setNestedCommands(res.commands);
             setInput("");
             showCommandPaletteVar("open");
-          }
+          } else close();
         });
       } else {
         close();
@@ -382,10 +404,20 @@ export const CommandPalette = () => {
     else if (showCommandPalette === "open") inputRef.current?.focus();
   }, [showCommandPalette, promptCallback, input, filteredCommands, focused]);
 
+  useEffect(() => {
+    const listener = (e: MouseButtonEvent) => {
+      if (e.element?.closest("[data-command-palette]")) return;
+      showCommandPaletteVar((p) => p === "open" ? "dismissed" : p);
+    };
+    mouse.addEventListener("mouseButtonDown", listener);
+    return () => mouse.removeEventListener("mouseButtonDown", listener);
+  }, []);
+
   return (
     <PaletteContainer
       $state={showCommandPalette}
       aria-hidden={showCommandPalette !== "open"}
+      data-command-palette
     >
       <Input
         placeholder={prompt}
@@ -413,7 +445,6 @@ export const CommandPalette = () => {
             );
           }
         }}
-        onBlur={() => setTimeout(() => showCommandPaletteVar("dismissed"))}
       />
       {!promptCallback &&
         filteredCommands.map((c) => (

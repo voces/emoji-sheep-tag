@@ -2,7 +2,7 @@ import { send } from "../messaging.ts";
 import { terrain } from "../graphics/three.ts";
 import { pathingMap } from "../systems/pathing.ts";
 import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
-import { getCliffs, getTiles } from "@/shared/map.ts";
+import { getCliffs, getMapBounds, getTiles } from "@/shared/map.ts";
 import { id as generateId } from "@/shared/util/id.ts";
 
 // Command interface - all editor commands must implement execute and undo
@@ -96,10 +96,12 @@ export const getUndoCount = () => undoStack.length;
 export const getRedoCount = () => redoStack.length;
 
 // Helper to update client-side pathing for a cliff change
+// x, y are in world coordinates (y=0 is bottom)
 const updateClientPathingForCliff = (x: number, y: number) => {
   const tiles = getTiles();
   const cliffs = getCliffs();
-  updatePathingForCliff(pathingMap, tiles, cliffs, x, tiles.length - 1 - y);
+  const bounds = getMapBounds();
+  updatePathingForCliff(pathingMap, tiles, cliffs, x, y, bounds);
 };
 
 // Execute a command and push it to undo stack
@@ -108,6 +110,14 @@ export const executeCommand = (command: EditorCommand) => {
   undoStack.push(command);
   if (undoStack.length > MAX_UNDO_HISTORY) undoStack.shift();
   redoStack.length = 0; // Clear redo stack on new command
+  notifyListeners();
+};
+
+// Add a pre-executed command to the undo stack (for batched drag operations)
+export const recordCommand = (command: EditorCommand) => {
+  undoStack.push(command);
+  if (undoStack.length > MAX_UNDO_HISTORY) undoStack.shift();
+  redoStack.length = 0;
   notifyListeners();
 };
 

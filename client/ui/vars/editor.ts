@@ -5,3 +5,4 @@ export const editorMapModifiedVar = makeVar<boolean>(false);
 export const editorCurrentMapVar = makeVar<
   { id: string; name: string } | undefined
 >(undefined);
+export const editorHideUIVar = makeVar<boolean>(false);

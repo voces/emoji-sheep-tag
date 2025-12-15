@@ -14,9 +14,10 @@ export const updatePathingForCliff = (
   cliffs: (number | "r")[][],
   worldX: number,
   worldY: number,
+  bounds?: { min: { x: number; y: number }; max: { x: number; y: number } },
 ) => {
-  // Recompute pathing from terrain
-  const newPathing = getPathingMaskFromTerrainMasks(tiles, cliffs);
+  // Recompute pathing from terrain (with bounds to mark out-of-bounds as impassable)
+  const newPathing = getPathingMaskFromTerrainMasks(tiles, cliffs, bounds);
 
   // Recompute cliff heights if layers are being used
   const newLayers = pathingMap.layers
@@ -42,15 +43,17 @@ export const updatePathingForCliff = (
           const pathingX = tx * pathingMap.tileResolution + px;
           const pathingY = ty * pathingMap.tileResolution + py;
 
-          if (newPathing[pathingY]?.[pathingX] !== undefined) {
-            const pathing = newPathing[pathingY][pathingX];
+          // newPathing is in map coordinates (y=0 is top), convert to access it
+          const mapY = newPathing.length - 1 - pathingY;
+
+          if (newPathing[mapY]?.[pathingX] !== undefined) {
+            const pathing = newPathing[mapY][pathingX];
             const gridX = pathingX * tilesPerPathingCell;
             const gridY = pathingY * tilesPerPathingCell;
 
             // Update layers if available
             if (pathingMap.layers && newLayers) {
-              pathingMap.layers[pathingY][pathingX] =
-                newLayers[pathingY][pathingX];
+              pathingMap.layers[pathingY][pathingX] = newLayers[mapY][pathingX];
             }
 
             // Update the grid tiles for this pathing cell

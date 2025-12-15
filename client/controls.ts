@@ -71,13 +71,15 @@ import {
   handleKeyUp,
   keyboard,
 } from "./controls/keyboardHandlers.ts";
-import { getMap } from "@/shared/map.ts";
+import { getCliffs, getMap, getTiles } from "@/shared/map.ts";
+import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import { isStructure } from "@/shared/api/unit.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
 import { tileDefs } from "@/shared/data.ts";
+import { pathingMap } from "./systems/pathing.ts";
 import {
   batchCommand,
   createEntityCommand,
@@ -86,6 +88,7 @@ import {
   executeCommand,
   keyboardMoveCommand,
   moveEntitiesCommand,
+  recordCommand,
   redo,
   setCliffCommand,
   setPathingCommand,
@@ -134,6 +137,13 @@ let editorDragEntities: Array<{
   entity: Entity;
   startPos: { x: number; y: number };
 }> = [];
+
+// Editor tile/cliff drag state
+let editorTileDrag: {
+  commands: EditorCommand[];
+  visited: Set<string>;
+  targetCliff?: number | "r";
+} | null = null;
 
 // Middle-click camera panning state
 let panGrabPixels: { x: number; y: number } | null = null;
@@ -260,6 +270,110 @@ const handleLeftClick = (e: MouseButtonEvent) => {
   }
 };
 
+// Apply a tile or cliff change at the given position, returning the command if applied
+const applyEditorTileChange = (
+  blueprint: ReturnType<typeof getBlueprint>,
+  worldX: number,
+  worldY: number,
+): EditorCommand | null => {
+  if (!blueprint || blueprint.prefab !== "tile" || blueprint.owner) return null;
+
+  const [normX, normY] = normalizeBuildPosition(worldX, worldY, "tile");
+  const x = normX - 0.5;
+  const y = normY - 0.5;
+  const key = `${x},${y}`;
+
+  // Skip if already visited in this drag
+  if (editorTileDrag?.visited.has(key)) return null;
+  editorTileDrag?.visited.add(key);
+
+  if (blueprint.vertexColor === 0xff01ff) {
+    // Raise cliff
+    const oldHeight = terrain.getCliff(x, y);
+    const newHeight = editorTileDrag?.targetCliff ?? oldHeight + 1;
+    if (oldHeight === newHeight) return null;
+    const command = setCliffCommand(x, y, oldHeight, newHeight);
+    doExecuteCommand(command);
+    return command;
+  } else if (blueprint.vertexColor === 0xff02ff) {
+    // Lower cliff
+    const oldHeight = terrain.getCliff(x, y);
+    const newHeight = editorTileDrag?.targetCliff ?? oldHeight - 1;
+    if (oldHeight === newHeight) return null;
+    const command = setCliffCommand(x, y, oldHeight, newHeight);
+    doExecuteCommand(command);
+    return command;
+  } else if (blueprint.vertexColor === 0xff03ff) {
+    // Ramp - toggle: if already a ramp, convert to interpolated height
+    const oldHeight = terrain.getCliff(x, y);
+    const cliffs = getCliffs();
+    const mapY = cliffs.length - 1 - y;
+    const currentCliff = cliffs[mapY]?.[x];
+    if (currentCliff === "r") {
+      // Remove ramp - convert to interpolated height
+      const command = setCliffCommand(x, y, "r", oldHeight);
+      doExecuteCommand(command);
+      return command;
+    }
+    const command = setCliffCommand(x, y, oldHeight, "r");
+    doExecuteCommand(command);
+    return command;
+  } else {
+    // Regular tile
+    const tileIndex = tileDefs.findIndex((t) =>
+      t.color === blueprint.vertexColor
+    );
+    const oldTile = terrain.masks.groundTile[y]?.[x] ?? 0;
+    if (oldTile === tileIndex) return null;
+    const oldPathing = tileDefs[oldTile]?.pathing ?? 0;
+    const command = setPathingCommand(
+      x,
+      y,
+      oldPathing,
+      blueprint.pathing!,
+      oldTile,
+      tileIndex,
+    );
+    doExecuteCommand(command);
+    return command;
+  }
+};
+
+// Execute command without adding to undo stack (for batching during drag)
+const doExecuteCommand = (command: EditorCommand) => {
+  switch (command.type) {
+    case "setPathing": {
+      terrain.setGroundTile(command.x, command.y, command.newTile);
+      pathingMap.setPathing(command.x, command.y, command.newPathing);
+      send({
+        type: "editorSetPathing",
+        x: command.x,
+        y: command.y,
+        pathing: command.newPathing,
+        tile: command.newTile,
+      });
+      break;
+    }
+    case "setCliff":
+      terrain.setCliff(command.x, command.y, command.newCliff);
+      updatePathingForCliff(
+        pathingMap,
+        getTiles(),
+        getCliffs(),
+        command.x,
+        command.y,
+        getMap().bounds,
+      );
+      send({
+        type: "editorSetCliff",
+        x: command.x,
+        y: command.y,
+        cliff: command.newCliff,
+      });
+      break;
+  }
+};
+
 const handleBlueprintClick = (e: MouseButtonEvent) => {
   const blueprint = getBlueprint();
   if (!blueprint) return;
@@ -288,37 +402,29 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
       return;
     }
 
-    const x = blueprint.position!.x - 0.5;
-    const y = blueprint.position!.y - 0.5;
+    // Start tile drag
+    const [normX, normY] = normalizeBuildPosition(e.world.x, e.world.y, "tile");
+    const x = normX - 0.5;
+    const y = normY - 0.5;
 
+    // Calculate target cliff height for plateau behavior
+    let targetCliff: number | "r" | undefined;
     if (blueprint.vertexColor === 0xff01ff) {
-      const oldHeight = terrain.getCliff(x, y);
-      const newHeight = oldHeight + 1;
-      executeCommand(setCliffCommand(x, y, oldHeight, newHeight));
+      targetCliff = terrain.getCliff(x, y) + 1;
     } else if (blueprint.vertexColor === 0xff02ff) {
-      const oldHeight = terrain.getCliff(x, y);
-      const newHeight = oldHeight - 1;
-      executeCommand(setCliffCommand(x, y, oldHeight, newHeight));
+      targetCliff = terrain.getCliff(x, y) - 1;
     } else if (blueprint.vertexColor === 0xff03ff) {
-      const oldHeight = terrain.getCliff(x, y);
-      executeCommand(setCliffCommand(x, y, oldHeight, "r"));
-    } else {
-      const tileIndex = tileDefs.findIndex((t) =>
-        t.color === blueprint.vertexColor
-      );
-      const oldTile = terrain.masks.groundTile[y]?.[x] ?? 0;
-      const oldPathing = tileDefs[oldTile]?.pathing ?? 0;
-      executeCommand(
-        setPathingCommand(
-          x,
-          y,
-          oldPathing,
-          blueprint.pathing!,
-          oldTile,
-          tileIndex,
-        ),
-      );
+      targetCliff = "r";
     }
+
+    editorTileDrag = {
+      commands: [],
+      visited: new Set(),
+      targetCliff,
+    };
+
+    const command = applyEditorTileChange(blueprint, e.world.x, e.world.y);
+    if (command) editorTileDrag.commands.push(command);
 
     return;
   }
@@ -356,7 +462,17 @@ const addToSelection = () =>
 
 mouse.addEventListener("mouseButtonUp", (e) => {
   if (e.button === "middle") panGrabPixels = null;
-  else if (e.button === "left" && editorDragEntities.length > 0) {
+  else if (e.button === "left" && editorTileDrag) {
+    // Finish editor tile/cliff drag - record all commands in undo stack (already executed)
+    if (editorTileDrag.commands.length > 0) {
+      recordCommand(
+        editorTileDrag.commands.length === 1
+          ? editorTileDrag.commands[0]
+          : batchCommand(editorTileDrag.commands),
+      );
+    }
+    editorTileDrag = null;
+  } else if (e.button === "left" && editorDragEntities.length > 0) {
     // Finish editor doodad drag - send updates to server for entities that moved
     const movedEntities = editorDragEntities.filter(({ entity, startPos }) =>
       entity.position &&
@@ -446,6 +562,13 @@ mouse.addEventListener("mouseMove", (e) => {
   // Handle editor paste preview
   if (editorVar() && isPasting()) {
     updatePasteBlueprints(e.world.x, e.world.y);
+  }
+
+  // Handle editor tile/cliff dragging
+  if (editorTileDrag) {
+    const blueprint = getBlueprint();
+    const command = applyEditorTileChange(blueprint, e.world.x, e.world.y);
+    if (command) editorTileDrag.commands.push(command);
   }
 
   // Handle editor doodad dragging
