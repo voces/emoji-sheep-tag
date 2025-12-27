@@ -6,7 +6,7 @@ import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { lookup } from "../systems/lookup.ts";
 import { canExecuteActionOnUnit } from "../util/allyPermissions.ts";
-import { findAction } from "../util/actionLookup.ts";
+import { findAction } from "@/shared/util/actionLookup.ts";
 
 export const zBuild = z.object({
   type: z.literal("build"),

@@ -4,7 +4,7 @@ import {
   findAction,
   findActionAndItem,
   findActionByOrder,
-} from "./actionLookup.ts";
+} from "@/shared/util/actionLookup.ts";
 import { Entity } from "@/shared/types.ts";
 
 describe("actionLookup", () => {

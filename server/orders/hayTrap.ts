@@ -7,7 +7,7 @@ import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 
 import type { Entity } from "@/shared/types.ts";
-import { findActionByOrder } from "../util/actionLookup.ts";
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 
 const hayTrapProjectiles = new Map<
   Entity,

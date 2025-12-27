@@ -2,6 +2,7 @@ import { TypedEventTarget } from "typed-event-target";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { camera, scene } from "./graphics/three.ts";
 import { InstancedSvg } from "./graphics/InstancedSvg.ts";
+import { AnimatedInstancedMesh } from "./graphics/AnimatedInstancedMesh.ts";
 import { Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
@@ -124,11 +125,13 @@ const updateIntersects = () => {
   if (intersects.length) {
     const set = new Set<Entity>();
     for (const intersect of intersects) {
+      if (typeof intersect.instanceId !== "number") continue;
+      const obj = intersect.object;
       if (
-        !(intersect.object instanceof InstancedSvg) ||
-        typeof intersect.instanceId !== "number"
+        !(obj instanceof InstancedSvg) &&
+        !(obj instanceof AnimatedInstancedMesh)
       ) continue;
-      const id = intersect.object.getId(intersect.instanceId);
+      const id = obj.getId(intersect.instanceId);
       if (!id) continue;
       const entity = lookup[id];
       if (!entity || (!editorVar() && entity.isDoodad)) continue;

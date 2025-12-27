@@ -5,7 +5,10 @@ import { zPoint } from "@/shared/zod.ts";
 import { handleMove } from "./move.ts";
 import { handleAttack } from "./attack.ts";
 import { getOrder } from "../orders/index.ts";
-import { findActionAndItem, findActionByOrder } from "../util/actionLookup.ts";
+import {
+  findActionAndItem,
+  findActionByOrder,
+} from "@/shared/util/actionLookup.ts";
 import { precast } from "../orders/precast.ts";
 import { postCast } from "../orders/postCast.ts";
 import { canExecuteActionOnUnit } from "../util/allyPermissions.ts";
@@ -106,6 +109,7 @@ export const unitOrder = (
           if (!queue) {
             delete unit.queue;
             delete unit.order;
+            if (unit.swing) delete unit.swing;
           }
           // Do nothing if stop is queued
           break;
@@ -113,6 +117,7 @@ export const unitOrder = (
           if (queue) unit.queue = [...unit.queue ?? [], { type: "hold" }];
           else {
             delete unit.queue;
+            if (unit.swing) delete unit.swing;
             unit.order = { type: "hold" };
           }
           break;

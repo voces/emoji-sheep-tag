@@ -1,5 +1,5 @@
 import { Entity, UnitDataAction } from "@/shared/types.ts";
-import { findActionByOrder } from "../util/actionLookup.ts";
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { playSoundAt } from "../api/sound.ts";
 import { getPlayerGold } from "../api/player.ts";
 

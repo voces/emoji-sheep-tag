@@ -2,7 +2,7 @@ import { DEFAULT_FACING } from "@/shared/constants.ts";
 import { Order, SystemEntity } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
-import { findActionByOrder } from "../util/actionLookup.ts";
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { pathingMap } from "../systems/pathing.ts";
 
 export const foxOrder = {

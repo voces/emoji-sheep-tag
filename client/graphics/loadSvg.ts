@@ -14,7 +14,6 @@ import { scene } from "./three.ts";
 import { svgs } from "../systems/three.ts";
 
 const loader = new SVGLoader();
-let zOrderCounter = 0;
 
 const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
   // 1) Declare our attributes & varyings
@@ -152,7 +151,7 @@ export const loadSvg = (
     xOffset?: number;
     facingOffset?: number;
   } = {},
-  zOrder?: number,
+  zOrder: number,
 ) => {
   const name = Object.entries(svgs).find((e) => e[1] === svg)?.[0];
   scale /= 36 * 2; // SVGs are 36x36, and we want a sheep to be size 1
@@ -246,9 +245,7 @@ export const loadSvg = (
   const isvg = new InstancedSvg(geometries, sharedMaterial, count, name);
   if (typeof layer === "number") isvg.layers.set(layer);
 
-  // Apply render order (use provided zOrder or auto-increment)
-  const currentZOrder = zOrder ?? zOrderCounter++;
-  isvg.renderOrder = currentZOrder;
+  isvg.renderOrder = zOrder;
 
   scene.add(isvg);
   return isvg;

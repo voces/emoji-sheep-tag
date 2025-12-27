@@ -1,6 +1,6 @@
 import { Entity } from "@/shared/types.ts";
 import { getOrder } from "../../orders/index.ts";
-import { findActionAndItem } from "../../util/actionLookup.ts";
+import { findActionAndItem } from "@/shared/util/actionLookup.ts";
 import { tweenPath } from "./tweenPath.ts";
 import {
   distanceBetweenEntities,

@@ -140,6 +140,8 @@ export type UnitDataActionTarget = {
   readonly range?: number;
   readonly damage?: number;
   readonly allowAllies?: boolean;
+  /** Animation to use instead of the default "cast" animation */
+  readonly animation?: string;
 };
 
 export type UnitDataActionUpgrade = {

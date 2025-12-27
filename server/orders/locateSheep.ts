@@ -1,5 +1,5 @@
 import { Order } from "@/shared/types.ts";
-import { findActionByOrder } from "../util/actionLookup.ts";
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { OrderDefinition } from "./types.ts";
 import { getSheep } from "../systems/sheep.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";

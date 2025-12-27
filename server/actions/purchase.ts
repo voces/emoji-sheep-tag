@@ -7,7 +7,7 @@ import { deductPlayerGold, getPlayerGold } from "../api/player.ts";
 import { items } from "@/shared/data.ts";
 import { addItem } from "../api/unit.ts";
 import { canExecuteActionOnUnit } from "../util/allyPermissions.ts";
-import { findAction } from "../util/actionLookup.ts";
+import { findAction } from "@/shared/util/actionLookup.ts";
 
 export const zPurchase = z.object({
   type: z.literal("purchase"),

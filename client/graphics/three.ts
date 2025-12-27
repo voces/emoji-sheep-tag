@@ -42,7 +42,7 @@ export const camera = new PerspectiveCamera(
   0.1,
   1000,
 );
-Object.assign(globalThis, { camera });
+Object.assign(globalThis, { camera, scene });
 
 // undefined in tests
 export let renderer: WebGLRenderer | undefined;

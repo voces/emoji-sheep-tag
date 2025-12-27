@@ -3,15 +3,22 @@ import { Color } from "three";
 import { app, Entity, SystemEntity } from "../ecs.ts";
 import { InstancedSvg } from "../graphics/InstancedSvg.ts";
 import { loadSvg } from "../graphics/loadSvg.ts";
+import { AnimatedInstancedMesh } from "../graphics/AnimatedInstancedMesh.ts";
+import { loadEstbModel } from "../graphics/loadEstbModel.ts";
+import {
+  getAnimationTime,
+  updateAnimationTime,
+} from "../graphics/AnimatedMeshMaterial.ts";
+import { estbToSvg } from "../graphics/loadEstb.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { getFps } from "../graphics/three.ts";
 import { computeUnitMovementSpeed, isAlly } from "@/shared/api/unit.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 import { glow } from "../graphics/glow.ts";
-
-import sheep from "../assets/sheep.svg" with { type: "text" };
-import wolf from "../assets/wolf.svg" with { type: "text" };
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
+import sheep from "../assets/sheep.estb" with { type: "bytes" };
+import wolf from "../assets/wolf.estb" with { type: "bytes" };
 import hut from "../assets/hut.svg" with { type: "text" };
 import fence from "../assets/fence.svg" with { type: "text" };
 import fire from "../assets/fire.svg" with { type: "text" };
@@ -99,8 +106,8 @@ import beam from "../assets/beam.svg" with { type: "text" };
 import beamStart from "../assets/beamStart.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
-  sheep,
-  wolf,
+  sheep: estbToSvg(sheep.buffer),
+  wolf: estbToSvg(wolf.buffer),
   hut,
   fence,
   fire,
@@ -186,18 +193,35 @@ export const svgs: Record<string, string> = {
 };
 
 type SvgConfig = {
+  type: "svg";
   svg: string;
   scale: number;
   options?: Parameters<typeof loadSvg>[2];
 };
 
+type EstmeConfig = {
+  type: "estme";
+  data: ArrayBuffer;
+  options?: Omit<Parameters<typeof loadEstbModel>[1], "zOrder">;
+};
+
+type ModelConfig = SvgConfig | EstmeConfig;
+
+type ModelCollection = InstancedSvg | AnimatedInstancedMesh;
+
 const svg = (
   svgText: string,
   scale: number,
   options?: Parameters<typeof loadSvg>[2],
-): SvgConfig => ({ svg: svgText, scale, options });
+): SvgConfig => ({ type: "svg", svg: svgText, scale, options });
 
-const svgConfigs: Record<string, SvgConfig | InstancedSvg> = {
+const estme = (
+  data: ArrayBuffer,
+  scale: number,
+  options?: Omit<Parameters<typeof loadEstbModel>[1], "scale">,
+): EstmeConfig => ({ type: "estme", data, options: { ...options, scale } });
+
+const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   // Background elements (lowest z-order)
   flowers: svg(flowers, 0.25, { layer: 2 }),
   grass: svg(grass, 0.75, { layer: 2 }),
@@ -219,7 +243,7 @@ const svgConfigs: Record<string, SvgConfig | InstancedSvg> = {
 
   // Units that can hide behind things
   sentry: svg(sentry, 0.03),
-  sheep: svg(sheep, 1),
+  sheep: estme(sheep.buffer, 0.12),
 
   // Background decor units can hide behind
   hayPile: svg(hayPile, 0.12, { layer: 2 }),
@@ -235,7 +259,7 @@ const svgConfigs: Record<string, SvgConfig | InstancedSvg> = {
   castle: svg(castle, 0.7),
   // shop: loadSvg(shop, 1),
   fox: svg(fox, 0.6),
-  wolf: svg(wolf, 0.7),
+  wolf: estme(wolf.buffer, 0.01),
   atom: svg(atom, 0.05),
 
   // Trees (should render in front of structures)
@@ -280,32 +304,38 @@ const svgConfigs: Record<string, SvgConfig | InstancedSvg> = {
   gravity: svg(gravity, 2, { layer: 2 }),
 };
 
-// Pre-assign render orders based on the order in svgConfigs
+// Pre-assign render orders based on the order in modelConfigs
 const modelRenderOrders = new Map<string, number>(
-  Object.keys(svgConfigs).map((key, index) => [key, index]),
+  Object.keys(modelConfigs).map((key, index) => [key, index]),
 );
 
-const getCollection = (model: string): InstancedSvg | undefined => {
-  const config = svgConfigs[model];
-  if (!config) return undefined;
-  if (config instanceof InstancedSvg) return config;
+const isLoadedCollection = (v: unknown): v is ModelCollection =>
+  v instanceof InstancedSvg || v instanceof AnimatedInstancedMesh;
 
-  const renderOrder = modelRenderOrders.get(model);
-  const group = loadSvg(
-    config.svg,
-    config.scale,
-    config.options,
-    renderOrder,
-  );
-  svgConfigs[model] = group;
-  return group;
+const getCollection = (model: string): ModelCollection | undefined => {
+  const config = modelConfigs[model];
+  if (!config) return undefined;
+  if (isLoadedCollection(config)) return config;
+
+  const zOrder = modelRenderOrders.get(model)!;
+
+  let collection: ModelCollection;
+  if (config.type === "estme") {
+    collection = loadEstbModel(config.data, {
+      ...config.options,
+      zOrder,
+    });
+  } else {
+    collection = loadSvg(config.svg, config.scale, config.options, zOrder);
+  }
+
+  modelConfigs[model] = collection;
+  return collection;
 };
 
-const collections: Record<string, InstancedSvg | undefined> = new Proxy(
-  {} as Record<string, InstancedSvg | undefined>,
-  {
-    get: (_target, prop: string) => getCollection(prop),
-  },
+const collections: Record<string, ModelCollection | undefined> = new Proxy(
+  {} as Record<string, ModelCollection | undefined>,
+  { get: (_target, prop: string) => getCollection(prop) },
 );
 Object.assign(globalThis, { collections });
 
@@ -341,7 +371,9 @@ const updateColor = (e: Entity) => {
   }
 
   if (e.alpha) collection.setAlphaAt(e.id, e.alpha, false);
-  else if (typeof e.progress === "number") {
+  else if (
+    typeof e.progress === "number" && collection instanceof InstancedSvg
+  ) {
     collection.setAlphaAt(e.id, e.progress, true);
   } else collection.setAlphaAt(e.id, 1);
 };
@@ -429,7 +461,15 @@ const onPositionOrRotationChange = (
   let finalX = baseX;
   let finalY = baseY;
 
-  if (e.gait && e.order && "path" in e.order && e.movementSpeed) {
+  // Skip gait for AnimatedInstancedMesh - it has GPU-driven animation
+  const collection = collections[model];
+  const hasGpuAnimation = collection instanceof AnimatedInstancedMesh &&
+    collection.animationData;
+
+  if (
+    e.gait && e.order && "path" in e.order && e.movementSpeed &&
+    !hasGpuAnimation
+  ) {
     const path = e.order.path;
     if (!path || path.length === 0) {
       gaitProgress.delete(e);
@@ -483,7 +523,7 @@ const onPositionOrRotationChange = (
     pathStartPositions.delete(e);
   }
 
-  collections[model]?.setPositionAt(
+  collection?.setPositionAt(
     e.id,
     finalX,
     finalY,
@@ -510,6 +550,100 @@ addSystem({
       );
     }
   },
+});
+
+// Animation state tracking for AnimatedInstancedMesh models
+const entityAnimationState = new WeakMap<Entity, string | undefined>();
+
+const getCurrentAnimation = (e: Entity): string | undefined => {
+  const model = e.model ?? e.prefab;
+  if (!model) return;
+
+  const collection = collections[model];
+  if (!(collection instanceof AnimatedInstancedMesh)) return;
+
+  if (
+    e.order && "path" in e.order && e.order.path?.length &&
+    collection.getClipInfo("run")
+  ) return "run";
+
+  const action = findActionByOrder(e);
+  if (
+    action && "animation" in action && action.animation &&
+    collection.getClipInfo(action.animation)
+  ) return action.animation;
+
+  if (e.order?.type === "cast" && collection.getClipInfo("cast")) return "cast";
+
+  if (e.swing) return "attack";
+
+  if (typeof e.progress === "number" && e.progress < 1) return "build";
+
+  return collection.getClipInfo("idle") ? "idle" : undefined;
+};
+
+const updateAnimationState = (e: Entity) => {
+  const model = e.model ?? e.prefab;
+  if (!model) return;
+
+  const collection = collections[model];
+  // Only handle AnimatedInstancedMesh (estme models)
+  if (!(collection instanceof AnimatedInstancedMesh)) return;
+
+  // Determine the appropriate animation based on entity state
+  const animationName = getCurrentAnimation(e);
+
+  // Only update if animation changed
+  const currentAnim = entityAnimationState.get(e);
+  if (currentAnim !== animationName) {
+    entityAnimationState.set(e, animationName);
+    if (animationName) {
+      const clipInfo = collection.getClipInfo(animationName);
+      // For build animations, scale speed to match remaining build time
+      // Buildings start at 10% progress, so remaining time is completionTime * (1 - progress)
+      let targetDuration = clipInfo?.duration ?? 1;
+      if (animationName === "build" && e.completionTime) {
+        const remainingProgress = 1 - (e.progress ?? 0);
+        targetDuration = e.completionTime * remainingProgress;
+      }
+      const speed = 1 / targetDuration;
+      // Calculate phase offset so animation starts at frame 0 now
+      // Shader uses: t = fract(time * speed + phase)
+      // We want t = 0 at current time, so phase = -(time * speed) mod 1
+      const phase = 1 - ((getAnimationTime() * speed) % 1);
+      collection.setAnimationAt(e.id, animationName, phase, speed);
+    } else {
+      // No animation - use "default" clip (T-pose), frozen
+      collection.setAnimationAt(e.id, "default", 0, 0);
+    }
+  }
+};
+
+addSystem({
+  props: ["order"],
+  onAdd: updateAnimationState,
+  onChange: updateAnimationState,
+  onRemove: updateAnimationState,
+});
+
+addSystem({
+  props: ["progress"],
+  onAdd: updateAnimationState,
+  onChange: updateAnimationState,
+  onRemove: updateAnimationState,
+});
+
+addSystem({
+  props: ["swing"],
+  onAdd: updateAnimationState,
+  onRemove: updateAnimationState,
+});
+
+addSystem({
+  props: ["model"],
+  onAdd: updateAnimationState,
+  onChange: updateAnimationState,
+  update: (_delta, time) => updateAnimationTime(time),
 });
 
 const updateScale = (e: Entity) => {
@@ -546,7 +680,7 @@ addSystem({
 const updateAlpha = (e: Entity) => {
   if (!appContext.current.entities.has(e)) return;
   const collection = collections[e.model ?? e.prefab ?? ""];
-  if (!collection) return;
+  if (!collection || collection instanceof AnimatedInstancedMesh) return;
   collection.setAlphaAt(
     e.id,
     typeof e.progress === "number" ? e.progress : 1,
@@ -575,6 +709,9 @@ addSystem<Entity, "order" | "position">({
       !model || e.order.type !== "cast" || "path" in e.order ||
       e.order.remaining === 0
     ) return;
+
+    // Skip jitter effect if model supports a custom animation for this action
+    if (getCurrentAnimation(e)) return;
 
     if (!isVisibleToLocalPlayer(e)) {
       return collections[model]?.setPositionAt(
@@ -669,6 +806,7 @@ addSystem({
   onAdd: (e) => {
     const collection = e.model ?? e.prefab;
     if (collection) prevModel.set(e, collection);
+    updateAnimationState(e);
   },
   onChange: (e) => {
     const next = e.model ?? e.prefab;
@@ -678,6 +816,7 @@ addSystem({
       prevModel.set(e, next);
       if (e.position) onPositionOrRotationChange(e as SystemEntity<"position">);
       updateColor(e);
+      updateAnimationState(e);
     }
   },
   onRemove: (e) => {
@@ -736,4 +875,13 @@ export const setMinimapMask = (entity: Entity, mask: boolean) => {
 
 export const clearMinimapMaskCache = () => {
   savedColors.clear();
+};
+
+/** Check if an entity's model has a specific animation clip */
+export const hasAnimation = (entity: Entity, clipName: string): boolean => {
+  const model = entity.model ?? entity.prefab;
+  if (!model) return false;
+  const collection = collections[model];
+  if (!(collection instanceof AnimatedInstancedMesh)) return false;
+  return !!collection.getClipInfo(clipName);
 };

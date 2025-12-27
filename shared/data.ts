@@ -612,6 +612,7 @@ export const prefabs: Record<string, DataEntity> = {
         castDuration: 0.5,
         smart: { spirit: 0, ward: 0, enemy: 0 },
         binding: ["KeyB"],
+        animation: "attack",
       },
     ],
     maxHealth: 20,
@@ -773,7 +774,7 @@ export const prefabs: Record<string, DataEntity> = {
     radius: 0.5,
     tilemap: tilemap4x4,
     maxHealth: 120,
-    completionTime: 0.7,
+    completionTime: 0.8,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [
       {
@@ -807,7 +808,7 @@ export const prefabs: Record<string, DataEntity> = {
     radius: 0.5,
     tilemap: tilemap4x4,
     maxHealth: 220, // Tuned to be 3 hit with 1 claw and 2 hit with 2 claws
-    completionTime: 1.1,
+    completionTime: 1,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [upgradeToFrostCastle("cabin"), selfDestruct],
     bounty: 2,
@@ -853,7 +854,7 @@ export const prefabs: Record<string, DataEntity> = {
     radius: 0.75,
     tilemap: tilemap6x6,
     maxHealth: 140,
-    completionTime: 1,
+    completionTime: 1.2,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
     actions: [selfDestruct],
     bounty: 3,

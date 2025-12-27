@@ -159,6 +159,7 @@ const zBaseAction = z.discriminatedUnion("type", [
     range: z.number().optional(),
     damage: z.number().optional(),
     allowAllies: z.boolean().optional(),
+    animation: z.string().optional(),
   }),
 ]);
 

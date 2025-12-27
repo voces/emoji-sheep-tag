@@ -4,7 +4,7 @@ import { Entity } from "@/shared/types.ts";
 import { orderUpgrade } from "../api/unit.ts";
 import { Client } from "../client.ts";
 import { lookup } from "../systems/lookup.ts";
-import { findActionAndItem } from "../util/actionLookup.ts";
+import { findActionAndItem } from "@/shared/util/actionLookup.ts";
 import { canExecuteActionOnUnit } from "../util/allyPermissions.ts";
 
 export const zUpgrade = z.object({

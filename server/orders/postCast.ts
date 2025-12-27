@@ -1,6 +1,6 @@
 import { Entity, Item, UnitDataAction } from "@/shared/types.ts";
 import { consumeItem } from "../api/unit.ts";
-import { findActionByOrder } from "../util/actionLookup.ts";
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { deductPlayerGold } from "../api/player.ts";
 
 export const postCast = (

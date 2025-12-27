@@ -1,6 +1,6 @@
 import { Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
-import { findActionByOrder } from "../util/actionLookup.ts";
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { lookup } from "../systems/lookup.ts";
 
 export const crystalSpeedOrder = {

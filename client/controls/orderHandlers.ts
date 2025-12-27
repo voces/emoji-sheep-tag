@@ -2,7 +2,7 @@ import { send } from "../client.ts";
 import { Entity } from "../ecs.ts";
 import { selection } from "../systems/selection.ts";
 import { UnitDataActionTarget } from "@/shared/types.ts";
-import { findAction, hasAction } from "../util/actionLookup.ts";
+import { findAction, hasAction } from "@/shared/util/actionLookup.ts";
 import { CursorVariant, updateCursor } from "../graphics/cursor.ts";
 import { newIndicator } from "../systems/indicators.ts";
 import { playEntitySound, playSound, playSoundAt } from "../api/sound.ts";

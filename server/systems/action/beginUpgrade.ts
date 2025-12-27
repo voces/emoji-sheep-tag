@@ -1,5 +1,5 @@
 import { Entity } from "@/shared/types.ts";
-import { findAction } from "../../util/actionLookup.ts";
+import { findAction } from "@/shared/util/actionLookup.ts";
 import { deductPlayerGold, getPlayerGold } from "../../api/player.ts";
 import { prefabs } from "@/shared/data.ts";
 import { UPGRADE_REFUND_RATE } from "@/shared/constants.ts";
