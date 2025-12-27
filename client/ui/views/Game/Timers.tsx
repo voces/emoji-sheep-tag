@@ -7,6 +7,7 @@ import { Card } from "@/components/layout/Card.tsx";
 import { usePlayers } from "@/hooks/usePlayers.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { practiceVar } from "@/vars/practice.ts";
 import { nonNull } from "@/shared/types.ts";
 
 const timersVar = makeVar<Entity[]>([]);
@@ -41,6 +42,7 @@ const Clock = styled.div`
 export const Timers = () => {
   const timers = useReactiveVar(timersVar);
   const lobbySettings = useReactiveVar(lobbySettingsVar);
+  const practice = useReactiveVar(practiceVar);
   const players = usePlayers();
   useListenToEntities(players, ["sheepTime"]);
 
@@ -54,7 +56,7 @@ export const Timers = () => {
         formatDuration(buff.remainingDuration * 1000),
       ];
     }).filter(nonNull),
-    ...lobbySettings.mode === "switch"
+    ...lobbySettings.mode === "switch" && !practice
       ? players.map((p): [string, string, number] => [
         p.id,
         p.name ?? "",

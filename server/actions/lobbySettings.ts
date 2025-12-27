@@ -80,6 +80,7 @@ export const serializeLobbySettings = (
     view: lobby.settings.view,
     teamGold: lobby.settings.teamGold,
     editor: lobby.round?.editor,
+    practice: lobby.round?.practice,
     host: lobby.host?.id ?? null,
     shard: lobby.settings.shard ?? null,
     shards: getShardInfoList(lobby),

@@ -17,6 +17,7 @@ import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import type { ServerToClientMessage, Update } from "./schemas.ts";
 import { editorVar } from "@/vars/editor.ts";
+import { practiceVar } from "@/vars/practice.ts";
 import { send } from "./client.ts";
 import { colorName, getPlayer, getPlayers } from "@/shared/api/player.ts";
 import { getWebSocket } from "./connection.ts";
@@ -101,7 +102,9 @@ export const handlers = {
     if (data.localPlayer) localPlayerIdVar(data.localPlayer);
 
     const prevPlayers = getPlayers();
-    const players = data.updates.filter((p) => p.isPlayer);
+    const players = data.updates.filter((p) =>
+      p.isPlayer && p.id !== "practice-enemy"
+    );
     const newPlayers = players.filter((p) =>
       !prevPlayers.some((p2) => p2.id === p.id) && data.localPlayer !== p.id
     );
@@ -136,6 +139,7 @@ export const handlers = {
       // Clear locally-generated doodads since server will send them
       clearDoodads();
     }
+    practiceVar(data.lobbySettings.practice ?? false);
     ensureMapLoaded(data.lobbySettings.map);
     lobbySettingsVar(data.lobbySettings);
     captainsDraftVar(data.captainsDraft ?? undefined);
@@ -155,6 +159,7 @@ export const handlers = {
     stateVar("lobby");
     unloadEcs();
     stateVar("playing");
+    practiceVar(e.practice ?? false);
     if (e.updates) processUpdates(e.updates);
     const center = getMapCenter();
     camera.position.x = center.x;
@@ -164,6 +169,7 @@ export const handlers = {
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");
     unloadEcs();
+    practiceVar(false);
     disconnectFromShard(); // Clean up shard connection when round ends
     generateDoodads(["dynamic"]);
     if (d.updates) processUpdates(d.updates);

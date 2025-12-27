@@ -400,6 +400,7 @@ export type Update = z.infer<typeof zUpdates>["updates"][number];
 const zStart = z.object({
   type: z.literal("start"),
   updates: zUpdate.array().readonly().optional(),
+  practice: z.boolean().optional(),
 });
 
 const zRound = z.object({
@@ -431,6 +432,7 @@ const zLobbySettings = z.object({
     wolves: z.number(),
   }),
   editor: z.boolean().optional(),
+  practice: z.boolean().optional(),
   view: z.boolean(),
   teamGold: z.boolean(),
   shard: z.string().nullable(),

@@ -227,7 +227,9 @@ export const leave = (client?: Client) => {
     for (const entity of entities) {
       lobby.round.ecs.removeEntity(entity);
     }
-    lobby.round.ecs.removeEntity(client);
+    // Must use getPlayer to get the ECS proxy, not the raw client object
+    const playerEntity = getPlayer(client.id);
+    if (playerEntity) lobby.round.ecs.removeEntity(playerEntity);
   }
 
   lobby.players.delete(client);

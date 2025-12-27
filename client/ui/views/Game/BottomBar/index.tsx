@@ -44,12 +44,12 @@ const MinimapContainer = styled(CommandButton)`
 `;
 
 export const BottomBar = () => {
-  const practice = useReactiveVar(editorVar);
+  const editor = useReactiveVar(editorVar);
   const { preferredActionsPerRow } = useReactiveVar(uiSettingsVar);
 
   return (
     <Wrapper $preferredActionsPerRow={Math.min(preferredActionsPerRow, 10)}>
-      {!practice && (
+      {!editor && (
         <MinimapContainer role="button">
           <Minimap style={{ width: 192, height: 192 }} />
         </MinimapContainer>

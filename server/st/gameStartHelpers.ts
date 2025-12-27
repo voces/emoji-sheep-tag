@@ -24,6 +24,8 @@ type PlayerLike = {
   playerColor: string;
   sheepCount?: number;
   handicap?: number;
+  gold?: number;
+  isPlayer: true;
 };
 
 type LobbySettingsLike = {
@@ -72,30 +74,16 @@ export const createPlayerEntities = <T extends PlayerLike>(
   }
 
   for (const c of sheep) {
-    ecs.addEntity({
-      id: c.id,
-      name: c.name,
-      isPlayer: true,
-      playerColor: c.playerColor,
-      team: "sheep",
-      gold: practice ? 100_000 : sheepPlayerGold,
-      sheepCount: settings.mode !== "switch"
-        ? (c.sheepCount ?? 0) + 1
-        : c.sheepCount,
-      handicap: c.handicap,
-    });
+    c.gold = practice ? 100_000 : sheepPlayerGold;
+    c.sheepCount = settings.mode !== "switch"
+      ? (c.sheepCount ?? 0) + 1
+      : c.sheepCount;
+    ecs.addEntity(c);
   }
 
   for (const c of wolves) {
-    ecs.addEntity({
-      id: c.id,
-      name: c.name,
-      isPlayer: true,
-      playerColor: c.playerColor,
-      team: "wolf",
-      gold: isTeamGold ? 0 : settings.startingGold.wolves,
-      sheepCount: c.sheepCount,
-    });
+    c.gold = isTeamGold ? 0 : settings.startingGold.wolves;
+    ecs.addEntity(c);
   }
 
   if (practice) {
@@ -307,7 +295,7 @@ export const initializeGame = <T extends PlayerLike>(
       }
 
       createPlayerEntities(ecs, settings, sheep, wolves, practice);
-      send({ type: "start", updates: flushUpdates(false) });
+      send({ type: "start", updates: flushUpdates(false), practice });
 
       if (!practice) {
         if (settings.mode !== "switch") {
