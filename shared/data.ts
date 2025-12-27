@@ -523,10 +523,6 @@ export const prefabs: Record<string, DataEntity> = {
     sightRadius: 6,
     radius: 0.25,
     pathing: PATHING_WALKABLE,
-    gait: {
-      duration: 0.2,
-      components: [{ radiusX: 0.003, radiusY: 0.015, frequency: 1, phase: 0 }],
-    },
     actions: [
       move,
       stop,
@@ -627,10 +623,6 @@ export const prefabs: Record<string, DataEntity> = {
     sightRadius: 14,
     radius: 0.5,
     pathing: PATHING_WALKABLE,
-    gait: {
-      duration: 0.55,
-      components: [{ radiusX: 0.005, radiusY: 0.015, frequency: 1, phase: 0 }],
-    },
     mana: 60,
     maxMana: 100,
     manaRegen: 1,
@@ -642,7 +634,6 @@ export const prefabs: Record<string, DataEntity> = {
       cooldown: 1.2,
       backswing: 0.15,
       damagePoint: 0.3,
-      model: "claw",
     },
     actions: [
       {
@@ -739,10 +730,6 @@ export const prefabs: Record<string, DataEntity> = {
     sightRadius: 10,
     radius: 0.5,
     pathing: PATHING_WALKABLE,
-    gait: {
-      duration: 0.65,
-      components: [{ radiusX: 0.006, radiusY: 0.016, frequency: 1, phase: 0 }],
-    },
     attack: {
       damage: 20,
       range: 0.09, // Sheep between two huts is 0.25; this gives a bit of wiggle
@@ -750,7 +737,6 @@ export const prefabs: Record<string, DataEntity> = {
       cooldown: 0.8,
       backswing: 0.10,
       damagePoint: 0.2,
-      model: "claw",
     },
     actions: [
       {
@@ -1128,12 +1114,6 @@ export const prefabs: Record<string, DataEntity> = {
     movementSpeed: 2,
     isDoodad: true,
     type: "cosmetic",
-    gait: {
-      duration: 0.25,
-      components: [
-        { radiusX: 0.002, radiusY: 0.03, frequency: 1, phase: 0 },
-      ],
-    },
   },
   bee: {
     name: "Bee",
