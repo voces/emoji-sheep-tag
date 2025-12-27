@@ -25,7 +25,9 @@ const updateSwing = (e: SystemEntity<"swing">) => {
 
   // Only render swing if there's no projectile and attack has a model
   // Skip if the entity has its own attack animation
-  if (!e.attack?.model || e.attack.projectileSpeed || hasAnimation(e, "attack")) return;
+  if (
+    !e.attack?.model || e.attack.projectileSpeed || hasAnimation(e, "attack")
+  ) return;
 
   const swing = addEntity({
     model: e.attack.model,

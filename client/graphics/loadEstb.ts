@@ -697,7 +697,9 @@ const buildAnimationData = (
             const aScale = getPropertyValue(ancestorAnim, "scale", t);
             // For opacity: use animated value if keyframes exist, otherwise treat as 1
             // (parent opacity controls children, but only if explicitly animated)
-            const hasAncestorOpacityKeyframes = ancestorAnim.some((kf) => kf.opacity !== undefined);
+            const hasAncestorOpacityKeyframes = ancestorAnim.some((kf) =>
+              kf.opacity !== undefined
+            );
             if (hasAncestorOpacityKeyframes) {
               anyAncestorHasOpacityKeyframes = true;
             }
@@ -731,7 +733,9 @@ const buildAnimationData = (
         // - If path has opacity keyframes, use animated value (first keyframe as initial)
         // - If no keyframes but ancestor has opacity keyframes, use 1 (fully controlled by ancestor)
         // - If no one in the chain has opacity keyframes, use base path opacity
-        const hasOpacityKeyframes = partAnim?.some((kf) => kf.opacity !== undefined) ?? false;
+        const hasOpacityKeyframes = partAnim?.some((kf) =>
+          kf.opacity !== undefined
+        ) ?? false;
         const pathOpacity = hasOpacityKeyframes
           ? getPropertyValue(partAnim, "opacity", t)
           : (anyAncestorHasOpacityKeyframes ? 1 : path.opacity);

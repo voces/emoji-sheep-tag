@@ -9,7 +9,7 @@ import "./action.ts"; // Import to register the action system
 describe("swing system", () => {
   it("should remove swing visual when swing property is removed", () => {
     // Create an attacking unit with a swing
-    const attacker = newUnit("player-1", "wolf", 5, 5);
+    const attacker = newUnit("player-1", "fox", 5, 5);
     const target = newUnit("player-2", "sheep", 6, 5);
 
     attacker.order = { type: "attack", targetId: target.id };
@@ -43,7 +43,7 @@ describe("swing system", () => {
 
   it("should update swing visual when swing property changes", () => {
     // Create an attacking unit with a swing
-    const attacker = newUnit("player-1", "wolf", 5, 5);
+    const attacker = newUnit("player-1", "fox", 5, 5);
     const target = newUnit("player-2", "sheep", 6, 5);
 
     attacker.order = { type: "attack", targetId: target.id };
@@ -83,7 +83,7 @@ describe("swing system", () => {
 
   it("should create swing visual when swing property is added", () => {
     // Create an attacking unit
-    const attacker = newUnit("player-1", "wolf", 5, 5);
+    const attacker = newUnit("player-1", "fox", 5, 5);
     const target = newUnit("player-2", "sheep", 6, 5);
 
     attacker.order = { type: "attack", targetId: target.id };
@@ -114,7 +114,7 @@ describe("swing system", () => {
 
   it("should remove swing visual when attacker entity is removed", () => {
     // Create an attacking unit with a swing
-    const attacker = newUnit("player-1", "wolf", 5, 5);
+    const attacker = newUnit("player-1", "fox", 5, 5);
     const target = newUnit("player-2", "sheep", 6, 5);
 
     attacker.order = { type: "attack", targetId: target.id };
