@@ -12,7 +12,12 @@ import { flushUpdates } from "../updates.ts";
 import { serializeLobbySettings } from "./lobbySettings.ts";
 import { autoAssignSheepOrWolf, initializePlayer } from "../st/roundHelpers.ts";
 import { serializeCaptainsDraft } from "./captains.ts";
-import { fetchClientGeoAndBroadcast } from "../shardRegistry.ts";
+import {
+  fetchClientGeoAndBroadcast,
+  getShard,
+  sendToShard,
+} from "../shardRegistry.ts";
+import { id as generateId } from "@/shared/util/id.ts";
 
 export const zJoinLobby = z.object({
   type: z.literal("joinLobby"),
@@ -57,7 +62,31 @@ export const joinLobby = (
       ...Array.from(lobby.players, (p) => p.sheepCount),
     );
 
-    if (lobby.round) {
+    if (lobby.activeShard) {
+      // Game is running on a shard - send player to shard
+      const shard = getShard(lobby.activeShard);
+      if (shard) {
+        const token = generateId("token");
+        sendToShard(shard, {
+          type: "addPlayer",
+          lobbyId: lobby.name,
+          player: {
+            id: client.id,
+            name: client.name,
+            playerColor: client.playerColor,
+            team: "pending",
+            sheepCount: client.sheepCount,
+            token,
+          },
+        });
+        client.send({
+          type: "connectToShard",
+          shardUrl: shard.publicUrl,
+          token,
+          lobbyId: lobby.name,
+        });
+      }
+    } else if (lobby.round) {
       // If joining an ongoing practice game, add player to sheep team and spawn units
       if (lobby.round.practice) {
         appContext.with(lobby.round.ecs, () => {
@@ -74,22 +103,25 @@ export const joinLobby = (
       client.team = autoAssignSheepOrWolf(lobby);
     }
 
-    // Send partial state to existing players (before adding joiner to lobby.players)
-    send({
-      type: "join",
-      lobby: lobby.name,
-      status: lobby.status,
-      updates: lobby.round ? flushUpdates(false) : [client],
-      lobbySettings: serializeLobbySettings(lobby, 1),
-      captainsDraft: serializeCaptainsDraft(lobby.captainsDraft),
-    });
-
     // Add player to lobby
     lobby.players.add(client);
     console.log(new Date(), "Client", client.id, "joined lobby", lobby.name);
 
-    // Send full state to joining player
-    sendJoinMessage(client);
+    // When game is on shard, skip primary server messaging - shard handles it
+    if (!lobby.activeShard) {
+      // Send partial state to existing players
+      send({
+        type: "join",
+        lobby: lobby.name,
+        status: lobby.status,
+        updates: lobby.round ? flushUpdates(false) : [client],
+        lobbySettings: serializeLobbySettings(lobby, 1),
+        captainsDraft: serializeCaptainsDraft(lobby.captainsDraft),
+      });
+
+      // Send full state to joining player
+      sendJoinMessage(client);
+    }
 
     // Update lobby list for hub
     broadcastLobbyList();

@@ -10,6 +10,8 @@ import {
   SHEEP_INDIVIDUAL_GOLD_CAP,
 } from "./teamGold.ts";
 import { spawnPracticeUnits } from "../st/gameStartHelpers.ts";
+import { getPlayerUnits } from "../systems/playerEntities.ts";
+import { appContext } from "@/shared/context.ts";
 
 /**
  * Get the gold available to a player (considering team gold)
@@ -147,4 +149,22 @@ export const addPlayerToPracticeGame = (client: Client) => {
   addEntity(client);
 
   spawnPracticeUnits(client.id);
+};
+
+/**
+ * Removes a player and all their units from the ECS.
+ * Must be called within appContext.
+ */
+export const removePlayerFromEcs = (playerId: string) => {
+  const ecs = appContext.current;
+
+  // Remove all units owned by this player
+  const entities = Array.from(getPlayerUnits(playerId));
+  for (const entity of entities) {
+    ecs.removeEntity(entity);
+  }
+
+  // Remove the player entity itself
+  const playerEntity = getPlayer(playerId);
+  if (playerEntity) ecs.removeEntity(playerEntity);
 };

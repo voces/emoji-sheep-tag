@@ -4,9 +4,9 @@ import { clientContext, lobbyContext } from "./contexts.ts";
 import { deleteLobby } from "./lobby.ts";
 import { clearUpdatesCache, flushUpdates } from "./updates.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
-import { findPlayerUnit, getPlayerUnits } from "./systems/playerEntities.ts";
+import { findPlayerUnit } from "./systems/playerEntities.ts";
 import { getPlayer } from "@/shared/api/player.ts";
-import { sendPlayerGold } from "./api/player.ts";
+import { removePlayerFromEcs, sendPlayerGold } from "./api/player.ts";
 import { getSheep } from "./systems/sheep.ts";
 import { distributeEquitably } from "./util/equitableDistribution.ts";
 import { isPractice } from "./api/st.ts";
@@ -159,13 +159,18 @@ export const sendJoinMessage = (client: Client) => {
     }
   }
 
+  // Sort entities so players come first (ensures owners exist before their units)
+  const entities = lobby.round
+    ? Array.from(lobby.round.ecs.entities).sort((a, b) =>
+      (b.isPlayer ? 1 : 0) - (a.isPlayer ? 1 : 0)
+    )
+    : Array.from(lobby.players);
+
   client.send({
     type: "join",
     lobby: lobby.name,
     status: lobby.status,
-    updates: lobby.round
-      ? Array.from(lobby.round.ecs.entities)
-      : Array.from(lobby.players),
+    updates: entities,
     rounds: lobby.rounds,
     lobbySettings: serializeLobbySettings(lobby),
     localPlayer: client.id,
@@ -222,14 +227,7 @@ export const leave = (client?: Client) => {
 
   // Clean up player entities (including sheep and spirits)
   if (lobby.round?.ecs) {
-    // Collect entities first to avoid iterator invalidation during removal
-    const entities = Array.from(getPlayerUnits(client.id));
-    for (const entity of entities) {
-      lobby.round.ecs.removeEntity(entity);
-    }
-    // Must use getPlayer to get the ECS proxy, not the raw client object
-    const playerEntity = getPlayer(client.id);
-    if (playerEntity) lobby.round.ecs.removeEntity(playerEntity);
+    removePlayerFromEcs(client.id);
   }
 
   lobby.players.delete(client);

@@ -141,6 +141,9 @@ const startOnShard = (
   shard: Shard,
   { lobby, sheep, wolves, practice, editor }: StartOnShardParams,
 ) => {
+  // Track which shard is running this lobby's game
+  lobby.activeShard = shard.id;
+
   // If this shard is on a Fly machine, track the lobby and cancel any pending destruction
   if (shard.flyMachineId) addLobbyToFlyMachine(shard.flyMachineId, lobby.name);
 

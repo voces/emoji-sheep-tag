@@ -81,6 +81,8 @@ export type Lobby = {
   round?: Round;
   rounds: { sheep: string[]; wolves: string[]; duration: number }[];
   captainsDraft?: CaptainsDraft;
+  /** Shard ID where the current game is running (if any). */
+  activeShard?: string;
 };
 
 // Global lobbies set for the primary server

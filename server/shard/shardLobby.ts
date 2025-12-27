@@ -6,9 +6,14 @@ import { buildLoadedMap, type PackedMap } from "@/shared/map.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
 import { initializeGame } from "../st/gameStartHelpers.ts";
 import { getPlayer } from "@/shared/api/player.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { lobbyContext } from "../contexts.ts";
-import { createRoundSummary } from "../lobbyApi.ts";
+import { createRoundSummary, send } from "../lobbyApi.ts";
+import { addPlayerToPracticeGame, removePlayerFromEcs } from "../api/player.ts";
+import { flushUpdates } from "../updates.ts";
+import { serializeLobbySettings } from "../actions/lobbySettings.ts";
+import { serializeCaptainsDraft } from "../actions/captains.ts";
 
 type AssignLobbyMessage = Extract<
   z.infer<typeof zServerToShardMessage>,
@@ -49,6 +54,7 @@ export class ShardLobby {
     canceled?: boolean,
     practice?: boolean,
   ) => void;
+  onPlayerTeamChanged?: (playerId: string, team: GameClient["team"]) => void;
 
   /** Broadcast a message to all clients in this lobby */
   send(message: Parameters<GameClient["send"]>[0]) {
@@ -96,19 +102,108 @@ export class ShardLobby {
     return player;
   }
 
+  /** Add a new expected player (mid-game join) */
+  addExpectedPlayer(player: PlayerInfo) {
+    this.expectedPlayers.set(player.token, player);
+  }
+
   /** Add an authenticated client */
   addClient(client: GameClient) {
+    // If game is already running, this is a mid-game join
+    // Handle before adding to clients so broadcast goes to existing clients only
+    if (this.round) {
+      this.addPlayerToRunningGame(client);
+      this.clients.set(client.id, client);
+      return;
+    }
+
     this.clients.set(client.id, client);
 
-    // Check if all expected players have connected
-    if (this.expectedPlayers.size === 0 && !this.round) {
-      // All players connected, start the game
-      this.startGame();
-    }
+    // Check if all expected players have connected and start
+    if (this.expectedPlayers.size === 0) this.startGame();
+  }
+
+  /** Add a player to an already running game */
+  private addPlayerToRunningGame(client: GameClient) {
+    const initialTeam = client.team;
+
+    lobbyContext.with(this, () => {
+      appContext.with(this.round!.ecs, () => {
+        this.round!.ecs.batch(() => {
+          if (this.round!.practice) addPlayerToPracticeGame(client);
+          // Non-practice: add as observer/pending
+          else addEntity(client);
+        });
+
+        // Notify primary server if team changed (e.g., practice mode mid-game join)
+        if (client.team !== initialTeam) {
+          this.onPlayerTeamChanged?.(client.id, client.team);
+        }
+
+        // Broadcast the new player/units to existing clients
+        send({
+          type: "join",
+          lobby: this.name,
+          status: this.status,
+          updates: flushUpdates(false),
+          lobbySettings: serializeLobbySettings(this),
+          captainsDraft: serializeCaptainsDraft(this.captainsDraft),
+        });
+
+        // Send full game state to the joining client
+        // Sort so players come first (ensures owners exist before their units)
+        const entities = Array.from(this.round!.ecs.entities).sort((a, b) =>
+          (b.isPlayer ? 1 : 0) - (a.isPlayer ? 1 : 0)
+        );
+        client.send({
+          type: "join",
+          lobby: this.name,
+          status: this.status,
+          updates: entities,
+          rounds: this.rounds,
+          lobbySettings: serializeLobbySettings(this),
+          localPlayer: client.id,
+          captainsDraft: serializeCaptainsDraft(this.captainsDraft),
+        });
+      });
+    });
   }
 
   /** Remove a disconnected client */
   removeClient(client: GameClient) {
+    console.log(new Date(), `Client ${client.id} left ${this.name}`);
+
+    // Clean up player entities from ECS
+    if (this.round?.ecs) {
+      lobbyContext.with(this, () => {
+        appContext.with(this.round!.ecs, () => {
+          this.round!.ecs.batch(() => removePlayerFromEcs(client.id));
+
+          // Send leave event to remaining clients
+          send({
+            type: "leave",
+            updates: flushUpdates(false),
+            lobbySettings: serializeLobbySettings(this),
+          });
+        });
+      });
+
+      // End round if team now empty (but not in practice mode)
+      if (client.team && !this.practice) {
+        const sheep = Array.from(this.clients.values()).filter((p) =>
+          p.team === "sheep" && p !== client
+        );
+        const wolves = Array.from(this.clients.values()).filter((p) =>
+          p.team === "wolf" && p !== client
+        );
+        if (sheep.length === 0 || wolves.length === 0) {
+          this.endRound(
+            !this.round.start || Date.now() - this.round.start < 10_000,
+          );
+        }
+      }
+    }
+
     this.clients.delete(client.id);
 
     // If all clients disconnect, end the lobby
@@ -184,26 +279,28 @@ export class ShardLobby {
       `Round ended in ${this.name}${canceled ? " (canceled)" : ""}`,
     );
 
-    // Sync sheepCount from ECS entities back to GameClient objects
-    if (!canceled) {
-      appContext.with(this.round.ecs, () => {
-        for (const client of this.clients.values()) {
-          const ecsPlayer = getPlayer(client.id);
-          if (ecsPlayer?.sheepCount !== undefined) {
-            client.sheepCount = ecsPlayer.sheepCount;
+    lobbyContext.with(this, () => {
+      // Sync sheepCount from ECS entities back to GameClient objects
+      if (!canceled) {
+        appContext.with(this.round!.ecs, () => {
+          for (const client of this.clients.values()) {
+            const ecsPlayer = getPlayer(client.id);
+            if (ecsPlayer?.sheepCount !== undefined) {
+              client.sheepCount = ecsPlayer.sheepCount;
+            }
           }
-        }
+        });
+      }
+
+      const round = createRoundSummary();
+
+      this.send({
+        type: "stop",
+        updates: Array.from(this.clients.values()),
+        round,
       });
-    }
-
-    const round = createRoundSummary();
-
-    this.send({
-      type: "stop",
-      updates: Array.from(this.clients.values()),
-      round,
+      this.cleanup(round, canceled);
     });
-    this.cleanup(round, canceled);
   }
 
   /** Clean up lobby resources */

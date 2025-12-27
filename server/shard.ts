@@ -137,7 +137,34 @@ const connectToPrimary = () => {
           reportStatus();
         };
 
+        // When a player's team changes, notify primary
+        lobby.onPlayerTeamChanged = (playerId, team) => {
+          sendToPrimary({
+            type: "playerTeamChanged",
+            lobbyId: message.lobbyId,
+            playerId,
+            team,
+          });
+        };
+
         reportStatus();
+        break;
+      }
+
+      case "addPlayer": {
+        const lobby = shardLobbies.get(message.lobbyId);
+        if (!lobby) {
+          console.error(
+            new Date(),
+            `[Shard] addPlayer: lobby ${message.lobbyId} not found`,
+          );
+          return;
+        }
+        console.log(
+          new Date(),
+          `[Shard] Adding player ${message.player.name} to ${message.lobbyId}`,
+        );
+        lobby.addExpectedPlayer(message.player);
         break;
       }
     }

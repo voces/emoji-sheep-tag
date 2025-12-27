@@ -346,6 +346,7 @@ export const handleShardSocket = (
 
             // Reset lobby status (shard games don't have lobby.round on primary)
             lobby.status = "lobby";
+            lobby.activeShard = undefined;
 
             // Record round result if not canceled
             if (message.round && !message.canceled) {
@@ -366,6 +367,22 @@ export const handleShardSocket = (
               message.canceled ? " (canceled)" : ""
             }`,
           );
+        }
+        break;
+      }
+
+      case "playerTeamChanged": {
+        // Find the lobby and update the player's team on the primary server
+        const lobby = Array.from(lobbies).find(
+          (l) => l.name === message.lobbyId,
+        );
+        if (lobby) {
+          const player = Array.from(lobby.players).find(
+            (p) => p.id === message.playerId,
+          );
+          if (player) {
+            player.team = message.team;
+          }
         }
         break;
       }

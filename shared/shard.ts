@@ -28,6 +28,18 @@ export const zShardToServerMessage = z.discriminatedUnion("type", [
       duration: z.number(),
     }).optional(),
   }),
+  // Shard notifies primary that a player's team changed (e.g., mid-game practice join)
+  z.object({
+    type: z.literal("playerTeamChanged"),
+    lobbyId: z.string(),
+    playerId: z.string(),
+    team: z.union([
+      z.literal("pending"),
+      z.literal("observer"),
+      z.literal("sheep"),
+      z.literal("wolf"),
+    ]),
+  }),
 ]);
 
 export type ShardToServerMessage = z.infer<typeof zShardToServerMessage>;
@@ -82,6 +94,24 @@ export const zServerToShardMessage = z.discriminatedUnion("type", [
     practice: z.boolean(),
     editor: z.boolean(),
     customMapData: z.unknown().optional(), // For local: maps
+  }),
+  // Server adds a player to an in-progress game (mid-game join)
+  z.object({
+    type: z.literal("addPlayer"),
+    lobbyId: z.string(),
+    player: z.object({
+      id: z.string(),
+      name: z.string(),
+      playerColor: z.string(),
+      team: z.union([
+        z.literal("pending"),
+        z.literal("observer"),
+        z.literal("sheep"),
+        z.literal("wolf"),
+      ]),
+      sheepCount: z.number(),
+      token: z.string(),
+    }),
   }),
 ]);
 
