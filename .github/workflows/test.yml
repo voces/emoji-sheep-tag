@@ -18,6 +18,9 @@ jobs:
       - name: Setup repo
         uses: actions/checkout@v4
 
+      - name: Fetch LFS files (estb only)
+        run: git lfs pull --include="*.estb"
+
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
@@ -39,6 +42,9 @@ jobs:
     steps:
       - name: Setup repo
         uses: actions/checkout@v4
+
+      - name: Fetch LFS files (estb only)
+        run: git lfs pull --include="*.estb"
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
