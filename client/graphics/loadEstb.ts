@@ -375,9 +375,12 @@ const rgbToHex = (rgb: { r: number; g: number; b: number }): string => {
 export const estbToSvg = (buffer: ArrayBuffer): string => {
   const { paths } = parseEstb(buffer);
 
-  // Calculate bounding box
+  // Filter out paths with zero opacity
+  const visiblePaths = paths.filter((p) => p.opacity > 0);
+
+  // Calculate bounding box (only from visible paths)
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const path of paths) {
+  for (const path of visiblePaths) {
     for (const seg of path.segments) {
       for (const pt of [seg.p0, seg.c0, seg.c1, seg.p1]) {
         minX = Math.min(minX, pt.x);
@@ -396,7 +399,7 @@ export const estbToSvg = (buffer: ArrayBuffer): string => {
   const viewMinY = flipY(maxY);
 
   const svgPaths: string[] = [];
-  for (const path of paths) {
+  for (const path of visiblePaths) {
     if (path.segments.length === 0) continue;
 
     // Build path d attribute with flipped Y

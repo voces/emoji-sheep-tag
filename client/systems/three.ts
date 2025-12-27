@@ -36,7 +36,7 @@ import stop from "../assets/stop.svg" with { type: "text" };
 import gold from "../assets/gold.svg" with { type: "text" };
 import divinity from "../assets/divinity.svg" with { type: "text" };
 import shop from "../assets/shop.svg" with { type: "text" };
-import fox from "../assets/fox.svg" with { type: "text" };
+import fox from "../assets/fox.estb" with { type: "bytes" };
 import sapphire from "../assets/sapphire.svg" with { type: "text" };
 import runningShoes from "../assets/running-shoes.svg" with { type: "text" };
 import purplePotion from "../assets/purple-potion.svg" with { type: "text" };
@@ -90,8 +90,8 @@ import cancel from "../assets/cancel.svg" with { type: "text" };
 import vip from "../assets/vip.svg" with { type: "text" };
 import wolfDodge from "../assets/wolf-dodge.svg" with { type: "text" };
 import construction from "../assets/construction.svg" with { type: "text" };
-import bird1 from "../assets/bird1.svg" with { type: "text" };
-import bird2 from "../assets/bird2.svg" with { type: "text" };
+import bird1 from "../assets/bird1.estb" with { type: "bytes" };
+import bird2 from "../assets/bird2.estb" with { type: "bytes" };
 import bee from "../assets/bee.svg" with { type: "text" };
 import alignment from "../assets/alignment.svg" with { type: "text" };
 import crystal from "../assets/crystal.svg" with { type: "text" };
@@ -125,7 +125,7 @@ export const svgs: Record<string, string> = {
   divinity,
   shop,
   claw2,
-  fox,
+  fox: estbToSvg(fox.buffer),
   sapphire,
   runningShoes,
   purplePotion,
@@ -176,8 +176,8 @@ export const svgs: Record<string, string> = {
   vip,
   wolfDodge,
   construction,
-  bird1,
-  bird2,
+  bird1: estbToSvg(bird1.buffer),
+  bird2: estbToSvg(bird2.buffer),
   bee,
   alignment,
   crystal,
@@ -218,7 +218,7 @@ const svg = (
 const estme = (
   data: ArrayBuffer,
   scale: number,
-  options?: Omit<Parameters<typeof loadEstbModel>[1], "scale">,
+  options?: Omit<Parameters<typeof loadEstbModel>[1], "scale" | "zOrder">,
 ): EstmeConfig => ({ type: "estme", data, options: { ...options, scale } });
 
 const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
@@ -258,7 +258,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   divinity: svg(divinity, 1.1),
   castle: svg(castle, 0.7),
   // shop: loadSvg(shop, 1),
-  fox: svg(fox, 0.6),
+  fox: estme(fox.buffer, 0.0088),
   wolf: estme(wolf.buffer, 0.01),
   atom: svg(atom, 0.05),
 
@@ -273,8 +273,8 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   // Temple stacks on things, we want it visible, always
   hinduTemple: svg(hinduTemple, 1.9),
 
-  bird1: svg(bird1, 0.25, { layer: 2 }),
-  bird2: svg(bird2, 0.25, { layer: 2 }),
+  bird1: estme(bird1.buffer, 0.004, { layer: 2 }),
+  bird2: estme(bird2.buffer, 0.004, { layer: 2 }),
   bee: svg(bee, 0.17, { layer: 2 }),
 
   // SFX elements (highest z-order, always on top)
