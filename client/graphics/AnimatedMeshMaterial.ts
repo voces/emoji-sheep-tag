@@ -22,11 +22,23 @@ export const updateAnimationTime = (time: number) => {
 
 export const getAnimationTime = () => animationTime;
 
-const shaderRefs = new WeakMap<Material, WebGLProgramParametersWithUniforms>();
+const shaderRefs = new WeakMap<
+  Material,
+  WebGLProgramParametersWithUniforms[]
+>();
+const shaderReadyCallbacks = new Map<Material, () => void>();
 
-export const getShaderRef = (
+export const getShaderRefs = (
   material: Material,
-): WebGLProgramParametersWithUniforms | undefined => shaderRefs.get(material);
+): WebGLProgramParametersWithUniforms[] => shaderRefs.get(material) ?? [];
+
+export const onShaderReady = (material: Material, callback: () => void) => {
+  if (shaderRefs.has(material)) {
+    callback();
+  } else {
+    shaderReadyCallbacks.set(material, callback);
+  }
+};
 
 const PART_Z_OFFSET = 0.0001;
 
@@ -103,7 +115,17 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
   material.customProgramCacheKey = () => "animatedMesh";
 
   material.onBeforeCompile = (shader) => {
-    shaderRefs.set(material, shader);
+    const existing = shaderRefs.get(material);
+    // Store all shaders in an array - Three.js may call onBeforeCompile multiple times
+    // with different shader objects (for different render targets/cameras)
+    if (!existing) {
+      shaderRefs.set(material, [shader]);
+      const callback = shaderReadyCallbacks.get(material);
+      if (callback) {
+        shaderReadyCallbacks.delete(material);
+        callback();
+      }
+    } else if (!existing.includes(shader)) existing.push(shader);
     addAnimationUniforms(shader);
 
     shader.vertexShader = `
@@ -220,8 +242,12 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
   };
 
   material.onBeforeRender = () => {
-    const shaderRef = shaderRefs.get(material);
-    if (shaderRef) shaderRef.uniforms.uTime.value = animationTime;
+    const refs = shaderRefs.get(material);
+    if (refs) {
+      for (const shaderRef of refs) {
+        shaderRef.uniforms.uTime.value = animationTime;
+      }
+    }
   };
 
   return material;
@@ -244,7 +270,9 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
   material.customProgramCacheKey = () => "animatedMeshDepth";
 
   material.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
-    shaderRefs.set(material, shader);
+    const existing = shaderRefs.get(material);
+    if (!existing) shaderRefs.set(material, [shader]);
+    else if (!existing.includes(shader)) existing.push(shader);
     addAnimationUniforms(shader);
 
     shader.vertexShader = `
@@ -304,8 +332,12 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
   };
 
   material.onBeforeRender = () => {
-    const shaderRef = shaderRefs.get(material);
-    if (shaderRef) shaderRef.uniforms.uTime.value = animationTime;
+    const refs = shaderRefs.get(material);
+    if (refs) {
+      for (const shaderRef of refs) {
+        shaderRef.uniforms.uTime.value = animationTime;
+      }
+    }
   };
 
   return material;

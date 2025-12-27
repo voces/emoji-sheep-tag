@@ -28,7 +28,11 @@ import { BVH } from "./BVH.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { getMapBounds } from "@/shared/map.ts";
 import type { AnimationData } from "./loadEstb.ts";
-import { getDepthMaterial, getShaderRef } from "./AnimatedMeshMaterial.ts";
+import {
+  createDepthMaterial,
+  getShaderRefs,
+  onShaderReady,
+} from "./AnimatedMeshMaterial.ts";
 
 const dummy = new Object3D();
 const _tempBox = new Box3();
@@ -51,6 +55,8 @@ export class AnimatedInstancedMesh extends InstancedMesh {
   readonly animationData: AnimationData | null;
   /** Depth pre-pass mesh for intra-instance occlusion */
   readonly depthMesh: InstancedMesh;
+  /** Callback when shader is ready (for re-applying animations) */
+  onShaderReady?: () => void;
 
   constructor(
     geometry: BufferGeometry,
@@ -80,30 +86,28 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     this.initializeInstanceAttributes(count);
     this.patchBounds();
 
-    const depthMaterial = getDepthMaterial();
+    const depthMaterial = createDepthMaterial();
     this.depthMesh = new InstancedMesh(geometry, depthMaterial, count);
     this.depthMesh.instanceMatrix = this.instanceMatrix;
     this.depthMesh.renderOrder = 0;
     this.depthMesh.frustumCulled = false;
     this.depthMesh.visible = false; // Only visible when transparent instances exist
 
-    this.depthMesh.onBeforeRender = (
-      _renderer,
-      _scene,
-      _camera,
-      _geometry,
-      mat,
-    ) => {
-      const shaderRef = getShaderRef(mat);
-      if (!shaderRef) return;
-      this.updateAnimationUniforms(shaderRef);
+    this.depthMesh.onBeforeRender = (_r, _s, _c, _g, mat) => {
+      for (const shaderRef of getShaderRefs(mat)) {
+        this.updateAnimationUniforms(shaderRef);
+      }
     };
 
-    this.onBeforeRender = (_renderer, _scene, _camera, _geometry, material) => {
-      const shaderRef = getShaderRef(material);
-      if (!shaderRef) return;
-      this.updateAnimationUniforms(shaderRef);
+    this.onBeforeRender = (_r, _s, _c, _g, mat) => {
+      for (const shaderRef of getShaderRefs(mat)) {
+        this.updateAnimationUniforms(shaderRef);
+      }
     };
+
+    onShaderReady(material, () => {
+      if (this.onShaderReady) this.onShaderReady();
+    });
 
     for (let i = 0; i < count; i++) {
       this.setPositionAt(i, Infinity, Infinity, undefined, Infinity);

@@ -5,11 +5,31 @@ import {
   updateAnimationTime,
 } from "../graphics/AnimatedMeshMaterial.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
-import { addSystem } from "@/shared/context.ts";
+import { addSystem, appContext } from "@/shared/context.ts";
 import { collections } from "./models.ts";
 
 // Animation state tracking for AnimatedInstancedMesh models
 const entityAnimationState = new WeakMap<Entity, string | undefined>();
+
+// Track collections that have had their shader ready callback set up
+const shaderReadySetup = new WeakSet<AnimatedInstancedMesh>();
+
+const setupShaderReadyCallback = (collection: AnimatedInstancedMesh) => {
+  if (shaderReadySetup.has(collection)) return;
+  shaderReadySetup.add(collection);
+
+  collection.onShaderReady = () => {
+    // Clear cached animation state for all entities using this collection
+    // so animations get re-applied with the now-ready shader
+    for (const e of appContext.current.entities) {
+      const model = e.model ?? e.prefab;
+      if (model && collections[model] === collection) {
+        entityAnimationState.delete(e);
+        updateAnimationState(e);
+      }
+    }
+  };
+};
 
 export const getCurrentAnimation = (e: Entity): string | undefined => {
   const model = e.model ?? e.prefab;
@@ -45,6 +65,9 @@ export const updateAnimationState = (e: Entity) => {
   const collection = collections[model];
   // Only handle AnimatedInstancedMesh (estme models)
   if (!(collection instanceof AnimatedInstancedMesh)) return;
+
+  // Set up shader ready callback to re-apply animations after shader compiles
+  setupShaderReadyCallback(collection);
 
   // Determine the appropriate animation based on entity state
   const animationName = getCurrentAnimation(e);

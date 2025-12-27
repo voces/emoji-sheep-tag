@@ -12,6 +12,7 @@ import { getAnimatedMeshMaterial } from "./AnimatedMeshMaterial.ts";
  */
 export const loadEstbModel = (
   buffer: ArrayBuffer,
+  modelName: string,
   options: {
     count?: number;
     layer?: number;
@@ -20,7 +21,7 @@ export const loadEstbModel = (
   },
 ): AnimatedInstancedMesh => {
   const scale = options.scale ?? 1;
-  const { geometry, animationData, parts } = loadEstb(buffer, { scale });
+  const { geometry, animationData } = loadEstb(buffer, { scale });
 
   const material = getAnimatedMeshMaterial();
   const count = options.count ?? 0;
@@ -29,7 +30,7 @@ export const loadEstbModel = (
     geometry,
     material,
     count,
-    `estb-${parts.length}parts`,
+    modelName,
     animationData,
   );
 

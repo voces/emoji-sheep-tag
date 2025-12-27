@@ -187,7 +187,7 @@ type SvgConfig = {
 type EstmeConfig = {
   type: "estme";
   data: ArrayBuffer;
-  options?: Omit<Parameters<typeof loadEstbModel>[1], "zOrder">;
+  options?: Omit<Parameters<typeof loadEstbModel>[2], "zOrder">;
 };
 
 type ModelConfig = SvgConfig | EstmeConfig;
@@ -203,7 +203,7 @@ const svg = (
 const estme = (
   data: ArrayBuffer,
   scale: number,
-  options?: Omit<Parameters<typeof loadEstbModel>[1], "scale" | "zOrder">,
+  options?: Omit<Parameters<typeof loadEstbModel>[2], "scale" | "zOrder">,
 ): EstmeConfig => ({ type: "estme", data, options: { ...options, scale } });
 
 const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
@@ -304,7 +304,7 @@ const getCollection = (model: string): ModelCollection | undefined => {
 
   let collection: ModelCollection;
   if (config.type === "estme") {
-    collection = loadEstbModel(config.data, {
+    collection = loadEstbModel(config.data, model, {
       ...config.options,
       zOrder,
     });
