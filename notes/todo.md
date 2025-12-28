@@ -41,7 +41,6 @@
 - Pausing?
 - Editor improvements
   - Brush size
-- Hover tooltip on units, indicating owner (or at least in-game multiboard)
 
 # Bugs
 
@@ -51,7 +50,6 @@
   - Per-player pathing calc limits?
 - Runaway number of canvas/renderers?
 - Sheep count keeps getting reset?
-- Update fetchFlyRegions to aggregate requests
 
 # Code quality
 

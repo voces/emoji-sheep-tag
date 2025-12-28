@@ -53,6 +53,9 @@ let cachedRegions: FlyRegion[] | undefined;
 let regionsLastFetched = 0;
 const REGIONS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
+// In-flight regions fetch promise (for deduplication)
+let fetchingRegions: Promise<FlyRegion[]> | undefined;
+
 // Track machines launched by this server
 // Maps machine ID -> { region, launchTime, lobbies }
 type ManagedMachine = {
@@ -106,43 +109,54 @@ const flyPlatformRequest = (path: string): Promise<Response> => {
 };
 
 /**
- * Fetch regions from API and update cache
+ * Fetch regions from API and update cache.
+ * Deduplicates concurrent calls by sharing the in-flight promise.
  */
-const fetchFlyRegions = async (): Promise<FlyRegion[]> => {
-  const response = await flyPlatformRequest("/platform/regions");
-  if (!response.ok) {
-    console.error(
+const fetchFlyRegions = (): Promise<FlyRegion[]> => {
+  if (fetchingRegions) return fetchingRegions;
+
+  const doFetch = async (): Promise<FlyRegion[]> => {
+    const response = await flyPlatformRequest("/platform/regions");
+    if (!response.ok) {
+      console.error(
+        new Date(),
+        `[Fly] Failed to fetch regions: ${await response.text()}`,
+      );
+      return cachedRegions ?? [];
+    }
+
+    const data = await response.json();
+    cachedRegions = (data.Regions as Array<{
+      code: string;
+      name: string;
+      latitude: number;
+      longitude: number;
+      deprecated: boolean;
+      requires_paid_plan: boolean;
+    }>)
+      .filter((r) => !r.deprecated)
+      .map((r) => ({
+        code: r.code,
+        name: r.name,
+        latitude: r.latitude,
+        longitude: r.longitude,
+        deprecated: r.deprecated,
+        requiresPaidPlan: r.requires_paid_plan,
+      }));
+    regionsLastFetched = Date.now();
+
+    console.log(
       new Date(),
-      `[Fly] Failed to fetch regions: ${await response.text()}`,
+      `[Fly] Fetched ${cachedRegions.length} regions from API`,
     );
-    return cachedRegions ?? [];
-  }
+    return cachedRegions;
+  };
 
-  const data = await response.json();
-  cachedRegions = (data.Regions as Array<{
-    code: string;
-    name: string;
-    latitude: number;
-    longitude: number;
-    deprecated: boolean;
-    requires_paid_plan: boolean;
-  }>)
-    .filter((r) => !r.deprecated)
-    .map((r) => ({
-      code: r.code,
-      name: r.name,
-      latitude: r.latitude,
-      longitude: r.longitude,
-      deprecated: r.deprecated,
-      requiresPaidPlan: r.requires_paid_plan,
-    }));
-  regionsLastFetched = Date.now();
+  fetchingRegions = doFetch().finally(() => {
+    fetchingRegions = undefined;
+  });
 
-  console.log(
-    new Date(),
-    `[Fly] Fetched ${cachedRegions.length} regions from API`,
-  );
-  return cachedRegions;
+  return fetchingRegions;
 };
 
 /**

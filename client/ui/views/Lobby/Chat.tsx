@@ -140,11 +140,7 @@ export const Chat = () => {
           disabled={disabled}
           onInput={(e) => chatValueVar(e.currentTarget.value)}
           onKeyDown={(e) => {
-            if (e.key === "Tab") {
-              e.preventDefault();
-              toggleChatChannel();
-              return;
-            }
+            if (e.key === "Tab") return toggleChatChannel();
             if (!e.code.includes("Enter") || !e.currentTarget.value) return;
             send({
               type: "chat",

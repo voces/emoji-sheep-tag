@@ -3,7 +3,7 @@ import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { lookup } from "./lookup.ts";
 import { applyAndConsumeBuffs, damageEntity } from "../api/unit.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
-import { isEnemy, testClassification } from "@/shared/api/unit.ts";
+import { isEnemy, isTree, testClassification } from "@/shared/api/unit.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 
 addSystem({
@@ -28,11 +28,8 @@ addSystem({
 
       for (const entity of entitiesInRange) {
         if (
-          isEnemy(attacker, entity) &&
-          testClassification(e, entity, attacker.attack?.targetsAllowed) &&
-          entity.position &&
-          distanceBetweenPoints(entity.position, e.projectile.target) <=
-            e.projectile.splashRadius
+          (isEnemy(attacker, entity) || isTree(entity)) &&
+          testClassification(e, entity, attacker.attack?.targetsAllowed)
         ) {
           if (entity.health) damageEntity(attacker, entity);
           applyAndConsumeBuffs(e, entity);

@@ -6,6 +6,7 @@ import { HStack } from "@/components/layout/Layout.tsx";
 import { Editor } from "./Editor/index.tsx";
 import { SimpleStats } from "./SimpleStats.tsx";
 import { BottomBar } from "./BottomBar/index.tsx";
+import { EntityTooltip } from "./EntityTooltip.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { editorHideUIVar, editorVar } from "@/vars/editor.ts";
 
@@ -27,8 +28,6 @@ export const Game = () => {
     <>
       <Chat />
 
-      {/* <Avatars /> */}
-
       <SimpleStats />
 
       <TopRight>
@@ -38,6 +37,8 @@ export const Game = () => {
       </TopRight>
 
       <BottomBar />
+
+      <EntityTooltip />
     </>
   );
 };

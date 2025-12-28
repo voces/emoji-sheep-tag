@@ -694,6 +694,28 @@ mouse.addEventListener("mouseMove", (e) => {
 document.addEventListener("keydown", (e) => {
   handleKeyDown(e.code);
 
+  // Block Tab to prevent focus leaving the game (e.g., to URL bar)
+  if (e.key === "Tab") e.preventDefault();
+
+  // Block browser shortcuts that disrupt gameplay (but not when typing in inputs)
+  const inInput = document.activeElement?.tagName === "INPUT";
+  if (e.ctrlKey || e.metaKey) {
+    const blocked = [
+      "KeyF",
+      "KeyG",
+      "KeyD",
+      "KeyS",
+      "KeyP",
+      "KeyO",
+      "KeyT",
+      "KeyN",
+      "KeyL",
+    ];
+    if (blocked.includes(e.code)) e.preventDefault();
+  }
+  if (e.key === "F1") e.preventDefault();
+  if (e.key === "Backspace" && !inInput) e.preventDefault();
+
   if (showSettingsVar()) return false;
 
   const shortcuts = shortcutsVar();

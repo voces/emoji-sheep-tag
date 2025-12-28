@@ -939,7 +939,7 @@ export const prefabs: Record<string, DataEntity> = {
       damagePoint: 0.2,
       projectileSpeed: 8,
       model: "frostOrb",
-      targetsAllowed: [["unit", "ward"]],
+      targetsAllowed: [["unit", "ward", "tree"]],
     },
     buffs: [{ impartedBuffOnAttack: "frostEffect" }],
   },
