@@ -14,7 +14,6 @@ const SettingRow = styled.div`
 
 const SettingLabel = styled.label`
   font-size: 14px;
-  cursor: pointer;
 `;
 
 export const Gameplay = () => {
@@ -74,31 +73,16 @@ export const Gameplay = () => {
 
       <SettingRow>
         <Checkbox
-          id="show-ping"
-          checked={settings.showPing}
+          id="raw-mouse-input"
+          checked={settings.rawMouseInput}
           onChange={(e) =>
             gameplaySettingsVar({
               ...settings,
-              showPing: e.currentTarget.checked,
+              rawMouseInput: e.currentTarget.checked,
             })}
         />
-        <SettingLabel htmlFor="show-ping">
-          Show ping
-        </SettingLabel>
-      </SettingRow>
-
-      <SettingRow>
-        <Checkbox
-          id="show-fps"
-          checked={settings.showFps}
-          onChange={(e) =>
-            gameplaySettingsVar({
-              ...settings,
-              showFps: e.currentTarget.checked,
-            })}
-        />
-        <SettingLabel htmlFor="show-fps">
-          Show FPS
+        <SettingLabel htmlFor="raw-mouse-input">
+          Raw mouse input (bypass OS acceleration)
         </SettingLabel>
       </SettingRow>
     </SettingsPanelContainer>

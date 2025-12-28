@@ -123,9 +123,12 @@ app.addSystem({
       // Abort if delta consumed turning
       if (delta === 0) break;
 
-      delta = "path" in e.order && e.order.path?.length
-        ? tweenPath(e, delta)
-        : 0;
+      // If order has a path, tween along it; otherwise break (nothing more to do)
+      if ("path" in e.order && e.order.path?.length) {
+        delta = tweenPath(e, delta);
+      } else {
+        break;
+      }
     }
 
     updateDebugCircles(e);

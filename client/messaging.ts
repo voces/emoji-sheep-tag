@@ -2,7 +2,7 @@ import type { ClientToServerMessage } from "../server/client.ts";
 import { getWebSocket } from "./connection.ts";
 import { getShardSocket } from "./shardConnection.ts";
 import { flags } from "./flags.ts";
-import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { editorMapModifiedVar } from "@/vars/editor.ts";
 
 const delay = (fn: () => void) => {
@@ -76,7 +76,7 @@ export const startPing = () => {
 
   pingInterval = setInterval(() => {
     if (
-      (!flags.debug || !flags.debugStats) && !gameplaySettingsVar().showPing
+      (!flags.debug || !flags.debugStats) && !uiSettingsVar().showPing
     ) return;
     const ws = getWebSocket();
     if (ws?.readyState !== WebSocket.OPEN) return;

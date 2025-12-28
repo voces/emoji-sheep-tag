@@ -1196,7 +1196,7 @@ for (const event of ["pointerdown", "keydown", "contextmenu"]) {
         }
 
         await globalThis.document.body.requestPointerLock({
-          unadjustedMovement: true,
+          unadjustedMovement: gameplaySettingsVar().rawMouseInput,
         });
       } catch { /* do nothing */ }
     }
@@ -1261,4 +1261,20 @@ addSystem({
 
 shortcutsVar.subscribe(() => {
   for (const e of entities) shortcutOverrides(e);
+});
+
+// Re-request pointer lock when rawMouseInput setting changes
+let lastRawMouseInput = gameplaySettingsVar().rawMouseInput;
+gameplaySettingsVar.subscribe(async (settings) => {
+  if (settings.rawMouseInput !== lastRawMouseInput) {
+    lastRawMouseInput = settings.rawMouseInput;
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+      try {
+        await globalThis.document.body.requestPointerLock({
+          unadjustedMovement: settings.rawMouseInput,
+        });
+      } catch { /* do nothing */ }
+    }
+  }
 });

@@ -3,11 +3,19 @@ import { stateVar } from "@/vars/state.ts";
 import { selection } from "./selection.ts";
 import { addSystem } from "@/shared/context.ts";
 import { Entity } from "../ecs.ts";
+import { visibilityGrid, visibleToLocalPlayer } from "./fog.ts";
+
+const isEntityVisible = (e: Entity): boolean =>
+  visibleToLocalPlayer(e) ||
+  (e.position !== undefined &&
+    visibilityGrid.isPositionVisible(e.position.x, e.position.y));
 
 addSystem({
   props: ["id"],
   onAdd: (e) => {
-    if (e.sounds?.birth) playEntitySound(e, "birth", { volume: 0.5 });
+    if (e.sounds?.birth && isEntityVisible(e)) {
+      playEntitySound(e, "birth", { volume: 0.5 });
+    }
   },
   onRemove: (e) => {
     if (stateVar() !== "playing") return;

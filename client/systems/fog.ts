@@ -94,7 +94,7 @@ const removeEntityFromGrid = (entity: Entity) => {
 
 // Check if an entity provides visibility for the local player
 // Observers see all entities, pending users only see wolves, others see allies
-const visibleToLocalPlayer = (entity: Entity): boolean => {
+export const visibleToLocalPlayer = (entity: Entity): boolean => {
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return false;
 

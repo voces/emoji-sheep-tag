@@ -1,7 +1,7 @@
 import { styled } from "styled-components";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { useEffect, useState } from "react";
 import { stats } from "../../../util/Stats.ts";
 import { getFps } from "../../../graphics/three.ts";
@@ -42,7 +42,7 @@ const Ping = () => {
 };
 
 export const SimpleStats = () => {
-  const { showFps, showPing } = useReactiveVar(gameplaySettingsVar);
+  const { showFps, showPing } = useReactiveVar(uiSettingsVar);
 
   if (!showFps && !showPing) return null;
 

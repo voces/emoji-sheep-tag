@@ -25,6 +25,7 @@ type PlayerLike = {
   sheepCount?: number;
   handicap?: number;
   gold?: number;
+  team?: "sheep" | "wolf" | "pending" | "observer";
   isPlayer: true;
 };
 
@@ -75,6 +76,7 @@ export const createPlayerEntities = <T extends PlayerLike>(
 
   for (const c of sheep) {
     c.gold = practice ? 100_000 : sheepPlayerGold;
+    c.team = "sheep";
     c.sheepCount = settings.mode !== "switch"
       ? (c.sheepCount ?? 0) + 1
       : c.sheepCount;
@@ -83,6 +85,7 @@ export const createPlayerEntities = <T extends PlayerLike>(
 
   for (const c of wolves) {
     c.gold = isTeamGold ? 0 : settings.startingGold.wolves;
+    c.team = "wolf";
     ecs.addEntity(c);
   }
 

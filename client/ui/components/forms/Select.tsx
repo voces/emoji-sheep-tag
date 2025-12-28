@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { styled } from "styled-components";
 import { Card } from "@/components/layout/Card.tsx";
 import { Button } from "@/components/forms/Button.tsx";
+import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 
 type SelectOption = {
   value: string;
@@ -92,7 +93,9 @@ export const Select = ({
         !document.pointerLockElement &&
         typeof document.body.requestPointerLock === "function"
       ) {
-        document.body.requestPointerLock({ unadjustedMovement: true });
+        document.body.requestPointerLock({
+          unadjustedMovement: gameplaySettingsVar().rawMouseInput,
+        });
       }
     } catch { /* ignore */ }
   };

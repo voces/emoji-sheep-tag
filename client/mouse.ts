@@ -174,14 +174,17 @@ globalThis.addEventListener("pointermove", (event) => {
   mouse.dispatchTypedEvent("mouseMove", new MouseMoveEvent());
 });
 
-globalThis.addEventListener("pointerdown", (event) =>
+globalThis.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
   mouse.dispatchTypedEvent(
     "mouseButtonDown",
     new MouseButtonEvent(
       "down",
       event.button === 0 ? "left" : event.button === 1 ? "middle" : "right",
     ),
-  ));
+  );
+});
 
 globalThis.addEventListener("pointerup", (event) =>
   mouse.dispatchTypedEvent(

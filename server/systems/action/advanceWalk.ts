@@ -29,11 +29,13 @@ export const advanceWalk = (e: Entity, delta: number): number => {
 
     // Check if already within follow distance
     if (distance <= FOLLOW_DISTANCE) {
-      // Already in range - clear path and set lastRepath to add delay before following again
-      if (e.order.path?.length) {
+      // Already in range - clear order if queued orders exist, otherwise retain it
+      if (e.queue?.length) {
+        delete e.order;
+      } else if (e.order.path?.length) {
         e.order = { ...e.order, path: [], lastRepath: now };
       }
-      return delta;
+      return 0;
     }
 
     // Only repath if we have no path
@@ -44,6 +46,11 @@ export const advanceWalk = (e: Entity, delta: number): number => {
         distanceFromTarget: FOLLOW_DISTANCE,
       });
       e.order = { ...e.order, path, lastRepath: now };
+      // If target is unreachable, clear order if queued orders exist, otherwise just face it
+      if (!path.length) {
+        if (e.queue?.length) delete e.order;
+        return 0;
+      }
     }
   } else if (!e.order.path || shouldRepath(e, now)) {
     // Periodic repath for static targets

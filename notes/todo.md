@@ -17,7 +17,6 @@
   - Crystal Ball
 - Pointer lock setting
 - Server-side visibility for attack cancel on cliffs?
-- Can hear through fog
 - When changing zoom, blueprints
 - Modes
   - Bulldog
@@ -42,14 +41,20 @@
 - Pausing?
 - Editor improvements
   - Brush size
+- Team vs All chat
+- Hover tooltip on units, indicating owner (or at least in-game multiboard)
+- Wolf attack triggers too often
+- Base wolf income too high
 
 # Bugs
 
-- Fire + Illusion?
 - Pathing falls over with lots of foxes
+  - Attack loops killed play
   - Falls over when spam clicking movement orders
   - Per-player pathing calc limits?
 - Runaway number of canvas/renderers?
+- Sheep count keeps getting reset?
+- Update fetchFlyRegions to aggregate requests
 
 # Code quality
 

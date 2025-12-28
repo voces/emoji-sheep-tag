@@ -13,8 +13,6 @@ export type Entity = CommonEntity & {
   selected?: boolean;
   zIndex?: number;
   isKaboom?: boolean;
-  /** Server position for restoring after failed interpolation */
-  serverPosition?: { readonly x: number; readonly y: number };
   /** Client-side elapsed time for easing calculations */
   clientElapsedTime?: number;
   aspectRatio?: number;

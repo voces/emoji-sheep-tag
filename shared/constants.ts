@@ -12,7 +12,7 @@ export const FOLLOW_DISTANCE = 0.25;
 
 export const PATHING_WALK_IGNORE_DISTANCE = 2;
 
-export const PATHING_WALK_ANGLE_DIFFERENCE = Math.PI / 2;
+export const PATHING_WALK_ANGLE_DIFFERENCE = Math.PI * 2 / 3;
 
 export const SHOP_INTERACTION_RANGE = 2;
 

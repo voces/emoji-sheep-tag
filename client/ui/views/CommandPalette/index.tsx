@@ -21,7 +21,7 @@ import { useCopyMap } from "./useCopyMap.ts";
 import { useSelectMap } from "./useSelectMap.ts";
 import { useSaveMapAs } from "./useSaveMapAs.ts";
 import { useQuickSaveMap } from "./useQuickSaveMap.ts";
-import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { openEditor } from "@/util/openEditor.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
@@ -122,7 +122,7 @@ const highlightText = (text: string, query: string) => {
 
 export const CommandPalette = () => {
   const showCommandPalette = useReactiveVar(showCommandPaletteVar);
-  const gameplaySettings = useReactiveVar(gameplaySettingsVar);
+  const uiSettings = useReactiveVar(uiSettingsVar);
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const currentMap = useReactiveVar(editorCurrentMapVar);
   const mapModified = useReactiveVar(editorMapModifiedVar);
@@ -193,26 +193,26 @@ export const CommandPalette = () => {
       ]
       : []),
     {
-      name: `${gameplaySettings.showPing ? "Hide" : "Show"} ping`,
+      name: `${uiSettings.showPing ? "Hide" : "Show"} ping`,
       description: `${
-        gameplaySettings.showPing ? "Hide" : "Show"
+        uiSettings.showPing ? "Hide" : "Show"
       } network latency indicator`,
       callback: () => {
-        gameplaySettingsVar({
-          ...gameplaySettings,
-          showPing: !gameplaySettings.showPing,
+        uiSettingsVar({
+          ...uiSettings,
+          showPing: !uiSettings.showPing,
         });
       },
     },
     {
-      name: `${gameplaySettings.showFps ? "Hide" : "Show"} FPS`,
+      name: `${uiSettings.showFps ? "Hide" : "Show"} FPS`,
       description: `${
-        gameplaySettings.showFps ? "Hide" : "Show"
+        uiSettings.showFps ? "Hide" : "Show"
       } frames per second counter`,
       callback: () => {
-        gameplaySettingsVar({
-          ...gameplaySettings,
-          showFps: !gameplaySettings.showFps,
+        uiSettingsVar({
+          ...uiSettings,
+          showFps: !uiSettings.showFps,
         });
       },
     },
@@ -299,8 +299,8 @@ export const CommandPalette = () => {
     flags.debug,
     flags.debugStats,
     flags.debugPathing,
-    gameplaySettings.showPing,
-    gameplaySettings.showFps,
+    uiSettings.showPing,
+    uiSettings.showFps,
   ]);
 
   const filteredCommands = useMemoWithPrevious<FilteredCommand[]>((prev) => {

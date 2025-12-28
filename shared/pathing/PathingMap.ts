@@ -28,6 +28,9 @@ import {
   yWorldToTile as worldToTileY,
 } from "./coordinates.ts";
 
+const PLAYER_PATHING_BUDGET = 5000;
+const MIN_UNIT_BUDGET = 50;
+
 let debugging = false;
 // const elems: HTMLElement[] = [];
 // export const toggleDebugging = (): void => {
@@ -121,6 +124,32 @@ export class PathingMap {
 
   // Maps entities to tiles
   private readonly entities: Map<PathingEntity, Tile[]> = new Map();
+
+  // Per-player pathing iteration tracking
+  private readonly pathingIterationsPerPlayer = new Map<string, number>();
+
+  trackPathingIteration(owner: string | undefined): boolean {
+    if (!owner) return false;
+    const count = (this.pathingIterationsPerPlayer.get(owner) ?? 0) + 1;
+    this.pathingIterationsPerPlayer.set(owner, count);
+    return count > PLAYER_PATHING_BUDGET;
+  }
+
+  getPlayerPathingBudgetRemaining(owner: string | undefined): number {
+    if (!owner) return MIN_UNIT_BUDGET;
+    const used = this.pathingIterationsPerPlayer.get(owner) ?? 0;
+    return Math.max(MIN_UNIT_BUDGET, PLAYER_PATHING_BUDGET - used);
+  }
+
+  getPathingStats(): Map<string, number> {
+    return this.pathingIterationsPerPlayer;
+  }
+
+  resetPathingStats(): Map<string, number> {
+    const stats = new Map(this.pathingIterationsPerPlayer);
+    this.pathingIterationsPerPlayer.clear();
+    return stats;
+  }
 
   constructor({
     pathing,
@@ -984,9 +1013,15 @@ export class PathingMap {
     startTile.__startParent = null;
 
     let checksSinceBestChange = 0;
+    let unitIterations = 0;
+    const unitBudget = this.getPlayerPathingBudgetRemaining(entity.owner);
     while (startHeap.length) {
       // Degenerate case: target is close to start, but ~blocked off
-      if (checksSinceBestChange++ > 500) break;
+      if (++checksSinceBestChange > 500) break;
+
+      // Per-unit budget (at least MIN_UNIT_BUDGET, or remaining player budget)
+      const overPlayerBudget = this.trackPathingIteration(entity.owner);
+      if (++unitIterations > unitBudget || overPlayerBudget) break;
 
       // Start to End
       const startCurrent = startHeap.pop();
