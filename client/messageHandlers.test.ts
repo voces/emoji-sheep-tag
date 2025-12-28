@@ -583,7 +583,7 @@ describe("chat", () => {
 
     expect(chatLogVar()).toHaveLength(initialChatCount + 1);
     expect(chatLogVar()[chatLogVar().length - 1].message).toBe(
-      "|c#FF0000|Test Player|: Hello world!",
+      "[All] |c#FF0000|Test Player|: Hello world!",
     );
   });
 
