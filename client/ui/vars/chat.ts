@@ -3,10 +3,18 @@ import { colorName, playerEntities } from "@/shared/api/player.ts";
 import { localPlayerIdVar } from "./localPlayerId.ts";
 import { onInit } from "@/shared/context.ts";
 
+export type ChatChannel = "all" | "allies";
+
+export const chatChannelVar = makeVar<ChatChannel>("all");
+
+export const toggleChatChannel = () => {
+  chatChannelVar((current) => current === "all" ? "allies" : "all");
+};
+
 export const chatLogVar = makeVar<
-  { id: string; timestamp: number; message: string }[]
+  { id: string; timestamp: number; message: string; channel?: ChatChannel }[]
 >([]);
-export const addChatMessage = (message: string) => {
+export const addChatMessage = (message: string, channel?: ChatChannel) => {
   // Not sure why I can't use playSound directly, but esbuild gets mad about the import
   globalThis.dispatchEvent(
     new CustomEvent("sound", {
@@ -18,6 +26,7 @@ export const addChatMessage = (message: string) => {
       id: crypto.randomUUID(),
       timestamp: Date.now(),
       message,
+      channel,
     }],
   );
 };

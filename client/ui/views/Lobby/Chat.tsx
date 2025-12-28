@@ -7,11 +7,15 @@ import {
 } from "react";
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { chatLogVar, chatValueVar } from "@/vars/chat.ts";
+import {
+  chatChannelVar,
+  chatLogVar,
+  chatValueVar,
+  toggleChatChannel,
+} from "@/vars/chat.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";
 import { send } from "../../../client.ts";
 import { Card } from "@/components/layout/Card.tsx";
-import { Input } from "@/components/forms/Input.tsx";
 
 const ChatCard = styled(Card)`
   height: 200px;
@@ -29,13 +33,57 @@ const ChatMessagesContainer = styled.div`
   padding-right: 16px;
 `;
 
-const ChatInput = styled(Input)`
-  max-width: none;
+const InputWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 12));
+  color: ${({ theme }) => theme.colors.border};
+
+  &:has(.hover:not([disabled])) {
+    background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 5));
+  }
+
+  &:has(:focus:not([disabled])) {
+    background-color: white;
+    box-shadow: #222 1px 1px 4px 1px;
+  }
+
+  &:has(:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ChannelButton = styled.button`
+  background: none;
+  border: none;
+  font-size: inherit;
+  padding: 4px 0.25em 4px 8px;
+  white-space: nowrap;
+  color: hsl(from ${({ theme }) => theme.colors.border} h s calc(l + 35));
+
+  &.hover {
+    color: ${(p) => p.theme.colors.border};
+  }
+`;
+
+const ChatInput = styled.input`
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: inherit;
+  padding: 4px 8px 4px 0;
+
+  &:focus:not([disabled]) {
+    box-shadow: none;
+  }
 `;
 
 export const Chat = () => {
   const chatLog = useReactiveVar(chatLogVar);
   const chatValue = useReactiveVar(chatValueVar);
+  const chatChannel = useReactiveVar(chatChannelVar);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
   const [disabled, setDisabled] = useState(true);
@@ -75,18 +123,38 @@ export const Chat = () => {
           </div>
         ))}
       </ChatMessagesContainer>
-      <ChatInput
-        ref={inputRef}
-        maxLength={150}
-        value={chatValue}
-        disabled={disabled}
-        onInput={(e) => chatValueVar(e.currentTarget.value)}
-        onKeyDown={(e) => {
-          if (!e.code.includes("Enter") || !e.currentTarget.value) return;
-          send({ type: "chat", message: e.currentTarget.value });
-          chatValueVar("");
-        }}
-      />
+      <InputWrapper>
+        <ChannelButton
+          onClick={() => {
+            toggleChatChannel();
+            inputRef.current?.focus();
+          }}
+          title="Tab to switch"
+        >
+          [{chatChannel === "all" ? "All" : "Allies"}]
+        </ChannelButton>
+        <ChatInput
+          ref={inputRef}
+          maxLength={150}
+          value={chatValue}
+          disabled={disabled}
+          onInput={(e) => chatValueVar(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Tab") {
+              e.preventDefault();
+              toggleChatChannel();
+              return;
+            }
+            if (!e.code.includes("Enter") || !e.currentTarget.value) return;
+            send({
+              type: "chat",
+              message: e.currentTarget.value,
+              channel: chatChannel,
+            });
+            chatValueVar("");
+          }}
+        />
+      </InputWrapper>
     </ChatCard>
   );
 };

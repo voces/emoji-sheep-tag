@@ -494,10 +494,13 @@ const zPong = z.object({
   data: z.unknown(),
 });
 
+const zChatChannel = z.enum(["all", "allies"]);
+
 const zChat = z.object({
   type: z.literal("chat"),
   player: z.string().optional(),
   message: z.string(),
+  channel: zChatChannel.optional(),
 });
 
 const zLobbySettingsMessage = zLobbySettings.extend({

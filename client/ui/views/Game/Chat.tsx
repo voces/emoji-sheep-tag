@@ -3,7 +3,12 @@ import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { send } from "../../../client.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";
-import { chatLogVar, chatValueVar } from "@/vars/chat.ts";
+import {
+  chatChannelVar,
+  chatLogVar,
+  chatValueVar,
+  toggleChatChannel,
+} from "@/vars/chat.ts";
 import { showChatBoxVar } from "@/vars/showChatBox.ts";
 
 const ChatContainer = styled.div`
@@ -58,31 +63,15 @@ const ChatMessage = styled.div<{
   }};
 `;
 
-const ChatInput = styled.input<{ $state: string }>`
-  background: transparent;
-  color: inherit;
-  text-shadow: 0 0 2px ${({ theme }) => theme.colors.border};
-  opacity: 0;
+const InputWrapper = styled.div<{ $state: string }>`
+  display: flex;
+  align-items: center;
+  opacity: ${({ $state }) => ($state === "closed" ? 0 : 1)};
   transition: all 100ms ease-in-out;
-  outline: none;
-  padding-left: ${({ theme }) => theme.spacing.sm};
-  margin-left: -${({ theme }) => theme.spacing.sm};
-  border: 0;
   width: 300px;
 
   ${({ $state, theme }) =>
     $state === "open" && `
-    &:focus:not([disabled]) {
-      opacity: 1;
-      background-color: color-mix(
-        in oklab,
-        ${theme.colors.background} 70%,
-        transparent
-      );
-      box-shadow: color-mix(in oklab, ${theme.colors.shadow} 70%, transparent)
-        1px 1px 4px 1px;
-    }
-    opacity: 1;
     background-color: color-mix(
       in oklab,
       ${theme.colors.background} 70%,
@@ -103,10 +92,40 @@ const ChatInput = styled.input<{ $state: string }>`
   `};
 `;
 
+const ChannelButton = styled.button<{ $state: string }>`
+  background: none;
+  border: none;
+  color: color-mix(in oklab, ${(p) => p.theme.colors.body} 60%, transparent);
+  font-size: inherit;
+  padding: 0 0.25em 0 4px;
+  white-space: nowrap;
+  pointer-events: ${({ $state }) => ($state === "open" ? "auto" : "none")};
+  &:hover {
+    color: ${(p) => p.theme.colors.body};
+  }
+`;
+
+const ChatInput = styled.input`
+  background: transparent;
+  color: inherit;
+  text-shadow: 0 0 2px ${({ theme }) => theme.colors.border};
+  transition: all 100ms ease-in-out;
+  outline: none;
+  padding: 0 ${({ theme }) => theme.spacing.sm};
+  border: 0;
+  flex: 1;
+
+  &:focus:not([disabled]) {
+    background: transparent;
+    box-shadow: none;
+  }
+`;
+
 export const Chat = () => {
   const chatLog = useReactiveVar(chatLogVar);
   const showChatBox = useReactiveVar(showChatBoxVar);
   const chatValue = useReactiveVar(chatValueVar);
+  const chatChannel = useReactiveVar(chatChannelVar);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const seenMessagesRef = useRef<Set<string>>(new Set());
   const [, forceUpdate] = useState({});
@@ -117,7 +136,11 @@ export const Chat = () => {
 
     if (showChatBox === "sent") {
       if (inputRef.current?.value) {
-        send({ type: "chat", message: inputRef.current.value });
+        send({
+          type: "chat",
+          message: inputRef.current.value,
+          channel: chatChannel,
+        });
         chatValueVar("");
       }
       showChatBoxVar("closed");
@@ -126,7 +149,7 @@ export const Chat = () => {
     if (showChatBox === "dismissed" && inputRef.current?.value === "") {
       showChatBoxVar("closed");
     }
-  }, [showChatBox]);
+  }, [showChatBox, chatChannel]);
 
   // Track which messages are new for this render
   const newMessageIds = chatLog
@@ -173,20 +196,37 @@ export const Chat = () => {
             <ColorMarkdown text={log.message} />
           </ChatMessage>
         ))}
-      <ChatInput
-        autoFocus
-        $state={showChatBox}
-        ref={inputRef}
-        maxLength={150}
-        value={chatValue}
-        onInput={(e) => chatValueVar(e.currentTarget.value)}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.code !== "Enter") return;
-          showChatBoxVar("sent");
-        }}
-        onBlur={() => showChatBoxVar("dismissed")}
-      />
+      <InputWrapper $state={showChatBox}>
+        <ChannelButton
+          $state={showChatBox}
+          onClick={() => {
+            toggleChatChannel();
+            showChatBoxVar("open");
+            inputRef.current?.focus();
+          }}
+          title="Tab to switch"
+        >
+          [{chatChannel === "all" ? "All" : "Allies"}]
+        </ChannelButton>
+        <ChatInput
+          autoFocus
+          ref={inputRef}
+          maxLength={150}
+          value={chatValue}
+          onInput={(e) => chatValueVar(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Tab") {
+              e.preventDefault();
+              toggleChatChannel();
+              return;
+            }
+            if (e.code !== "Enter") return;
+            showChatBoxVar("sent");
+          }}
+          onBlur={() => showChatBoxVar("dismissed")}
+        />
+      </InputWrapper>
     </ChatContainer>
   );
 };

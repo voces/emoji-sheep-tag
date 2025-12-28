@@ -192,10 +192,17 @@ export const handlers = {
     }
   },
   chat: (
-    { player, message }: Extract<ServerToClientMessage, { type: "chat" }>,
+    { player, message, channel }: Extract<
+      ServerToClientMessage,
+      { type: "chat" }
+    >,
   ) => {
     const p = getPlayer(player);
-    addChatMessage(p ? `${colorName(p)}: ${message}` : message);
+    const channelPrefix = channel === "allies" ? "[Allies] " : "[All] ";
+    addChatMessage(
+      p ? `${channelPrefix}${colorName(p)}: ${message}` : message,
+      channel,
+    );
   },
   lobbySettings: (
     { type: _type, ...lobbySettings }: Extract<

@@ -41,10 +41,7 @@
 - Pausing?
 - Editor improvements
   - Brush size
-- Team vs All chat
 - Hover tooltip on units, indicating owner (or at least in-game multiboard)
-- Wolf attack triggers too often
-- Base wolf income too high
 
 # Bugs
 

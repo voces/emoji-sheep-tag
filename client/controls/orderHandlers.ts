@@ -15,6 +15,22 @@ import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { canPlayerExecuteAction } from "../util/allyPermissions.ts";
 import { distanceBetweenEntities } from "@/shared/pathing/math.ts";
 
+let lastAckAttackTime = 0;
+
+const playAckAttackSound = (entity: Entity, targetId: string | undefined) => {
+  const now = performance.now();
+  const currentTargetId = entity.order && "targetId" in entity.order
+    ? entity.order.targetId
+    : undefined;
+  const sameTarget = currentTargetId === targetId;
+  const throttle = sameTarget ? 3000 : 1500;
+
+  if (now - lastAckAttackTime < throttle) return;
+
+  lastAckAttackTime = now;
+  playEntitySound(entity, "ackAttack", { volume: 0.5 });
+};
+
 let activeOrder:
   | { order: string; variant: CursorVariant; aoe: number }
   | undefined;
@@ -135,8 +151,8 @@ export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
     });
 
     if (order === "attack") {
-      const e = groupedOrders[order].find((e) => e.sounds?.ackAttack);
-      if (e) playEntitySound(e, "ackAttack", { throttle: 1000 });
+      const u = groupedOrders[order].find((e) => e.sounds?.ackAttack);
+      if (u) playAckAttackSound(u, target?.id);
     }
   }
 
@@ -206,8 +222,8 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
 
   if (target && unitsWithTarget.size) {
     if (orderToExecute === "attack") {
-      const e2 = unitsWithTarget.find((e) => !!e.sounds?.ackAttack?.length);
-      if (e2) playEntitySound(e2, "ackAttack", { throttle: 1000 });
+      const u = unitsWithTarget.find((e) => !!e.sounds?.ackAttack?.length);
+      if (u) playAckAttackSound(u, target.id);
     }
     send({
       type: "unitOrder",
@@ -244,8 +260,8 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
 
   if (unitsWithoutTarget.size) {
     if (orderToExecute === "attack") {
-      const e2 = unitsWithoutTarget.find((e) => !!e.sounds?.ackAttack?.length);
-      if (e2) playEntitySound(e2, "ackAttack", { throttle: 1000 });
+      const u = unitsWithoutTarget.find((e) => !!e.sounds?.ackAttack?.length);
+      if (u) playAckAttackSound(u, undefined);
     }
     send({
       type: "unitOrder",
