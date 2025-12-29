@@ -16,7 +16,7 @@ import { getActiveOrder } from "../../../../controls.ts";
 import { mouse, MouseButtonEvent } from "../../../../mouse.ts";
 import { handleTargetOrder } from "../../../../controls/orderHandlers.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { playSound } from "../../../../api/sound.ts";
 import { pick } from "../../../../util/pick.ts";
 
@@ -120,10 +120,16 @@ export const PrimaryPortrait = () => {
   const selection = useReactiveVar(selectionVar);
   const iconProps = useEntityIconProps(selection);
   useListenToEntityProps(selection, ["icon", "model", "prefab"]);
+  const startedFollowingRef = useRef(false);
 
-  // Handle mouse up on global mouse - stop following
+  // Handle mouse up on global mouse - stop following only if we started it
   useEffect(() => {
-    const handleMouseUp = () => stopFollowingEntity();
+    const handleMouseUp = () => {
+      if (startedFollowingRef.current) {
+        stopFollowingEntity();
+        startedFollowingRef.current = false;
+      }
+    };
 
     mouse.addEventListener("mouseButtonUp", handleMouseUp);
     return () => mouse.removeEventListener("mouseButtonUp", handleMouseUp);
@@ -152,6 +158,7 @@ export const PrimaryPortrait = () => {
     } else {
       // Otherwise, start following the entity
       startFollowingEntity(selection);
+      startedFollowingRef.current = true;
     }
   };
 

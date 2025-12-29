@@ -11,6 +11,7 @@ import { getPlayer } from "@/shared/api/player.ts";
 import { isAlly } from "@/shared/api/unit.ts";
 import { Color } from "three";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
+import { startFollowingEntity, stopFollowingEntity } from "../api/camera.ts";
 
 // X'd farms not removed from selection
 export const selection = new ExtendedSet<SystemEntity<"selected">>();
@@ -31,6 +32,14 @@ const updateSelectionBuff = (e: Entity) => {
   if (!localPlayer) return;
 
   const oldBuff = selectionBuffs.get(e);
+
+  if (e.prefab === "startLocation") {
+    if (oldBuff) {
+      e.buffs = e.buffs?.filter((b) => b !== oldBuff);
+      selectionBuffs.delete(e);
+    }
+    return;
+  }
 
   // Collect all selecting player colors (including local player if selected)
   const selectingColors: string[] = [];
@@ -162,7 +171,21 @@ addSystem({
   onAdd: (e) => {
     if (!isLocalPlayer(e.owner)) return;
 
-    if (e.prefab === "sheep" || e.prefab === "wolf" || e.prefab === "spirit") {
+    // Start locations: select, center camera, and follow
+    if (e.prefab === "startLocation") {
+      selectEntity(e);
+      startFollowingEntity(e);
+      if (!primaryUnitVar()) primaryUnitVar(e);
+    } else if (e.prefab === "sheep") {
+      // Sheep: select, center camera, stop following start location
+      stopFollowingEntity();
+      selectEntity(e);
+      if (e.position) {
+        camera.position.x = e.position.x;
+        camera.position.y = e.position.y;
+      }
+      if (!primaryUnitVar()) primaryUnitVar(e);
+    } else if (e.prefab === "wolf" || e.prefab === "spirit") {
       if (selection.size === 0) {
         selectEntity(e);
         if (e.position) {
@@ -178,6 +201,7 @@ addSystem({
   },
   onRemove: (e) => {
     if (e === primaryUnitVar()) primaryUnitVar(undefined);
+    if (e.prefab === "startLocation") stopFollowingEntity();
     mirrors.delete(e);
     foxes.delete(e);
   },

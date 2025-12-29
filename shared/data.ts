@@ -1001,6 +1001,14 @@ export const prefabs: Record<string, DataEntity> = {
     bounty: 4,
     sounds: { birth: ["splat1"], death: ["splat1"] },
   },
+  startLocation: {
+    name: "Start Location",
+    model: "startLocation",
+    radius: 0.25,
+    pathing: PATHING_WALKABLE | PATHING_BLIGHT,
+    blocksPathing: PATHING_NONE,
+    actions: [move],
+  },
   tree: {
     name: "Tree",
     radius: 0.5,

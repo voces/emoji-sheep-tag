@@ -28,6 +28,19 @@ export const zShardToServerMessage = z.discriminatedUnion("type", [
       wolves: z.array(z.string()),
       duration: z.number(),
     }).optional(),
+    // Player start locations to persist for next round
+    startLocations: z.record(
+      z.string(),
+      z.object({ x: z.number(), y: z.number(), map: z.string() }),
+    )
+      .optional(),
+  }),
+  // Shard updates a player's start location as they move it
+  z.object({
+    type: z.literal("updateStartLocation"),
+    lobbyId: z.string(),
+    playerId: z.string(),
+    startLocation: z.object({ x: z.number(), y: z.number(), map: z.string() }),
   }),
 ]);
 
@@ -77,6 +90,11 @@ export const zServerToShardMessage = z.discriminatedUnion("type", [
         z.literal("wolf"),
       ]),
       token: z.string(), // One-time token for player auth
+      startLocation: z.object({
+        x: z.number(),
+        y: z.number(),
+        map: z.string(),
+      }).optional(),
     })),
     hostId: z.string().nullable(),
     practice: z.boolean(),

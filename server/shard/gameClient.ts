@@ -31,6 +31,7 @@ export class GameClient {
   handicap?: number;
   /** Unused, but required for type compatibility with Client */
   sheepCount = 0;
+  startLocation?: { x: number; y: number; map: string };
   // Note: socket and lobby are defined non-enumerable in constructor to prevent JSON serialization
   socket!: Socket;
   lobby!: ShardLobby;
@@ -43,6 +44,7 @@ export class GameClient {
       name: string;
       playerColor: string;
       team: "sheep" | "wolf" | "pending" | "observer";
+      startLocation?: { x: number; y: number; map: string };
     },
   ) {
     // Make socket and lobby properties non-enumerable to prevent JSON serialization issues
@@ -58,6 +60,14 @@ export class GameClient {
       writable: false,
       enumerable: false,
       configurable: false,
+    });
+
+    // Make startLocation non-enumerable to prevent JSON serialization to clients
+    Object.defineProperty(this, "startLocation", {
+      value: playerInfo.startLocation,
+      writable: true,
+      enumerable: false,
+      configurable: true,
     });
 
     this.id = playerInfo.id;

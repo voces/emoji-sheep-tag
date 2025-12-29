@@ -181,6 +181,7 @@ const startOnShard = (
       playerColor: p.playerColor,
       team: sheep.has(p) ? "sheep" : wolves.has(p) ? "wolf" : p.team,
       token: playerTokens.get(p)!,
+      startLocation: p.startLocation,
     })),
     hostId: lobby.host?.id ?? null,
     practice,

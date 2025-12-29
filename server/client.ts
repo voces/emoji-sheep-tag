@@ -88,6 +88,7 @@ export class Client implements Entity {
   lobby?: Lobby;
   ip?: string; // Client's IP address for geolocation
   sheepCount = 0;
+  startLocation?: { x: number; y: number; map: string };
 
   constructor(socket: Socket, providedName?: string, ip?: string) {
     this.playerColor = colors[0];
@@ -117,6 +118,14 @@ export class Client implements Entity {
       writable: false,
       enumerable: false,
       configurable: false,
+    });
+
+    // Make startLocation non-enumerable to prevent JSON serialization to clients
+    Object.defineProperty(this, "startLocation", {
+      value: undefined,
+      writable: true,
+      enumerable: false,
+      configurable: true,
     });
 
     // Add to global client tracking

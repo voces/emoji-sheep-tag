@@ -125,7 +125,7 @@ const connectToPrimary = () => {
         shardLobbies.set(message.lobbyId, lobby);
 
         // When lobby ends, notify primary and clean up
-        lobby.onEnd = (round, canceled, practice, sheepWon) => {
+        lobby.onEnd = (round, canceled, practice, sheepWon, startLocations) => {
           sendToPrimary({
             type: "lobbyEnded",
             lobbyId: message.lobbyId,
@@ -133,9 +133,20 @@ const connectToPrimary = () => {
             practice,
             sheepWon,
             round,
+            startLocations,
           });
           shardLobbies.delete(message.lobbyId);
           reportStatus();
+        };
+
+        // When a player moves their start location, notify primary
+        lobby.onStartLocationUpdate = (playerId, startLocation) => {
+          sendToPrimary({
+            type: "updateStartLocation",
+            lobbyId: message.lobbyId,
+            playerId,
+            startLocation,
+          });
         };
 
         reportStatus();

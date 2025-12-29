@@ -56,9 +56,7 @@ export const stopFollowingEntity = () => {
 export const getFollowingEntity = () => followingEntity;
 
 onRender((delta) => {
-  if (followingEntity) {
-    focusEntity(followingEntity);
-  }
+  if (followingEntity) focusEntity(followingEntity);
 
   // Handle smooth camera interpolation
   if (interpolation.isInterpolating) {

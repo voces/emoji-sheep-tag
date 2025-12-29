@@ -54,6 +54,11 @@ export class ShardLobby {
     canceled?: boolean,
     practice?: boolean,
     sheepWon?: boolean,
+    startLocations?: Record<string, { x: number; y: number; map: string }>,
+  ) => void;
+  onStartLocationUpdate?: (
+    playerId: string,
+    startLocation: { x: number; y: number; map: string },
   ) => void;
 
   /** Broadcast a message to all clients in this lobby */
@@ -283,7 +288,17 @@ export class ShardLobby {
 
     lobbyContext.with(this, () => {
       const round = createRoundSummary();
-      this.cleanup(round, canceled, sheepWon, notifyPrimary);
+      // Collect start locations from all clients
+      const startLocations: Record<
+        string,
+        { x: number; y: number; map: string }
+      > = {};
+      for (const client of this.clients.values()) {
+        if (client.startLocation) {
+          startLocations[client.id] = client.startLocation;
+        }
+      }
+      this.cleanup(round, canceled, sheepWon, notifyPrimary, startLocations);
     });
   }
 
@@ -293,6 +308,7 @@ export class ShardLobby {
     canceled = false,
     sheepWon = false,
     notifyPrimary = true,
+    startLocations?: Record<string, { x: number; y: number; map: string }>,
   ) {
     if (this.tokenExpirationTimer) {
       clearTimeout(this.tokenExpirationTimer);
@@ -304,7 +320,9 @@ export class ShardLobby {
     // Notify primary server (skip if already notified or primary requested the cancel)
     if (!this.notifiedPrimary) {
       this.notifiedPrimary = true;
-      if (notifyPrimary) this.onEnd?.(round, canceled, this.practice, sheepWon);
+      if (notifyPrimary) {
+        this.onEnd?.(round, canceled, this.practice, sheepWon, startLocations);
+      }
     }
   }
 }

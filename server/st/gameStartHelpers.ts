@@ -2,7 +2,7 @@ import type { Game } from "../ecs.ts";
 import { newEcs } from "../ecs.ts";
 import type { Entity } from "@/shared/types.ts";
 import type { LoadedMap } from "@/shared/map.ts";
-import { addEntity } from "@/shared/api/entity.ts";
+import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { generateDoodads, getMapCenter } from "@/shared/map.ts";
 import { newUnit } from "../api/unit.ts";
 import { playSoundAt } from "../api/sound.ts";
@@ -28,6 +28,7 @@ type PlayerLike = {
   gold?: number;
   team?: "sheep" | "wolf" | "pending" | "observer";
   isPlayer: true;
+  startLocation?: { x: number; y: number; map: string };
 };
 
 type LobbySettingsLike = {
@@ -123,6 +124,58 @@ export const spawnSheepUnits = <T extends { id: string }>(
   const sheepPool: Entity[] = [];
   for (const owner of sheep) {
     sheepPool.push(newUnit(owner.id, "sheep", ...getSheepSpawn()));
+  }
+  return sheepPool;
+};
+
+export const spawnStartLocations = <T extends PlayerLike>(
+  sheep: T[],
+  mapId: string,
+): Entity[] => {
+  const startLocations: Entity[] = [];
+  for (const owner of sheep) {
+    // Only use saved position if it's from the same map
+    const pos = owner.startLocation?.map === mapId
+      ? owner.startLocation
+      : undefined;
+    const [defaultX, defaultY] = getSheepSpawn();
+    startLocations.push(
+      newUnit(
+        owner.id,
+        "startLocation",
+        pos?.x ?? defaultX,
+        pos?.y ?? defaultY,
+      ),
+    );
+  }
+  return startLocations;
+};
+
+export const convertStartLocationsToSheep = <T extends PlayerLike>(
+  startLocations: Entity[],
+  sheepPlayers: T[],
+  mapId: string,
+): Entity[] => {
+  const sheepPool: Entity[] = [];
+  for (const startLocation of startLocations) {
+    if (!startLocation.owner || !startLocation.position) continue;
+    const sheep = newUnit(
+      startLocation.owner,
+      "sheep",
+      startLocation.position.x,
+      startLocation.position.y,
+    );
+    sheepPool.push(sheep);
+    // Save the start location position for next round
+    const player = sheepPlayers.find((p) => p.id === startLocation.owner);
+    if (player) {
+      player.startLocation = {
+        x: startLocation.position.x,
+        y: startLocation.position.y,
+        map: mapId,
+      };
+    }
+    removeEntity(startLocation);
   }
   return sheepPool;
 };
@@ -316,7 +369,10 @@ export const initializeGame = <T extends PlayerLike>(
       createPlayerEntities(ecs, settings, sheep, wolves, practice);
       send({ type: "start", updates: flushUpdates(false), practice });
 
+      // For non-practice rounds, spawn start locations immediately
+      let startLocations: Entity[] = [];
       if (!practice) {
+        startLocations = spawnStartLocations(sheep, map.id);
         if (settings.mode !== "switch") {
           broadcastTeamAnnouncement(sheep, wolves);
         }
@@ -325,7 +381,10 @@ export const initializeGame = <T extends PlayerLike>(
 
       timeout(() => {
         if (!round.active) return;
-        const sheepPool = spawnSheep(sheep, practice);
+        // Convert start locations to sheep, or spawn sheep directly in practice
+        const sheepPool = practice
+          ? spawnSheep(sheep, practice)
+          : convertStartLocationsToSheep(startLocations, sheep, map.id);
 
         if (!practice) {
           if (settings.mode === "vip") {

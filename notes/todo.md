@@ -40,7 +40,6 @@
 - Pausing?
 - Editor improvements
   - Brush size
-- Controlled start location
 - Enable queuing actions during construction/upgrades
 - Enable queuing actions for gold? This would require monitoring gold...
 - Targeting range indicators
@@ -54,6 +53,7 @@
   - Per-player pathing calc limits?
 - Runaway number of canvas/renderers?
 - Sheep count keeps getting reset?
+- Scrolling does not work with pointer lock
 
 # Code quality
 

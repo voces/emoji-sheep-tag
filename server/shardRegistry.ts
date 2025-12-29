@@ -190,6 +190,7 @@ export const endShardRound = (
     sheepWon?: boolean;
     round?: { sheep: string[]; wolves: string[]; duration: number };
     cancelMessage?: string;
+    startLocations?: Record<string, { x: number; y: number; map: string }>;
   },
 ) => {
   const lobby = Array.from(lobbies).find((l) => l.name === lobbyId);
@@ -239,6 +240,18 @@ export const endShardRound = (
           if (player) {
             player.sheepCount = (player.sheepCount ?? 0) + 1;
           }
+        }
+      }
+    }
+
+    // Update start locations on Client objects for next round
+    if (options.startLocations) {
+      for (
+        const [playerId, position] of Object.entries(options.startLocations)
+      ) {
+        const player = Array.from(lobby.players).find((p) => p.id === playerId);
+        if (player) {
+          player.startLocation = position;
         }
       }
     }
@@ -419,6 +432,7 @@ export const handleShardSocket = (
           practice: message.practice,
           sheepWon: message.sheepWon,
           round: message.round,
+          startLocations: message.startLocations,
         });
 
         console.log(
@@ -427,6 +441,21 @@ export const handleShardSocket = (
             message.canceled ? " (canceled)" : ""
           }`,
         );
+        break;
+      }
+
+      case "updateStartLocation": {
+        if (!shard) return;
+        const lobby = Array.from(lobbies).find((l) =>
+          l.name === message.lobbyId
+        );
+        if (!lobby) return;
+        const player = Array.from(lobby.players).find((p) =>
+          p.id === message.playerId
+        );
+        if (player) {
+          player.startLocation = message.startLocation;
+        }
         break;
       }
     }

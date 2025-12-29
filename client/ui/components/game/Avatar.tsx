@@ -19,7 +19,7 @@ import { getActiveOrder } from "../../../controls.ts";
 import { mouse, MouseButtonEvent } from "../../../mouse.ts";
 import { handleTargetOrder } from "../../../controls/orderHandlers.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { playSound } from "../../../api/sound.ts";
 import { pick } from "../../../util/pick.ts";
 import { getPlayer } from "@/shared/api/player.ts";
@@ -128,6 +128,7 @@ export const Avatar = (
 
   const iconProps = useEntityIconProps(entity);
   const ownerColor = getPlayer(entity.owner)?.playerColor ?? undefined;
+  const startedFollowingRef = useRef(false);
 
   // Get expiring buffs for timers
   const expiringBuffs =
@@ -151,12 +152,18 @@ export const Avatar = (
     } else {
       // Otherwise, start following the entity
       startFollowingEntity(entity);
+      startedFollowingRef.current = true;
     }
   };
 
-  // Handle mouse up on global mouse - stop following
+  // Handle mouse up on global mouse - stop following only if we started it
   useEffect(() => {
-    const handleMouseUp = () => stopFollowingEntity();
+    const handleMouseUp = () => {
+      if (startedFollowingRef.current) {
+        stopFollowingEntity();
+        startedFollowingRef.current = false;
+      }
+    };
 
     mouse.addEventListener("mouseButtonUp", handleMouseUp);
     return () => mouse.removeEventListener("mouseButtonUp", handleMouseUp);
