@@ -164,14 +164,7 @@ describe("selectEntitiesByPrefabInRadius", () => {
   });
 
   it("should add to selection when additive flag is true", () => {
-    const existing = app.addEntity({
-      id: "wolf-existing",
-      prefab: "wolf",
-      owner: "player-1",
-      position: { x: 50, y: 50 },
-    });
-    selectEntity(existing);
-
+    // Create all entities first (sheep get auto-selected on creation)
     const origin = app.addEntity({
       id: "sheep-1",
       prefab: "sheep",
@@ -184,6 +177,14 @@ describe("selectEntitiesByPrefabInRadius", () => {
       owner: "player-1",
       position: { x: 2, y: 1 },
     });
+    // Use a farm (doesn't auto-select) as the existing selection
+    const existing = app.addEntity({
+      id: "farm-existing",
+      prefab: "farm",
+      owner: "player-1",
+      position: { x: 50, y: 50 },
+    });
+    selectEntity(existing, false); // Add to selection without clearing
 
     selectEntitiesByPrefabInRadius(
       origin,
@@ -376,6 +377,7 @@ describe("selectAllMirrors", () => {
 describe("selectPrimaryUnit", () => {
   it("should select sheep primary unit and move camera (with extra primary units)", () => {
     // Create sheep primary unit (first one) plus extra primary units
+    // Note: sheep auto-selects and centers camera on creation
     app.addEntity({
       id: "sheep-1",
       prefab: "sheep",
@@ -395,7 +397,8 @@ describe("selectPrimaryUnit", () => {
       position: { x: 50, y: 60 },
     });
 
-    // Set camera to a different position
+    // Clear selection and set camera to a different position
+    clearSelection();
     camera.position.x = 100;
     camera.position.y = 100;
 
@@ -404,7 +407,13 @@ describe("selectPrimaryUnit", () => {
     // Should select first sheep (the primary unit)
     expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
 
-    // Camera should move to the sheep's position
+    // selectPrimaryUnit only moves camera when unit was already selected
+    // Since we cleared selection first, camera doesn't move on first call
+    expect(camera.position.x).toBe(100);
+    expect(camera.position.y).toBe(100);
+
+    // Call selectPrimaryUnit again - now it should move camera
+    selectPrimaryUnit();
     expect(camera.position.x).toBe(10);
     expect(camera.position.y).toBe(20);
   });

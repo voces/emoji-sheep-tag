@@ -186,6 +186,7 @@ addSystem({
       }
       if (!primaryUnitVar()) primaryUnitVar(e);
     } else if (e.prefab === "wolf" || e.prefab === "spirit") {
+      // Required to prevent selecting mirrors
       if (selection.size === 0) {
         selectEntity(e);
         if (e.position) {
