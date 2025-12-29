@@ -221,6 +221,58 @@ globalThis.addEventListener("pointerup", (event) =>
 
 globalThis.addEventListener("contextmenu", (e) => e.preventDefault());
 
+// Handle wheel events for the simulated cursor position during pointer lock
+globalThis.addEventListener(
+  "wheel",
+  (event) => {
+    if (!document.pointerLockElement) return;
+    if (!event.isTrusted) return; // Ignore synthetic events we dispatch
+
+    event.preventDefault();
+
+    // Find the element at the simulated cursor position
+    const target = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
+    if (!target) return;
+
+    // Dispatch a synthetic wheel event to give handlers a chance to respond
+    const syntheticEvent = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      clientX: mouse.pixels.x,
+      clientY: mouse.pixels.y,
+      deltaX: event.deltaX,
+      deltaY: event.deltaY,
+      deltaZ: event.deltaZ,
+      deltaMode: event.deltaMode,
+    });
+    target.dispatchEvent(syntheticEvent);
+
+    // If a handler called preventDefault, don't manually scroll
+    if (syntheticEvent.defaultPrevented) return;
+
+    // Manually scroll since synthetic events don't trigger default behavior
+    const elements = document.elementsFromPoint(mouse.pixels.x, mouse.pixels.y);
+    for (const element of elements) {
+      if (!(element instanceof HTMLElement)) continue;
+
+      const style = getComputedStyle(element);
+      const overflowY = style.overflowY;
+      const overflowX = style.overflowX;
+      const canScrollY = (overflowY === "auto" || overflowY === "scroll") &&
+        element.scrollHeight > element.clientHeight;
+      const canScrollX = (overflowX === "auto" || overflowX === "scroll") &&
+        element.scrollWidth > element.clientWidth;
+
+      if (canScrollY || canScrollX) {
+        if (canScrollY) element.scrollTop += event.deltaY;
+        if (canScrollX) element.scrollLeft += event.deltaX;
+        return;
+      }
+    }
+  },
+  { passive: false },
+);
+
 addSystem({
   update: (_, time) => (time - lastIntersectUpdate > 0.2) && updateIntersects(),
 });

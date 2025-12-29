@@ -53,7 +53,6 @@
   - Per-player pathing calc limits?
 - Runaway number of canvas/renderers?
 - Sheep count keeps getting reset?
-- Scrolling does not work with pointer lock
 
 # Code quality
 
