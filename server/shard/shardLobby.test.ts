@@ -69,7 +69,6 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
             name: "Player 1",
             playerColor: "#ff0000",
             team: "sheep",
-            sheepCount: 0,
             token: "token-abc",
           },
           {
@@ -77,7 +76,6 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
             name: "Player 2",
             playerColor: "#00ff00",
             team: "wolf",
-            sheepCount: 0,
             token: "token-xyz",
           },
         ],
@@ -97,7 +95,6 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
           name: "Player 1",
           playerColor: "#ff0000",
           team: "sheep",
-          sheepCount: 5,
           token: "valid-token",
         }],
       }));
@@ -109,7 +106,6 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
       expect(playerInfo).toBeDefined();
       expect(playerInfo?.id).toBe("player-1");
       expect(playerInfo?.name).toBe("Player 1");
-      expect(playerInfo?.sheepCount).toBe(5);
     });
 
     it("removes token after use (one-time use)", () => {
@@ -140,7 +136,6 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
           name: "Player 1",
           playerColor: "#ff0000",
           team: "sheep",
-          sheepCount: 0,
           token: "token-1",
         }],
       }));
@@ -212,7 +207,6 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
             name: "P1",
             playerColor: "#fff",
             team: "sheep",
-            sheepCount: 0,
             token: "t1",
           },
           {
@@ -220,7 +214,6 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
             name: "P2",
             playerColor: "#fff",
             team: "wolf",
-            sheepCount: 0,
             token: "t2",
           },
         ],
@@ -259,7 +252,6 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
           name: "Host",
           playerColor: "#fff",
           team: "sheep",
-          sheepCount: 0,
           token: "token-1",
         }],
       }));

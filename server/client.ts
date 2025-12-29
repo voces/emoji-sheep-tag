@@ -15,6 +15,7 @@ import { generic, zGenericEvent } from "./actions/generic.ts";
 import { chat, zChat } from "./actions/chat.ts";
 import { cancel, zCancel } from "./actions/stop.ts";
 import { purchase, zPurchase } from "./actions/purchase.ts";
+import { resetGold, zResetGold } from "./actions/resetGold.ts";
 import { lobbySettings, zLobbySettings } from "./actions/lobbySettings.ts";
 import {
   uploadCustomMap,
@@ -79,7 +80,6 @@ export class Client implements Entity {
   playerColor: string;
   isPlayer: true = true;
   team: "sheep" | "wolf" | "pending" | "observer" = "pending";
-  gold?: number;
   handicap?: number;
 
   // Client-specific properties (not part of ECS)
@@ -155,6 +155,7 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zChat,
   zCancel,
   zPurchase,
+  zResetGold,
   zLobbySettings,
   zUploadCustomMap,
   zEditorCreateEntity,
@@ -187,6 +188,7 @@ const actions = {
   chat,
   cancel,
   purchase,
+  resetGold,
   lobbySettings,
   uploadCustomMap,
   editorCreateEntity,

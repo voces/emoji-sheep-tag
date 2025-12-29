@@ -122,7 +122,6 @@ describe("shardRegistry", () => {
           name: "Player 1",
           playerColor: "#ff0000",
           team: "sheep",
-          sheepCount: 0,
           token: "abc123",
         }],
         hostId: "player-1",

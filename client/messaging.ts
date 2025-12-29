@@ -16,8 +16,7 @@ const delay = (fn: () => void) => {
 };
 
 // Message types that should go through the shard during gameplay
-// Note: "generic" goes to primary server (lobby-level operations)
-// "cancel" goes to shard which then notifies primary to handle draft undo
+// Note: "generic" and "cancel" go to primary server (lobby-level operations)
 const SHARD_MESSAGE_TYPES = new Set([
   "build",
   "upgrade",
@@ -25,8 +24,8 @@ const SHARD_MESSAGE_TYPES = new Set([
   "ping",
   "mapPing",
   "chat",
-  "cancel",
   "purchase",
+  "resetGold",
   "updateSelection",
 ]);
 

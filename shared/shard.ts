@@ -22,23 +22,12 @@ export const zShardToServerMessage = z.discriminatedUnion("type", [
     lobbyId: z.string(),
     canceled: z.boolean().optional(), // True if host canceled the round
     practice: z.boolean().optional(), // True if practice mode
+    sheepWon: z.boolean().optional(), // True if sheep won (timer expired)
     round: z.object({
       sheep: z.array(z.string()),
       wolves: z.array(z.string()),
       duration: z.number(),
     }).optional(),
-  }),
-  // Shard notifies primary that a player's team changed (e.g., mid-game practice join)
-  z.object({
-    type: z.literal("playerTeamChanged"),
-    lobbyId: z.string(),
-    playerId: z.string(),
-    team: z.union([
-      z.literal("pending"),
-      z.literal("observer"),
-      z.literal("sheep"),
-      z.literal("wolf"),
-    ]),
   }),
 ]);
 
@@ -87,7 +76,6 @@ export const zServerToShardMessage = z.discriminatedUnion("type", [
         z.literal("sheep"),
         z.literal("wolf"),
       ]),
-      sheepCount: z.number(),
       token: z.string(), // One-time token for player auth
     })),
     hostId: z.string().nullable(),
@@ -109,9 +97,13 @@ export const zServerToShardMessage = z.discriminatedUnion("type", [
         z.literal("sheep"),
         z.literal("wolf"),
       ]),
-      sheepCount: z.number(),
       token: z.string(),
     }),
+  }),
+  // Server requests the shard cancel a lobby (host canceled from primary)
+  z.object({
+    type: z.literal("cancelLobby"),
+    lobbyId: z.string(),
   }),
 ]);
 

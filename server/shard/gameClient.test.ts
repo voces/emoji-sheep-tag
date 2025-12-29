@@ -49,14 +49,12 @@ describe("GameClient", () => {
         name: "Test Player",
         playerColor: "#ff0000",
         team: "sheep",
-        sheepCount: 5,
       });
 
       expect(client.id).toBe("player-1");
       expect(client.name).toBe("Test Player");
       expect(client.playerColor).toBe("#ff0000");
       expect(client.team).toBe("sheep");
-      expect(client.sheepCount).toBe(5);
       expect(client.isPlayer).toBe(true);
 
       lobby.cleanup();
@@ -69,7 +67,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "wolf",
-        sheepCount: 0,
       });
 
       const keys = Object.keys(client);
@@ -90,7 +87,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "wolf",
-        sheepCount: 3,
       });
 
       const json = JSON.stringify(client);
@@ -98,7 +94,6 @@ describe("GameClient", () => {
 
       expect(parsed.id).toBe("player-1");
       expect(parsed.name).toBe("Test");
-      expect(parsed.sheepCount).toBe(3);
       expect(parsed.socket).toBeUndefined();
       expect(parsed.lobby).toBeUndefined();
 
@@ -122,7 +117,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "sheep",
-        sheepCount: 0,
       });
 
       client.send({ type: "chat", message: "Hello" });
@@ -151,7 +145,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "sheep",
-        sheepCount: 0,
       });
 
       client.send({ type: "chat", message: "Hello" });
@@ -178,7 +171,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "sheep",
-        sheepCount: 0,
       });
 
       client.rawSend('{"type":"test"}');
@@ -208,7 +200,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "sheep",
-        sheepCount: 0,
       });
 
       client.rawSend("test");
@@ -227,7 +218,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "sheep",
-        sheepCount: 0,
       });
 
       expect(client.team).toBe("sheep");
@@ -241,7 +231,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "wolf",
-        sheepCount: 0,
       });
 
       expect(client.team).toBe("wolf");
@@ -255,7 +244,6 @@ describe("GameClient", () => {
         name: "Test",
         playerColor: "#fff",
         team: "observer",
-        sheepCount: 0,
       });
 
       expect(client.team).toBe("observer");

@@ -75,7 +75,6 @@ export const joinLobby = (
             name: client.name,
             playerColor: client.playerColor,
             team: "pending",
-            sheepCount: client.sheepCount,
             token,
           },
         });

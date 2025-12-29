@@ -143,6 +143,7 @@ const startOnShard = (
 ) => {
   // Track which shard is running this lobby's game
   lobby.activeShard = shard.id;
+  shard.lobbies.add(lobby.name);
 
   // If this shard is on a Fly machine, track the lobby and cancel any pending destruction
   if (shard.flyMachineId) addLobbyToFlyMachine(shard.flyMachineId, lobby.name);
@@ -179,7 +180,6 @@ const startOnShard = (
       name: p.name,
       playerColor: p.playerColor,
       team: sheep.has(p) ? "sheep" : wolves.has(p) ? "wolf" : p.team,
-      sheepCount: p.sheepCount,
       token: playerTokens.get(p)!,
     })),
     hostId: lobby.host?.id ?? null,

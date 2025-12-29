@@ -110,17 +110,33 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
 
   const time = new FakeTime();
 
-  // Set up client properties and add to ECS (similar to start action)
+  // Set up client properties and add separate player entities to ECS
   for (const { client } of sheepClients) {
     client.team = "sheep";
-    client.gold = gold;
-    ecs.addEntity(client);
+    ecs.addEntity({
+      id: client.id,
+      name: client.name,
+      playerColor: client.playerColor,
+      isPlayer: true,
+      team: "sheep",
+      gold,
+      sheepCount: client.sheepCount,
+      handicap: client.handicap,
+    });
   }
 
   for (const { client } of wolfClients) {
     client.team = "wolf";
-    client.gold = gold;
-    ecs.addEntity(client);
+    ecs.addEntity({
+      id: client.id,
+      name: client.name,
+      playerColor: client.playerColor,
+      isPlayer: true,
+      team: "wolf",
+      gold,
+      sheepCount: client.sheepCount,
+      handicap: client.handicap,
+    });
   }
 
   // Create team entities when teamGold is enabled

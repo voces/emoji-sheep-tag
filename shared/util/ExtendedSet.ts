@@ -43,7 +43,7 @@ export class ExtendedSet<T> extends Set<T> {
   }
 
   first() {
-    for (const element of this) return element;
+    return this.values().next().value;
   }
 
   find(mapper: (item: T) => boolean) {

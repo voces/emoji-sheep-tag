@@ -95,13 +95,15 @@ const InputWrapper = styled.div<{ $state: string }>`
 const ChannelButton = styled.button<{ $state: string }>`
   background: none;
   border: none;
-  color: color-mix(in oklab, ${(p) => p.theme.colors.body} 60%, transparent);
+  color: inherit;
   font-size: inherit;
   padding: 0 0.25em 0 4px;
   white-space: nowrap;
   pointer-events: ${({ $state }) => ($state === "open" ? "auto" : "none")};
-  &:hover {
-    color: ${(p) => p.theme.colors.body};
+  opacity: 0.6;
+
+  &.hover {
+    opacity: 1;
   }
 `;
 
@@ -216,7 +218,10 @@ export const Chat = () => {
           onInput={(e) => chatValueVar(e.currentTarget.value)}
           onKeyDown={(e) => {
             e.stopPropagation();
-            if (e.key === "Tab") return toggleChatChannel();
+            if (e.key === "Tab") {
+              e.preventDefault();
+              return toggleChatChannel();
+            }
             if (e.code !== "Enter") return;
             showChatBoxVar("sent");
           }}

@@ -22,7 +22,7 @@ import {
 } from "./actions/captains.ts";
 import { broadcastShards } from "./shardRegistry.ts";
 
-const convertPendingPlayersToTeams = (lobby: Lobby) => {
+export const convertPendingPlayersToTeams = (lobby: Lobby) => {
   const pendingPlayers = Array.from(lobby.players).filter((p) =>
     p.team === "pending"
   );
@@ -30,6 +30,88 @@ const convertPendingPlayersToTeams = (lobby: Lobby) => {
 
   for (const player of pendingPlayers) {
     player.team = autoAssignSheepOrWolf(lobby);
+  }
+};
+
+/**
+ * Common round-end cleanup logic used by both primary server rounds and shard games.
+ * Returns whether captains draft phase changed (for client notification).
+ */
+export const processRoundEnd = (
+  lobby: Lobby,
+  canceled: boolean,
+  practice: boolean,
+): { captainsPhaseChanged: boolean; inSecondCaptainsRound: boolean } => {
+  // Reset VIP handicaps
+  if (lobby.settings.mode === "vip") {
+    for (const p of lobby.players) p.handicap = undefined;
+  }
+
+  // Assign pending players (mid-game joins) to teams
+  convertPendingPlayersToTeams(lobby);
+
+  // Handle captains draft phases
+  const inFirstCaptainsRound = !canceled &&
+    !practice &&
+    lobby.captainsDraft?.phase === "drafted";
+
+  const inSecondCaptainsRound = !canceled &&
+    !practice &&
+    lobby.captainsDraft?.phase === "reversed";
+
+  if (inFirstCaptainsRound) {
+    // After first round: swap teams and move to "reversed" phase
+    for (const player of lobby.players) {
+      if (player.team === "sheep") player.team = "wolf";
+      else if (player.team === "wolf") player.team = "sheep";
+    }
+
+    const sheepCount = Array.from(lobby.players).filter((p) =>
+      p.team === "sheep"
+    ).length;
+    lobby.settings.sheep = sheepCount;
+
+    lobby.captainsDraft!.phase = "reversed";
+  } else if (inSecondCaptainsRound) {
+    // After second round: clear captains draft
+    lobby.captainsDraft = undefined;
+  }
+
+  return {
+    captainsPhaseChanged: inFirstCaptainsRound || inSecondCaptainsRound,
+    inSecondCaptainsRound,
+  };
+};
+
+/** Send round-end messages to clients (stop, captains phase change, cancel chat) */
+export const sendRoundEndMessages = (
+  round: ReturnType<typeof createRoundSummary> | undefined,
+  captainsPhaseChanged: boolean,
+  inSecondCaptainsRound: boolean,
+  options: {
+    canceled: boolean;
+    practice: boolean;
+    sheepWon?: boolean;
+    cancelMessage?: string;
+  },
+) => {
+  const lobby = lobbyContext.current;
+
+  if (options.sheepWon) {
+    send({ type: "chat", message: "Sheep win!" });
+  }
+  send({ type: "stop", updates: Array.from(lobby.players), round });
+
+  if (captainsPhaseChanged) {
+    send({
+      type: "captainsDraft",
+      phase: inSecondCaptainsRound ? undefined : "reversed",
+    });
+    send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
+  }
+
+  if (options.canceled && !options.practice) {
+    send({ type: "chat", message: options.cancelMessage ?? "Round canceled." });
   }
 };
 
@@ -56,45 +138,18 @@ export const endRound = (canceled = false) => {
   console.log(new Date(), "Round ended in lobby", lobby.name);
   lobby.round.clearInterval();
 
-  if (lobby.settings.mode === "vip") {
-    for (const p of lobby.players) p.handicap = undefined;
-  }
-
-  convertPendingPlayersToTeams(lobby);
+  const { captainsPhaseChanged, inSecondCaptainsRound } = processRoundEnd(
+    lobby,
+    canceled,
+    wasPractice,
+  );
 
   const round = !canceled &&
-      !lobby.round.practice &&
+      !wasPractice &&
       lobby.settings.mode !== "switch" &&
       lobby.settings.mode !== "vamp"
     ? createRoundSummary()
     : undefined;
-
-  // Handle captains draft phases
-  const inFirstCaptainsRound = !canceled &&
-    !lobby.round.practice &&
-    lobby.captainsDraft?.phase === "drafted";
-
-  const inSecondCaptainsRound = !canceled &&
-    !lobby.round.practice &&
-    lobby.captainsDraft?.phase === "reversed";
-
-  if (inFirstCaptainsRound) {
-    // After first round: swap teams and move to "reversed" phase
-    for (const player of lobby.players) {
-      if (player.team === "sheep") player.team = "wolf";
-      else if (player.team === "wolf") player.team = "sheep";
-    }
-
-    const sheepCount = Array.from(lobby.players).filter((p) =>
-      p.team === "sheep"
-    ).length;
-    lobby.settings.sheep = sheepCount;
-
-    lobby.captainsDraft!.phase = "reversed";
-  } else if (inSecondCaptainsRound) {
-    // After second round: clear captains draft
-    lobby.captainsDraft = undefined;
-  }
 
   // Sync sheepCount from ECS entities back to Client objects (before clearing round)
   if (!canceled) {
@@ -115,19 +170,10 @@ export const endRound = (canceled = false) => {
   lobby.status = "lobby";
   if (round) lobby.rounds.push(round);
 
-  send({ type: "stop", updates: Array.from(lobby.players), round });
-
-  if (inFirstCaptainsRound || inSecondCaptainsRound) {
-    send({
-      type: "captainsDraft",
-      phase: inSecondCaptainsRound ? undefined : "reversed",
-    });
-    send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
-  }
-
-  if (canceled && !wasPractice) {
-    send({ type: "chat", message: "Round canceled." });
-  }
+  sendRoundEndMessages(round, captainsPhaseChanged, inSecondCaptainsRound, {
+    canceled,
+    practice: wasPractice,
+  });
 };
 
 export const send = (message: ServerToClientMessage) => {

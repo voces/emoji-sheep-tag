@@ -56,10 +56,17 @@ export class MouseMoveEvent extends MouseEvent {
   }
 }
 
+export class IntersectsChangeEvent extends MouseEvent {
+  constructor() {
+    super("intersectsChange");
+  }
+}
+
 type MouseEvents = {
   mouseButtonDown: MouseButtonEvent;
   mouseButtonUp: MouseButtonEvent;
   mouseMove: MouseMoveEvent;
+  intersectsChange: IntersectsChangeEvent;
 };
 
 class MouseEventTarget extends TypedEventTarget<MouseEvents> {}
@@ -69,7 +76,7 @@ type Mouse = {
   percent: Vector2;
   world: Vector2;
   angle: number;
-  intersects: Set<Entity>;
+  intersects: ExtendedSet<Entity>;
   customRaycast?: (
     x: number,
     y: number,
@@ -87,7 +94,7 @@ export const mouse: MouseEventTarget & Mouse = Object.assign(
     percent: new Vector2(0.5, 0.5),
     world: new Vector2(),
     angle: 0,
-    intersects: new Set<Entity>(),
+    intersects: new ExtendedSet<Entity>(),
     customRaycast: undefined,
   },
 );
@@ -103,8 +110,15 @@ const world3 = new Vector3();
 
 let lastIntersectUpdate = performance.now() / 1000;
 
+const setsEqual = (a: ExtendedSet<Entity>, b: ExtendedSet<Entity>) => {
+  if (a.size !== b.size) return false;
+  for (const item of a) if (!b.has(item)) return false;
+  return true;
+};
+
 const updateIntersects = () => {
   lastIntersectUpdate = performance.now() / 1000;
+  const prevIntersects = mouse.intersects;
 
   if (mouse.customRaycast) {
     const result = mouse.customRaycast(mouse.pixels.x, mouse.pixels.y);
@@ -115,6 +129,12 @@ const updateIntersects = () => {
         result.world.y - camera.position.y,
         result.world.x - camera.position.x,
       );
+      if (!setsEqual(prevIntersects, mouse.intersects)) {
+        mouse.dispatchTypedEvent(
+          "intersectsChange",
+          new IntersectsChangeEvent(),
+        );
+      }
       return;
     }
   }
@@ -123,7 +143,7 @@ const updateIntersects = () => {
   if (editorVar()) raycaster.layers.enable(2);
   const intersects = raycaster.intersectObject(scene, true);
   if (intersects.length) {
-    const set = new Set<Entity>();
+    const set = new ExtendedSet<Entity>();
     for (const intersect of intersects) {
       if (typeof intersect.instanceId !== "number") continue;
       const obj = intersect.object;
@@ -142,11 +162,15 @@ const updateIntersects = () => {
       set.add(entity);
     }
     if (set.size || mouse.intersects.size) mouse.intersects = set;
-  } else if (mouse.intersects.size) mouse.intersects = new Set();
+  } else if (mouse.intersects.size) mouse.intersects = new ExtendedSet();
 
   raycaster.ray.intersectPlane(plane, world3);
   mouse.world.x = world3.x;
   mouse.world.y = world3.y;
+
+  if (!setsEqual(prevIntersects, mouse.intersects)) {
+    mouse.dispatchTypedEvent("intersectsChange", new IntersectsChangeEvent());
+  }
 };
 
 globalThis.addEventListener("pointermove", (event) => {

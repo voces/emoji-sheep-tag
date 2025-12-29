@@ -146,10 +146,8 @@ export const Avatar = (
           world: { x: entity.position?.x ?? 0, y: entity.position?.y ?? 0 },
         },
       );
-      const success = handleTargetOrder(syntheticEvent);
-      if (!success) {
-        playSound("ui", pick("error1"), { volume: 0.3 });
-      }
+      const result = handleTargetOrder(syntheticEvent);
+      if (!result.success) playSound("ui", pick("error1"), { volume: 0.3 });
     } else {
       // Otherwise, start following the entity
       startFollowingEntity(entity);

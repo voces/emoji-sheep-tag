@@ -57,6 +57,7 @@ export const miscNames = {
   ping: "Ping location",
   jumpToPing: "Jump to ping",
   applyZoom: "Apply zoom",
+  toggleScoreboard: "Toggle scoreboard",
 };
 
 export const bindingsEqual = (a: string[], b: string[]): boolean =>
@@ -110,6 +111,7 @@ export const defaultBindings: Shortcuts = {
     ping: ["AltLeft", "KeyG"],
     jumpToPing: ["Space"],
     applyZoom: ["Backquote"],
+    toggleScoreboard: ["Tab"],
   },
   ...Object.fromEntries(
     Object.entries(prefabs).filter(([, d]) => d.actions?.length).map((
@@ -179,6 +181,7 @@ export const createInitialShortcuts = (): Shortcuts => ({
     ping: pluckShortcut("misc.ping") ?? ["AltLeft", "KeyG"],
     jumpToPing: pluckShortcut("misc.jumpToPing") ?? ["Space"],
     applyZoom: pluckShortcut("misc.applyZoom") ?? ["Backquote"],
+    toggleScoreboard: pluckShortcut("misc.toggleScoreboard") ?? ["Tab"],
   },
   ...Object.fromEntries(
     Object.entries(prefabs).filter(([, d]) => d.actions?.length)

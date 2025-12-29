@@ -254,9 +254,7 @@ export const orderAttack = (
 
     // If not in range and no movement, play error sound and abort
     if (!attacker.movementSpeed) {
-      if (attacker.position) {
-        playSoundAt(attacker.position, "error1");
-      }
+      if (attacker.position) playSoundAt(attacker.position, "error1");
       return false;
     }
 

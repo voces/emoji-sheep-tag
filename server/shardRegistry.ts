@@ -8,7 +8,7 @@ import { zShardToServerMessage } from "@/shared/shard.ts";
 import { undoDraft } from "./st/roundHelpers.ts";
 import { lobbyContext } from "./contexts.ts";
 import { lobbies, type Lobby } from "./lobby.ts";
-import { send } from "./lobbyApi.ts";
+import { processRoundEnd, send, sendRoundEndMessages } from "./lobbyApi.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
 import {
   type FlyRegion,
@@ -181,6 +181,77 @@ const validateShardConnectivity = (
     });
   });
 
+/** End a round that was running on a shard */
+const endShardRound = (
+  lobbyId: string,
+  options: {
+    canceled?: boolean;
+    practice?: boolean;
+    sheepWon?: boolean;
+    round?: { sheep: string[]; wolves: string[]; duration: number };
+    cancelMessage?: string;
+  },
+) => {
+  const lobby = Array.from(lobbies).find((l) => l.name === lobbyId);
+  if (!lobby) {
+    console.log(
+      new Date(),
+      `[Shard] endShardRound: lobby ${lobbyId} not found`,
+    );
+    return;
+  }
+  if (lobby.status !== "playing") {
+    console.log(
+      new Date(),
+      `[Shard] endShardRound: lobby ${lobbyId} status is ${lobby.status}, expected playing`,
+    );
+    return;
+  }
+
+  lobbyContext.with(lobby, () => {
+    if (options.canceled && lobby.settings.mode !== "switch") {
+      undoDraft();
+    }
+
+    const { captainsPhaseChanged, inSecondCaptainsRound } = processRoundEnd(
+      lobby,
+      options.canceled ?? false,
+      options.practice ?? false,
+    );
+
+    lobby.status = "lobby";
+    lobby.activeShard = undefined;
+
+    // Record round result and update sheep counts if not canceled
+    if (options.round && !options.canceled) {
+      lobby.rounds.push(options.round);
+
+      if (lobby.settings.mode !== "switch") {
+        for (const playerId of options.round.sheep) {
+          const player = Array.from(lobby.players).find((p) =>
+            p.id === playerId
+          );
+          if (player) {
+            player.sheepCount = (player.sheepCount ?? 0) + 1;
+          }
+        }
+      }
+    }
+
+    sendRoundEndMessages(
+      options.round,
+      captainsPhaseChanged,
+      inSecondCaptainsRound,
+      {
+        canceled: options.canceled ?? false,
+        practice: options.practice ?? false,
+        sheepWon: options.sheepWon,
+        cancelMessage: options.cancelMessage,
+      },
+    );
+  });
+};
+
 export const handleShardSocket = (
   socket: Socket,
   remoteIp: string,
@@ -258,7 +329,11 @@ export const handleShardSocket = (
             const flyRegion = getFlyRegions().find((r) =>
               r.code === regionCode
             );
-            region = flyRegion?.name ?? regionCode;
+            // Use short display name for consistency with pre-launch region names
+            region = getRegionDisplayName(
+              regionCode,
+              flyRegion?.name ?? regionCode,
+            );
             if (flyRegion) {
               coordinates = {
                 lat: flyRegion.latitude,
@@ -334,56 +409,19 @@ export const handleShardSocket = (
           removeLobbyFromFlyMachine(shard.flyMachineId, message.lobbyId);
         }
 
-        // Find the lobby on the primary server
-        const lobby = Array.from(lobbies).find(
-          (l) => l.name === message.lobbyId,
+        endShardRound(message.lobbyId, {
+          canceled: message.canceled,
+          practice: message.practice,
+          sheepWon: message.sheepWon,
+          round: message.round,
+        });
+
+        console.log(
+          new Date(),
+          `[Shard] Lobby ${message.lobbyId} ended on shard ${shard.name}${
+            message.canceled ? " (canceled)" : ""
+          }`,
         );
-        if (lobby && lobby.status === "playing") {
-          lobbyContext.with(lobby, () => {
-            if (message.canceled && lobby.settings.mode !== "switch") {
-              undoDraft();
-            }
-
-            // Reset lobby status (shard games don't have lobby.round on primary)
-            lobby.status = "lobby";
-            lobby.activeShard = undefined;
-
-            // Record round result if not canceled
-            if (message.round && !message.canceled) {
-              lobby.rounds.push(message.round);
-            }
-
-            // Notify clients (shard already sent stop, but primary clients need update)
-            if (message.canceled && !message.practice) {
-              for (const p of lobby.players) {
-                p.send({ type: "chat", message: "Round canceled." });
-              }
-            }
-          });
-
-          console.log(
-            new Date(),
-            `[Shard] Lobby ${message.lobbyId} ended on shard ${shard.name}${
-              message.canceled ? " (canceled)" : ""
-            }`,
-          );
-        }
-        break;
-      }
-
-      case "playerTeamChanged": {
-        // Find the lobby and update the player's team on the primary server
-        const lobby = Array.from(lobbies).find(
-          (l) => l.name === message.lobbyId,
-        );
-        if (lobby) {
-          const player = Array.from(lobby.players).find(
-            (p) => p.id === message.playerId,
-          );
-          if (player) {
-            player.team = message.team;
-          }
-        }
         break;
       }
     }
@@ -395,6 +433,19 @@ export const handleShardSocket = (
         new Date(),
         `[Shard] Shard disconnected: ${shard.name} (${shard.id})`,
       );
+
+      // End rounds for all lobbies that were playing on this shard
+      for (const lobbyId of shard.lobbies) {
+        endShardRound(lobbyId, {
+          canceled: true,
+          cancelMessage: `Round canceled (${shard.name} disconnected).`,
+        });
+        console.log(
+          new Date(),
+          `[Shard] Round ended in ${lobbyId} due to shard disconnect`,
+        );
+      }
+
       shards.delete(shard.id);
 
       // Clean up Fly machine tracking

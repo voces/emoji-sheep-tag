@@ -13,7 +13,7 @@ import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { getEffectivePlayerGold } from "../../../api/player.ts";
 
 const Container = styled.div(({ theme }) => ({
-  width: 120,
+  width: 100,
   display: "flex",
   gap: 4,
   alignItems: "center",

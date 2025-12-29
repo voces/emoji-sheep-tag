@@ -175,14 +175,21 @@ export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
   return true;
 };
 
-export const handleTargetOrder = (e: MouseButtonEvent) => {
-  if (!activeOrder) return false;
+export type TargetOrderResult =
+  | { success: true }
+  | { success: false; reason: "invalid-target" | "out-of-range" };
+
+export const handleTargetOrder = (e: MouseButtonEvent): TargetOrderResult => {
+  if (!activeOrder) return { success: false, reason: "invalid-target" };
 
   const orderToExecute = activeOrder.order;
   const target = e.intersects.first();
 
   // For ground-targeted orders (AOE cursor), ignore entities entirely
   const isGroundOrder = !!activeOrder.aoe;
+
+  // Track if any unit failed due to range (vs classification)
+  let anyOutOfRange = false;
 
   const unitsWithTarget = isGroundOrder
     ? new ExtendedSet<Entity>()
@@ -214,7 +221,10 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
       if (typeof entity.movementSpeed !== "number") {
         const range = action.range ?? 0;
         const distance = distanceBetweenEntities(entity, target);
-        if (distance > range) return false;
+        if (distance > range) {
+          anyOutOfRange = true;
+          return false;
+        }
       }
 
       return true;
@@ -289,10 +299,13 @@ export const handleTargetOrder = (e: MouseButtonEvent) => {
     if (!e.queue) cancelOrder();
     else queued.state = true;
 
-    return true;
+    return { success: true };
   }
 
-  return false;
+  return {
+    success: false,
+    reason: anyOutOfRange ? "out-of-range" : "invalid-target",
+  };
 };
 
 export const playOrderSound = (x?: number, y?: number, volume = 0.1) => {

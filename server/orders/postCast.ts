@@ -1,7 +1,7 @@
 import { Entity, Item, UnitDataAction } from "@/shared/types.ts";
 import { consumeItem } from "../api/unit.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
-import { deductPlayerGold } from "../api/player.ts";
+import { deductPlayerGold, grantPlayerGold } from "../api/player.ts";
 
 export const postCast = (
   entity: Entity,
@@ -17,7 +17,8 @@ export const postCast = (
     );
 
   if (entity.owner && a?.goldCost) {
-    deductPlayerGold(entity.owner, a.goldCost);
+    if (a.goldCost > 0) deductPlayerGold(entity.owner, a.goldCost);
+    else grantPlayerGold(entity.owner, -a.goldCost);
   }
 
   // Set action cooldown

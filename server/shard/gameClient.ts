@@ -8,6 +8,7 @@ import {
 } from "../util/socketHandler.ts";
 
 // Game-specific actions only (no lobby management like generic/team changes)
+// Note: cancel is routed through primary server, not handled here
 import { build, zBuild } from "../actions/build.ts";
 import { upgrade, zUpgrade } from "../actions/upgrade.ts";
 import { unitOrder, zOrderEvent } from "../actions/unitOrder.ts";
@@ -15,18 +16,11 @@ import { ping, zPing } from "../actions/ping.ts";
 import { mapPing, zMapPing } from "../actions/mapPing.ts";
 import { chat, zChat } from "../actions/chat.ts";
 import { purchase, zPurchase } from "../actions/purchase.ts";
+import { resetGold, zResetGold } from "../actions/resetGold.ts";
 import {
   updateSelection,
   zUpdateSelection,
 } from "../actions/updateSelection.ts";
-
-// Shard-specific cancel handler (ends round on shard)
-const zCancel = z.object({ type: z.literal("cancel") });
-const cancel = (client: GameClient) => {
-  // Only host can cancel, and only during a round
-  if (client.id !== client.lobby.hostId || !client.lobby.round) return;
-  client.lobby.endRound(true); // true = canceled
-};
 
 export class GameClient {
   id: string;
@@ -34,9 +28,9 @@ export class GameClient {
   playerColor: string;
   isPlayer: true = true;
   team: "sheep" | "wolf" | "pending" | "observer";
-  gold?: number;
   handicap?: number;
-  sheepCount: number;
+  /** Unused, but required for type compatibility with Client */
+  sheepCount = 0;
   // Note: socket and lobby are defined non-enumerable in constructor to prevent JSON serialization
   socket!: Socket;
   lobby!: ShardLobby;
@@ -49,7 +43,6 @@ export class GameClient {
       name: string;
       playerColor: string;
       team: "sheep" | "wolf" | "pending" | "observer";
-      sheepCount: number;
     },
   ) {
     // Make socket and lobby properties non-enumerable to prevent JSON serialization issues
@@ -71,7 +64,6 @@ export class GameClient {
     this.name = playerInfo.name;
     this.playerColor = playerInfo.playerColor;
     this.team = playerInfo.team;
-    this.sheepCount = playerInfo.sheepCount;
   }
 
   send(message: ServerToClientMessage) {
@@ -101,8 +93,8 @@ const zGameMessage = z.discriminatedUnion("type", [
   zPing,
   zMapPing,
   zChat,
-  zCancel,
   zPurchase,
+  zResetGold,
   zUpdateSelection,
 ]);
 
@@ -113,8 +105,8 @@ const gameActions = {
   ping,
   mapPing,
   chat,
-  cancel,
   purchase,
+  resetGold,
   updateSelection,
 };
 

@@ -145,8 +145,8 @@ export const PrimaryPortrait = () => {
           },
         },
       );
-      const success = handleTargetOrder(syntheticEvent);
-      if (!success) {
+      const result = handleTargetOrder(syntheticEvent);
+      if (!result.success) {
         playSound("ui", pick("error1"), { volume: 0.3 });
       }
     } else {

@@ -26,7 +26,6 @@
   - 2v4 - 15 rounds
   - 5v5 - 2 rounds
 - Settings not discoverable in game
-- In game scoreboard
 - Birds & Bees
   - Should redirect target if occupied/avoid crowding
   - Birds
@@ -41,6 +40,11 @@
 - Pausing?
 - Editor improvements
   - Brush size
+- Controlled start location
+- Enable queuing actions during construction/upgrades
+- Enable queuing actions for gold? This would require monitoring gold...
+- Targeting range indicators
+- Per-player handicap
 
 # Bugs
 

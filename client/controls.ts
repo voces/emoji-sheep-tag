@@ -7,7 +7,9 @@ import { selection } from "./systems/selection.ts";
 import { jumpToNextPing } from "./systems/indicators.ts";
 import { camera, terrain } from "./graphics/three.ts";
 import { getEffectivePlayerGold } from "./api/player.ts";
-import { UnitDataAction } from "@/shared/types.ts";
+import { UnitDataAction, UnitDataActionTarget } from "@/shared/types.ts";
+import { formatTargeting } from "@/shared/util/formatTargeting.ts";
+import { findAction } from "@/shared/util/actionLookup.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { canBuild } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
@@ -15,6 +17,7 @@ import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "@/vars/showChatBox.ts";
 import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
+import { showFeedback } from "@/vars/feedback.ts";
 import { stateVar } from "@/vars/state.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
@@ -107,6 +110,22 @@ import {
 export { getActiveOrder, keyboard };
 export const clearBlueprint = clearBlueprintHandler;
 export const hasBlueprint = hasBlueprintHandler;
+
+const getTargetingMessage = (orderName: string): string => {
+  for (const entity of selection) {
+    const action = findAction(
+      entity,
+      (a): a is UnitDataActionTarget =>
+        a.type === "target" && a.order === orderName,
+    );
+    if (!action) continue;
+
+    const targeting = action.targeting;
+    if (targeting?.length) return formatTargeting(targeting);
+  }
+
+  return "Invalid target";
+};
 export const cancelOrder = (
   check?: (order: string | undefined, blueprint: string | undefined) => boolean,
 ) => {
@@ -213,7 +232,15 @@ const handleLeftClick = (e: MouseButtonEvent) => {
     lastClickedEntity = null;
     lastEntityClickTime = 0;
   } else if (getActiveOrder()) {
-    if (!handleTargetOrder(e)) playSound("ui", pick("error1"), { volume: 0.3 });
+    const result = handleTargetOrder(e);
+    if (!result.success) {
+      playSound("ui", pick("error1"), { volume: 0.3 });
+      showFeedback(
+        result.reason === "out-of-range"
+          ? "Target is out of range"
+          : getTargetingMessage(getActiveOrder()!.order),
+      );
+    }
     lastClickedEntity = null;
     lastEntityClickTime = 0;
   } else if (e.intersects.size && !isMinimapClick) {
@@ -436,7 +463,9 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   const [x, y] = normalizeBuildPosition(e.world.x, e.world.y, prefab);
 
   if (!canBuild(unit, prefab, x, y)) {
-    return playSound("ui", pick("error1"), { volume: 0.3 });
+    playSound("ui", pick("error1"), { volume: 0.3 });
+    showFeedback("Cannot build here");
+    return;
   }
 
   if (!e.queue) cancelBlueprint();
@@ -898,18 +927,16 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
 
   if (units.length === 0 && unitsTotal) {
     playSound("ui", pick("error1"), { volume: 0.3 });
+    showFeedback("Not enough mana");
     return;
   }
 
-  if (action.type === "build" || action.type === "purchase") {
-    const goldCost = action.goldCost ?? 0;
-    if (goldCost > 0 && units.length > 0) {
-      const playerGold = getEffectivePlayerGold(units[0].owner);
-
-      if (playerGold < goldCost) {
-        playSound("ui", pick("error1"), { volume: 0.3 });
-        return;
-      }
+  if ("goldCost" in action && action.goldCost && units.length) {
+    const playerGold = getEffectivePlayerGold(units[0].owner);
+    if (playerGold < action.goldCost) {
+      playSound("ui", pick("error1"), { volume: 0.3 });
+      showFeedback("Not enough gold");
+      return;
     }
   }
 
@@ -923,6 +950,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
 
   if (units.length === 0 && unitsTotal > 0) {
     playSound("ui", pick("error1"), { volume: 0.3 });
+    showFeedback("Unit is busy");
     return;
   }
 

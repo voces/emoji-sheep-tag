@@ -26,6 +26,7 @@ import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { openEditor } from "@/util/openEditor.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
 import { mouse, MouseButtonEvent } from "../../../mouse.ts";
+import { practiceVar } from "@/vars/practice.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -143,12 +144,20 @@ export const CommandPalette = () => {
   const saveMapAs = useSaveMapAs();
   const quickSaveMap = useQuickSaveMap();
 
+  const practice = useReactiveVar(practiceVar);
+
   const commands = useMemo((): Command[] => [
     {
       name: "Cancel round",
       description: "Cancels the current round",
       valid: () => stateVar() === "playing" && isLocalPlayerHost() && !isEditor,
       callback: () => send({ type: "cancel" }),
+    },
+    {
+      name: "Reset gold",
+      description: "Sets all players' gold to 0",
+      valid: () => practice && isLocalPlayerHost(),
+      callback: () => send({ type: "resetGold" }),
     },
     ...(!isEditor
       ? [{
@@ -301,6 +310,7 @@ export const CommandPalette = () => {
     flags.debugPathing,
     uiSettings.showPing,
     uiSettings.showFps,
+    practice,
   ]);
 
   const filteredCommands = useMemoWithPrevious<FilteredCommand[]>((prev) => {

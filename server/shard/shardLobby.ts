@@ -5,7 +5,6 @@ import type { CaptainsDraft, Round } from "../lobby.ts";
 import { buildLoadedMap, type PackedMap } from "@/shared/map.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
 import { initializeGame } from "../st/gameStartHelpers.ts";
-import { getPlayer } from "@/shared/api/player.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { lobbyContext } from "../contexts.ts";
@@ -53,8 +52,8 @@ export class ShardLobby {
     round?: { sheep: string[]; wolves: string[]; duration: number },
     canceled?: boolean,
     practice?: boolean,
+    sheepWon?: boolean,
   ) => void;
-  onPlayerTeamChanged?: (playerId: string, team: GameClient["team"]) => void;
 
   /** Broadcast a message to all clients in this lobby */
   send(message: Parameters<GameClient["send"]>[0]) {
@@ -125,20 +124,25 @@ export class ShardLobby {
 
   /** Add a player to an already running game */
   private addPlayerToRunningGame(client: GameClient) {
-    const initialTeam = client.team;
+    const isPractice = this.round!.practice;
 
     lobbyContext.with(this, () => {
       appContext.with(this.round!.ecs, () => {
         this.round!.ecs.batch(() => {
-          if (this.round!.practice) addPlayerToPracticeGame(client);
+          if (isPractice) addPlayerToPracticeGame(client);
           // Non-practice: add as observer/pending
-          else addEntity(client);
+          else {
+            addEntity({
+              id: client.id,
+              name: client.name,
+              playerColor: client.playerColor,
+              isPlayer: true,
+              team: client.team,
+              gold: 0,
+              handicap: client.handicap,
+            });
+          }
         });
-
-        // Notify primary server if team changed (e.g., practice mode mid-game join)
-        if (client.team !== initialTeam) {
-          this.onPlayerTeamChanged?.(client.id, client.team);
-        }
 
         // Broadcast the new player/units to existing clients
         send({
@@ -263,15 +267,12 @@ export class ShardLobby {
         wolves,
         practice: this.practice,
         editor: this.editor,
-        onSheepWin: () => {
-          this.send({ type: "chat", message: "Sheep win!" });
-          this.endRound();
-        },
+        onSheepWin: () => this.endRound(false, true),
       }));
   }
 
   /** End the current round */
-  endRound(canceled = false) {
+  endRound(canceled = false, sheepWon = false) {
     if (!this.round) return;
 
     console.log(
@@ -280,26 +281,8 @@ export class ShardLobby {
     );
 
     lobbyContext.with(this, () => {
-      // Sync sheepCount from ECS entities back to GameClient objects
-      if (!canceled) {
-        appContext.with(this.round!.ecs, () => {
-          for (const client of this.clients.values()) {
-            const ecsPlayer = getPlayer(client.id);
-            if (ecsPlayer?.sheepCount !== undefined) {
-              client.sheepCount = ecsPlayer.sheepCount;
-            }
-          }
-        });
-      }
-
       const round = createRoundSummary();
-
-      this.send({
-        type: "stop",
-        updates: Array.from(this.clients.values()),
-        round,
-      });
-      this.cleanup(round, canceled);
+      this.cleanup(round, canceled, sheepWon);
     });
   }
 
@@ -307,6 +290,7 @@ export class ShardLobby {
   cleanup(
     round?: ReturnType<typeof createRoundSummary>,
     canceled = false,
+    sheepWon = false,
   ) {
     if (this.tokenExpirationTimer) {
       clearTimeout(this.tokenExpirationTimer);
@@ -316,6 +300,6 @@ export class ShardLobby {
     delete this.round;
 
     // Notify primary server
-    this.onEnd?.(round, canceled, this.practice);
+    this.onEnd?.(round, canceled, this.practice, sheepWon);
   }
 }

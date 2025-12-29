@@ -60,10 +60,11 @@ const ChannelButton = styled.button`
   font-size: inherit;
   padding: 4px 0.25em 4px 8px;
   white-space: nowrap;
-  color: hsl(from ${({ theme }) => theme.colors.border} h s calc(l + 35));
+  color: inherit;
+  opacity: 0.6;
 
   &.hover {
-    color: ${(p) => p.theme.colors.border};
+    opacity: 1;
   }
 `;
 

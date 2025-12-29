@@ -18,18 +18,22 @@ describe("player API", () => {
     it(
       "should find player in wolves",
       { wolves: ["wolf-player"] },
-      ({ clients }) => {
+      () => {
         const result = getPlayer("wolf-player");
-        expect(result).toEqual(clients.get("wolf-player"));
+        expect(result?.id).toBe("wolf-player");
+        expect(result?.team).toBe("wolf");
+        expect(result?.isPlayer).toBe(true);
       },
     );
 
     it(
       "should find player in sheep",
       { sheep: ["sheep-player"] },
-      ({ clients }) => {
+      () => {
         const result = getPlayer("sheep-player");
-        expect(result).toEqual(clients.get("sheep-player"));
+        expect(result?.id).toBe("sheep-player");
+        expect(result?.team).toBe("sheep");
+        expect(result?.isPlayer).toBe(true);
       },
     );
 
@@ -104,10 +108,14 @@ describe("player API", () => {
           addPlayerToPracticeGame(newClient);
         });
 
-        // Check player properties were set
-        expect(newClient.team).toBe("sheep");
-        expect(newClient.gold).toBe(100_000);
-        expect(newClient.name).toBe("New Player");
+        // Check player entity was created in ECS with correct properties
+        const playerEntity = Array.from(ecs.entities).find((e) =>
+          e.id === "new-player" && e.isPlayer
+        );
+        expect(playerEntity).toBeDefined();
+        expect(playerEntity?.team).toBe("sheep");
+        expect(playerEntity?.gold).toBe(100_000);
+        expect(playerEntity?.name).toBe("New Player");
 
         // Check units were spawned
         const units = Array.from(lobby.round!.ecs.entities).filter((e) =>
@@ -134,8 +142,11 @@ describe("player API", () => {
         lobby.round!.practice = true;
 
         const existingClient = clients.get("existing-player")!;
-        const originalTeam = existingClient.team;
-        const originalGold = existingClient.gold;
+        const existingPlayerEntity = Array.from(ecs.entities).find((e) =>
+          e.id === "existing-player" && e.isPlayer
+        )!;
+        const originalTeam = existingPlayerEntity.team;
+        const originalGold = existingPlayerEntity.gold;
 
         // Try to add again
         ecs.batch(() => {
@@ -143,8 +154,8 @@ describe("player API", () => {
         });
 
         // Should keep original properties
-        expect(existingClient.team).toBe(originalTeam);
-        expect(existingClient.gold).toBe(originalGold);
+        expect(existingPlayerEntity.team).toBe(originalTeam);
+        expect(existingPlayerEntity.gold).toBe(originalGold);
       },
     );
 

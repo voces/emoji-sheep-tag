@@ -45,10 +45,14 @@ describe("joinLobby", () => {
         });
       });
 
-      // Check player properties were set
-      expect(newClient.team).toBe("sheep");
-      expect(newClient.gold).toBe(100_000);
-      expect(newClient.name).toBe("Joining Player");
+      // Check player entity was created in ECS with correct properties
+      const playerEntity = Array.from(ecs.entities).find((e) =>
+        e.id === "joining-player" && e.isPlayer
+      );
+      expect(playerEntity).toBeDefined();
+      expect(playerEntity?.team).toBe("sheep");
+      expect(playerEntity?.gold).toBe(100_000);
+      expect(playerEntity?.name).toBe("Joining Player");
 
       // Check units were spawned
       const units = Array.from(ecs.entities).filter((e) =>
@@ -125,8 +129,11 @@ describe("joinLobby", () => {
       lobby.round!.practice = true;
 
       const existingClient = clients.get("existing-player")!;
-      const originalTeam = existingClient.team;
-      const originalGold = existingClient.gold;
+      const existingPlayerEntity = Array.from(ecs.entities).find((e) =>
+        e.id === "existing-player" && e.isPlayer
+      )!;
+      const originalTeam = existingPlayerEntity.team;
+      const originalGold = existingPlayerEntity.gold;
 
       // Count entities before trying to add again
       const unitsBefore = Array.from(ecs.entities).filter((e) =>
@@ -145,8 +152,8 @@ describe("joinLobby", () => {
       });
 
       // Should keep original team and gold
-      expect(existingClient.team).toBe(originalTeam);
-      expect(existingClient.gold).toBe(originalGold);
+      expect(existingPlayerEntity.team).toBe(originalTeam);
+      expect(existingPlayerEntity.gold).toBe(originalGold);
 
       // Count entities owned by existing-player (should still be just the original ones)
       const units = Array.from(ecs.entities).filter((e) =>
@@ -179,9 +186,13 @@ describe("joinLobby", () => {
       // Call the actual joinLobby action
       joinLobby(newClient, { type: "joinLobby", lobbyName: lobby.name });
 
-      // Check player properties were set by addPlayerToPracticeGame
-      expect(newClient.team).toBe("sheep");
-      expect(newClient.gold).toBe(100_000);
+      // Check player entity was created in ECS with correct properties
+      const playerEntity = Array.from(ecs.entities).find((e) =>
+        e.id === "joining-player" && e.isPlayer
+      );
+      expect(playerEntity).toBeDefined();
+      expect(playerEntity?.team).toBe("sheep");
+      expect(playerEntity?.gold).toBe(100_000);
       expect(newClient.lobby).toBe(lobby);
 
       // Check units were spawned

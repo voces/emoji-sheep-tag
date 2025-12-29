@@ -43,7 +43,9 @@ export const getPlayerGold = (playerId: string): number => {
  * - Wolves: Deduct from team pool
  * - Sheep: Deduct from team pool first, then individual gold
  */
-export const deductPlayerGold = (playerId: string, amount: number) => {
+export const deductPlayerGold = (playerId: string, amount: number): void => {
+  if (amount < 0) return grantPlayerGold(playerId, -amount);
+
   const player = getPlayer(playerId);
   if (!player) return;
 
@@ -51,15 +53,12 @@ export const deductPlayerGold = (playerId: string, amount: number) => {
     ? player.team
     : undefined;
   if (!isTeamGoldEnabled(team)) {
-    if (player.gold !== undefined) {
-      player.gold = Math.max(player.gold - amount, 0);
-    }
+    player.gold = Math.max((player.gold ?? 0) - amount, 0);
     return;
   }
 
-  if (player.team === "wolf") {
-    deductTeamGold("wolf", amount);
-  } else if (player.team === "sheep") {
+  if (player.team === "wolf") deductTeamGold("wolf", amount);
+  else if (player.team === "sheep") {
     // Deduct from team pool first
     const deductedFromTeam = deductTeamGold("sheep", amount);
     const remaining = amount - deductedFromTeam;
@@ -68,9 +67,7 @@ export const deductPlayerGold = (playerId: string, amount: number) => {
     if (remaining > 0 && player.gold !== undefined) {
       player.gold = Math.max(player.gold - remaining, 0);
     }
-  } else if (player.gold !== undefined) {
-    player.gold = Math.max(player.gold - amount, 0);
-  }
+  } else player.gold = Math.max((player.gold ?? 0) - amount, 0);
 };
 
 /**
@@ -78,7 +75,9 @@ export const deductPlayerGold = (playerId: string, amount: number) => {
  * - Wolves: Grant to team pool
  * - Sheep: Fill individual gold up to cap, overflow to team pool
  */
-export const grantPlayerGold = (playerId: string, amount: number) => {
+export const grantPlayerGold = (playerId: string, amount: number): void => {
+  if (amount < 0) return deductPlayerGold(playerId, -amount);
+
   const player = getPlayer(playerId);
   if (!player) return;
 
@@ -90,9 +89,8 @@ export const grantPlayerGold = (playerId: string, amount: number) => {
     return;
   }
 
-  if (player.team === "wolf") {
-    grantTeamGold("wolf", amount);
-  } else if (player.team === "sheep") {
+  if (player.team === "wolf") grantTeamGold("wolf", amount);
+  else if (player.team === "sheep") {
     const currentGold = player.gold ?? 0;
     const roomInIndividual = Math.max(
       0,
@@ -107,9 +105,7 @@ export const grantPlayerGold = (playerId: string, amount: number) => {
     if (toTeam > 0) {
       grantTeamGold("sheep", toTeam);
     }
-  } else {
-    player.gold = (player.gold ?? 0) + amount;
-  }
+  } else player.gold = (player.gold ?? 0) + amount;
 };
 
 export const sendPlayerGold = (
@@ -141,12 +137,17 @@ export const addPlayerToPracticeGame = (client: Client) => {
   // Don't add if player already has a team (already in game)
   if (client.team !== "pending") return;
 
-  // Set client properties for practice game
-  client.team = "sheep";
-  client.gold = 100_000;
-
-  // Add client to ECS
-  addEntity(client);
+  // Create new player entity for the ECS
+  addEntity({
+    id: client.id,
+    name: client.name,
+    playerColor: client.playerColor,
+    isPlayer: true,
+    team: "sheep",
+    gold: 100_000,
+    sheepCount: client.sheepCount,
+    handicap: client.handicap,
+  });
 
   spawnPracticeUnits(client.id);
 };

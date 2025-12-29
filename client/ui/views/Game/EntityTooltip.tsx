@@ -5,6 +5,8 @@ import { mouse } from "../../../mouse.ts";
 import { Entity } from "../../../ecs.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { camera } from "../../../graphics/three.ts";
+import { getBlueprint } from "../../../controls/blueprintHandlers.ts";
+import { getActiveOrder } from "../../../controls.ts";
 
 const HOVER_DELAY_MS = 500;
 
@@ -54,15 +56,26 @@ const worldToScreen = (entity: Entity): { x: number; y: number } | null => {
 
 export const EntityTooltip = () => {
   const [visibleEntity, setVisibleEntity] = useState<Entity | null>(null);
+  const [, forceUpdate] = useState(0);
   const hoverTimerRef = useRef<number | null>(null);
   const currentEntityRef = useRef<Entity | null>(null);
 
   useEffect(() => {
-    const handleMouseMove = () => {
-      const firstEntity = mouse.intersects.values().next().value as
-        | Entity
-        | undefined;
+    const updateTooltipState = () => {
+      // Suppress tooltip when cursor is being used
+      if (getBlueprint() || getActiveOrder()) {
+        if (currentEntityRef.current !== null) {
+          currentEntityRef.current = null;
+          setVisibleEntity(null);
+          if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = null;
+          }
+        }
+        return;
+      }
 
+      const firstEntity = mouse.intersects.first();
       const targetEntity = firstEntity?.owner ? firstEntity : null;
 
       // Entity changed - reset timer
@@ -85,9 +98,18 @@ export const EntityTooltip = () => {
       }
     };
 
-    mouse.addEventListener("mouseMove", handleMouseMove);
+    // Update on intersects change
+    mouse.addEventListener("intersectsChange", updateTooltipState);
+
+    // Periodic update for position and suppression state changes
+    const interval = setInterval(() => {
+      updateTooltipState();
+      forceUpdate((n) => n + 1);
+    }, 200);
+
     return () => {
-      mouse.removeEventListener("mouseMove", handleMouseMove);
+      mouse.removeEventListener("intersectsChange", updateTooltipState);
+      clearInterval(interval);
       if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     };
   }, []);

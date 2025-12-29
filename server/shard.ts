@@ -125,26 +125,17 @@ const connectToPrimary = () => {
         shardLobbies.set(message.lobbyId, lobby);
 
         // When lobby ends, notify primary and clean up
-        lobby.onEnd = (round, canceled, practice) => {
+        lobby.onEnd = (round, canceled, practice, sheepWon) => {
           sendToPrimary({
             type: "lobbyEnded",
             lobbyId: message.lobbyId,
             canceled,
             practice,
+            sheepWon,
             round,
           });
           shardLobbies.delete(message.lobbyId);
           reportStatus();
-        };
-
-        // When a player's team changes, notify primary
-        lobby.onPlayerTeamChanged = (playerId, team) => {
-          sendToPrimary({
-            type: "playerTeamChanged",
-            lobbyId: message.lobbyId,
-            playerId,
-            team,
-          });
         };
 
         reportStatus();
@@ -165,6 +156,23 @@ const connectToPrimary = () => {
           `[Shard] Adding player ${message.player.name} to ${message.lobbyId}`,
         );
         lobby.addExpectedPlayer(message.player);
+        break;
+      }
+
+      case "cancelLobby": {
+        const lobby = shardLobbies.get(message.lobbyId);
+        if (!lobby) {
+          console.error(
+            new Date(),
+            `[Shard] cancelLobby: lobby ${message.lobbyId} not found`,
+          );
+          return;
+        }
+        console.log(
+          new Date(),
+          `[Shard] Canceling lobby ${message.lobbyId} (requested by primary)`,
+        );
+        lobby.endRound(true);
         break;
       }
     }
