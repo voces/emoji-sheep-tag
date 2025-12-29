@@ -172,7 +172,8 @@ const connectToPrimary = () => {
           new Date(),
           `[Shard] Canceling lobby ${message.lobbyId} (requested by primary)`,
         );
-        lobby.endRound(true);
+        // Don't notify primary - it already knows since it requested the cancel
+        lobby.endRound(true, false, false);
         break;
       }
     }

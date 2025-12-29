@@ -182,7 +182,7 @@ const validateShardConnectivity = (
   });
 
 /** End a round that was running on a shard */
-const endShardRound = (
+export const endShardRound = (
   lobbyId: string,
   options: {
     canceled?: boolean;
@@ -207,6 +207,11 @@ const endShardRound = (
     );
     return;
   }
+
+  console.log(
+    new Date(),
+    `[Shard] Round ended in ${lobbyId}${options.canceled ? " (canceled)" : ""}`,
+  );
 
   lobbyContext.with(lobby, () => {
     if (options.canceled && lobby.settings.mode !== "switch") {

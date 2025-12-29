@@ -37,6 +37,7 @@ export class ShardLobby {
   expectedPlayers: Map<string, PlayerInfo> = new Map(); // token -> player info
   clients: Map<string, GameClient> = new Map(); // player id -> client
   private tokenExpirationTimer?: number;
+  private notifiedPrimary = false;
 
   get players(): Set<GameClient> {
     return new Set(this.clients.values());
@@ -272,7 +273,7 @@ export class ShardLobby {
   }
 
   /** End the current round */
-  endRound(canceled = false, sheepWon = false) {
+  endRound(canceled = false, sheepWon = false, notifyPrimary = true) {
     if (!this.round) return;
 
     console.log(
@@ -282,7 +283,7 @@ export class ShardLobby {
 
     lobbyContext.with(this, () => {
       const round = createRoundSummary();
-      this.cleanup(round, canceled, sheepWon);
+      this.cleanup(round, canceled, sheepWon, notifyPrimary);
     });
   }
 
@@ -291,6 +292,7 @@ export class ShardLobby {
     round?: ReturnType<typeof createRoundSummary>,
     canceled = false,
     sheepWon = false,
+    notifyPrimary = true,
   ) {
     if (this.tokenExpirationTimer) {
       clearTimeout(this.tokenExpirationTimer);
@@ -299,7 +301,10 @@ export class ShardLobby {
     this.round?.clearInterval();
     delete this.round;
 
-    // Notify primary server
-    this.onEnd?.(round, canceled, this.practice, sheepWon);
+    // Notify primary server (skip if already notified or primary requested the cancel)
+    if (!this.notifiedPrimary) {
+      this.notifiedPrimary = true;
+      if (notifyPrimary) this.onEnd?.(round, canceled, this.practice, sheepWon);
+    }
   }
 }
