@@ -45,7 +45,7 @@ type RoundLike = {
   start?: number;
 };
 
-export const createPlayerEntities = <T extends PlayerLike>(
+const createPlayerEntities = <T extends PlayerLike>(
   ecs: Game,
   settings: LobbySettingsLike,
   sheep: T[],
@@ -118,7 +118,7 @@ export const createPlayerEntities = <T extends PlayerLike>(
   }
 };
 
-export const spawnSheepUnits = <T extends { id: string }>(
+const spawnSheepUnits = <T extends { id: string }>(
   sheep: T[],
 ): Entity[] => {
   const sheepPool: Entity[] = [];
@@ -128,7 +128,7 @@ export const spawnSheepUnits = <T extends { id: string }>(
   return sheepPool;
 };
 
-export const spawnStartLocations = <T extends PlayerLike>(
+const spawnStartLocations = <T extends PlayerLike>(
   sheep: T[],
   mapId: string,
 ): Entity[] => {
@@ -151,7 +151,7 @@ export const spawnStartLocations = <T extends PlayerLike>(
   return startLocations;
 };
 
-export const convertStartLocationsToSheep = <T extends PlayerLike>(
+const convertStartLocationsToSheep = <T extends PlayerLike>(
   startLocations: Entity[],
   sheepPlayers: T[],
   mapId: string,
@@ -208,7 +208,7 @@ const spawnSheep = <T extends { id: string }>(
   return spawnSheepUnits(sheep);
 };
 
-export const setupVipMode = <T extends PlayerLike>(
+const setupVipMode = <T extends PlayerLike>(
   round: RoundLike,
   sheep: T[],
   sheepPool: Entity[],
@@ -224,6 +224,7 @@ export const setupVipMode = <T extends PlayerLike>(
     modelOffset: { y: 0.5 },
   }];
   round.vip = vip.owner;
+  send({ type: "vip", playerId: vip.owner! });
 
   for (const player of sheep) {
     if (player.id !== vip.owner) {
@@ -232,7 +233,7 @@ export const setupVipMode = <T extends PlayerLike>(
   }
 };
 
-export const spawnWolves = <T extends { id: string }>(wolves: T[]) => {
+const spawnWolves = <T extends { id: string }>(wolves: T[]) => {
   const center = getMapCenter();
   for (const owner of wolves) {
     newUnit(owner.id, "wolf", center.x, center.y);
@@ -240,7 +241,7 @@ export const spawnWolves = <T extends { id: string }>(wolves: T[]) => {
   playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
 };
 
-export const broadcastCountdown = () => {
+const broadcastCountdown = () => {
   addEntity({
     isTimer: true,
     buffs: [{
@@ -254,7 +255,7 @@ export const broadcastCountdown = () => {
   timeout(() => send({ type: "chat", message: "Starting in 1…" }), 2);
 };
 
-export const broadcastTeamAnnouncement = <T extends PlayerLike>(
+const broadcastTeamAnnouncement = <T extends PlayerLike>(
   sheep: T[],
   wolves: T[],
 ) => {
@@ -267,7 +268,7 @@ export const broadcastTeamAnnouncement = <T extends PlayerLike>(
   });
 };
 
-export const setupSurvivalTimer = (
+const setupSurvivalTimer = (
   round: RoundLike,
   settings: LobbySettingsLike,
   playerCount: number,
@@ -290,7 +291,7 @@ export const setupSurvivalTimer = (
   timeout(onSheepWin, round.duration);
 };
 
-export const addWolfSpawnTimer = (duration: number) => {
+const addWolfSpawnTimer = (duration: number) => {
   addEntity({
     isTimer: true,
     buffs: [{
@@ -301,7 +302,7 @@ export const addWolfSpawnTimer = (duration: number) => {
   });
 };
 
-export type InitializeGameOptions<T extends PlayerLike> = {
+type InitializeGameOptions<T extends PlayerLike> = {
   map: LoadedMap;
   settings: LobbySettingsLike;
   sheep: T[];

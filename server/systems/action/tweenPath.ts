@@ -3,7 +3,7 @@ import { Entity } from "@/shared/types.ts";
 import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
 import { pathable } from "../pathing.ts";
 
-export type TweenPathResult = {
+type TweenPathResult = {
   delta: number;
   pathBlocked: boolean;
 };

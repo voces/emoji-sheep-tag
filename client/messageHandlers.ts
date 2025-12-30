@@ -26,6 +26,7 @@ import { connectToShard, disconnectFromShard } from "./shardConnection.ts";
 import { lobbiesVar } from "@/vars/lobbies.ts";
 import { applyZoom } from "./api/player.ts";
 import { loadClientMap } from "./maps.ts";
+import { vipVar } from "@/vars/vip.ts";
 import { unpackMap2D } from "@/shared/util/2dPacking.ts";
 import {
   getCliffHeight,
@@ -170,6 +171,7 @@ export const handlers = {
     stateVar("lobby");
     unloadEcs();
     practiceVar(false);
+    vipVar(undefined);
     disconnectFromShard(); // Clean up shard connection when round ends
     generateDoodads(["dynamic"]);
     if (d.updates) processUpdates(d.updates);
@@ -319,4 +321,7 @@ export const handlers = {
   shards: (
     { shards }: Extract<ServerToClientMessage, { type: "shards" }>,
   ) => lobbySettingsVar({ ...lobbySettingsVar(), shards }),
+  vip: (
+    { playerId }: Extract<ServerToClientMessage, { type: "vip" }>,
+  ) => vipVar(playerId),
 };

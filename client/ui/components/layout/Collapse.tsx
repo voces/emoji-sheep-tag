@@ -1,6 +1,6 @@
 import React, { HTMLAttributes, useEffect, useRef } from "react";
 
-export type CollapseProps = {
+type CollapseProps = {
   /** controls open/closed */
   isOpen: boolean;
   /** animation duration in ms */

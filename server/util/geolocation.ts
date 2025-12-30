@@ -264,7 +264,7 @@ const MAJOR_CITIES: Array<{ name: string; lat: number; lon: number }> = [
 ];
 
 /** Find the nearest major city to given coordinates */
-export const getNearestMajorCity = (coords: Coordinates): string => {
+const getNearestMajorCity = (coords: Coordinates): string => {
   let nearestCity = MAJOR_CITIES[0];
   let nearestDist = Infinity;
 

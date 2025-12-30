@@ -65,12 +65,3 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = "Button";
-
-export const IconButton = styled(StyledButton)`
-  width: 2cap;
-  height: 2cap;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;

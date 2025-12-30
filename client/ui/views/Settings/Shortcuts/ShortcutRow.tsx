@@ -23,7 +23,7 @@ const ShortcutInputContainer = styled(HStack)`
   align-items: center;
 `;
 
-export type ShortcutRowProps = {
+type ShortcutRowProps = {
   actionKey: string;
   shortcut: string[];
   fullKey: string;

@@ -11,6 +11,7 @@ import { formatDuration } from "@/util/formatDuration.ts";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 
@@ -60,6 +61,11 @@ const MenuItem = styled.div`
 const PlayerRowContainer = styled(HStack)`
   align-items: center;
   gap: ${({ theme }) => theme.spacing.sm};
+`;
+
+const CaptainStar = styled.span`
+  font-size: 14px;
+  line-height: 1;
 `;
 
 const PlayersGrid = styled.div`
@@ -253,15 +259,17 @@ const PlayerIcon = (
 type PlayerRowProps = Player & {
   isLocalPlayer: boolean;
   isHost: boolean;
+  isCaptain: boolean;
 };
 
 const PlayerRow = (props: PlayerRowProps) => {
-  const { name, isLocalPlayer } = props;
+  const { name, isLocalPlayer, isCaptain } = props;
   const nameInputRef = useRef<NameInputRef>(null);
 
   return (
     <PlayerRowContainer>
       <PlayerIcon {...props} player={props} nameInputRef={nameInputRef} />
+      {isCaptain && <CaptainStar>⭐</CaptainStar>}
       <NameInput
         ref={nameInputRef}
         value={name ?? ""}
@@ -278,8 +286,11 @@ export const Players = () => {
   const players = usePlayers();
   useListenToEntities(players, ["playerColor", "name", "team", "sheepCount"]);
   const rounds = useReactiveVar(roundsVar);
-  const { host } = useReactiveVar(lobbySettingsVar);
+  const lobbySettings = useReactiveVar(lobbySettingsVar);
+  const captainsDraft = useReactiveVar(captainsDraftVar);
   const localPlayer = useLocalPlayer();
+
+  const captains = captainsDraft?.captains;
 
   return (
     <PlayersCard>
@@ -301,7 +312,8 @@ export const Players = () => {
               <PlayerRow
                 {...p}
                 isLocalPlayer={p.id === localPlayer?.id}
-                isHost={localPlayer?.id === host}
+                isHost={localPlayer?.id === lobbySettings.host}
+                isCaptain={captains?.includes(p.id) ?? false}
               />
               <GridHeader $align="right">
                 {p.sheepCount}

@@ -10,8 +10,11 @@ import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { practiceVar } from "@/vars/practice.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
+import { captainsDraftVar } from "@/vars/captainsDraft.ts";
+import { vipVar } from "@/vars/vip.ts";
 import { Player } from "@/shared/api/player.ts";
 import { isStructure } from "@/shared/api/unit.ts";
+import { SvgIcon } from "@/components/SVGIcon.tsx";
 
 const timersVar = makeVar<Entity[]>([]);
 const spiritsVar = makeVar<Entity[]>([]);
@@ -118,8 +121,26 @@ const PlayerRow = styled.div`
   gap: ${({ theme }) => theme.spacing.md};
 `;
 
+const PlayerNameContainer = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
 const PlayerName = styled.span<{ $color: string }>`
   color: ${({ $color }) => $color};
+`;
+
+const PlayerIndicator = styled.span`
+  display: flex;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+`;
+
+const CaptainStar = styled.span`
+  font-size: 12px;
+  line-height: 1;
 `;
 
 const PlayerValue = styled.span`
@@ -157,6 +178,34 @@ const getMainTimer = (
   };
 };
 
+type PlayerNameWithIndicatorProps = {
+  player: Player;
+  captains: readonly string[] | undefined;
+  vipId: string | undefined;
+  isCaptainsMode: boolean;
+};
+
+const PlayerNameWithIndicator = (
+  { player, captains, vipId, isCaptainsMode }: PlayerNameWithIndicatorProps,
+) => {
+  const isCaptain = captains?.includes(player.id);
+  const isVip = player.id === vipId;
+
+  return (
+    <PlayerNameContainer>
+      {isCaptainsMode && isCaptain && <CaptainStar>⭐</CaptainStar>}
+      {!isCaptainsMode && isVip && (
+        <PlayerIndicator>
+          <SvgIcon icon="vip" accentColor={player.playerColor ?? undefined} />
+        </PlayerIndicator>
+      )}
+      <PlayerName $color={player.playerColor ?? "#FFFFFF"}>
+        {player.name ?? "Unknown"}
+      </PlayerName>
+    </PlayerNameContainer>
+  );
+};
+
 type ScoreboardProps = {
   players: readonly Player[];
   practice: boolean;
@@ -168,15 +217,23 @@ const Scoreboard = (
 ) => {
   const spirits = useReactiveVar(spiritsVar);
   const structuresByOwner = useReactiveVar(structuresByOwnerVar);
+  const captainsDraft = useReactiveVar(captainsDraftVar);
+  const vipId = useReactiveVar(vipVar);
+
+  const isCaptainsMode = !!captainsDraft;
+  const captains = captainsDraft?.captains;
 
   if (practice) {
     return (
       <Body>
         {players.map((p) => (
           <PlayerRow key={p.id}>
-            <PlayerName $color={p.playerColor ?? "#FFFFFF"}>
-              {p.name ?? "Unknown"}
-            </PlayerName>
+            <PlayerNameWithIndicator
+              player={p}
+              captains={captains}
+              vipId={vipId}
+              isCaptainsMode={isCaptainsMode}
+            />
           </PlayerRow>
         ))}
       </Body>
@@ -223,9 +280,12 @@ const Scoreboard = (
           const count = structuresByOwner[p.id]?.size ?? 0;
           return (
             <PlayerRow key={p.id}>
-              <PlayerName $color={p.playerColor ?? "#FFFFFF"}>
-                {p.name ?? "Unknown"}
-              </PlayerName>
+              <PlayerNameWithIndicator
+                player={p}
+                captains={captains}
+                vipId={vipId}
+                isCaptainsMode={isCaptainsMode}
+              />
               {count > 0 && <PlayerValue>{count}</PlayerValue>}
             </PlayerRow>
           );
@@ -237,9 +297,12 @@ const Scoreboard = (
           <TeamHeader>Spirits</TeamHeader>
           {deadSheep.map((p) => (
             <PlayerRow key={p.id}>
-              <PlayerName $color={p.playerColor ?? "#FFFFFF"}>
-                {p.name ?? "Unknown"}
-              </PlayerName>
+              <PlayerNameWithIndicator
+                player={p}
+                captains={captains}
+                vipId={vipId}
+                isCaptainsMode={isCaptainsMode}
+              />
             </PlayerRow>
           ))}
         </TeamSection>
@@ -248,9 +311,12 @@ const Scoreboard = (
         <TeamHeader>Wolves</TeamHeader>
         {wolfPlayers.map((p) => (
           <PlayerRow key={p.id}>
-            <PlayerName $color={p.playerColor ?? "#FFFFFF"}>
-              {p.name ?? "Unknown"}
-            </PlayerName>
+            <PlayerNameWithIndicator
+              player={p}
+              captains={captains}
+              vipId={vipId}
+              isCaptainsMode={isCaptainsMode}
+            />
           </PlayerRow>
         ))}
         {wolfPlayers.length === 0 && <span>-</span>}

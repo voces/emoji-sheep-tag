@@ -570,6 +570,11 @@ const zShards = z.object({
   shards: z.array(zShardInfo).readonly(),
 });
 
+const zVip = z.object({
+  type: z.literal("vip"),
+  playerId: z.string(),
+});
+
 export const zMessage = z.discriminatedUnion("type", [
   zStart,
   zUpdates,
@@ -585,6 +590,7 @@ export const zMessage = z.discriminatedUnion("type", [
   zUploadCustomMap,
   zConnectToShard,
   zShards,
+  zVip,
 ]);
 
 export type ServerToClientMessage = z.input<typeof zMessage>;
