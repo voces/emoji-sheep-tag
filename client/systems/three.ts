@@ -137,13 +137,8 @@ const onPositionOrRotationChange = (
 
   // Skip gait for AnimatedInstancedMesh - it has GPU-driven animation
   const collection = collections[model];
-  const hasGpuAnimation = collection instanceof AnimatedInstancedMesh &&
-    collection.animationData;
 
-  if (
-    e.gait && e.order && "path" in e.order && e.movementSpeed &&
-    !hasGpuAnimation
-  ) {
+  if (e.gait && e.order && "path" in e.order && e.movementSpeed) {
     const path = e.order.path;
     if (!path || path.length === 0) {
       gaitProgress.delete(e);

@@ -28,9 +28,6 @@
 - Settings not discoverable in game
 - Birds & Bees
   - Should redirect target if occupied/avoid crowding
-  - Birds
-    - Should spawn a fixed set from trees
-    - Should rest on branches
 - Should be able to Tab between types in a selection
 - Buff stack id & max stack
 - Redirect?

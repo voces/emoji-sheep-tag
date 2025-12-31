@@ -1122,6 +1122,12 @@ export const prefabs: Record<string, DataEntity> = {
     movementSpeed: 2,
     isDoodad: true,
     type: "cosmetic",
+    gait: {
+      duration: 4,
+      components: [
+        { radiusX: 0.01, radiusY: 0.03, frequency: 1, phase: 0 },
+      ],
+    },
   },
   bee: {
     name: "Bee",

@@ -1,69 +1,68 @@
-import { addSystem } from "@/shared/context.ts";
+import { addSystem, appContext } from "@/shared/context.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { prefabs } from "@/shared/data.ts";
-import { Entity } from "../ecs.ts";
-import { onMapChange } from "@/shared/map.ts";
+import { normalizeAngle } from "@/shared/pathing/math.ts";
+import { Entity } from "@/shared/types.ts";
 
+// Track all living trees
 const trees = new Set<Entity>();
-const allBirds = new Set<Entity>();
 
-let nextSpawnTime = 0;
+// Track last time a bird chose to visit each tree
+const treeLastVisitTime = new Map<Entity, number>();
+
+// Track which bird belongs to which tree (one bird per tree)
+const treeToBird = new Map<Entity, Entity>();
+
+const treeOffsets = [
+  { x: 0.2, y: 0.1 },
+  { x: -0.18, y: 0 },
+];
+
+const getTreeLandingSpot = (tree: Entity) => {
+  const offset = treeOffsets[Math.floor(Math.random() * treeOffsets.length)];
+  const scale = tree.modelScale ?? 1;
+  const facing = normalizeAngle(tree.facing ?? 0);
+  const flip = facing < (Math.PI / 2) && facing > (Math.PI / -2);
+  const angle = flip ? Math.PI - facing : facing + Math.PI;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const oy = flip ? -offset.y : offset.y;
+  return {
+    x: tree.position!.x + (offset.x * cos - oy * sin) * scale,
+    y: tree.position!.y + (offset.x * sin + oy * cos) * scale,
+  };
+};
+
 addSystem({
-  props: ["targetedAs"],
-  onAdd: (e) => e.targetedAs.includes("tree") && trees.add(e),
-  onRemove: (e) => trees.delete(e),
-  update: (delta: number) => {
-    nextSpawnTime -= delta;
+  props: ["targetedAs", "position"] as const,
+  onAdd: (e) => {
+    if (e.targetedAs?.includes("tree") && e.position) {
+      trees.add(e);
+      treeLastVisitTime.set(e, 0);
 
-    if (nextSpawnTime <= 0) {
-      spawnBird();
-      nextSpawnTime = 45 / trees.size;
+      if (Math.random() < 0.35) spawnBirdAtTree(e);
+    }
+  },
+  onRemove: (e) => {
+    if (e.targetedAs?.includes("tree")) {
+      trees.delete(e);
+      treeLastVisitTime.delete(e);
+
+      const bird = treeToBird.get(e);
+      if (bird) {
+        removeEntity(bird);
+        treeToBird.delete(e);
+      }
     }
   },
 });
 
-const spawnBird = () => {
-  const treeArray = Array.from(trees).filter((e) => e.health && e.health > 0);
-
-  if (treeArray.length < 2) return;
-
-  // Pick random start tree
-  const startTree = treeArray[Math.floor(Math.random() * treeArray.length)];
-  if (!startTree.position) return;
-
-  // Calculate distances to all other trees and bias towards nearby ones
-  const remainingTrees = treeArray.filter((t) => t !== startTree && t.position);
-  const treesWithDistances = remainingTrees.map((tree) => {
-    const dx = tree.position!.x - startTree.position!.x;
-    const dy = tree.position!.y - startTree.position!.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    return { tree, distance };
-  });
-
-  // Sort by distance and use weighted random selection favoring closer trees
-  treesWithDistances.sort((a, b) => a.distance - b.distance);
-
-  // Use exponential distribution to bias towards closer trees
-  // Random value between 0 and 1, squared to bias towards lower values
-  const biasedRandom = Math.random() ** 5;
-  const index = Math.floor(biasedRandom * treesWithDistances.length);
-  const endTree = treesWithDistances[index]?.tree;
-
-  if (!startTree.position || !endTree.position) return;
-
-  const dx = endTree.position.x - startTree.position.x;
-  const dy = endTree.position.y - startTree.position.y;
-  const distance = Math.sqrt(dx * dx + dy * dy);
-
-  // Calculate heading towards target
-  const heading = Math.atan2(dy, dx);
+const spawnBirdAtTree = (tree: Entity) => {
+  if (!tree.position) return;
+  if (treeToBird.has(tree)) return; // Already has a bird
 
   // Pick bird variant (60% bird1, 40% bird2)
   const isBird1 = Math.random() < 0.6;
-
-  // Bird1: brighter, larger, slower
-  // Bird2: less vibrant, smaller, faster
-  // With overlapping ranges for variety
 
   const hue = Math.random();
 
@@ -104,39 +103,119 @@ const spawnBird = () => {
   const blue = Math.floor((b + m) * 255);
   const color = (red << 16) | (green << 8) | blue;
 
-  const movementSpeed = (prefabs.bird.movementSpeed ?? 2) * speedMultiplier;
-  const modelScale = scaleBase;
-
   const bird = addEntity({
     prefab: "bird",
     model: isBird1 ? "bird1" : "bird2",
-    position: { x: startTree.position.x, y: startTree.position.y },
-    facing: heading,
-    movementSpeed,
-    modelScale,
+    position: getTreeLandingSpot(tree),
+    facing: Math.random() < 0.5 ? 0 : Math.PI,
+    movementSpeed: (prefabs.bird.movementSpeed ?? 2) * speedMultiplier,
+    modelScale: scaleBase,
     playerColor: `#${color.toString(16).padStart(6, "0")}`,
-    order: {
-      type: "walk",
-      target: { x: endTree.position.x, y: endTree.position.y },
-      path: [{ x: endTree.position.x, y: endTree.position.y }],
-    },
     isEffect: true,
   });
 
-  // Track bird for cleanup
-  allBirds.add(bird);
+  treeToBird.set(tree, bird);
 
-  // Remove bird after it reaches destination
-  const flightTime = distance / (bird.movementSpeed ?? 2);
-  setTimeout(() => {
-    removeEntity(bird);
-    allBirds.delete(bird);
-  }, flightTime * 1000);
+  // Start looking for next tree after a short rest
+  const restTime = 2 + Math.random() * 5;
+  setTimeout(() => scheduleNextTreeVisit(bird), restTime * 1000);
 };
 
-// Clean up all birds when map changes
-onMapChange(() => {
-  for (const bird of allBirds) removeEntity(bird);
-  allBirds.clear();
-  nextSpawnTime = 0;
-});
+const selectTargetTree = (bird: Entity): Entity | null => {
+  if (!bird.position) return null;
+
+  // Get living trees (have health > 0)
+  const livingTrees = Array.from(trees).filter((t) =>
+    t.health && t.health > 0 && t.position
+  );
+  if (livingTrees.length === 0) return null;
+
+  // Randomly sample up to 8 trees
+  const sampleSize = Math.min(8, livingTrees.length);
+  const sampled: Entity[] = [];
+  const indices = new Set<number>();
+
+  while (sampled.length < sampleSize) {
+    const idx = Math.floor(Math.random() * livingTrees.length);
+    if (!indices.has(idx)) {
+      indices.add(idx);
+      sampled.push(livingTrees[idx]);
+    }
+  }
+
+  const now = performance.now() / 1000;
+
+  // Calculate sqrt group for each sampled tree and distance
+  const treesWithInfo = sampled.map((tree) => {
+    const lastVisit = treeLastVisitTime.get(tree) ?? 0;
+    const delta = now - lastVisit;
+    const cbrtGroup = Math.floor(Math.cbrt(delta));
+
+    const dx = tree.position!.x - bird.position!.x;
+    const dy = tree.position!.y - bird.position!.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    return { tree, cbrtGroup, distance };
+  });
+
+  // Sort by sqrtGroup descending, then by distance ascending
+  treesWithInfo.sort((a, b) => {
+    if (b.cbrtGroup !== a.cbrtGroup) return b.cbrtGroup - a.cbrtGroup;
+    return a.distance - b.distance;
+  });
+
+  // Pick the highest group
+  const highestGroup = treesWithInfo[0].cbrtGroup;
+  const inHighestGroup = treesWithInfo.filter((t) =>
+    t.cbrtGroup === highestGroup
+  );
+
+  // Pick the closest tree in that group (already sorted by distance)
+  return inHighestGroup[0].tree;
+};
+
+const scheduleNextTreeVisit = (bird: Entity) => {
+  if (!appContext.current.entities.has(bird) || !bird.position) return;
+
+  const targetTree = selectTargetTree(bird);
+  if (!targetTree?.position) return;
+
+  // Mark this tree as being visited now (when bird starts flying)
+  treeLastVisitTime.set(targetTree, performance.now() / 1000);
+
+  const target = getTreeLandingSpot(targetTree);
+
+  const dx = target.x - bird.position.x;
+  const dy = target.y - bird.position.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const heading = Math.atan2(dy, dx);
+
+  // Update bird to fly to this tree
+  bird.facing = heading;
+  bird.order = { type: "walk", target, path: [target] };
+
+  // Schedule arrival and next visit
+  const flightTime = distance / (bird.movementSpeed ?? 2);
+  const restTime = 2 + Math.random() * 5;
+
+  // When bird arrives, face 0 or π (whichever requires least turning)
+  setTimeout(() => {
+    if (!appContext.current.entities.has(bird)) return;
+    const currentFacing = bird.facing ?? 0;
+    // Calculate angular distance to 0 and π
+    const distTo0 = Math.abs(
+      Math.atan2(Math.sin(currentFacing), Math.cos(currentFacing)),
+    );
+    const distToPi = Math.abs(
+      Math.atan2(
+        Math.sin(currentFacing - Math.PI),
+        Math.cos(currentFacing - Math.PI),
+      ),
+    );
+    bird.facing = distTo0 <= distToPi ? 0 : Math.PI;
+  }, flightTime * 1000);
+
+  setTimeout(() => {
+    scheduleNextTreeVisit(bird);
+  }, (flightTime + restTime) * 1000);
+};

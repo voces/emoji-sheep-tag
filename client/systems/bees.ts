@@ -22,6 +22,22 @@ const flowerOffsets = [
   { x: 0.0546, y: 0.0588 },
 ];
 
+const getFlowerLandingSpot = (flower: Entity) => {
+  const offset =
+    flowerOffsets[Math.floor(Math.random() * flowerOffsets.length)];
+  const scale = flower.modelScale ?? 1;
+  const facing = normalizeAngle(flower.facing ?? 0);
+  const flip = facing < (Math.PI / 2) && facing > (Math.PI / -2);
+  const angle = flip ? Math.PI - facing : facing + Math.PI;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const oy = flip ? -offset.y : offset.y;
+  return {
+    x: flower.position!.x + (offset.x * cos - oy * sin) * scale,
+    y: flower.position!.y + (offset.x * sin + oy * cos) * scale,
+  };
+};
+
 addSystem({
   props: ["prefab", "position"] as const,
   onAdd: (e) => {
@@ -55,17 +71,13 @@ const spawnBeeAtFlower = (flower: Entity) => {
   if (!flower.position) return;
   if (flowerToBee.has(flower)) return; // Already has a bee
 
-  const movementSpeed = (prefabs.bee.movementSpeed ?? 1.5) *
-    (0.8 + Math.random() * 0.4);
-
-  const modelScale = 0.25 + Math.random() * 0.15;
-
   const bee = addEntity({
     prefab: "bee",
-    position: { x: flower.position.x, y: flower.position.y },
+    position: getFlowerLandingSpot(flower),
     facing: Math.random() * Math.PI * 2,
-    movementSpeed,
-    modelScale,
+    movementSpeed: (prefabs.bee.movementSpeed ?? 1.5) *
+      (0.8 + Math.random() * 0.4),
+    modelScale: 0.25 + Math.random() * 0.15,
     isEffect: true,
   });
 
@@ -86,7 +98,7 @@ const scheduleNextFlowerVisit = (bee: Entity) => {
   if (!visitedFlowers) return;
 
   // Find nearest unvisited flower
-  let nearestPoint = flowerKd.nearest(
+  const nearestPoint = flowerKd.nearest(
     bee.position.x,
     bee.position.y,
     (point: Point) => {
@@ -115,32 +127,16 @@ const scheduleNextFlowerVisit = (bee: Entity) => {
 
     visitedFlowers.add(targetFlower);
 
-    const offset =
-      flowerOffsets[Math.floor(Math.random() * flowerOffsets.length)];
-    const scale = targetFlower.modelScale ?? 1;
-    const facing = normalizeAngle(targetFlower.facing ?? 0);
-    const flip = facing < (Math.PI / 2) && facing > (Math.PI / -2);
-    const angle = flip ? Math.PI - facing : facing + Math.PI;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const oy = flip ? -offset.y : offset.y;
-    nearestPoint = {
-      x: nearestPoint.x + (offset.x * cos - oy * sin) * scale,
-      y: nearestPoint.y + (offset.x * sin + oy * cos) * scale,
-    };
+    const target = getFlowerLandingSpot(targetFlower);
 
-    const dx = nearestPoint.x - bee.position.x;
-    const dy = nearestPoint.y - bee.position.y;
+    const dx = target.x - bee.position.x;
+    const dy = target.y - bee.position.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     const heading = Math.atan2(dy, dx);
 
     // Update bee to fly to this flower
     bee.facing = heading;
-    bee.order = {
-      type: "walk",
-      target: { x: nearestPoint.x, y: nearestPoint.y },
-      path: [{ x: nearestPoint.x, y: nearestPoint.y }],
-    };
+    bee.order = { type: "walk", target, path: [target] };
 
     // Schedule next visit after reaching this flower
     const flightTime = distance / (bee.movementSpeed ?? 1.5);
