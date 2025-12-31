@@ -229,6 +229,7 @@ globalThis.addEventListener(
     if (!event.isTrusted) return; // Ignore synthetic events we dispatch
 
     event.preventDefault();
+    event.stopImmediatePropagation();
 
     // Find the element at the simulated cursor position
     const target = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);

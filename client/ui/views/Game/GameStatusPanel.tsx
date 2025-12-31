@@ -12,6 +12,7 @@ import { practiceVar } from "@/vars/practice.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { vipVar } from "@/vars/vip.ts";
+import { editorVar } from "@/vars/editor.ts";
 import { Player } from "@/shared/api/player.ts";
 import { isStructure } from "@/shared/api/unit.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
@@ -332,6 +333,9 @@ export const GameStatusPanel = () => {
   const shortcuts = useReactiveVar(shortcutsVar);
   const players = usePlayers();
   const expanded = useReactiveVar(scoreboardExpandedVar);
+  const isEditor = useReactiveVar(editorVar);
+
+  const localPlayer = useLocalPlayer();
 
   useListenToEntities(players, ["sheepTime", "team"]);
 
@@ -350,10 +354,10 @@ export const GameStatusPanel = () => {
     return () => globalThis.removeEventListener("keydown", handleKeyDown);
   }, [shortcuts]);
 
+  if (isEditor) return null;
+
   const mainTimer = getMainTimer(timers, players, lobbySettings, practice);
   if (!mainTimer) return null;
-
-  const localPlayer = useLocalPlayer();
   const hasPlayers = players.length > 0;
   const forceExpanded = mainTimer.label === "Time until sheep spawn:" ||
     (localPlayer?.team === "wolf" &&

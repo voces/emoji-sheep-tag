@@ -5,6 +5,7 @@ import { packMap2D } from "@/shared/util/2dPacking.ts";
 import { packEntities } from "@/shared/util/entityPacking.ts";
 import { getMapBounds, getMapCenter, type PackedMap } from "@/shared/map.ts";
 import { editorCurrentMapVar } from "@/vars/editor.ts";
+import { rad2deg } from "@/shared/util/math.ts";
 
 export const buildPackedMapFromEditor = (): PackedMap => {
   let maxCliff = 0;
@@ -30,11 +31,16 @@ export const buildPackedMapFromEditor = (): PackedMap => {
     ),
     cliffs: packMap2D(cliffs, maxCliff + 1),
     entities: packEntities(
-      Array.from(app.entities).filter((e) =>
-        e.isDoodad && e.prefab && e.position &&
-        !e.id.startsWith("blueprint-") &&
-        !e.isEffect
-      ),
+      Array.from(app.entities)
+        .filter((e) =>
+          e.isDoodad && e.prefab && e.position &&
+          !e.id.startsWith("blueprint-") &&
+          !e.isEffect
+        )
+        .map((e) => ({
+          ...e,
+          facing: e.facing != null ? rad2deg(e.facing) : undefined,
+        })),
     ),
   };
 };

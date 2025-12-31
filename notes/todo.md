@@ -31,8 +31,6 @@
   - Birds
     - Should spawn a fixed set from trees
     - Should rest on branches
-  - Bees
-    - Should rest on one of the three flowers
 - Should be able to Tab between types in a selection
 - Buff stack id & max stack
 - Redirect?

@@ -84,14 +84,20 @@ export const copySelectedDoodads = async (cut = false): Promise<boolean> => {
   const selected = Array.from(selection).filter((e) => e.isDoodad && !e.owner);
   if (selected.length === 0) return false;
 
-  const center = calculateCenter(selected);
+  const rawCenter = calculateCenter(selected);
   const anchorPrefab = findAnchorPrefab(selected);
+
+  // Snap center to anchor prefab's grid so relative offsets align properly on paste
+  const [snappedCenterX, snappedCenterY] = anchorPrefab
+    ? normalizeBuildPosition(rawCenter.x, rawCenter.y, anchorPrefab)
+    : [rawCenter.x, rawCenter.y];
+  const center = { x: snappedCenterX, y: snappedCenterY };
 
   const clipboardData: ClipboardData = {
     type: "emoji-sheep-tag-doodads",
     entities: selected.map((e) => {
       const data = serializeEntity(e);
-      // Store positions relative to center
+      // Store positions relative to snapped center
       if (e.position) {
         data.position = {
           x: e.position.x - center.x,

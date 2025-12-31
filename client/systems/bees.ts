@@ -2,7 +2,7 @@ import { addSystem, appContext } from "@/shared/context.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { prefabs } from "@/shared/data.ts";
 import { KdTree } from "@/shared/util/KDTree.ts";
-import { Point } from "@/shared/pathing/math.ts";
+import { normalizeAngle, Point } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 
 // Dedicated KD-tree for flowers
@@ -15,6 +15,12 @@ const beeVisitedFlowers = new WeakMap<Entity, Set<Entity>>();
 
 // Track which bee belongs to which flower (one bee per flower)
 const flowerToBee = new Map<Entity, Entity>();
+
+const flowerOffsets = [
+  { x: -0.0086, y: -0.0109 },
+  { x: -0.0833, y: 0.0788 },
+  { x: 0.0546, y: 0.0588 },
+];
 
 addSystem({
   props: ["prefab", "position"] as const,
@@ -80,7 +86,7 @@ const scheduleNextFlowerVisit = (bee: Entity) => {
   if (!visitedFlowers) return;
 
   // Find nearest unvisited flower
-  const nearestPoint = flowerKd.nearest(
+  let nearestPoint = flowerKd.nearest(
     bee.position.x,
     bee.position.y,
     (point: Point) => {
@@ -108,6 +114,20 @@ const scheduleNextFlowerVisit = (bee: Entity) => {
     if (!targetFlower) return;
 
     visitedFlowers.add(targetFlower);
+
+    const offset =
+      flowerOffsets[Math.floor(Math.random() * flowerOffsets.length)];
+    const scale = targetFlower.modelScale ?? 1;
+    const facing = normalizeAngle(targetFlower.facing ?? 0);
+    const flip = facing < (Math.PI / 2) && facing > (Math.PI / -2);
+    const angle = flip ? Math.PI - facing : facing + Math.PI;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const oy = flip ? -offset.y : offset.y;
+    nearestPoint = {
+      x: nearestPoint.x + (offset.x * cos - oy * sin) * scale,
+      y: nearestPoint.y + (offset.x * sin + oy * cos) * scale,
+    };
 
     const dx = nearestPoint.x - bee.position.x;
     const dy = nearestPoint.y - bee.position.y;
