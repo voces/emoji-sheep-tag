@@ -233,6 +233,7 @@ const zBuff = z.object({
   particleScaleRange: z.number().optional(),
   particleLifetime: z.number().optional(),
   preventsBuffs: z.string().array().readonly().optional(),
+  invisible: z.boolean().optional(),
 });
 
 const zItem = z.object({
@@ -287,6 +288,7 @@ export const zUpdate = z.object({
   facing: z.number().nullable().optional(),
   turnSpeed: z.number().optional(),
   sightRadius: z.number().optional(),
+  trueVision: z.boolean().optional(),
   gait: z.object({
     duration: z.number(),
     components: z.array(

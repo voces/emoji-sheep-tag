@@ -91,6 +91,7 @@ import brokenHayCube from "../assets/brokenHayCube.svg" with { type: "text" };
 import beam from "../assets/beam.svg" with { type: "text" };
 import beamStart from "../assets/beamStart.svg" with { type: "text" };
 import startLocation from "../assets/startLocation.estb" with { type: "bytes" };
+import eye from "../assets/eye.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep: estbToSvg(sheep.buffer),
@@ -177,6 +178,7 @@ export const svgs: Record<string, string> = {
   brokenHayCube,
   beamStart,
   startLocation: estbToSvg(startLocation.buffer),
+  eye,
 };
 
 type SvgConfig = {
@@ -270,6 +272,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   sparkle2: svg(sparkle2, 0.2, { layer: 2 }),
   rune: svg(rune, 0.4, { layer: 2 }),
   rune2: svg(rune2, 0.05, { layer: 2 }),
+  eye: svg(eye, 0.05, { layer: 2 }),
   swap: svg(swap, 0.1, { layer: 2 }),
   fire: svg(fire, 1, { layer: 2 }),
   crimsonArc: svg(crimsonArc, 0.1, { layer: 2 }),

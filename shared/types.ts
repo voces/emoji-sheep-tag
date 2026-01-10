@@ -117,6 +117,7 @@ export type Buff = {
   readonly particleScaleRange?: number;
   readonly particleLifetime?: number;
   readonly preventsBuffs?: ReadonlyArray<string>;
+  readonly invisible?: boolean;
 };
 
 type IconEffect = "mirror";
@@ -281,6 +282,8 @@ export type Entity = {
   /** Radians per second */
   turnSpeed?: number;
   sightRadius?: number;
+  /** Can see invisible units */
+  trueVision?: boolean;
   gait?: Gait;
   actions?: ReadonlyArray<UnitDataAction>;
   completionTime?: number;

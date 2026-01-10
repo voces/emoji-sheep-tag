@@ -72,7 +72,7 @@ const InnerGold = (
 
   // Get team entity for team gold display
   const teamEntityId = validTeam ? TEAM_ENTITY_IDS[validTeam] : undefined;
-  const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
+  const teamEntity = teamEntityId ? lookup(teamEntityId) : undefined;
   useListenToEntityProp(
     teamGoldEnabled ? teamEntity : undefined,
     "gold",

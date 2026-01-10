@@ -1,14 +1,8 @@
-import { Entity } from "../ecs.ts";
-import { addSystem } from "@/shared/context.ts";
+import { map } from "../ecs.ts";
 
-// A system to track a reverse map for entity ids to entities
-export const lookup: Record<string, Entity | undefined> = {};
-addSystem({
-  props: ["id"],
-  onAdd: (e) => {
-    lookup[e.id] = e;
-  },
-  onRemove: (e) => {
-    delete lookup[e.id];
-  },
-});
+// Wrapper function matching the server's lookup interface
+// Uses the existing `map` from ecs.ts which tracks all entities by id
+export const lookup = (entityId: string | null | undefined) => {
+  if (!entityId) return;
+  return map[entityId];
+};

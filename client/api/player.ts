@@ -126,7 +126,7 @@ export const getEffectivePlayerGold = (
   }
 
   const teamEntityId = team ? TEAM_ENTITY_IDS[team] : undefined;
-  const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
+  const teamEntity = teamEntityId ? lookup(teamEntityId) : undefined;
   const teamGold = teamEntity?.gold ?? 0;
 
   if (player.team === "wolf") {

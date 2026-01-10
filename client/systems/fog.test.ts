@@ -41,9 +41,9 @@ it("switch wolf -> sheep", () => {
   });
   app.update();
 
-  expect(lookup["sheep-0"]!.hiddenByFog).toBeFalsy();
-  expect(lookup["hut-0"]!.hiddenByFog).toBeFalsy();
-  expect(lookup["wolf-0"]!.hiddenByFog).toBeTruthy();
+  expect(lookup("sheep-0")!.hiddenByFog).toBeFalsy();
+  expect(lookup("hut-0")!.hiddenByFog).toBeFalsy();
+  expect(lookup("wolf-0")!.hiddenByFog).toBeTruthy();
 
   handlers.updates({
     type: "updates",
@@ -69,7 +69,7 @@ it("switch wolf -> sheep", () => {
   });
   app.update();
 
-  expect(lookup["sheep-1"]!.hiddenByFog).toBeFalsy(); // 10 < 14
-  expect(lookup["hut-0"]!.hiddenByFog).toBeFalsy(); // ally
-  expect(lookup["wolf-1"]!.hiddenByFog).toBeFalsy(); // ally
+  expect(lookup("sheep-1")!.hiddenByFog).toBeFalsy(); // 10 < 14
+  expect(lookup("hut-0")!.hiddenByFog).toBeFalsy(); // ally
+  expect(lookup("wolf-1")!.hiddenByFog).toBeFalsy(); // ally
 });

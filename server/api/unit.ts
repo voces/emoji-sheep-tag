@@ -1,4 +1,5 @@
 import {
+  canSee,
   computeUnitDamage,
   isEnemy,
   iterateBuffs,
@@ -29,8 +30,6 @@ import { addEntity, mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
 import { newSfx } from "./sfx.ts";
-import { canSeeTarget } from "@/shared/visibility.ts";
-import { getTerrainLayers } from "@/shared/map.ts";
 import { lookup } from "../systems/lookup.ts";
 import { isAlly } from "@/shared/api/unit.ts";
 
@@ -216,12 +215,6 @@ const isReachableTarget = (attacker: Entity, target: Entity) => {
       path.at(-1)?.y !== attacker.position.y);
 };
 
-const getBlockersInRange = (x: number, y: number, radius: number) =>
-  getEntitiesInRange(x, y, radius).filter(
-    (e): e is SystemEntity<"position" | "blocksLineOfSight"> =>
-      !!e.blocksLineOfSight && !!e.position,
-  );
-
 // Calculate attack priority for a target entity (higher = more important to attack)
 export const prioritizeTarget = (target: Entity): number => {
   let priority = 0;
@@ -248,34 +241,30 @@ export const prioritizeTarget = (target: Entity): number => {
 };
 
 export const acquireTarget = (e: Entity) => {
-  const pos = e.position;
-  if (!pos) return;
+  if (!e.position) return;
 
-  const terrainLayers = getTerrainLayers();
+  const attacker = e as SystemEntity<"position">;
 
-  return getEntitiesInRange(pos.x, pos.y, e.sightRadius ?? 5)
-    .filter((e2) =>
-      e2.position &&
+  return getEntitiesInRange(
+    attacker.position.x,
+    attacker.position.y,
+    e.sightRadius ?? 5,
+  )
+    .filter((e2): e2 is SystemEntity<"position"> =>
+      !!e2.position &&
       isEnemy(e, e2) &&
       testClassification(e, e2, e.attack?.targetsAllowed)
     )
-    .map((e2) => [e2, distanceBetweenPoints(pos, e2.position!)] as const)
+    .map((e2) =>
+      [e2, distanceBetweenPoints(attacker.position, e2.position)] as const
+    )
     .sort((a, b) => {
       const priorityDiff = prioritizeTarget(b[0]) - prioritizeTarget(a[0]);
       if (priorityDiff !== 0) return priorityDiff;
       return a[1] - b[1];
     }).find(([e2]) =>
-      isReachableTarget(e, e2) && e2.position && canSeeTarget(
-        {
-          position: pos,
-          sightRadius: e.sightRadius,
-          id: e.id,
-          tilemap: e.tilemap,
-        },
-        { position: e2.position, tilemap: e2.tilemap },
-        terrainLayers,
-        getBlockersInRange,
-      )
+      // canSee checks LOS and invisibility (requires ally with trueVision to see invisible)
+      isReachableTarget(e, e2) && canSee(e, e2)
     )?.[0];
 };
 
@@ -647,6 +636,13 @@ export const damageEntity = (
   if (attacker.buffs) {
     attacker.buffs = attacker.buffs.filter((buff) => !buff.consumeOnAttack);
   }
+};
+
+/** Removes invisibility buffs from an entity */
+export const breakInvisibility = (entity: Entity) => {
+  if (!entity.buffs?.some((b) => b.invisible)) return;
+  entity.buffs = entity.buffs.filter((b) => !b.invisible);
+  if (entity.buffs.length === 0) entity.buffs = null;
 };
 
 export const changePrefab = (

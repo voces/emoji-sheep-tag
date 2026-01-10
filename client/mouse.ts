@@ -153,7 +153,7 @@ const updateIntersects = () => {
       ) continue;
       const id = obj.getId(intersect.instanceId);
       if (!id) continue;
-      const entity = lookup[id];
+      const entity = lookup(id);
       if (!entity || (!editorVar() && entity.isDoodad)) continue;
       // Filter out entities hidden by fog (but allow in editor mode)
       if (entity.hiddenByFog && !editorVar()) continue;

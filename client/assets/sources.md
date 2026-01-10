@@ -70,6 +70,7 @@
 - https://www.svgrepo.com/svg/298925/bird
 - https://www.svgrepo.com/svg/261755/bird
 - https://www.svgrepo.com/svg/264361/bee
+- https://www.svgrepo.com/svg/288441/visibility-eye
 
 # Audio
 

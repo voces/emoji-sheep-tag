@@ -12,6 +12,7 @@ import { precast } from "../../orders/precast.ts";
 import { postCast } from "../../orders/postCast.ts";
 import { handleBlockedPath } from "./pathRetry.ts";
 import { canSee } from "@/shared/api/unit.ts";
+import { breakInvisibility } from "../../api/unit.ts";
 
 export const advanceCast = (e: Entity, delta: number): number => {
   if (e.order?.type !== "cast") return delta;
@@ -92,6 +93,7 @@ export const advanceCast = (e: Entity, delta: number): number => {
       return delta;
     }
 
+    breakInvisibility(e);
     orderDef?.onCastStart?.(e);
 
     // Mark the order as started

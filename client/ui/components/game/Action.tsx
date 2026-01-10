@@ -41,7 +41,7 @@ export const Action = ({ action, current, entity }: {
 
   // Get team entity for team gold checks
   const teamEntityId = ownerTeam ? TEAM_ENTITY_IDS[ownerTeam] : undefined;
-  const teamEntity = teamEntityId ? lookup[teamEntityId] : undefined;
+  const teamEntity = teamEntityId ? lookup(teamEntityId) : undefined;
 
   // Check if action is disabled due to insufficient gold
   const goldCost = action.goldCost ?? 0;

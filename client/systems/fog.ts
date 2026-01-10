@@ -1,4 +1,4 @@
-import { app, Entity, registerFogReset, SystemEntity } from "../ecs.ts";
+import { app, Entity, map, registerFogReset, SystemEntity } from "../ecs.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import {
   getMap,
@@ -25,7 +25,7 @@ import {
   setFogPass,
 } from "../graphics/three.ts";
 import { FogPass } from "../graphics/FogPass.ts";
-import { isAlly, isStructure, isTree } from "@/shared/api/unit.ts";
+import { isAlly, isInvisible, isStructure, isTree } from "@/shared/api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
@@ -38,6 +38,88 @@ import { iterateViewersInRange } from "@/shared/systems/vision.ts";
 
 // Fog resolution multiplier: 2 = 160x160, 4 = 320x320, etc.
 const FOG_RESOLUTION_MULTIPLIER = 4;
+
+// Cache last-seen state for structures in fog
+type FogSnapshot = {
+  model: string | undefined;
+  progress: number | null | undefined;
+};
+const fogSnapshots = new WeakMap<Entity, FogSnapshot>();
+
+// Store pending server values that were blocked while entity was in fog
+type PendingServerValues = {
+  model?: string | null;
+  prefab?: string | null;
+  progress?: number | null;
+};
+const pendingServerValues = new WeakMap<Entity, PendingServerValues>();
+
+// Track entities that should be removed when revealed (server deleted them while in fog)
+// Using Set instead of WeakSet to allow iteration for sheep death cleanup
+const pendingRemoval = new Set<Entity>();
+
+/** Mark an entity for removal when it becomes visible (structure destroyed in fog) */
+export const markPendingRemoval = (entity: Entity) => {
+  pendingRemoval.add(entity);
+};
+
+/** Check if an entity is pending removal */
+export const isPendingRemoval = (entity: Entity): boolean =>
+  pendingRemoval.has(entity);
+
+/** Remove an entity from pending removal and clean up its fog state */
+const removePendingEntity = (entity: Entity) => {
+  pendingRemoval.delete(entity);
+  fogSnapshots.delete(entity);
+  pendingServerValues.delete(entity);
+  app.removeEntity(entity);
+  delete map[entity.id];
+};
+
+/** Remove all pending entities matching a filter predicate */
+export const removePendingEntitiesWhere = (
+  predicate: (entity: Entity) => boolean,
+) => {
+  for (const entity of pendingRemoval) {
+    if (predicate(entity)) removePendingEntity(entity);
+  }
+};
+
+const snapshotEntity = (entity: Entity): FogSnapshot => ({
+  model: entity.model ?? entity.prefab,
+  progress: entity.progress,
+});
+
+/** Get snapshotted values for an entity if it has a fog snapshot */
+export const getFogSnapshot = (entity: Entity): FogSnapshot | undefined =>
+  fogSnapshots.get(entity);
+
+/** Store pending server values that were blocked while entity is in fog */
+export const storePendingServerValues = (
+  entity: Entity,
+  values: PendingServerValues,
+) => {
+  const existing = pendingServerValues.get(entity) ?? {};
+  // Only merge values that are not undefined (undefined means "not in this patch")
+  const merged = { ...existing };
+  if (values.model !== undefined) merged.model = values.model;
+  if (values.prefab !== undefined) merged.prefab = values.prefab;
+  if (values.progress !== undefined) merged.progress = values.progress;
+  pendingServerValues.set(entity, merged);
+};
+
+/** Apply pending server values when entity becomes visible, then clear them */
+const applyPendingServerValues = (entity: Entity) => {
+  const pending = pendingServerValues.get(entity);
+  if (pending) {
+    if (pending.model !== undefined) entity.model = pending.model ?? undefined;
+    if (pending.prefab !== undefined) {
+      entity.prefab = pending.prefab ?? undefined;
+    }
+    if (pending.progress !== undefined) entity.progress = pending.progress;
+    pendingServerValues.delete(entity);
+  }
+};
 
 export const alwaysVisible = (entity: Entity) =>
   entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
@@ -785,6 +867,7 @@ const canAllySeeEntity = (target: Entity): boolean => {
   if (teamsToCheck.length === 0) return false;
 
   const terrainLayers = getTerrainLayers();
+  const targetIsInvisible = isInvisible(target);
 
   // Get target's terrain height for early-out (use min height for tilemaps)
   const targetHeight = getMinEntityHeight(
@@ -802,6 +885,9 @@ const canAllySeeEntity = (target: Entity): boolean => {
         target.position.y,
       )
     ) {
+      // Invisible targets require trueVision to see
+      if (targetIsInvisible && !viewer.trueVision) continue;
+
       // Early out: if target is higher than viewer, viewer can't see target
       const viewerHeight = getMaxEntityHeight(
         viewer.position,
@@ -835,12 +921,14 @@ const handleEntityVisibility = (entity: Entity) => {
   // If view mode is enabled, disable fog entirely
   if (lobbySettingsVar().view) {
     if (entity.hiddenByFog) delete entity.hiddenByFog;
+    fogSnapshots.delete(entity);
     return;
   }
 
   // Skip allied entities
   if (visibleToLocalPlayer(entity)) {
     if (entity.hiddenByFog) delete entity.hiddenByFog;
+    fogSnapshots.delete(entity);
     everSeen.add(entity.id);
     return;
   }
@@ -854,14 +942,44 @@ const handleEntityVisibility = (entity: Entity) => {
 
   // For units, hide when not visible
   if (!isStructure(entity)) {
-    if (visible) delete entity.hiddenByFog;
-    else entity.hiddenByFog = true;
+    if (visible) {
+      delete entity.hiddenByFog;
+      fogSnapshots.delete(entity);
+    } else {
+      entity.hiddenByFog = true;
+    }
     return;
   }
 
-  // For structures, only show if ever seen
-  if (everSeen.has(entity.id)) delete entity.hiddenByFog;
-  else entity.hiddenByFog = true;
+  // For structures: show if ever seen, but invisible structures must be currently visible
+  const shouldShow = everSeen.has(entity.id) &&
+    (!isInvisible(entity) || visible);
+
+  if (shouldShow) {
+    delete entity.hiddenByFog;
+
+    if (visible) {
+      // Currently visible - clear snapshot and restore real server values
+      fogSnapshots.delete(entity);
+      applyPendingServerValues(entity);
+
+      // If entity was marked for removal while in fog, remove it now
+      if (pendingRemoval.has(entity)) {
+        pendingRemoval.delete(entity);
+        app.removeEntity(entity);
+        delete map[entity.id];
+        return;
+      }
+    } else {
+      // In fog but was seen - create snapshot when entering fog
+      if (!fogSnapshots.has(entity)) {
+        fogSnapshots.set(entity, snapshotEntity(entity));
+      }
+      // Note: snapshot values are preserved by filtering updates in messageHandlers.ts
+    }
+  } else {
+    entity.hiddenByFog = true;
+  }
 };
 addSystem({
   props: ["position"],
@@ -870,6 +988,21 @@ addSystem({
   onRemove: (e) => {
     // Clean up tracking when entity is removed
     everSeen.delete(e.id);
+    // WeakMap auto-cleans when entity is GC'd
+  },
+});
+
+// Re-check visibility when buffs change (for invisibility)
+addSystem({
+  props: ["buffs"],
+  onAdd: (entity) => {
+    if (entity.position) handleEntityVisibility(entity);
+  },
+  onChange: (entity) => {
+    if (entity.position) handleEntityVisibility(entity);
+  },
+  onRemove: (entity) => {
+    if (entity.position) handleEntityVisibility(entity);
   },
 });
 

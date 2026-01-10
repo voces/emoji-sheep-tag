@@ -1,6 +1,10 @@
 import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
-import { build, computeBuildDistance } from "../../api/unit.ts";
+import {
+  breakInvisibility,
+  build,
+  computeBuildDistance,
+} from "../../api/unit.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 import { addSystem } from "@/shared/context.ts";
@@ -55,6 +59,7 @@ export const advanceBuild = (e: Entity, delta: number): number => {
     return tweenResult.delta;
   }
 
+  breakInvisibility(e);
   build(e, e.order.unitType, e.order.x, e.order.y);
   delete e.order;
   return delta;

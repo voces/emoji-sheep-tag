@@ -80,7 +80,7 @@ export const findActionForShortcut = (
   let bestMatchQuality = 0;
 
   const currentMenu = getCurrentMenu();
-  const menuUnit = currentMenu ? lookup[currentMenu.unitId] : undefined;
+  const menuUnit = currentMenu ? lookup(currentMenu.unitId) : undefined;
 
   if (currentMenu && menuUnit) {
     // Check menu actions

@@ -92,7 +92,7 @@ app.addSystem({
       // Turn; consume delta if target point is outside angle of attack (±60°)
       const lookTarget = "path" in e.order && e.order.path?.[0] ||
         "targetId" in e.order && e.order.targetId &&
-          lookup[e.order.targetId]?.position ||
+          lookup(e.order.targetId)?.position ||
         "target" in e.order && e.order.target ||
         ("x" in e.order && "y" in e.order && { x: e.order.x, y: e.order.y }) ||
         undefined;

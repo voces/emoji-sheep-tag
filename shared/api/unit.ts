@@ -37,6 +37,7 @@ const getTeam = (owner: string | undefined): "sheep" | "wolf" | "neutral" => {
  * Check if the source entity's team can see the target entity.
  * This checks if ANY entity on the same team has LOS to the target.
  * Allies can always see each other (no LOS check needed).
+ * Invisible targets require a viewer with trueVision.
  * Uses KD tree for efficient spatial lookup.
  */
 export const canSee = (source: Entity, target: Entity): boolean => {
@@ -48,6 +49,7 @@ export const canSee = (source: Entity, target: Entity): boolean => {
   if (team === "neutral") return false;
 
   const terrainLayers = getTerrainLayers();
+  const targetIsInvisible = isInvisible(target);
 
   // Get target's terrain height for early-out (use min height for tilemaps)
   const targetHeight = getMinEntityHeight(
@@ -64,6 +66,9 @@ export const canSee = (source: Entity, target: Entity): boolean => {
       target.position.y,
     )
   ) {
+    // Invisible targets require trueVision to see
+    if (targetIsInvisible && !viewer.trueVision) continue;
+
     // Early out: if target is higher than viewer, viewer can't see target
     const viewerHeight = getMaxEntityHeight(
       viewer.position,
@@ -74,17 +79,14 @@ export const canSee = (source: Entity, target: Entity): boolean => {
 
     if (
       canSeeTarget(
-        {
-          position: viewer.position,
-          sightRadius: viewer.sightRadius,
-          id: viewer.id,
-          tilemap: viewer.tilemap,
-        },
+        viewer,
         { position: target.position, tilemap: target.tilemap },
         terrainLayers,
         getBlockersInRange,
       )
-    ) return true;
+    ) {
+      return true;
+    }
   }
 
   return false;
@@ -300,6 +302,10 @@ export const isWard = (entity: Entity) => {
   return !entity.tilemap && !entity.movementSpeed && !entity.isDoodad &&
     !!entity.owner;
 };
+
+/** Checks if an entity has an invisibility buff */
+export const isInvisible = (entity: Entity): boolean =>
+  entity.buffs?.some((b) => b.invisible) ?? false;
 
 const isSpirit = (entity: Entity) => !!entity.targetedAs?.includes("spirit");
 

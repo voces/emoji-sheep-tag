@@ -50,7 +50,7 @@ export const manaPotionOrder = {
             "ease-in-out",
             0.5,
             {
-              vertexColor: 0x34a5e9,
+              playerColor: "#34a5e9",
               modelScale: 0.5 + Math.random() ** 2,
               facing: Math.random() * Math.PI * 2,
             },

@@ -35,9 +35,32 @@ import {
 import { storeReceivedMap } from "./storage/receivedMaps.ts";
 import { getLocalMap, saveLocalMap } from "./storage/localMaps.ts";
 import { triggerLocalMapsRefresh } from "@/vars/localMapsRefresh.ts";
+import {
+  getFogSnapshot,
+  markPendingRemoval,
+  removePendingEntitiesWhere,
+  storePendingServerValues,
+} from "./systems/fog.ts";
+import { isStructure } from "@/shared/api/unit.ts";
 
 const processUpdates = (updates: ReadonlyArray<Update>) => {
   const players = updates.filter((u) => u.isPlayer || map[u.id]?.isPlayer);
+
+  // Track owners whose sheep are being deleted - their structures shouldn't persist in fog
+  // (e.g., when a sheep dies, wolves know all their structures are destroyed)
+  const ownersWithDeletedSheep = new Set(
+    updates.filter((u) =>
+      u.__delete && (u.prefab === "sheep" || map[u.id]?.prefab === "sheep")
+    ).map((u) => u.owner ?? map[u.id]?.owner).filter(Boolean) as string[],
+  );
+
+  // If any sheep died, also remove their structures that were already pending removal
+  // (structures destroyed earlier while in fog, now we know owner is dead)
+  if (ownersWithDeletedSheep.size > 0) {
+    removePendingEntitiesWhere((e) =>
+      !!e.owner && ownersWithDeletedSheep.has(e.owner)
+    );
+  }
 
   app.batch(() => {
     // Add player entities to ECS
@@ -49,12 +72,49 @@ const processUpdates = (updates: ReadonlyArray<Update>) => {
     // Add other entities
     for (const { __delete, ...update } of updates) {
       if (update.isPlayer || map[update.id]?.isPlayer) continue;
-      if (update.id in map) Object.assign(map[update.id], update);
-      else map[update.id] = app.addEntity(update);
+      if (update.id in map) {
+        // Preserve fog snapshot values - don't let server updates override them
+        const entity = map[update.id];
+        const snapshot = getFogSnapshot(entity);
+        if (snapshot) {
+          // Apply update but preserve visual properties from snapshot
+          // (model, prefab, progress all affect rendered appearance)
+          // Store the blocked values so they can be applied when entity becomes visible
+          const {
+            model,
+            prefab,
+            progress,
+            ...rest
+          } = update;
+          if (
+            model !== undefined || prefab !== undefined ||
+            progress !== undefined
+          ) {
+            storePendingServerValues(entity, { model, prefab, progress });
+          }
+          Object.assign(entity, rest);
+        } else {
+          Object.assign(entity, update);
+        }
+      } else {
+        map[update.id] = app.addEntity(update);
+      }
 
       if (__delete) {
-        app.removeEntity(map[update.id]);
-        delete map[update.id];
+        const entity = map[update.id];
+        // If structure has fog snapshot (is in fog and was seen), keep showing it
+        // UNLESS its owner's sheep is dying (e.g., sheep death destroys all structures)
+        const ownerSheepDying = entity?.owner &&
+          ownersWithDeletedSheep.has(entity.owner);
+        if (
+          entity && isStructure(entity) && getFogSnapshot(entity) &&
+          !ownerSheepDying
+        ) {
+          markPendingRemoval(entity);
+        } else {
+          app.removeEntity(entity);
+          delete map[update.id];
+        }
       }
     }
 
@@ -103,7 +163,6 @@ export const handlers = {
     if (data.localPlayer) localPlayerIdVar(data.localPlayer);
 
     const prevPlayers = getPlayers();
-    console.log(prevPlayers);
     const players = data.updates.filter((p) =>
       p.isPlayer && p.id !== "practice-enemy"
     );
@@ -111,7 +170,6 @@ export const handlers = {
       !prevPlayers.some((p2) => p2.id === p.id) && data.localPlayer !== p.id
     );
     const localNewPlayer = players.find((p) => p.id === data.localPlayer);
-    console.log({ prevPlayers, newPlayers, localNewPlayer });
 
     if (newPlayers.length) {
       if (localNewPlayer) {

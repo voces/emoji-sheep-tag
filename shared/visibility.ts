@@ -1,33 +1,31 @@
 // Shared visibility/line-of-sight checking functions
 // Used by both client (for per-team visibility) and server (for attack/auto-attack)
 
+import { Entity } from "./types.ts";
+
 // terrainLayers is at 2x resolution relative to world coordinates
 export const TERRAIN_SCALE = 2;
 
 // Tilemaps are in pathing tile units (4 per world unit)
 const PATHING_SCALE = 4;
 
-// Minimal types for visibility checks - compatible with Entity but not dependent on it
 type Position = { x: number; y: number };
-type Tilemap = {
-  top: number;
-  left: number;
-  height: number;
-  width: number;
-  map: ReadonlyArray<number>;
-};
+type Tilemap = NonNullable<Entity["tilemap"]>;
 type Viewer = {
   position: Position;
   sightRadius?: number;
   id?: string;
   tilemap?: Tilemap;
 };
-type Target = { position: Position; tilemap?: Tilemap };
+type Target = {
+  position: Position;
+  tilemap?: Tilemap;
+};
 type Blocker = {
   position: Position;
+  id: string;
   blocksLineOfSight?: number;
   radius?: number;
-  id: string;
 };
 
 // Helper to get the terrain cell range covered by a tilemap

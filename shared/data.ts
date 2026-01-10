@@ -389,6 +389,7 @@ type DataEntity =
     | "movementSpeed"
     | "turnSpeed"
     | "sightRadius"
+    | "trueVision"
     | "gait"
     | "blocksLineOfSight"
     | "actions"
@@ -686,7 +687,8 @@ export const prefabs: Record<string, DataEntity> = {
       },
       {
         name: "Place Sentry",
-        description: "Places a Sentry Ward which can watch for sheep.",
+        description:
+          "Places a Sentry Ward which can watch for sheep and see invisible units.",
         type: "target",
         order: "sentry",
         icon: "sentry",
@@ -781,7 +783,7 @@ export const prefabs: Record<string, DataEntity> = {
           "Upgrades the hut to a Crystal, which is capable of casting buffs on nearby units.",
         type: "upgrade",
         prefab: "crystal",
-        goldCost: 20,
+        goldCost: 40,
         binding: ["KeyC"],
       },
       selfDestruct,
@@ -962,10 +964,24 @@ export const prefabs: Record<string, DataEntity> = {
         order: "crystalSpeed",
         icon: "sparkle2",
         binding: ["KeyS"],
-        manaCost: 60,
+        manaCost: 45,
         castDuration: 0.5,
         range: 5,
         targeting: [["ally", "unit"]],
+        allowAllies: true,
+      },
+      {
+        name: "Vanish",
+        description:
+          "Make target invisible for 60 seconds. Broken by building, casting, or attacking.",
+        type: "target",
+        order: "crystalInvisibility",
+        icon: "eye",
+        binding: ["KeyV"],
+        manaCost: 60,
+        castDuration: 0.5,
+        range: 5,
+        targeting: [["ally"]],
         allowAllies: true,
       },
       selfDestruct,
@@ -992,6 +1008,7 @@ export const prefabs: Record<string, DataEntity> = {
   sentry: {
     name: "Sentry Ward",
     sightRadius: 12,
+    trueVision: true,
     radius: 0.25,
     pathing: PATHING_RESERVED,
     requiresPathing: PATHING_NONE,

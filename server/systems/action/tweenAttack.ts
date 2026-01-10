@@ -5,6 +5,7 @@ import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 import { tweenSwing } from "./tweenSwing.ts";
 import { handleBlockedPath } from "./pathRetry.ts";
+import { breakInvisibility } from "../../api/unit.ts";
 
 export const tweenAttack = (e: Entity, delta: number) => {
   if (
@@ -20,6 +21,7 @@ export const tweenAttack = (e: Entity, delta: number) => {
     if (e.swing) return tweenSwing(e, delta);
 
     if (!e.attackCooldownRemaining) {
+      breakInvisibility(e);
       e.swing = {
         remaining: Math.max(e.attack.backswing, e.attack.damagePoint),
         source: e.position,
@@ -118,6 +120,7 @@ export const tweenAttack = (e: Entity, delta: number) => {
   }
 
   if (!e.attackCooldownRemaining) {
+    breakInvisibility(e);
     e.swing = {
       remaining: Math.max(e.attack.backswing, e.attack.damagePoint),
       source: e.position,

@@ -402,8 +402,18 @@ addSystem({
 addSystem({
   props: ["model"],
   onAdd: (e) => {
-    const collection = e.model ?? e.prefab;
-    if (collection) prevModel.set(e, collection);
+    const next = e.model ?? e.prefab;
+    const prev = prevModel.get(e);
+    // If entity already had a different model via prefab, switch collections
+    if (prev && prev !== next) {
+      collections[prev]?.delete(e.id);
+    }
+    if (next) prevModel.set(e, next);
+    // Re-render if entity already has position (model added after entity creation)
+    if (e.position && prev !== next) {
+      onPositionOrRotationChange(e as SystemEntity<"position">);
+      updateColor(e);
+    }
   },
   onChange: (e) => {
     const next = e.model ?? e.prefab;

@@ -16,7 +16,7 @@ import "./systems/buffParticles.ts";
 import "./systems/kaboom.ts";
 import "./systems/easing.ts";
 import "./systems/indicators.ts";
-import "./systems/mirrors.ts";
+import "./systems/visualModifiers.ts";
 import "./systems/fog.ts";
 import "./systems/floatingText.ts";
 import "./systems/birds.ts";

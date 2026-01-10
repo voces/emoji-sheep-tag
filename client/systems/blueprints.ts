@@ -67,7 +67,7 @@ const entitiesFromQueue = (e: Entity) => {
       });
     }
     if ("targetId" in o && o.targetId) {
-      const target = lookup[o.targetId];
+      const target = lookup(o.targetId);
       if (target && target.position) {
         const existing = existingBlueprints.find((b) =>
           b.position?.x === target.position?.x &&
