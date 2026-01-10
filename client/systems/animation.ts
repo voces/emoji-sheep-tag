@@ -11,6 +11,10 @@ import { collections } from "./models.ts";
 // Animation state tracking for AnimatedInstancedMesh models
 const entityAnimationState = new WeakMap<Entity, string | undefined>();
 
+// Track entities with extended cast animation after mirror image
+const mirrorCastOverride = new Set<Entity>();
+const MIRROR_CAST_EXTENSION_MS = 100;
+
 // Track collections that have had their shader ready callback set up
 const shaderReadySetup = new WeakSet<AnimatedInstancedMesh>();
 
@@ -52,6 +56,11 @@ export const getCurrentAnimation = (e: Entity): string | undefined => {
   if (e.order?.type === "cast" && collection.getClipInfo("cast")) return "cast";
 
   if (e.swing) return "attack";
+
+  // Extend cast animation briefly after mirror image cast ends
+  if (mirrorCastOverride.has(e) && collection.getClipInfo("cast")) {
+    return "cast";
+  }
 
   if (typeof e.progress === "number" && e.progress < 1) return "build";
 
@@ -98,11 +107,29 @@ export const updateAnimationState = (e: Entity) => {
   }
 };
 
+const isCastingMirror = (e: Entity) =>
+  e.order?.type === "cast" && e.order.orderId === "mirrorImage";
+
+const handleMirrorCastChange = (e: Entity) => {
+  if (isCastingMirror(e)) {
+    mirrorCastOverride.add(e);
+  } else if (mirrorCastOverride.has(e)) {
+    // Cast ended - extend animation briefly then clear
+    setTimeout(() => {
+      if (!isCastingMirror(e)) {
+        mirrorCastOverride.delete(e);
+        updateAnimationState(e);
+      }
+    }, MIRROR_CAST_EXTENSION_MS);
+  }
+  updateAnimationState(e);
+};
+
 addSystem({
   props: ["order"],
-  onAdd: updateAnimationState,
-  onChange: updateAnimationState,
-  onRemove: updateAnimationState,
+  onAdd: handleMirrorCastChange,
+  onChange: handleMirrorCastChange,
+  onRemove: handleMirrorCastChange,
 });
 
 addSystem({

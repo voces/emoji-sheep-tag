@@ -1,6 +1,6 @@
 import { Color } from "three";
 
-import { app, Entity, SystemEntity } from "../ecs.ts";
+import { Entity, SystemEntity } from "../ecs.ts";
 import { InstancedSvg } from "../graphics/InstancedSvg.ts";
 import { AnimatedInstancedMesh } from "../graphics/AnimatedInstancedMesh.ts";
 import { getLocalPlayer } from "../api/player.ts";
@@ -269,15 +269,8 @@ addSystem({
   onRemove: updateAlpha,
 });
 
-const wasCastingMirror = new Map<Entity, number>();
-
 addSystem<Entity, "order" | "position">({
   props: ["order", "position"],
-  onChange: (e) => {
-    if (e.order.type === "cast" && e.order.orderId === "mirrorImage") {
-      wasCastingMirror.set(e, e.order.remaining + 0.15);
-    }
-  },
   updateEntity: (e) => {
     const model = e.model ?? e.prefab;
     if (
@@ -306,39 +299,6 @@ addSystem<Entity, "order" | "position">({
       e.facing,
       e.zIndex,
     );
-  },
-  update: (delta) => {
-    for (const [e, remaining] of wasCastingMirror) {
-      const model = e.model ?? e.prefab;
-      if (!model || !e.position || !app.entities.has(e)) {
-        wasCastingMirror.delete(e);
-        continue;
-      }
-
-      if (!isVisibleToLocalPlayer(e)) {
-        collections[model]?.setPositionAt(
-          e.id,
-          Infinity,
-          Infinity,
-          e.facing,
-          e.zIndex,
-        );
-        wasCastingMirror.delete(e);
-        continue;
-      }
-
-      if ((remaining ?? 0) < delta) wasCastingMirror.delete(e);
-      else wasCastingMirror.set(e, remaining - delta);
-
-      const r = Math.random() * Math.PI * 2;
-      collections[model]?.setPositionAt(
-        e.id,
-        e.position.x + 0.05 * Math.cos(r),
-        e.position.y + 0.05 * Math.sin(r),
-        e.facing,
-        e.zIndex,
-      );
-    }
   },
 });
 
