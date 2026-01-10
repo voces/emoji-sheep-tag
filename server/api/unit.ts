@@ -31,6 +31,8 @@ import { playSoundAt } from "./sound.ts";
 import { newSfx } from "./sfx.ts";
 import { canSeeTarget } from "@/shared/visibility.ts";
 import { getTerrainLayers } from "@/shared/map.ts";
+import { lookup } from "../systems/lookup.ts";
+import { isAlly } from "@/shared/api/unit.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -220,6 +222,31 @@ const getBlockersInRange = (x: number, y: number, radius: number) =>
       !!e.blocksLineOfSight && !!e.position,
   );
 
+// Calculate attack priority for a target entity (higher = more important to attack)
+export const prioritizeTarget = (target: Entity): number => {
+  let priority = 0;
+
+  // Has bite ability: +5
+  if (target.actions?.some((a) => "order" in a && a.order === "bite")) {
+    priority += 5;
+  }
+
+  // Has attack: +2
+  if (target.attack) priority += 2;
+
+  // Currently biting or attacking an ally: -10
+  const order = target.order;
+  if (order?.type === "cast" && order.orderId === "bite" && order.targetId) {
+    const orderTarget = lookup(order.targetId);
+    if (orderTarget && isAlly(target, orderTarget)) priority -= 10;
+  } else if (order?.type === "attack" && "targetId" in order) {
+    const orderTarget = lookup(order.targetId);
+    if (orderTarget && isAlly(target, orderTarget)) priority -= 10;
+  }
+
+  return priority;
+};
+
 export const acquireTarget = (e: Entity) => {
   const pos = e.position;
   if (!pos) return;
@@ -234,9 +261,8 @@ export const acquireTarget = (e: Entity) => {
     )
     .map((e2) => [e2, distanceBetweenPoints(pos, e2.position!)] as const)
     .sort((a, b) => {
-      if (a[0].prefab === "sheep") {
-        if (b[0].prefab !== "sheep") return -1;
-      } else if (b[0].prefab === "sheep") return 1;
+      const priorityDiff = prioritizeTarget(b[0]) - prioritizeTarget(a[0]);
+      if (priorityDiff !== 0) return priorityDiff;
       return a[1] - b[1];
     }).find(([e2]) =>
       isReachableTarget(e, e2) && e2.position && canSeeTarget(

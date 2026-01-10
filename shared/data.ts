@@ -603,7 +603,7 @@ export const prefabs: Record<string, DataEntity> = {
         type: "target",
         icon: "bite",
         targeting: [["spirit"], ["ward"], ["structure"]],
-        order: "save",
+        order: "bite",
         range: 0,
         castDuration: 0.5,
         smart: { spirit: 0, ward: 0, enemy: 0 },

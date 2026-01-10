@@ -13,18 +13,18 @@ import { send } from "../lobbyApi.ts";
 import { colorName, getPlayer } from "@/shared/api/player.ts";
 import { lobbyContext } from "../contexts.ts";
 
-export const saveOrder = {
-  id: "save",
+export const biteOrder = {
+  id: "bite",
 
   onIssue: (unit, target, queue) => {
     if (typeof target !== "string") return "failed";
 
-    const action = findActionByOrder(unit, "save");
+    const action = findActionByOrder(unit, "bite");
     if (!action) return "failed";
 
     const order: Order = {
       type: "cast",
-      orderId: "save",
+      orderId: "bite",
       remaining: "castDuration" in action ? action.castDuration ?? 0 : 0,
       targetId: target,
     };
@@ -46,7 +46,7 @@ export const saveOrder = {
       : undefined;
     if (!target) return;
 
-    const action = findActionByOrder(unit, "save");
+    const action = findActionByOrder(unit, "bite");
     if (action?.type !== "target") return;
 
     if (

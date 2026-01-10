@@ -1,10 +1,11 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { styled } from "styled-components";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { Slider } from "@/components/forms/Slider.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
 import { SettingsPanelContainer, SettingsPanelTitle } from "./commonStyles.tsx";
+import { flags } from "../../../flags.ts";
 
 const SettingRow = styled.div`
   display: flex;
@@ -18,15 +19,17 @@ const SettingLabel = styled.label`
 
 export const UI = () => {
   const uiSettings = useReactiveVar(uiSettingsVar);
+  const [debug, setDebug] = useState(flags.debug);
 
   const handlePreferredActionsPerRowChange = useCallback((value: number) => {
     uiSettingsVar({ ...uiSettingsVar(), preferredActionsPerRow: value });
   }, []);
 
   const formatPreferredActionsPerRow = useCallback((value: number) => {
-    if (value === 0) return "None";
-    if (value === 11) return "Unlimited";
-    return value.toString();
+    const modified = value !== 4 ? "* " : "";
+    if (value === 0) return `${modified}None`;
+    if (value === 11) return `${modified}Unlimited`;
+    return `${modified}${value}`;
   }, []);
 
   return (
@@ -69,6 +72,28 @@ export const UI = () => {
         />
         <SettingLabel htmlFor="show-fps">
           Show FPS
+        </SettingLabel>
+      </SettingRow>
+
+      <SettingRow>
+        <Checkbox
+          id="enable-debugging"
+          checked={debug}
+          onChange={(e) => {
+            const enabled = e.currentTarget.checked;
+            flags.debug = enabled;
+            setDebug(enabled);
+            if (!enabled) {
+              localStorage.removeItem("debug");
+              globalThis.latency = 0;
+              globalThis.noise = 0;
+            } else {
+              localStorage.setItem("debug", "true");
+            }
+          }}
+        />
+        <SettingLabel htmlFor="enable-debugging">
+          Enable debugging
         </SettingLabel>
       </SettingRow>
     </SettingsPanelContainer>

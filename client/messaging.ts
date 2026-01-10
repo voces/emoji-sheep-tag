@@ -1,7 +1,6 @@
 import type { ClientToServerMessage } from "../server/client.ts";
 import { getWebSocket } from "./connection.ts";
 import { getShardSocket } from "./shardConnection.ts";
-import { flags } from "./flags.ts";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { editorMapModifiedVar } from "@/vars/editor.ts";
 
@@ -74,9 +73,7 @@ export const startPing = () => {
   }
 
   pingInterval = setInterval(() => {
-    if (
-      (!flags.debug || !flags.debugStats) && !uiSettingsVar().showPing
-    ) return;
+    if (!uiSettingsVar().showPing) return;
     const ws = getWebSocket();
     if (ws?.readyState !== WebSocket.OPEN) return;
     const time = performance.now();

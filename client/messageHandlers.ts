@@ -103,6 +103,7 @@ export const handlers = {
     if (data.localPlayer) localPlayerIdVar(data.localPlayer);
 
     const prevPlayers = getPlayers();
+    console.log(prevPlayers);
     const players = data.updates.filter((p) =>
       p.isPlayer && p.id !== "practice-enemy"
     );
@@ -110,6 +111,7 @@ export const handlers = {
       !prevPlayers.some((p2) => p2.id === p.id) && data.localPlayer !== p.id
     );
     const localNewPlayer = players.find((p) => p.id === data.localPlayer);
+    console.log({ prevPlayers, newPlayers, localNewPlayer });
 
     if (newPlayers.length) {
       if (localNewPlayer) {
@@ -190,7 +192,7 @@ export const handlers = {
   },
   pong: ({ data }: Extract<ServerToClientMessage, { type: "pong" }>) => {
     if (typeof data === "number") {
-      stats.msPanel.update(performance.now() - data, 100);
+      stats.msPanel.update(performance.now() - data);
     }
   },
   chat: (

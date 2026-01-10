@@ -120,7 +120,5 @@ scene.add(glow);
 // Update glow shader time uniform for pulsing animation
 onRender((_, time) => {
   const shader = glowMaterial.userData.shader;
-  if (shader?.uniforms.time) {
-    shader.uniforms.time.value = time;
-  }
+  if (shader?.uniforms.time) shader.uniforms.time.value = time;
 });

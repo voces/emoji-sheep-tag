@@ -102,13 +102,9 @@ export const joinLobby = (
       client.team = autoAssignSheepOrWolf(lobby);
     }
 
-    // Add player to lobby
-    lobby.players.add(client);
-    console.log(new Date(), "Client", client.id, "joined lobby", lobby.name);
-
     // When game is on shard, skip primary server messaging - shard handles it
     if (!lobby.activeShard) {
-      // Send partial state to existing players
+      // Send partial state to existing players (before adding new player to lobby)
       send({
         type: "join",
         lobby: lobby.name,
@@ -117,10 +113,14 @@ export const joinLobby = (
         lobbySettings: serializeLobbySettings(lobby, 1),
         captainsDraft: serializeCaptainsDraft(lobby.captainsDraft),
       });
-
-      // Send full state to joining player
-      sendJoinMessage(client);
     }
+
+    // Add player to lobby
+    lobby.players.add(client);
+    console.log(new Date(), "Client", client.id, "joined lobby", lobby.name);
+
+    // Send full state to joining player
+    if (!lobby.activeShard) sendJoinMessage(client);
 
     // Update lobby list for hub
     broadcastLobbyList();

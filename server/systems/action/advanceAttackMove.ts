@@ -1,5 +1,5 @@
 import { Entity } from "@/shared/types.ts";
-import { acquireTarget, isAlive } from "../../api/unit.ts";
+import { acquireTarget, isAlive, prioritizeTarget } from "../../api/unit.ts";
 import { canSee } from "@/shared/api/unit.ts";
 import { lookup } from "../lookup.ts";
 import { calcPath } from "../pathing.ts";
@@ -23,6 +23,17 @@ export const advanceAttackMove = (e: Entity, delta: number): number => {
   if (!e.order.targetId) {
     const next = acquireTarget(e);
     if (next) e.order = { ...e.order, targetId: next.id };
+  } else {
+    const target = lookup(e.order.targetId);
+    // Check if there's a higher priority target available
+    const acquired = acquireTarget(e);
+    if (
+      target && acquired &&
+      prioritizeTarget(acquired) > prioritizeTarget(target)
+    ) {
+      const { path: _, ...rest } = e.order;
+      e.order = { ...rest, targetId: acquired.id };
+    }
   }
 
   // Attack target if have one
@@ -51,7 +62,15 @@ export const advanceAttackMove = (e: Entity, delta: number): number => {
   if (
     (e.order.path?.at(-1)?.x === e.position?.x &&
       e.order.path?.at(-1)?.y === e.position?.y)
-  ) delete e.order;
+  ) {
+    if (
+      e.position?.x === e.order.target.x && e.position.y === e.order.target.y
+    ) delete e.order;
+    else {
+      const { path: _, ...rest } = e.order;
+      e.order = rest;
+    }
+  }
 
   return tweenResult.delta;
 };

@@ -1,5 +1,5 @@
 import { SystemEntity } from "@/shared/types.ts";
-import { acquireTarget, orderAttack } from "../api/unit.ts";
+import { acquireTarget } from "../api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
 
 addSystem(() => {
@@ -7,8 +7,7 @@ addSystem(() => {
     if (e.order || e.queue?.length || typeof e.progress === "number") return;
 
     const target = acquireTarget(e);
-    // TODO: return to pos?
-    if (target) orderAttack(e, target);
+    if (target) e.order = { type: "attackMove", target: e.position };
   };
 
   const entities = new Set<SystemEntity<"attack" | "position">>();

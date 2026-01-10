@@ -32,8 +32,7 @@ const createTerrainMasks = (map: LoadedMap = getMap()) => ({
   ),
 });
 
-const canvas = document.querySelector("canvas");
-if (!canvas) throw new Error("Could not find canvas");
+const canvas = document.querySelector("canvas") ?? undefined;
 
 export const scene = new Scene();
 export const camera = new PerspectiveCamera(

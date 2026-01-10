@@ -29,7 +29,6 @@
   - Should redirect target if occupied/avoid crowding
 - Should be able to Tab between types in a selection
 - Buff stack id & max stack
-- Redirect?
 - Pub functionality
 - Pausing?
 - Editor improvements

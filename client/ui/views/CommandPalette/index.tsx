@@ -226,25 +226,6 @@ export const CommandPalette = () => {
       },
     },
     {
-      name: `${flags.debug ? "Disable" : "Enable"} debugging`,
-      description: flags.debug
-        ? "Disable debugging and hide debug commands."
-        : "Show debug commands.",
-      callback: () => {
-        flags.debug = !flags.debug;
-        const stats = document.getElementById("stats");
-        if (!flags.debug) {
-          localStorage.removeItem("debug");
-          globalThis.latency = 0;
-          globalThis.noise = 0;
-          if (stats) stats.style.display = "none";
-        } else {
-          localStorage.setItem("debug", "true");
-          if (stats) stats.style.display = flags.debugStats ? "" : "none";
-        }
-      },
-    },
-    {
       name: "Set latency",
       description: "Artificially increase latency",
       valid: () => flags.debug,
@@ -271,21 +252,6 @@ export const CommandPalette = () => {
       }),
     },
     {
-      name: `${flags.debugStats ? "Hide" : "Show"} stats`,
-      description: `${
-        flags.debugStats ? "Hide" : "Show"
-      } latency, memory, and frames per second`,
-      valid: () => flags.debug,
-      callback: () => {
-        flags.debugStats = !flags.debugStats;
-        if (flags.debugStats) localStorage.setItem("debug-stats", "true");
-        else localStorage.removeItem("debug-stats");
-
-        const stats = document.getElementById("stats");
-        if (stats) stats.style.display = flags.debugStats ? "" : "none";
-      },
-    },
-    {
       name: `${flags.debugPathing ? "Disable" : "Enable"} path debugging`,
       description: `${flags.debugPathing ? "Hide" : "Show"} pathing traces`,
       valid: () => flags.debug,
@@ -306,7 +272,6 @@ export const CommandPalette = () => {
     hideUI,
     lobbySettings.view,
     flags.debug,
-    flags.debugStats,
     flags.debugPathing,
     uiSettings.showPing,
     uiSettings.showFps,

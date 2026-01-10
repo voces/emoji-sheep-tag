@@ -10,9 +10,7 @@ export const tweenAttack = (e: Entity, delta: number) => {
   if (
     !e.position || !e.attack || !e.order ||
     (e.order.type !== "attack" && e.order.type !== "attackMove")
-  ) {
-    return delta;
-  }
+  ) return delta;
 
   // Ground attack (only for attack orders with target but no targetId)
   if (
