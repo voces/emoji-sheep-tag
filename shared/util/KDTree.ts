@@ -176,42 +176,46 @@ export class KdTree {
    */
   rangeSearchCircle(x: number, y: number, D: number): Point[] {
     const results: Point[] = [];
-    const D2 = D * D; // Compare squared distances to avoid sqrt computations.
+    for (const point of this.iterateInRange(x, y, D)) {
+      results.push(point);
+    }
+    return results;
+  }
 
-    const searchRec = (node: KdTreeNode | null) => {
-      if (node === null) return;
+  /**
+   * Yields all points within distance D from point (x, y).
+   * Allows early termination via generator protocol.
+   * @param x X-coordinate of the center point.
+   * @param y Y-coordinate of the center point.
+   * @param D The distance (radius) from the center point.
+   */
+  *iterateInRange(x: number, y: number, D: number): Generator<Point> {
+    if (!this.root) return;
+
+    const D2 = D * D;
+    const stack: KdTreeNode[] = [this.root];
+
+    while (stack.length > 0) {
+      const node = stack.pop()!;
 
       const dx = node.point.x - x;
       const dy = node.point.y - y;
       const distanceSquared = dx * dx + dy * dy;
 
       if (distanceSquared <= D2) {
-        results.push(node.point);
+        yield node.point;
       }
 
-      const axis = node.axis;
-      let diff: number;
-      if (axis === 0) {
-        diff = x - node.point.x;
-      } else {
-        diff = y - node.point.y;
-      }
+      const diff = node.axis === 0 ? x - node.point.x : y - node.point.y;
 
       if (diff <= 0) {
-        searchRec(node.left);
-        if (diff * diff <= D2) {
-          searchRec(node.right);
-        }
+        if (node.left) stack.push(node.left);
+        if (diff * diff <= D2 && node.right) stack.push(node.right);
       } else {
-        searchRec(node.right);
-        if (diff * diff <= D2) {
-          searchRec(node.left);
-        }
+        if (node.right) stack.push(node.right);
+        if (diff * diff <= D2 && node.left) stack.push(node.left);
       }
-    };
-
-    searchRec(this.root);
-    return results;
+    }
   }
 
   /**

@@ -29,7 +29,7 @@ it(
 
 it(
   "integration: wolf attacking sheep (path movement)",
-  { wolves: [], sheep: [] },
+  { wolves: ["player-1"], sheep: ["player-0"] },
   function* () {
     const wolf = newUnit("player-1", "wolf", 20, 20);
     const sheep = newUnit("player-0", "sheep", 30, 20);

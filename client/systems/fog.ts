@@ -27,13 +27,19 @@ import {
 import { FogPass } from "../graphics/FogPass.ts";
 import { isAlly, isStructure, isTree } from "@/shared/api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
-import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { getPlayer } from "@/shared/api/player.ts";
+import { getEntitiesInRange } from "@/shared/systems/kd.ts";
+import {
+  canSeeTarget,
+  getMaxEntityHeight,
+  getMinEntityHeight,
+} from "@/shared/visibility.ts";
+import { iterateViewersInRange } from "@/shared/systems/vision.ts";
 
 // Fog resolution multiplier: 2 = 160x160, 4 = 320x320, etc.
 const FOG_RESOLUTION_MULTIPLIER = 4;
 
-const alwaysVisible = (entity: Entity) =>
+export const alwaysVisible = (entity: Entity) =>
   entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
   entity.id.startsWith("blueprint-") ||
   entity.id.startsWith("paste-blueprint-") ||
@@ -58,36 +64,101 @@ let terrainLayerData = getTerrainLayers();
 let fogBounds = getMapBounds();
 let currentFogMapId = getMap().id;
 
-const addEntityToGrid = (entity: Entity) => {
-  if (!entity.position) return;
+// Get fog grid bounds for an entity, considering tilemap if present
+const getEntityFogBounds = (
+  entity: Entity,
+): { minX: number; maxX: number; minY: number; maxY: number } => {
+  if (!entity.position) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+
+  if (entity.tilemap) {
+    // Tilemaps use pathing scale (4 per world unit)
+    const PATHING_SCALE = 4;
+    const worldMinX = entity.position.x + entity.tilemap.left / PATHING_SCALE;
+    const worldMaxX = entity.position.x +
+      (entity.tilemap.left + entity.tilemap.width) / PATHING_SCALE;
+    const worldMinY = entity.position.y + entity.tilemap.top / PATHING_SCALE;
+    const worldMaxY = entity.position.y +
+      (entity.tilemap.top + entity.tilemap.height) / PATHING_SCALE;
+
+    return {
+      minX: Math.floor(worldMinX * FOG_RESOLUTION_MULTIPLIER),
+      maxX: Math.floor(worldMaxX * FOG_RESOLUTION_MULTIPLIER),
+      minY: Math.floor(worldMinY * FOG_RESOLUTION_MULTIPLIER),
+      maxY: Math.floor(worldMaxY * FOG_RESOLUTION_MULTIPLIER),
+    };
+  }
+
+  // Non-tilemap entities just use center position
   const x = Math.floor(entity.position.x * FOG_RESOLUTION_MULTIPLIER);
   const y = Math.floor(entity.position.y * FOG_RESOLUTION_MULTIPLIER);
-  let row = entityGridMap.get(y);
-  if (!row) {
-    row = new Map();
-    entityGridMap.set(y, row);
-  }
-  let cell = row.get(x);
-  if (!cell) {
-    cell = new Set();
-    row.set(x, cell);
-  }
-  cell.add(entity);
+  return { minX: x, maxX: x, minY: y, maxY: y };
 };
 
-const removeEntityFromGrid = (entity: Entity) => {
+const addEntityToGrid = (entity: Entity) => {
   if (!entity.position) return;
-  const x = Math.floor(entity.position.x * FOG_RESOLUTION_MULTIPLIER);
-  const y = Math.floor(entity.position.y * FOG_RESOLUTION_MULTIPLIER);
-  const row = entityGridMap.get(y);
-  if (!row) return;
-  const cell = row.get(x);
-  if (!cell) return;
-  cell.delete(entity);
-  if (cell.size === 0) {
-    row.delete(x);
-    if (row.size === 0) {
-      entityGridMap.delete(y);
+  const bounds = getEntityFogBounds(entity);
+
+  for (let y = bounds.minY; y <= bounds.maxY; y++) {
+    let row = entityGridMap.get(y);
+    if (!row) {
+      row = new Map();
+      entityGridMap.set(y, row);
+    }
+    for (let x = bounds.minX; x <= bounds.maxX; x++) {
+      let cell = row.get(x);
+      if (!cell) {
+        cell = new Set();
+        row.set(x, cell);
+      }
+      cell.add(entity);
+    }
+  }
+};
+
+const removeEntityFromGrid = (
+  entity: Entity,
+  position?: { x: number; y: number },
+) => {
+  const pos = position ?? entity.position;
+  if (!pos) return;
+
+  // Reconstruct bounds using the provided position
+  const bounds = entity.tilemap
+    ? (() => {
+      const PATHING_SCALE = 4;
+      const worldMinX = pos.x + entity.tilemap.left / PATHING_SCALE;
+      const worldMaxX = pos.x +
+        (entity.tilemap.left + entity.tilemap.width) / PATHING_SCALE;
+      const worldMinY = pos.y + entity.tilemap.top / PATHING_SCALE;
+      const worldMaxY = pos.y +
+        (entity.tilemap.top + entity.tilemap.height) / PATHING_SCALE;
+      return {
+        minX: Math.floor(worldMinX * FOG_RESOLUTION_MULTIPLIER),
+        maxX: Math.floor(worldMaxX * FOG_RESOLUTION_MULTIPLIER),
+        minY: Math.floor(worldMinY * FOG_RESOLUTION_MULTIPLIER),
+        maxY: Math.floor(worldMaxY * FOG_RESOLUTION_MULTIPLIER),
+      };
+    })()
+    : {
+      minX: Math.floor(pos.x * FOG_RESOLUTION_MULTIPLIER),
+      maxX: Math.floor(pos.x * FOG_RESOLUTION_MULTIPLIER),
+      minY: Math.floor(pos.y * FOG_RESOLUTION_MULTIPLIER),
+      maxY: Math.floor(pos.y * FOG_RESOLUTION_MULTIPLIER),
+    };
+
+  for (let y = bounds.minY; y <= bounds.maxY; y++) {
+    const row = entityGridMap.get(y);
+    if (!row) continue;
+    for (let x = bounds.minX; x <= bounds.maxX; x++) {
+      const cell = row.get(x);
+      if (!cell) continue;
+      cell.delete(entity);
+      if (cell.size === 0) {
+        row.delete(x);
+        if (row.size === 0) {
+          entityGridMap.delete(y);
+        }
+      }
     }
   }
 };
@@ -615,31 +686,23 @@ addSystem({
   },
   onChange: (entity) => {
     if (alwaysVisible(entity)) return;
-    // Remove from old position
     const oldPos = entityOldPositions.get(entity);
     if (oldPos) {
-      const oldX = Math.floor(oldPos.x * FOG_RESOLUTION_MULTIPLIER);
-      const oldY = Math.floor(oldPos.y * FOG_RESOLUTION_MULTIPLIER);
-      const newX = Math.floor(entity.position.x * FOG_RESOLUTION_MULTIPLIER);
-      const newY = Math.floor(entity.position.y * FOG_RESOLUTION_MULTIPLIER);
-
-      // Only update if grid cell changed
-      if (oldX !== newX || oldY !== newY) {
-        const oldRow = entityGridMap.get(oldY);
-        if (oldRow) {
-          const oldCell = oldRow.get(oldX);
-          if (oldCell) {
-            oldCell.delete(entity);
-            if (oldCell.size === 0) {
-              oldRow.delete(oldX);
-              if (oldRow.size === 0) {
-                entityGridMap.delete(oldY);
-              }
-            }
-          }
-        }
-        // Add to new position
+      // For tilemapped entities, always remove/re-add since bounds may span many cells
+      // For non-tilemapped entities, only update if center cell changed
+      if (entity.tilemap) {
+        removeEntityFromGrid(entity, oldPos);
         addEntityToGrid(entity);
+      } else {
+        const oldX = Math.floor(oldPos.x * FOG_RESOLUTION_MULTIPLIER);
+        const oldY = Math.floor(oldPos.y * FOG_RESOLUTION_MULTIPLIER);
+        const newX = Math.floor(entity.position.x * FOG_RESOLUTION_MULTIPLIER);
+        const newY = Math.floor(entity.position.y * FOG_RESOLUTION_MULTIPLIER);
+
+        if (oldX !== newX || oldY !== newY) {
+          removeEntityFromGrid(entity, oldPos);
+          addEntityToGrid(entity);
+        }
       }
     }
     entityOldPositions.set(entity, {
@@ -689,6 +752,82 @@ onMapChange((map) => {
   rebuildFogResources();
 });
 
+// Get blockers in range for visibility checks
+const getBlockersInRange = (x: number, y: number, radius: number) =>
+  getEntitiesInRange(x, y, radius).filter(
+    (
+      e,
+    ): e is Entity & {
+      position: { x: number; y: number };
+      blocksLineOfSight: number;
+    } => !!e.blocksLineOfSight && !!e.position,
+  );
+
+// Check if any allied entity can see the target entity using LOS checks
+const canAllySeeEntity = (target: Entity): boolean => {
+  if (!target.position) return false;
+
+  const localPlayer = getLocalPlayer();
+  if (!localPlayer) return false;
+
+  const localTeam = localPlayer.team;
+
+  // Observers see everything
+  if (localTeam === "observer") return true;
+
+  // Determine which team(s) to check
+  const teamsToCheck: ("sheep" | "wolf")[] = localTeam === "pending"
+    ? ["wolf"] // Pending users only see wolf team
+    : localTeam === "sheep" || localTeam === "wolf"
+    ? [localTeam]
+    : [];
+
+  if (teamsToCheck.length === 0) return false;
+
+  const terrainLayers = getTerrainLayers();
+
+  // Get target's terrain height for early-out (use min height for tilemaps)
+  const targetHeight = getMinEntityHeight(
+    target.position,
+    target.tilemap,
+    terrainLayers,
+  );
+
+  // Use KD tree to efficiently find nearby viewers
+  for (const team of teamsToCheck) {
+    for (
+      const viewer of iterateViewersInRange(
+        team,
+        target.position.x,
+        target.position.y,
+      )
+    ) {
+      // Early out: if target is higher than viewer, viewer can't see target
+      const viewerHeight = getMaxEntityHeight(
+        viewer.position,
+        viewer.tilemap,
+        terrainLayers,
+      );
+      if (targetHeight > viewerHeight) continue;
+
+      if (
+        canSeeTarget(
+          {
+            position: viewer.position,
+            sightRadius: viewer.sightRadius,
+            id: viewer.id,
+            tilemap: viewer.tilemap,
+          },
+          { position: target.position, tilemap: target.tilemap },
+          terrainLayers,
+          getBlockersInRange,
+        )
+      ) return true;
+    }
+  }
+  return false;
+};
+
 // System to hide enemy units in fog (but keep structures visible once seen)
 const handleEntityVisibility = (entity: Entity) => {
   if (alwaysVisible(entity) || !entity.position) return;
@@ -706,11 +845,8 @@ const handleEntityVisibility = (entity: Entity) => {
     return;
   }
 
-  // Check if position is visible
-  const visible = visibilityGrid.isPositionVisible(
-    entity.position.x,
-    entity.position.y,
-  );
+  // Check if any allied unit can see this entity using LOS
+  const visible = canAllySeeEntity(entity);
 
   // Mark as ever seen if currently visible
   if (visible) everSeen.add(entity.id);

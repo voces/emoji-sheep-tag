@@ -5,10 +5,90 @@ import {
   classificationGroups,
   defaultClassifications,
 } from "../data.ts";
-import { Buff, Entity } from "../types.ts";
+import { Buff, Entity, SystemEntity } from "../types.ts";
 import { absurd } from "../util/absurd.ts";
 import { mergeEntityWithPrefab } from "./entity.ts";
 import { getPlayer } from "./player.ts";
+import { getTerrainLayers } from "../map.ts";
+import { getEntitiesInRange } from "../systems/kd.ts";
+import { iterateViewersInRange } from "../systems/vision.ts";
+import {
+  canSeeTarget,
+  getMaxEntityHeight,
+  getMinEntityHeight,
+} from "../visibility.ts";
+
+// Get blockers in range for visibility checks
+const getBlockersInRange = (x: number, y: number, radius: number) =>
+  getEntitiesInRange(x, y, radius).filter(
+    (e): e is SystemEntity<"position" | "blocksLineOfSight"> =>
+      !!e.blocksLineOfSight && !!e.position,
+  );
+
+const getTeam = (owner: string | undefined): "sheep" | "wolf" | "neutral" => {
+  if (!owner) return "neutral";
+  const player = getPlayer(owner);
+  if (player?.team === "sheep") return "sheep";
+  if (player?.team === "wolf") return "wolf";
+  return "neutral";
+};
+
+/**
+ * Check if the source entity's team can see the target entity.
+ * This checks if ANY entity on the same team has LOS to the target.
+ * Allies can always see each other (no LOS check needed).
+ * Uses KD tree for efficient spatial lookup.
+ */
+export const canSee = (source: Entity, target: Entity): boolean => {
+  if (!target.position) return false;
+  // Allies can always see each other
+  if (isAlly(source, target)) return true;
+
+  const team = getTeam(source.owner);
+  if (team === "neutral") return false;
+
+  const terrainLayers = getTerrainLayers();
+
+  // Get target's terrain height for early-out (use min height for tilemaps)
+  const targetHeight = getMinEntityHeight(
+    target.position,
+    target.tilemap,
+    terrainLayers,
+  );
+
+  // Iterate through nearby viewers using KD tree
+  for (
+    const viewer of iterateViewersInRange(
+      team,
+      target.position.x,
+      target.position.y,
+    )
+  ) {
+    // Early out: if target is higher than viewer, viewer can't see target
+    const viewerHeight = getMaxEntityHeight(
+      viewer.position,
+      viewer.tilemap,
+      terrainLayers,
+    );
+    if (targetHeight > viewerHeight) continue;
+
+    if (
+      canSeeTarget(
+        {
+          position: viewer.position,
+          sightRadius: viewer.sightRadius,
+          id: viewer.id,
+          tilemap: viewer.tilemap,
+        },
+        { position: target.position, tilemap: target.tilemap },
+        terrainLayers,
+        getBlockersInRange,
+      )
+    ) return true;
+  }
+
+  return false;
+};
 
 /**
  * Iterates over all buffs on an entity, including both direct buffs and buffs from inventory items.

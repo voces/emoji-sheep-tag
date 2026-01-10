@@ -16,7 +16,6 @@
   - Sobi Mask
   - Crystal Ball
 - Pointer lock setting
-- Server-side visibility for attack cancel on cliffs?
 - When changing zoom, blueprints
 - Modes
   - Bulldog
@@ -39,6 +38,9 @@
 - Enable queuing actions for gold? This would require monitoring gold...
 - Targeting range indicators
 - Per-player handicap
+- Day/night cycle
+  - Reduce wolf/sheep/fox visibility at night
+  - Starts day, night at 1:45. Nights last 1:15 and days last 2:00.
 
 # Bugs
 

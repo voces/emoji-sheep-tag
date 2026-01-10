@@ -18,6 +18,7 @@
     "regen",
     "svgs",
     "tilemap",
+    "tilemaps",
     "tweening"
   ],
   "chatgpt.commentCodeLensEnabled": true

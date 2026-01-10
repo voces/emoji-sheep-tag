@@ -1,6 +1,7 @@
 import { lookup } from "../lookup.ts";
 import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { isAlive } from "../../api/unit.ts";
+import { canSee } from "@/shared/api/unit.ts";
 import { Entity } from "@/shared/types.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
@@ -18,8 +19,11 @@ export const advanceWalk = (e: Entity, delta: number): number => {
   // Continuously repath for moving targets (targetId)
   if ("targetId" in e.order) {
     const target = lookup(e.order.targetId);
-    if (!target || !isAlive(target)) {
-      delete e.order;
+    // If target gone/dead/invisible, convert to move to last known position
+    if (!target || !isAlive(target) || !canSee(e, target)) {
+      if (target?.position) {
+        e.order = { type: "walk", target: { ...target.position } };
+      } else delete e.order;
       return delta;
     }
 

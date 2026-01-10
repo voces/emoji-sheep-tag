@@ -1,5 +1,6 @@
 import { Entity } from "@/shared/types.ts";
 import { acquireTarget, isAlive } from "../../api/unit.ts";
+import { canSee } from "@/shared/api/unit.ts";
 import { lookup } from "../lookup.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenAttack } from "./tweenAttack.ts";
@@ -9,10 +10,10 @@ import { handleBlockedPath } from "./pathRetry.ts";
 export const advanceAttackMove = (e: Entity, delta: number): number => {
   if (e.order?.type !== "attackMove") return delta;
 
-  // Clear target if dead
+  // Clear target if dead or not visible
   if (e.order.targetId) {
     const target = lookup(e.order.targetId);
-    if (!target || !isAlive(target)) {
+    if (!target || !isAlive(target) || !canSee(e, target)) {
       const { targetId: _, ...rest } = e.order;
       e.order = rest;
     }

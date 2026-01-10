@@ -29,6 +29,8 @@ import { addEntity, mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { playSoundAt } from "./sound.ts";
 import { newSfx } from "./sfx.ts";
+import { canSeeTarget } from "@/shared/visibility.ts";
+import { getTerrainLayers } from "@/shared/map.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
@@ -212,9 +214,17 @@ const isReachableTarget = (attacker: Entity, target: Entity) => {
       path.at(-1)?.y !== attacker.position.y);
 };
 
+const getBlockersInRange = (x: number, y: number, radius: number) =>
+  getEntitiesInRange(x, y, radius).filter(
+    (e): e is SystemEntity<"position" | "blocksLineOfSight"> =>
+      !!e.blocksLineOfSight && !!e.position,
+  );
+
 export const acquireTarget = (e: Entity) => {
   const pos = e.position;
   if (!pos) return;
+
+  const terrainLayers = getTerrainLayers();
 
   return getEntitiesInRange(pos.x, pos.y, e.sightRadius ?? 5)
     .filter((e2) =>
@@ -228,7 +238,19 @@ export const acquireTarget = (e: Entity) => {
         if (b[0].prefab !== "sheep") return -1;
       } else if (b[0].prefab === "sheep") return 1;
       return a[1] - b[1];
-    }).find(([e2]) => isReachableTarget(e, e2))?.[0];
+    }).find(([e2]) =>
+      isReachableTarget(e, e2) && e2.position && canSeeTarget(
+        {
+          position: pos,
+          sightRadius: e.sightRadius,
+          id: e.id,
+          tilemap: e.tilemap,
+        },
+        { position: e2.position, tilemap: e2.tilemap },
+        terrainLayers,
+        getBlockersInRange,
+      )
+    )?.[0];
 };
 
 export const orderAttack = (

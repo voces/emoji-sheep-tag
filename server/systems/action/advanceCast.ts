@@ -11,10 +11,20 @@ import { lookup } from "../lookup.ts";
 import { precast } from "../../orders/precast.ts";
 import { postCast } from "../../orders/postCast.ts";
 import { handleBlockedPath } from "./pathRetry.ts";
+import { canSee } from "@/shared/api/unit.ts";
 
 export const advanceCast = (e: Entity, delta: number): number => {
   if (e.order?.type !== "cast") return delta;
   const { action, item } = findActionAndItem(e, e.order.orderId) ?? {};
+
+  // Cancel if entity target is no longer visible
+  if (e.order.targetId) {
+    const entityTarget = lookup(e.order.targetId);
+    if (!entityTarget || !canSee(e, entityTarget)) {
+      delete e.order;
+      return delta;
+    }
+  }
 
   // Handle movement for cast orders with target and range
   const range = action?.type === "target" ? action.range : undefined;

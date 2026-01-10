@@ -22,6 +22,7 @@ import "./systems/floatingText.ts";
 import "./systems/birds.ts";
 import "./systems/bees.ts";
 import "@/shared/systems/kd.ts";
+import "@/shared/systems/vision.ts";
 import "@/shared/systems/mapCenterMarker.ts";
 import "./graphics/cursor.ts";
 
