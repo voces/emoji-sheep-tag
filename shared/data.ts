@@ -592,6 +592,15 @@ export const prefabs: Record<string, DataEntity> = {
         goldCost: 12,
       },
       {
+        name: "Build Monolith",
+        description:
+          "A rock inscribed with symbols making it invisible to enemies.",
+        type: "build",
+        unitType: "monolith",
+        binding: ["KeyQ"],
+        goldCost: 6,
+      },
+      {
         name: "Destroy last farm",
         type: "auto",
         order: "destroyLastFarm",
@@ -688,7 +697,7 @@ export const prefabs: Record<string, DataEntity> = {
       {
         name: "Place Sentry",
         description:
-          "Places a Sentry Ward which can watch for sheep and see invisible units.",
+          "Places a Sentry Ward which can watch for sheep and reveals invisible enemies.",
         type: "target",
         order: "sentry",
         icon: "sentry",
@@ -947,7 +956,7 @@ export const prefabs: Record<string, DataEntity> = {
   },
   crystal: {
     name: "Crystal",
-    sightRadius: 6,
+    sightRadius: 4,
     radius: 0.5,
     tilemap: tilemap4x4,
     maxHealth: 200,
@@ -987,6 +996,18 @@ export const prefabs: Record<string, DataEntity> = {
       selfDestruct,
     ],
     bounty: 6,
+  },
+  monolith: {
+    name: "Monolith",
+    sightRadius: 4,
+    radius: 0.5,
+    tilemap: tilemap4x4,
+    maxHealth: 120,
+    completionTime: 1,
+    sounds: { birth: ["construction1"], death: ["explosion1"] },
+    actions: [selfDestruct],
+    bounty: 3,
+    buffs: [{ invisible: true }],
   },
   fence: {
     name: "Fence",

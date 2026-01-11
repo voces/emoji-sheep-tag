@@ -92,6 +92,7 @@ import beam from "../assets/beam.svg" with { type: "text" };
 import beamStart from "../assets/beamStart.svg" with { type: "text" };
 import startLocation from "../assets/startLocation.estb" with { type: "bytes" };
 import eye from "../assets/eye.svg" with { type: "text" };
+import monolith from "../assets/monolith.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   sheep: estbToSvg(sheep.buffer),
@@ -179,6 +180,7 @@ export const svgs: Record<string, string> = {
   beamStart,
   startLocation: estbToSvg(startLocation.buffer),
   eye,
+  monolith,
 };
 
 type SvgConfig = {
@@ -245,6 +247,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   watchtower: svg(watchtower, 0.06),
   divinity: svg(divinity, 1.1),
   castle: svg(castle, 0.7),
+  monolith: svg(monolith, 0.13, { yOffset: 0.05 }),
   fox: estme(fox.buffer, 0.0088),
   wolf: estme(wolf.buffer, 0.01),
   atom: svg(atom, 0.05),

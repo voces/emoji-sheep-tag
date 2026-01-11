@@ -20,11 +20,24 @@ const applyModifiers = (e: Entity) => {
 
   if (isInvisible(e)) alpha *= 0.4;
 
+  const reducedSpeed = e.buffs?.reduce(
+    (reducedSpeed, b) =>
+      reducedSpeed * Math.min(b.movementSpeedMultiplier ?? 1, 1),
+    1,
+  ) ?? 1;
+  if (reducedSpeed < 1) {
+    const r = Math.round((vertexColor & 0xff0000) / 65536 * reducedSpeed) *
+      65536;
+    const g = Math.round((vertexColor & 0xff00) / 256 * reducedSpeed) * 256;
+    const b = vertexColor & 0xff;
+    vertexColor = r + g + b;
+  }
+
   if (alpha === 1) delete e.alpha;
   else e.alpha = alpha;
 
   if (vertexColor === 0xffffff) delete e.vertexColor;
-  e.vertexColor = vertexColor;
+  else e.vertexColor = vertexColor;
 };
 
 app.addSystem({

@@ -3,7 +3,6 @@
 - Login system
 - Farms
   - Strong?
-  - Invis?
   - Money?
 - Items
   - Auras?
@@ -41,6 +40,7 @@
   - Reduce wolf/sheep/fox visibility at night
   - Starts day, night at 1:45. Nights last 1:15 and days last 2:00.
 - Death animation (sheep)
+- Animated Crystal
 
 # Bugs
 
