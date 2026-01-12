@@ -35,9 +35,7 @@ export const getPenAreas = (): Rectangle[] => {
     for (let x = 0; x < map.tiles[y].length; x++) {
       if (map.tiles[y][x] === PEN_TILE_INDEX && !visited[y][x]) {
         const area = findPenArea(map.tiles, visited, x, y);
-        if (area) {
-          areas.push(area);
-        }
+        if (area) areas.push(area);
       }
     }
   }

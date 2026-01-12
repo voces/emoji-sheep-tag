@@ -730,17 +730,18 @@ document.addEventListener("keydown", (e) => {
   const inInput = document.activeElement?.tagName === "INPUT";
   if (e.ctrlKey || e.metaKey) {
     const blocked = [
+      "KeyA",
+      "KeyD",
       "KeyF",
       "KeyG",
-      "KeyD",
-      "KeyS",
-      "KeyP",
-      "KeyO",
-      "KeyT",
-      "KeyN",
       "KeyL",
+      "KeyN",
+      "KeyO",
+      "KeyP",
+      "KeyS",
+      "KeyT",
     ];
-    if (blocked.includes(e.code)) e.preventDefault();
+    if (blocked.includes(e.code) && !inInput) e.preventDefault();
   }
   if (e.key === "F1") e.preventDefault();
   if (e.key === "Backspace" && !inInput) e.preventDefault();

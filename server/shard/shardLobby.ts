@@ -258,7 +258,7 @@ export class ShardLobby {
 
     // Create map - for custom maps, use the packed data directly
     const map = this.customMapData
-      ? buildLoadedMap("custom", this.customMapData as PackedMap)
+      ? buildLoadedMap(this.settings.map, this.customMapData as PackedMap)
       : buildLoadedMap(
         this.settings.map,
         this.readPackedMap(this.settings.map),

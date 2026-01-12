@@ -75,9 +75,6 @@
   - Per-player pathing calc limits?
 - Runaway number of canvas/renderers?
 - Sheep count keeps getting reset?
-- Map selector broken
-  - Custom maps do not work with shards
-- Alt+S selects all the text
 - Illusified huts are treated the same as regular huts, making multi-selection
   bad
 
