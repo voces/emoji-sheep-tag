@@ -1172,7 +1172,6 @@ export const prefabs: Record<string, DataEntity> = {
   bee: {
     name: "Bee",
     model: "bee",
-    modelScale: 0.3,
     movementSpeed: 1.5,
     isDoodad: true,
     type: "cosmetic",

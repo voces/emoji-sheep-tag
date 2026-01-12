@@ -4,6 +4,7 @@ import { prefabs } from "@/shared/data.ts";
 import { KdTree } from "@/shared/util/KDTree.ts";
 import { normalizeAngle, Point } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
+import { raise } from "@/shared/util/raise.ts";
 
 // Dedicated KD-tree for flowers
 const flowerKd = new KdTree();
@@ -75,7 +76,8 @@ const spawnBeeAtFlower = (flower: Entity) => {
     prefab: "bee",
     position: getFlowerLandingSpot(flower),
     facing: Math.random() * Math.PI * 2,
-    movementSpeed: (prefabs.bee.movementSpeed ?? 1.5) *
+    movementSpeed:
+      (prefabs.bee.movementSpeed ?? raise("bees lack movement speed!")) *
       (0.8 + Math.random() * 0.4),
     modelScale: 0.25 + Math.random() * 0.15,
     isEffect: true,
@@ -109,40 +111,39 @@ const scheduleNextFlowerVisit = (bee: Entity) => {
     },
   );
 
-  if (!nearestPoint) {
+  let targetPoint = nearestPoint;
+
+  if (!targetPoint) {
     // No unvisited flowers found, reset visited set and try again
     visitedFlowers.clear();
-    const anyFlower = flowerKd.nearest(
+    targetPoint = flowerKd.nearest(
       bee.position.x,
       bee.position.y,
-      () => true,
+      () => Math.random() < 0.5,
     );
-    if (!anyFlower) return; // No flowers at all
-
-    const flower = pointToFlower.get(anyFlower);
-    if (flower) visitedFlowers.add(flower);
-  } else {
-    const targetFlower = pointToFlower.get(nearestPoint);
-    if (!targetFlower) return;
-
-    visitedFlowers.add(targetFlower);
-
-    const target = getFlowerLandingSpot(targetFlower);
-
-    const dx = target.x - bee.position.x;
-    const dy = target.y - bee.position.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const heading = Math.atan2(dy, dx);
-
-    // Update bee to fly to this flower
-    bee.facing = heading;
-    bee.order = { type: "walk", target, path: [target] };
-
-    // Schedule next visit after reaching this flower
-    const flightTime = distance / (bee.movementSpeed ?? 1.5);
-    const hoverTime = 0.125 + Math.random() ** 2 * 4.875;
-    setTimeout(() => {
-      scheduleNextFlowerVisit(bee);
-    }, (flightTime + hoverTime) * 1000);
+    if (!targetPoint) return; // No flowers at all
   }
+
+  const targetFlower = pointToFlower.get(targetPoint);
+  if (!targetFlower) return;
+
+  visitedFlowers.add(targetFlower);
+
+  const target = getFlowerLandingSpot(targetFlower);
+
+  const dx = target.x - bee.position.x;
+  const dy = target.y - bee.position.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const heading = Math.atan2(dy, dx);
+
+  // Update bee to fly to this flower
+  bee.facing = heading;
+  bee.order = { type: "walk", target, path: [target] };
+
+  // Schedule next visit after reaching this flower
+  const flightTime = distance / (bee.movementSpeed ?? 1.5);
+  const hoverTime = 0.25 + Math.random() ** 2 * 4.75;
+  setTimeout(() => {
+    scheduleNextFlowerVisit(bee);
+  }, (flightTime + hoverTime) * 1000);
 };

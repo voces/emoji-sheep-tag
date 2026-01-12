@@ -108,10 +108,14 @@ const UnitStats = () => {
   );
 };
 
+const StyledAvatars = styled(Avatars)`
+  min-width: 134px;
+`;
+
 export const SelectionPreview = () => {
   useSet(selection);
 
   if (selection.size <= 1) return <UnitStats />;
 
-  return <Avatars />;
+  return <StyledAvatars />;
 };

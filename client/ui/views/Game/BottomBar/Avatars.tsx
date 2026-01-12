@@ -15,7 +15,9 @@ const AvatarContainer = styled.div`
 const getGroupKey = (entity: Entity): string =>
   entity.unique ? `unique:${entity.id}` : `prefab:${entity.prefab ?? "none"}`;
 
-export const Avatars = () => {
+export const Avatars = (
+  props: React.ComponentProps<typeof AvatarContainer>,
+) => {
   useSet(selection);
 
   const groups = useMemo(() => {
@@ -34,7 +36,7 @@ export const Avatars = () => {
   if (!selection.size) return null;
 
   return (
-    <AvatarContainer>
+    <AvatarContainer {...props}>
       {Array.from(groups.entries(), ([groupKey, entities]) => (
         <Avatar
           key={groupKey ?? "none"}
