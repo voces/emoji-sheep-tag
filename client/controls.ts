@@ -2,7 +2,7 @@ import { mouse, MouseButtonEvent } from "./mouse.ts";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { send } from "./client.ts";
 import { Entity } from "./ecs.ts";
-import { addSystem, appContext } from "@/shared/context.ts";
+import { addSystem } from "@/shared/context.ts";
 import { selection } from "./systems/selection.ts";
 import { jumpToNextPing } from "./systems/indicators.ts";
 import { camera, terrain } from "./graphics/three.ts";
@@ -24,21 +24,12 @@ import { showSettingsVar } from "@/vars/showSettings.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { isSoftwareRenderer } from "./util/gpu.ts";
 import {
-  clearSelection,
-  DOUBLE_CLICK_SELECTION_RADIUS,
   selectAllFoxes,
   selectAllMirrors,
-  selectEntitiesByPrefabInRadius,
   selectEntity,
   selectPrimaryUnit,
 } from "./api/selection.ts";
-import {
-  applyZoom,
-  getLocalPlayer,
-  setZoom,
-  showZoomMessage,
-} from "./api/player.ts";
-import { getEntitiesInRect } from "@/shared/systems/kd.ts";
+import { applyZoom, setZoom, showZoomMessage } from "./api/player.ts";
 import {
   closeAllMenus,
   closeMenu,
@@ -56,7 +47,6 @@ import {
   normalizeBuildPosition,
   updateBlueprint,
 } from "./controls/blueprintHandlers.ts";
-import { hasAllyActions } from "./util/allyPermissions.ts";
 import {
   cancelOrder as cancelOrderHandler,
   getActiveOrder,
@@ -74,11 +64,23 @@ import {
   handleKeyUp,
   keyboard,
 } from "./controls/keyboardHandlers.ts";
+import {
+  cleanupSelectionState,
+  dragStart,
+  handleDragSelectionOnMouseUp,
+  handleEntitySelectionOnMouseUp,
+  pendingEntityClick,
+  selectionEntity,
+  setDragStart,
+  setLastClickedEntity,
+  setLastEntityClickTime,
+  setPendingEntityClick,
+  updateSelectionRectangle,
+} from "./controls/selection.ts";
 import { getCliffs, getMap, getTiles } from "@/shared/map.ts";
 import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
-import { isStructure } from "@/shared/api/unit.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
 import { tileDefs } from "@/shared/data.ts";
@@ -146,10 +148,6 @@ const isGameElement = (element: Element | null): boolean => {
 mouse.getActiveOrder = getActiveOrder;
 mouse.getBlueprint = getBlueprint;
 
-// Selection drag state
-let dragStart: { x: number; y: number } | null = null;
-let selectionEntity: Entity | null = null;
-
 // Editor doodad drag state
 let editorDragAnchor: Entity | null = null;
 let editorDragEntities: Array<{
@@ -166,10 +164,6 @@ let editorTileDrag: {
 
 // Middle-click camera panning state
 let panGrabPixels: { x: number; y: number } | null = null;
-
-const DOUBLE_CLICK_THRESHOLD_MS = 300;
-let lastEntityClickTime = 0;
-let lastClickedEntity: Entity | null = null;
 
 // Mouse event handlers
 mouse.addEventListener("mouseButtonDown", (e) => {
@@ -229,8 +223,8 @@ const handleLeftClick = (e: MouseButtonEvent) => {
 
   if (blueprint) {
     handleBlueprintClick(e);
-    lastClickedEntity = null;
-    lastEntityClickTime = 0;
+    setLastClickedEntity(null);
+    setLastEntityClickTime(0);
   } else if (getActiveOrder()) {
     const result = handleTargetOrder(e);
     if (!result.success) {
@@ -241,14 +235,11 @@ const handleLeftClick = (e: MouseButtonEvent) => {
           : getTargetingMessage(getActiveOrder()!.order),
       );
     }
-    lastClickedEntity = null;
-    lastEntityClickTime = 0;
+    setLastClickedEntity(null);
+    setLastEntityClickTime(0);
   } else if (e.intersects.size && !isMinimapClick) {
     const clickedEntity = e.intersects.first()!;
     const now = performance.now();
-    const additive = addToSelection();
-    const isDoubleClick = clickedEntity === lastClickedEntity &&
-      now - lastEntityClickTime <= DOUBLE_CLICK_THRESHOLD_MS;
 
     // In editor mode, start dragging if clicking on a doodad
     if (editorVar() && clickedEntity.isDoodad && clickedEntity.position) {
@@ -272,28 +263,23 @@ const handleLeftClick = (e: MouseButtonEvent) => {
         selectEntity(clickedEntity, true, false);
       }
       editorDragAnchor = clickedEntity;
-      lastEntityClickTime = now;
-      lastClickedEntity = clickedEntity;
+      setLastEntityClickTime(now);
+      setLastClickedEntity(clickedEntity);
       return;
     }
 
-    if (isDoubleClick) {
-      selectEntitiesByPrefabInRadius(
-        clickedEntity,
-        DOUBLE_CLICK_SELECTION_RADIUS,
-        additive,
-        additive,
-      );
-    } else {
-      selectEntity(clickedEntity, !additive, additive);
-    }
-
-    lastEntityClickTime = now;
-    lastClickedEntity = clickedEntity;
+    // Defer entity selection to mouse up
+    setPendingEntityClick({
+      entity: clickedEntity,
+      time: now,
+      startPixels: { x: e.pixels.x, y: e.pixels.y },
+    });
+    // Also set dragStart so selection rectangle can initiate from entity clicks
+    setDragStart({ x: e.world.x, y: e.world.y });
   } else if (!isMinimapClick) {
-    dragStart = { x: e.world.x, y: e.world.y };
-    lastClickedEntity = null;
-    lastEntityClickTime = 0;
+    setDragStart({ x: e.world.x, y: e.world.y });
+    setLastClickedEntity(null);
+    setLastEntityClickTime(0);
   }
 };
 
@@ -486,9 +472,6 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   });
 };
 
-const addToSelection = () =>
-  checkShortcut(shortcutsVar().misc.addToSelectionModifier) > 0;
-
 mouse.addEventListener("mouseButtonUp", (e) => {
   if (e.button === "middle") panGrabPixels = null;
   else if (e.button === "left" && editorTileDrag) {
@@ -524,61 +507,11 @@ mouse.addEventListener("mouseButtonUp", (e) => {
     editorDragAnchor = null;
     editorDragEntities = [];
   } else if (e.button === "left" && selectionEntity && dragStart) {
-    // Calculate selection bounds
-    const minX = Math.min(dragStart.x, e.world.x);
-    const maxX = Math.max(dragStart.x, e.world.x);
-    const minY = Math.min(dragStart.y, e.world.y);
-    const maxY = Math.max(dragStart.y, e.world.y);
-
-    // Find all units within the selection rectangle using KDTree
-    const entitiesInRect = getEntitiesInRect(minX, minY, maxX, maxY);
-    const ownUnits: Entity[] = [];
-    const controllableEntities: Entity[] = []; // Own structures + ally entities with actions
-    const otherEntities: Entity[] = [];
-    const localPlayerId = getLocalPlayer()?.id;
-
-    for (const entity of entitiesInRect) {
-      if (entity.isDoodad && !editorVar()) continue;
-      if (entity.id === "selection-rectangle") continue;
-      if (entity.isEffect) continue;
-      // Skip entities hidden by fog
-      if ((entity as Entity).hiddenByFog) continue;
-
-      if (entity.owner === localPlayerId) {
-        if (isStructure(entity)) controllableEntities.push(entity);
-        else ownUnits.push(entity);
-      } else if (localPlayerId && hasAllyActions(entity)) {
-        controllableEntities.push(entity);
-      } else {
-        otherEntities.push(entity);
-      }
-    }
-
-    const toSelect = ownUnits.length && ownUnits.some((e) => !e.selected)
-      ? ownUnits
-      : controllableEntities.length &&
-          controllableEntities.some((e) => !e.selected)
-      ? controllableEntities
-      : otherEntities.length && otherEntities.some((e) => !e.selected)
-      ? otherEntities
-      : ownUnits.length
-      ? ownUnits
-      : controllableEntities.length
-      ? controllableEntities
-      : otherEntities;
-
-    // Select all units within the rectangle
-    if (toSelect.length > 0) {
-      const toggle = addToSelection();
-      if (!toggle) clearSelection();
-      for (const unit of toSelect) selectEntity(unit, false, toggle);
-    }
-
-    // Clean up selection rectangle
-    appContext.current.removeEntity(selectionEntity);
-    selectionEntity = null;
+    handleDragSelectionOnMouseUp(e.world.x, e.world.y);
+  } else if (e.button === "left" && pendingEntityClick) {
+    handleEntitySelectionOnMouseUp(e.pixels.x, e.pixels.y);
   }
-  dragStart = null;
+  cleanupSelectionState();
 });
 
 // Mouse move handler
@@ -637,41 +570,7 @@ mouse.addEventListener("mouseMove", (e) => {
 
   // Handle selection rectangle dragging
   if (dragStart && !getBlueprint() && !getActiveOrder()) {
-    const currentX = e.world.x;
-    const currentY = e.world.y;
-    const deltaX = Math.abs(currentX - dragStart.x);
-    const deltaY = Math.abs(currentY - dragStart.y);
-
-    // Only create rectangle if dragged more than a small threshold
-    if (deltaX > 0.01 || deltaY > 0.01 || selectionEntity) {
-      if (!selectionEntity) {
-        // Create the selection rectangle entity
-        selectionEntity = appContext.current.addEntity({
-          id: "selection-rectangle",
-          model: "square",
-          position: { x: 0, y: 0 },
-          modelScale: 1,
-          aspectRatio: 1,
-          alpha: 0.3,
-          isDoodad: true,
-        });
-      }
-
-      // Update position and scale of the selection rectangle
-      // Center the rectangle between drag start and current position
-      const centerX = (dragStart.x + currentX) / 2;
-      const centerY = (dragStart.y + currentY) / 2;
-
-      // Calculate scale based on the drag distance
-      const width = Math.abs(currentX - dragStart.x);
-      const height = Math.abs(currentY - dragStart.y);
-
-      // Update the entity
-      selectionEntity.position = { x: centerX, y: centerY };
-      // Fallbacks too large
-      selectionEntity.modelScale = width || 0.01;
-      selectionEntity.aspectRatio = height / (width || 0.01) || 0.01;
-    }
+    updateSelectionRectangle(e.world.x, e.world.y);
   }
 
   // Handle hover events

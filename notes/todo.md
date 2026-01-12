@@ -57,14 +57,10 @@
 - Custom control groups (4+)
 - Cabin model
   - Remove right room & well & scale
-- Drag select should work when initiating on a unit
-  - Select units on mouse up, not down
 - Healthbars
 - Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
 - Allow spirits to jump off the pen
 - Transfer host
-- Modifying a shortcut that is shared should only prompt changing hotkeys for
-  other entities that have the same current hotkey
 - Modifying a shortcut should swap instead of conflict
 
 # Bugs

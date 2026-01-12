@@ -60,16 +60,22 @@ const filterNonDefaultBindings = (sections: typeof defaultBindings) => {
   return filtered;
 };
 
-const findOtherUnitsWithAction = (
+const findOtherUnitsWithSameBinding = (
   sections: typeof defaultBindings,
   currentSection: string,
   actionKey: string,
+  currentBinding: string[],
 ): string[] => {
   const otherSections: string[] = [];
 
   for (const [section, shortcuts] of Object.entries(sections)) {
     if (section === currentSection || section === "misc") continue;
-    if (shortcuts[actionKey]) otherSections.push(section);
+    const otherBinding = shortcuts[actionKey];
+    if (!otherBinding) continue;
+    // Only include if the binding matches the current section's binding
+    const matches = otherBinding.length === currentBinding.length &&
+      otherBinding.every((k, i) => k === currentBinding[i]);
+    if (matches) otherSections.push(section);
   }
 
   return otherSections;
@@ -130,10 +136,12 @@ export const Shortcuts = () => {
     actionKey: string,
     binding: string[],
   ) => {
-    const otherSections = findOtherUnitsWithAction(
+    const currentBinding = sections[section]?.[actionKey] ?? [];
+    const otherSections = findOtherUnitsWithSameBinding(
       sections,
       section,
       actionKey,
+      currentBinding,
     );
 
     if (otherSections.length > 0) {
