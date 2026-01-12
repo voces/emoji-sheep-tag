@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Entity } from "../../../ecs.ts";
 import { lookup } from "../../../systems/lookup.ts";
 import { UnitDataAction } from "@/shared/types.ts";
@@ -16,7 +17,7 @@ const TEAM_ENTITY_IDS = {
   wolf: "team-wolf",
 } as const;
 
-export const Action = ({ action, current, entity }: {
+export const Action = memo(({ action, current, entity }: {
   action: UnitDataAction & { count?: number };
   current: boolean;
   entity: Entity;
@@ -165,4 +166,4 @@ export const Action = ({ action, current, entity }: {
   }
 
   return null;
-};
+});

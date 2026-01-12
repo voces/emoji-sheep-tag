@@ -3,11 +3,13 @@ import { app, Entity } from "../ecs.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { computeBlueprintColor } from "../util/colorHelpers.ts";
+import { prefabs } from "@/shared/data.ts";
 
 const applyModifiers = (e: Entity) => {
   const p = getLocalPlayer();
 
-  let alpha = 1;
+  const baseAlpha = e.prefab ? prefabs[e.prefab]?.alpha ?? 1 : 1;
+  let alpha = baseAlpha;
   let vertexColor = 0xffffff;
 
   if (e.isMirror && p && isAlly(e, p.id)) {
@@ -33,8 +35,7 @@ const applyModifiers = (e: Entity) => {
     vertexColor = r + g + b;
   }
 
-  if (alpha === 1) delete e.alpha;
-  else e.alpha = alpha;
+  e.alpha = alpha;
 
   if (vertexColor === 0xffffff) delete e.vertexColor;
   else e.vertexColor = vertexColor;

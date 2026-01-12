@@ -27,11 +27,31 @@ const TooltipContent = styled.div({
   gap: 4,
 });
 
-const useGoldTooltip = (team: string | undefined) => {
+const SheepTooltip = () => {
   const primaryUnit = useReactiveVar(primaryUnitVar);
-  const sheepUnit = team === "sheep" ? primaryUnit : undefined;
-  const position = useListenToEntityProp(sheepUnit, "position");
+  const multiplier = useListenToEntityProp(
+    primaryUnit,
+    "position",
+    (p) => p ? getDistanceMultiplier(p.x, p.y).toFixed(2) : undefined,
+  );
 
+  if (multiplier) {
+    return (
+      <TooltipContent>
+        <div>Gold is generated over time based on distance from the pen.</div>
+        <div>Current multiplier: {multiplier}x</div>
+      </TooltipContent>
+    );
+  }
+
+  return (
+    <TooltipContent>
+      <div>Gold is generated over time based on distance from the pen.</div>
+    </TooltipContent>
+  );
+};
+
+const useGoldTooltip = (team: string | undefined) => {
   if (team === "wolf") {
     return (
       <TooltipContent>
@@ -40,15 +60,7 @@ const useGoldTooltip = (team: string | undefined) => {
     );
   }
 
-  if (team === "sheep" && position) {
-    const multiplier = getDistanceMultiplier(position.x, position.y);
-    return (
-      <TooltipContent>
-        <div>Gold is generated over time based on distance from the pen.</div>
-        <div>Current multiplier: {multiplier.toFixed(2)}x</div>
-      </TooltipContent>
-    );
-  }
+  if (team === "sheep") return <SheepTooltip />;
 
   return null;
 };

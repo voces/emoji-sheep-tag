@@ -1,5 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Entity, listen } from "../../ecs.ts";
+
+const deepEqual = (
+  a: unknown,
+  b: unknown,
+  seen = new WeakMap<object, WeakSet<object>>(),
+): boolean => {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (typeof a !== typeof b) return false;
+
+  if (typeof a === "object") {
+    const seenWithA = seen.get(a);
+    if (seenWithA?.has(b as object)) return true;
+    if (!seenWithA) seen.set(a, new WeakSet([b as object]));
+    else seenWithA.add(b as object);
+
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b) || a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (!deepEqual(a[i], b[i], seen)) return false;
+      }
+      return true;
+    }
+
+    const aKeys = Object.keys(a as object);
+    const bKeys = Object.keys(b as object);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const key of aKeys) {
+      if (
+        !deepEqual(
+          (a as Record<string, unknown>)[key],
+          (b as Record<string, unknown>)[key],
+          seen,
+        )
+      ) return false;
+    }
+    return true;
+  }
+
+  return false;
+};
 
 // Shared throttling logic with trailing call
 const throttle = <T>(
@@ -51,11 +92,24 @@ export const useListenToEntityProp = <P extends keyof Entity, T = Entity[P]>(
       ? transform(entity[prop])
       : (entity?.[prop] as T),
   );
+  const cachedRef = useRef<T | undefined>(undefined);
+
   useEffect(
     () => {
       if (!entity) return undefined;
 
-      const { throttledCallback, cleanup } = throttle(setValue, 100);
+      const setValueIfChanged = (newValue: T) => {
+        if (transform) {
+          if (!deepEqual(cachedRef.current, newValue)) {
+            cachedRef.current = newValue;
+            setValue(newValue);
+          }
+        } else {
+          setValue(newValue);
+        }
+      };
+
+      const { throttledCallback, cleanup } = throttle(setValueIfChanged, 100);
       const cb = (e: Entity) =>
         throttledCallback(
           transform ? transform(e[prop]) : (e[prop] as T),
@@ -89,12 +143,24 @@ export const useListenToEntityProps = <
   const [value, setValue] = useState<T>(
     transform ? transform(initialValue) : (initialValue as T),
   );
+  const cachedRef = useRef<T | undefined>(undefined);
 
   useEffect(
     () => {
       if (!entity) return undefined;
 
-      const { throttledCallback, cleanup } = throttle(setValue, 100);
+      const setValueIfChanged = (newValue: T) => {
+        if (transform) {
+          if (!deepEqual(cachedRef.current, newValue)) {
+            cachedRef.current = newValue;
+            setValue(newValue);
+          }
+        } else {
+          setValue(newValue);
+        }
+      };
+
+      const { throttledCallback, cleanup } = throttle(setValueIfChanged, 100);
       const cb = (e: Entity) => {
         const propsValue = Object.fromEntries(
           props.map((prop) => [prop, e?.[prop]]),

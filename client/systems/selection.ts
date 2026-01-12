@@ -2,7 +2,7 @@ import { Entity, SystemEntity } from "../ecs.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
-import { camera, onRender } from "../graphics/three.ts";
+import { camera } from "../graphics/three.ts";
 import { getLocalPlayer, isLocalPlayer } from "../api/player.ts";
 import { addSystem } from "@/shared/context.ts";
 import type { Buff } from "@/shared/types.ts";
@@ -130,32 +130,6 @@ const readdBuff = (e: Entity) => {
   if (!hasSelectionBuff) e.buffs = [...e.buffs ?? [], tracked];
 };
 addSystem({ props: ["buffs"], onChange: readdBuff, onRemove: readdBuff });
-
-// Fade selection glow from 1.0 to 0.5 over 10 seconds using delta time
-onRender((delta) => {
-  for (const [entity, buff] of selectionBuffs) {
-    const currentAlpha = buff.modelAlpha ?? 1;
-    if (currentAlpha > 0.5) {
-      // Decrease alpha by 0.05 per second (0.5 / 10 seconds)
-      const newAlpha = Math.max(0.5, currentAlpha - delta * 0.05);
-      const newBuff: Buff = { ...buff, modelAlpha: newAlpha };
-      selectionBuffs.set(entity, newBuff);
-
-      // Replace buff in entity's buffs array
-      const buffs = entity.buffs;
-      if (buffs) {
-        const index = buffs.indexOf(buff);
-        if (index !== -1) {
-          entity.buffs = [
-            ...buffs.slice(0, index),
-            newBuff,
-            ...buffs.slice(index + 1),
-          ];
-        }
-      }
-    }
-  }
-});
 
 // Update selection buff when selectedBy changes
 addSystem({
