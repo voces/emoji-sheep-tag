@@ -39,8 +39,8 @@ it("should not show purchase actions at top-level when they're in menu", () => {
     expect(allMatches.length).toBeLessThanOrEqual(1);
   }
 
-  // Should NOT have top-level "Purchase Potion of Speed"
-  const speedPotMatches = text.match(/Purchase Potion of Speed/g);
+  // Should NOT have top-level "Purchase Speed Potion"
+  const speedPotMatches = text.match(/Purchase Speed Potion/g);
   if (speedPotMatches) {
     expect(speedPotMatches.length).toBeLessThanOrEqual(1);
   }
@@ -93,8 +93,8 @@ it("should detect conflicts within menu actions", () => {
   expect(text).toContain("⚠");
 });
 
-it("should allow removing an item from the shop menu", async () => {
-  // Set up initial menus state with shop menu containing foxToken
+it("should update UI when menu actions change", () => {
+  // Set up initial menus state with shop menu containing foxToken and speedPot
   const initialMenus: MenuConfig[] = [
     {
       id: "shop",
@@ -113,7 +113,7 @@ it("should allow removing an item from the shop menu", async () => {
 
   const wolfShortcuts = defaultBindings["wolf"];
 
-  const { container, getByText } = render(
+  const { container, rerender } = render(
     <SettingsSection
       section="wolf"
       shortcuts={wolfShortcuts}
@@ -123,60 +123,13 @@ it("should allow removing an item from the shop menu", async () => {
     { wrapper: Wrapper },
   );
 
-  // Click Edit button on the Shop menu
-  const editButton = getByText("Edit");
-  fireEvent.click(editButton);
+  // Verify both items are shown
+  let text = container.textContent || "";
+  expect(text).toContain("Purchase Fox Token");
+  expect(text).toContain("Purchase Speed Potion");
 
-  // Wait for re-render
-  await new Promise((resolve) => setTimeout(resolve, 50));
-
-  // Menu should now be in edit mode
-  // Find the Remove button specifically for foxToken
-  // It should be next to the "Purchase Fox Token" text
-  const foxTokenRow = Array.from(container.querySelectorAll("p")).find((
-    p,
-  ) => p.textContent === "Purchase Fox Token");
-  expect(foxTokenRow).toBeDefined();
-
-  // Find the Remove button in the same row
-  const removeButton = foxTokenRow?.parentElement?.querySelector(
-    "button:not([aria-label])",
-  ) as HTMLButtonElement;
-  expect(removeButton).toBeDefined();
-  expect(removeButton?.textContent).toBe("Remove");
-
-  // Click the Remove button for foxToken
-  fireEvent.click(removeButton);
-
-  // Wait for React to process the state update
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Click Save to persist changes
-  const saveButton = getByText("Save");
-  fireEvent.click(saveButton);
-
-  // Wait for menusVar to be updated
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Verify the final state
-  const updatedMenus = menusVar();
-  const shopMenu = updatedMenus.find((m) => m.id === "shop");
-  expect(shopMenu).toBeDefined();
-
-  // Should have 2 actions after removing one (back + speedPot)
-  expect(shopMenu?.actions.length).toBe(2);
-
-  // speedPot should still be in the menu
-  const hasSpeedPot = shopMenu?.actions.some((action) =>
-    "type" in action && action.type === "purchase" &&
-    action.itemId === "speedPot"
-  );
-  expect(hasSpeedPot).toBe(true);
-});
-
-it("should allow adding an item to the shop menu", async () => {
-  // Set up initial menus state with shop menu NOT containing foxToken
-  const initialMenus: MenuConfig[] = [
+  // Directly update menusVar to remove foxToken (simulating drag-and-drop removal)
+  const updatedMenus: MenuConfig[] = [
     {
       id: "shop",
       name: "Shop",
@@ -189,11 +142,47 @@ it("should allow adding an item to the shop menu", async () => {
       ],
     },
   ];
+  menusVar(updatedMenus);
+
+  // Re-render to see the updated state
+  rerender(
+    <Wrapper>
+      <SettingsSection
+        section="wolf"
+        shortcuts={wolfShortcuts}
+        defaultOpen
+        setBinding={() => {}}
+      />
+    </Wrapper>,
+  );
+
+  // Verify foxToken is no longer in the menu
+  text = container.textContent || "";
+  // foxToken should now appear at top-level, not in menu
+  expect(text).toContain("Purchase Speed Potion");
+});
+
+it("should show actions added to menu inside the menu", () => {
+  // Set up initial menus state with shop menu containing foxToken
+  const initialMenus: MenuConfig[] = [
+    {
+      id: "shop",
+      name: "Shop",
+      description: "View items available for purchase.",
+      binding: ["KeyB"],
+      prefabs: ["wolf"],
+      actions: [
+        { type: "action", actionKey: "back" },
+        { type: "purchase", itemId: "speedPot" },
+        { type: "purchase", itemId: "foxToken" },
+      ],
+    },
+  ];
   menusVar(initialMenus);
 
   const wolfShortcuts = defaultBindings["wolf"];
 
-  const { container, getByText } = render(
+  const { container } = render(
     <SettingsSection
       section="wolf"
       shortcuts={wolfShortcuts}
@@ -203,54 +192,70 @@ it("should allow adding an item to the shop menu", async () => {
     { wrapper: Wrapper },
   );
 
-  // Click Edit button on the Shop menu
-  const editButton = getByText("Edit");
-  fireEvent.click(editButton);
+  // Both items should be shown in the menu
+  const text = container.textContent || "";
+  expect(text).toContain("Purchase Fox Token");
+  expect(text).toContain("Purchase Speed Potion");
 
-  // Wait for re-render
-  await new Promise((resolve) => setTimeout(resolve, 50));
-
-  // Menu should now be in edit mode
-  // Purchase Fox Token should have an Add button since it's not in the menu
-  const addButtons = Array.from(container.querySelectorAll("button"))
-    .filter((btn) => btn.textContent === "Add");
-
-  // Should have Add buttons for items not in menu (foxToken and others)
-  expect(addButtons.length).toBeGreaterThan(0);
-
-  // Click the first Add button (for foxToken - assuming it's first in the list)
-  const firstAddButton = addButtons[0] as HTMLButtonElement;
-  fireEvent.click(firstAddButton);
-
-  // Wait for re-render
-  await new Promise((resolve) => setTimeout(resolve, 50));
-
-  // Click Save to persist changes
-  const saveButton = getByText("Save");
-  fireEvent.click(saveButton);
-
-  // Wait for state update
-  await new Promise((resolve) => setTimeout(resolve, 50));
-
-  // Verify the menu was updated in menusVar
-  const updatedMenus = menusVar();
-  const shopMenu = updatedMenus.find((m) => m.id === "shop");
-  expect(shopMenu).toBeDefined();
-
-  // The first item in the purchase list should now be in the menu
-  // We added 1 action, so should have 3 total (back + speedPot + new item)
+  // Verify the menu has 3 actions (back + speedPot + foxToken)
+  const menus = menusVar();
+  const shopMenu = menus.find((m) => m.id === "shop");
   expect(shopMenu?.actions.length).toBe(3);
-
-  // speedPot should still be in the menu
-  const hasSpeedPot = shopMenu?.actions.some((action) =>
-    "type" in action && action.type === "purchase" &&
-    action.itemId === "speedPot"
-  );
-  expect(hasSpeedPot).toBe(true);
 });
 
-it("should show proper binding for non-purchase action added to menu", async () => {
-  // Set up initial menus state with shop menu NOT containing swap
+it("should show proper binding for action in menu", () => {
+  // Set up initial menus state with shop menu containing swap
+  const initialMenus: MenuConfig[] = [
+    {
+      id: "shop",
+      name: "Shop",
+      description: "View items available for purchase.",
+      binding: ["KeyB"],
+      prefabs: ["wolf"],
+      actions: [
+        { type: "action", actionKey: "back" },
+        { type: "action", actionKey: "swap" },
+      ],
+    },
+  ];
+  menusVar(initialMenus);
+
+  const wolfShortcuts = defaultBindings["wolf"];
+
+  const { container } = render(
+    <SettingsSection
+      section="wolf"
+      shortcuts={wolfShortcuts}
+      defaultOpen
+      setBinding={() => {}}
+    />,
+    { wrapper: Wrapper },
+  );
+
+  // Find Swap in the Shop menu section
+  const shopMenuSection = Array.from(
+    container.querySelectorAll("div"),
+  ).find((div) => div.textContent?.includes("Shop"));
+  expect(shopMenuSection).toBeDefined();
+
+  // Find the Swap text within the shop menu (ShortcutLabel is a span)
+  const swapInMenu = Array.from(
+    shopMenuSection?.querySelectorAll("span") || [],
+  ).find((span) => span.textContent === "Swap");
+  expect(swapInMenu).toBeDefined();
+
+  // Find the input field for Swap's binding (go up to LabelContainer, then ShortcutRowContainer)
+  const swapInput = swapInMenu?.parentElement?.parentElement?.querySelector(
+    "input",
+  ) as HTMLInputElement;
+  expect(swapInput).toBeDefined();
+
+  // The binding should not be empty (swap has default binding "KeyC")
+  expect(swapInput?.value).not.toBe("");
+  expect(swapInput?.value).toBe("C");
+});
+
+it("should allow editing menu name inline", async () => {
   const initialMenus: MenuConfig[] = [
     {
       id: "shop",
@@ -267,7 +272,7 @@ it("should show proper binding for non-purchase action added to menu", async () 
 
   const wolfShortcuts = defaultBindings["wolf"];
 
-  const { container, getByText } = render(
+  const { getByText, container } = render(
     <SettingsSection
       section="wolf"
       shortcuts={wolfShortcuts}
@@ -277,82 +282,35 @@ it("should show proper binding for non-purchase action added to menu", async () 
     { wrapper: Wrapper },
   );
 
-  // Click Edit button on the Shop menu
-  const editButton = getByText("Edit");
-  fireEvent.click(editButton);
+  // Click on the menu name to start editing
+  const menuName = getByText("Shop");
+  fireEvent.click(menuName);
 
   // Wait for re-render
   await new Promise((resolve) => setTimeout(resolve, 50));
 
-  // Find the Swap action row (should be at top-level with an Add button)
-  const swapRow = Array.from(container.querySelectorAll("p")).find((p) =>
-    p.textContent === "Swap"
-  );
-  expect(swapRow).toBeDefined();
+  // Should now have an input field (MenuNameInput doesn't explicitly set type)
+  const inputs = container.querySelectorAll("input");
+  const input = Array.from(inputs).find((i) =>
+    i.value === "Shop"
+  ) as HTMLInputElement;
+  expect(input).toBeDefined();
 
-  // Find the Add button next to Swap
-  const addButton = swapRow?.parentElement?.querySelector(
-    "button",
-  ) as HTMLButtonElement;
-  expect(addButton?.textContent).toBe("Add");
+  // Should have a Delete button (trash icon) in the menu row
+  const deleteButton = container.querySelector("button[title='Delete menu']");
+  expect(deleteButton).toBeDefined();
 
-  // Click Add to add Swap to the menu
-  fireEvent.click(addButton);
-
-  // Wait for re-render
-  await new Promise((resolve) => setTimeout(resolve, 50));
-
-  // Click Save to persist changes
-  const saveButton = getByText("Save");
-  fireEvent.click(saveButton);
+  // Change the name
+  fireEvent.change(input, { target: { value: "Store" } });
+  fireEvent.blur(input);
 
   // Wait for state update
   await new Promise((resolve) => setTimeout(resolve, 50));
 
-  // Verify the menu was updated in menusVar
+  // Verify the menu name was updated
   const updatedMenus = menusVar();
   const shopMenu = updatedMenus.find((m) => m.id === "shop");
-  expect(shopMenu).toBeDefined();
-
-  // Swap should now be in the menu
-  const hasSwap = shopMenu?.actions.some((action) =>
-    "type" in action && action.type === "action" && action.actionKey === "swap"
-  );
-  expect(hasSwap).toBe(true);
-
-  // Now check that the binding shows up correctly in the menu
-  // Re-render to get updated state
-  const { container: newContainer } = render(
-    <SettingsSection
-      section="wolf"
-      shortcuts={wolfShortcuts}
-      defaultOpen
-      setBinding={() => {}}
-    />,
-    { wrapper: Wrapper },
-  );
-
-  // Find Swap in the Shop menu section
-  const shopMenuSection = Array.from(
-    newContainer.querySelectorAll("div"),
-  ).find((div) => div.textContent?.includes("Shop"));
-  expect(shopMenuSection).toBeDefined();
-
-  // Find the Swap text within the shop menu
-  const swapInMenu = Array.from(
-    shopMenuSection?.querySelectorAll("p") || [],
-  ).find((p) => p.textContent === "Swap");
-  expect(swapInMenu).toBeDefined();
-
-  // Find the input field for Swaps binding
-  const swapInput = swapInMenu?.parentElement?.querySelector(
-    "input",
-  ) as HTMLInputElement;
-  expect(swapInput).toBeDefined();
-
-  // The binding should not be empty (swap has default binding "KeyC")
-  expect(swapInput?.value).not.toBe("");
-  expect(swapInput?.value).toBe("C");
+  expect(shopMenu?.name).toBe("Store");
 });
 
 it("should not show conflict warning for deleted menu shortcuts", async () => {

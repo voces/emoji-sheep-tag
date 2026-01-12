@@ -8,7 +8,7 @@ import { newUnit } from "../api/unit.ts";
 import { playSoundAt } from "../api/sound.ts";
 import { getSheepSpawn, getSpiritSpawn } from "./getSheepSpawn.ts";
 import { getIdealTime } from "./roundHelpers.ts";
-import { colorName } from "@/shared/api/player.ts";
+import { colorName, getPlayer } from "@/shared/api/player.ts";
 import { TICK_RATE } from "@/shared/constants.ts";
 import { clearUpdatesCache, flushUpdates } from "../updates.ts";
 import { appContext } from "@/shared/context.ts";
@@ -189,6 +189,8 @@ export const spawnPracticeUnits = (playerId: string): Entity => {
 
   // Set trueOwner so the player retains control even when transferring ownership
   wolf.trueOwner = playerId;
+  const playerColor = getPlayer(playerId)?.playerColor;
+  if (playerColor) wolf.playerColor = playerColor;
 
   // Add practice mode "Give to Enemy" action (will be swapped to "Reclaim" when given)
   if (wolf.actions) {

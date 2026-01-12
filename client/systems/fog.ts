@@ -992,18 +992,17 @@ addSystem({
   },
 });
 
-// Re-check visibility when buffs change (for invisibility)
+// Re-check visibility when buffs or progress change (for invisibility)
 addSystem({
   props: ["buffs"],
-  onAdd: (entity) => {
-    if (entity.position) handleEntityVisibility(entity);
-  },
-  onChange: (entity) => {
-    if (entity.position) handleEntityVisibility(entity);
-  },
-  onRemove: (entity) => {
-    if (entity.position) handleEntityVisibility(entity);
-  },
+  onAdd: handleEntityVisibility,
+  onChange: handleEntityVisibility,
+  onRemove: handleEntityVisibility,
+});
+addSystem({
+  props: ["progress"],
+  onAdd: handleEntityVisibility,
+  onRemove: handleEntityVisibility,
 });
 
 // TODO: run only once (a swap runs twice)

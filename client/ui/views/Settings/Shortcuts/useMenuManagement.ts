@@ -1,90 +1,84 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { MenuActionRef, MenuConfig } from "@/vars/menus.ts";
 import { defaultMenus, menusVar } from "@/vars/menus.ts";
 import {
   buildActionsInMenusSet,
   createMenuActionRef,
+  findMenuForAction,
 } from "./menuActionHelpers.ts";
 import { prefabs } from "@/shared/data.ts";
 
 export const useMenuManagement = (
-  menus: MenuConfig[],
   section: string,
 ) => {
-  const [editMenuForm, setEditMenuForm] = useState<MenuConfig | null>(null);
   const [menuToDelete, setMenuToDelete] = useState<string | null>(null);
 
-  const startEditMenu = (menu: MenuConfig) => {
-    setEditMenuForm(menu);
-  };
-
-  const saveEditMenu = () => {
-    if (!editMenuForm?.name) return;
-    // Update name, description, and icon from the form
-    menusVar(
-      menus.map((m) =>
-        m.id === editMenuForm.id
-          ? {
-            ...m,
-            name: editMenuForm.name,
-            description: editMenuForm.description,
-            icon: editMenuForm.icon,
-          }
-          : m
-      ),
-    );
-    setEditMenuForm(null);
-  };
-
-  const cancelEditMenu = () => {
-    if (!editMenuForm) return;
-    // Restore the original menu state from editMenuForm
-    menusVar(
-      menus.map((m) => m.id === editMenuForm.id ? editMenuForm : m),
-    );
-    setEditMenuForm(null);
-  };
-
-  const deleteMenu = (menuId: string) => {
+  const deleteMenu = useCallback((menuId: string) => {
     setMenuToDelete(menuId);
-  };
+  }, []);
 
-  const confirmDeleteMenu = () => {
-    if (!menuToDelete) return;
-    setEditMenuForm(null);
-    menusVar(menus.filter((m) => m.id !== menuToDelete));
+  const confirmDeleteMenu = useCallback(() => {
+    setMenuToDelete((currentMenuToDelete) => {
+      if (!currentMenuToDelete) return currentMenuToDelete;
+      menusVar(menusVar().filter((m) => m.id !== currentMenuToDelete));
+      return null;
+    });
+  }, []);
+
+  const cancelDeleteMenu = useCallback(() => {
     setMenuToDelete(null);
-  };
+  }, []);
 
-  const cancelDeleteMenu = () => {
-    setMenuToDelete(null);
-  };
-
-  const addActionToMenu = (menuId: string, actionKey: string) => {
+  const addActionToMenu = useCallback((menuId: string, actionKey: string) => {
     // Don't allow adding Back action
     if (actionKey === "back" || actionKey.startsWith("menu-back-")) return;
 
-    if (editMenuForm?.id === menuId) {
-      const menu = menus.find((m) => m.id === menuId);
-      if (!menu) return;
+    const menus = menusVar();
+    const menu = menus.find((m) => m.id === menuId);
+    if (!menu) return;
 
-      const actionRef = createMenuActionRef(actionKey);
+    // Find if this action is already in another menu
+    const sectionMenus = menus.filter((m) => m.prefabs.includes(section));
+    const existingMenuId = findMenuForAction(actionKey, sectionMenus);
 
-      // Add the action to the menu immediately
-      const updatedMenu = {
-        ...menu,
-        actions: [...menu.actions, actionRef],
-      };
+    // If already in this menu, do nothing
+    if (existingMenuId === menuId) return;
 
-      menusVar(menus.map((m) => (m.id === menuId ? updatedMenu : m)));
-    }
-  };
+    const actionRef = createMenuActionRef(actionKey);
 
-  const removeActionFromMenu = (menuId: string, actionKey: string) => {
-    // Don't allow removing Back action
-    if (actionKey === "back" || actionKey.startsWith("menu-back-")) return;
+    // Build updated menus list
+    const updatedMenus = menus.map((m) => {
+      if (m.id === menuId) {
+        // Add action to target menu
+        return { ...m, actions: [...m.actions, actionRef] };
+      }
+      if (m.id === existingMenuId) {
+        // Remove action from its current menu
+        return {
+          ...m,
+          actions: m.actions.filter((action) => {
+            if ("type" in action) {
+              if (action.type === "purchase") {
+                return `purchase-${action.itemId}` !== actionKey;
+              }
+              return action.actionKey !== actionKey;
+            }
+            return true;
+          }),
+        };
+      }
+      return m;
+    });
 
-    if (editMenuForm?.id === menuId) {
+    menusVar(updatedMenus);
+  }, [section]);
+
+  const removeActionFromMenu = useCallback(
+    (menuId: string, actionKey: string) => {
+      // Don't allow removing Back action
+      if (actionKey === "back" || actionKey.startsWith("menu-back-")) return;
+
+      const menus = menusVar();
       const menu = menus.find((m) => m.id === menuId);
       if (!menu) return;
 
@@ -105,29 +99,46 @@ export const useMenuManagement = (
       };
 
       menusVar(menus.map((m) => (m.id === menuId ? updatedMenu : m)));
-    }
-  };
+    },
+    [],
+  );
 
-  const createMenu = () => {
+  const updateMenuIcon = useCallback(
+    (menuId: string, icon: string | undefined) => {
+      menusVar(
+        menusVar().map((m) => m.id === menuId ? { ...m, icon } : m),
+      );
+    },
+    [],
+  );
+
+  const updateMenuName = useCallback(
+    (menuId: string, name: string) => {
+      if (!name.trim()) return;
+      menusVar(
+        menusVar().map((m) =>
+          m.id === menuId ? { ...m, name: name.trim() } : m
+        ),
+      );
+    },
+    [],
+  );
+
+  const createMenu = useCallback(() => {
     const newMenu: MenuConfig = {
       id: `menu-${Date.now()}`,
       name: "New Menu",
       prefabs: [section],
       actions: [{ type: "action", actionKey: "back" }],
     };
-    menusVar([...menus, newMenu]);
-    startEditMenu(newMenu);
-  };
+    menusVar([...menusVar(), newMenu]);
+  }, [section]);
 
-  const updateEditMenuForm = (updates: Partial<MenuConfig>) => {
-    if (!editMenuForm) return;
-    setEditMenuForm({ ...editMenuForm, ...updates });
-  };
-
-  const restoreDefaultMenu = (menuId: string) => {
+  const restoreDefaultMenu = useCallback((menuId: string) => {
     const defaultMenu = defaultMenus.find((m) => m.id === menuId);
     if (!defaultMenu) return;
 
+    const menus = menusVar();
     // Check if menu already exists
     const existingMenu = menus.find((m) => m.id === menuId);
     if (existingMenu) {
@@ -147,15 +158,18 @@ export const useMenuManagement = (
       };
       menusVar([...menus, restoredMenu]);
     }
-  };
+  }, [section]);
 
-  const getDeletedDefaultMenus = () =>
-    defaultMenus.filter((defaultMenu) =>
-      defaultMenu.prefabs.includes(section) &&
-      !menus.some((m) => m.id === defaultMenu.id)
-    );
+  const getDeletedDefaultMenus = useCallback(
+    () =>
+      defaultMenus.filter((defaultMenu) =>
+        defaultMenu.prefabs.includes(section) &&
+        !menusVar().some((m) => m.id === defaultMenu.id)
+      ),
+    [section],
+  );
 
-  const createBuildMenu = () => {
+  const createBuildMenu = useCallback(() => {
     const prefab = prefabs[section];
     if (!prefab?.actions) return;
 
@@ -182,11 +196,10 @@ export const useMenuManagement = (
       ],
     };
 
-    menusVar([...menus, buildMenu]);
-    startEditMenu(buildMenu);
-  };
+    menusVar([...menusVar(), buildMenu]);
+  }, [section]);
 
-  const hasTopLevelBuildActions = () => {
+  const hasNestedBuildActions = useCallback(() => {
     const prefab = prefabs[section];
     if (!prefab?.actions) return false;
 
@@ -198,42 +211,45 @@ export const useMenuManagement = (
     if (buildActions.length === 0) return false;
 
     // Get all actions that are currently in menus
-    const sectionMenus = menus.filter((m) => m.prefabs.includes(section));
+    const sectionMenus = menusVar().filter((m) => m.prefabs.includes(section));
     const actionsInMenus = buildActionsInMenusSet(sectionMenus);
 
-    // Check if ANY build action is NOT in a menu (i.e., at top level)
+    // Check if ANY build actions are already in menus (nested)
     return buildActions.some((action) => {
       const buildActionKey = `build-${action.unitType}`;
-      return !actionsInMenus.has(buildActionKey);
+      return actionsInMenus.has(buildActionKey);
     });
-  };
+  }, [section]);
 
-  return {
-    editing: {
-      form: editMenuForm,
-      start: startEditMenu,
-      save: saveEditMenu,
-      cancel: cancelEditMenu,
-      updateForm: updateEditMenuForm,
-    },
-    deletion: {
-      menuToDelete,
-      deleteMenu,
-      confirm: confirmDeleteMenu,
-      cancel: cancelDeleteMenu,
-    },
-    actions: {
-      add: addActionToMenu,
-      remove: removeActionFromMenu,
-    },
-    creation: {
-      createMenu,
-      createBuildMenu,
-      hasTopLevelBuildActions,
-    },
-    restoration: {
-      restore: restoreDefaultMenu,
-      getDeleted: getDeletedDefaultMenus,
-    },
-  };
+  const deletion = useMemo(() => ({
+    menuToDelete,
+    deleteMenu,
+    confirm: confirmDeleteMenu,
+    cancel: cancelDeleteMenu,
+  }), [menuToDelete, deleteMenu, confirmDeleteMenu, cancelDeleteMenu]);
+
+  const actions = useMemo(() => ({
+    add: addActionToMenu,
+    remove: removeActionFromMenu,
+    updateIcon: updateMenuIcon,
+    updateName: updateMenuName,
+  }), [addActionToMenu, removeActionFromMenu, updateMenuIcon, updateMenuName]);
+
+  const creation = useMemo(() => ({
+    createMenu,
+    createBuildMenu,
+    hasNestedBuildActions,
+  }), [createMenu, createBuildMenu, hasNestedBuildActions]);
+
+  const restoration = useMemo(() => ({
+    restore: restoreDefaultMenu,
+    getDeleted: getDeletedDefaultMenus,
+  }), [restoreDefaultMenu, getDeletedDefaultMenus]);
+
+  return useMemo(() => ({
+    deletion,
+    actions,
+    creation,
+    restoration,
+  }), [deletion, actions, creation, restoration]);
 };

@@ -51,3 +51,10 @@ app.addSystem({
   onChange: applyModifiers,
   onRemove: applyModifiers,
 });
+
+app.addSystem({
+  props: ["progress"],
+  onAdd: applyModifiers,
+  onChange: applyModifiers,
+  onRemove: applyModifiers,
+});

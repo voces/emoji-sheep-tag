@@ -114,19 +114,37 @@ const loadMenusFromStorage = (): MenuConfig[] => {
 
 export const menusVar = makeVar<MenuConfig[]>(loadMenusFromStorage());
 
+// Get a stable key for sorting menu actions
+const getActionSortKey = (action: MenuActionRef | MenuConfig): string => {
+  if ("type" in action) {
+    if (action.type === "action") return `action:${action.actionKey}`;
+    if (action.type === "purchase") return `purchase:${action.itemId}`;
+  }
+  return `menu:${action.id}`;
+};
+
+// Sort actions for consistent comparison
+const sortActions = (actions: Array<MenuActionRef | MenuConfig>) =>
+  [...actions].sort((a, b) =>
+    getActionSortKey(a).localeCompare(getActionSortKey(b))
+  );
+
 // Helper to check if a menu matches its default
 export const isDefaultMenu = (menu: MenuConfig): boolean => {
   const defaultMenu = defaultMenus.find((m) => m.id === menu.id);
   if (!defaultMenu) return false;
 
-  // Compare all properties (deep equality check)
+  // Sort actions before comparing to ignore order differences
+  const sortedMenuActions = sortActions(menu.actions);
+  const sortedDefaultActions = sortActions(defaultMenu.actions);
+
   return (
     menu.name === defaultMenu.name &&
     menu.description === defaultMenu.description &&
     menu.icon === defaultMenu.icon &&
     JSON.stringify(menu.binding) === JSON.stringify(defaultMenu.binding) &&
     JSON.stringify(menu.prefabs) === JSON.stringify(defaultMenu.prefabs) &&
-    JSON.stringify(menu.actions) === JSON.stringify(defaultMenu.actions)
+    JSON.stringify(sortedMenuActions) === JSON.stringify(sortedDefaultActions)
   );
 };
 

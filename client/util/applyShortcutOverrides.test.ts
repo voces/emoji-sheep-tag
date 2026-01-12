@@ -7,7 +7,7 @@ import { applyShortcutOverride } from "./applyShortcutOverrides.ts";
 describe("applyShortcutOverride", () => {
   it("should apply override to item action", () => {
     const action: UnitDataAction = {
-      name: "Drink Potion of Speed",
+      name: "Drink Speed Potion",
       type: "auto",
       order: "speedPot",
       binding: ["KeyS"],
@@ -25,7 +25,7 @@ describe("applyShortcutOverride", () => {
 
   it("should not modify action if no override exists", () => {
     const action: UnitDataAction = {
-      name: "Drink Potion of Speed",
+      name: "Drink Speed Potion",
       type: "auto",
       order: "speedPot",
       binding: ["KeyS"],
@@ -43,7 +43,7 @@ describe("applyShortcutOverride", () => {
 
   it("should not modify action if override is same as default", () => {
     const action: UnitDataAction = {
-      name: "Drink Potion of Speed",
+      name: "Drink Speed Potion",
       type: "auto",
       order: "speedPot",
       binding: ["KeyS"],

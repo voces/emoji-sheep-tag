@@ -8,7 +8,7 @@ import { items } from "@/shared/data.ts";
 afterEach(cleanupTest);
 
 describe("strengthPotion integration", () => {
-  describe("Potion of Strength item", () => {
+  describe("Strength Potion item", () => {
     it("should add strength potion to inventory with correct properties", {
       wolves: ["wolf-player"],
     }, function* ({ clients }) {
@@ -24,7 +24,7 @@ describe("strengthPotion integration", () => {
       expect(success).toBe(true);
       expect(wolf.inventory).toHaveLength(1);
       expect(wolf.inventory![0].id).toBe("strengthPotion");
-      expect(wolf.inventory![0].name).toBe("Potion of Strength");
+      expect(wolf.inventory![0].name).toBe("Strength Potion");
       expect(wolf.inventory![0].charges).toBe(1);
     });
 

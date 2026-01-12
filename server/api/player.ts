@@ -161,8 +161,11 @@ export const removePlayerFromEcs = (playerId: string) => {
 
   // Remove all units owned by this player
   const entities = Array.from(getPlayerUnits(playerId));
-  for (const entity of entities) {
-    ecs.removeEntity(entity);
+  for (const entity of entities) ecs.removeEntity(entity);
+
+  const practiceEntities = Array.from(getPlayerUnits("practice-enemy"));
+  for (const entity of practiceEntities) {
+    if (entity.trueOwner === playerId) ecs.removeEntity(entity);
   }
 
   // Remove the player entity itself

@@ -153,6 +153,8 @@ export const items: Record<string, Item> = {
   foxToken: {
     id: "foxToken",
     name: "Fox Token",
+    description:
+      "Summons a Fox which can attack enemy units and structures. Lasts 150 seconds.",
     icon: "fox",
     gold: 140,
     binding: ["KeyF"],
@@ -168,14 +170,14 @@ export const items: Record<string, Item> = {
   },
   strengthPotion: {
     id: "strengthPotion",
-    name: "Potion of Strength",
+    name: "Strength Potion",
     description: "Next attack deals 2000% damage (20x)",
     icon: "pinkPotion",
     gold: 35,
     binding: ["KeyG"],
     charges: 1,
     actions: [{
-      name: "Drink Potion of Strength",
+      name: "Drink Strength Potion",
       type: "auto",
       order: "strengthPotion",
       icon: "pinkPotion",
@@ -206,7 +208,7 @@ export const items: Record<string, Item> = {
   },
   speedPot: {
     id: "speedPot",
-    name: "Potion of Speed",
+    name: "Speed Potion",
     description:
       "Increases attack speed by 10% and movement speed by 15% for 10 seconds.",
     icon: "purplePotion",
@@ -214,7 +216,7 @@ export const items: Record<string, Item> = {
     binding: ["KeyS"],
     charges: 1,
     actions: [{
-      name: "Drink Potion of Speed",
+      name: "Drink Speed Potion",
       description:
         "Increases attack speed by 10% and movement speed by 15% for 10 seconds.",
       type: "auto",
@@ -285,7 +287,7 @@ export const items: Record<string, Item> = {
   scythe: {
     id: "scythe",
     name: "Scythe",
-    description: "Increases gold bounty from kills.",
+    description: "Doubles the gold bounty from kills, then adds +1.",
     icon: "scythe",
     gold: 110,
     binding: ["KeyY"],
@@ -303,7 +305,7 @@ export const items: Record<string, Item> = {
     binding: ["KeyX"],
     charges: 1,
     actions: [{
-      name: "Launch Hay Trap",
+      name: "Throw Hay Trap",
       type: "target",
       order: "hayTrap",
       icon: "hayCube",
@@ -576,7 +578,7 @@ export const prefabs: Record<string, DataEntity> = {
         goldCost: 12,
       },
       {
-        name: "Build Translocation Hut",
+        name: "Build Blink Gate",
         description: "Translocates the sheep upon construction.",
         type: "build",
         unitType: "translocationHut",
@@ -592,7 +594,7 @@ export const prefabs: Record<string, DataEntity> = {
         goldCost: 12,
       },
       {
-        name: "Build Monolith",
+        name: "Build Obelisk",
         description:
           "A rock inscribed with symbols making it invisible to enemies.",
         type: "build",
@@ -882,7 +884,7 @@ export const prefabs: Record<string, DataEntity> = {
     bounty: 4,
   },
   translocationHut: {
-    name: "Translocation Hut",
+    name: "Blink Gate",
     model: "divinity",
     sightRadius: 4,
     radius: 0.5,
@@ -998,7 +1000,7 @@ export const prefabs: Record<string, DataEntity> = {
     bounty: 6,
   },
   monolith: {
-    name: "Monolith",
+    name: "Obelisk",
     sightRadius: 4,
     radius: 0.5,
     tilemap: tilemap4x4,

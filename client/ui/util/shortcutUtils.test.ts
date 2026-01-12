@@ -41,7 +41,7 @@ describe("shortcutUtils", () => {
         "Purchase Fox Token",
       );
       expect(getActionDisplayName("menu-shop.purchase-speedPot", "wolf")).toBe(
-        "Purchase Potion of Speed",
+        "Purchase Speed Potion",
       );
 
       // Test legacy purchase action display names (without menu prefix)
@@ -49,7 +49,7 @@ describe("shortcutUtils", () => {
         "Purchase Fox Token",
       );
       expect(getActionDisplayName("purchase-speedPot", "wolf")).toBe(
-        "Purchase Potion of Speed",
+        "Purchase Speed Potion",
       );
     });
   });

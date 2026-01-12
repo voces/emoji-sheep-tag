@@ -31,7 +31,7 @@ export const speedPotOrder = {
 
     if (action.movementSpeedMultiplier) {
       buffs.push({
-        name: "Potion of Speed",
+        name: "Speed Potion",
         description: `+${
           Math.round((action.movementSpeedMultiplier - 1) * 100)
         }% movement speed`,
@@ -45,7 +45,7 @@ export const speedPotOrder = {
 
     if (action.attackSpeedMultiplier) {
       buffs.push({
-        name: "Potion of Speed",
+        name: "Speed Potion",
         description: `+${
           Math.round((action.attackSpeedMultiplier - 1) * 100)
         }% attack speed`,

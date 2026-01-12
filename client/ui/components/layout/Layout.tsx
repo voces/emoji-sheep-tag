@@ -43,7 +43,6 @@ export const Overlay = styled.div`
     ${({ theme }) => theme.colors.border} 40%,
     transparent
   );
-  backdrop-filter: blur(3px);
   pointer-events: auto;
 `;
 

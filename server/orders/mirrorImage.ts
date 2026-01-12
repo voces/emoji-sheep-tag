@@ -7,6 +7,7 @@ import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 export const mirrorImageOrder = {
   id: "mirrorImage",
@@ -102,7 +103,11 @@ export const mirrorImageOrder = {
       if (unit.health !== undefined) mirror.health = unit.health;
       if (unit.mana !== undefined) mirror.mana = unit.mana;
       if (unit.inventory) mirror.inventory = [...unit.inventory];
-      if (unit.trueOwner !== undefined) mirror.trueOwner = unit.trueOwner;
+      if (unit.trueOwner !== undefined) {
+        mirror.trueOwner = unit.trueOwner;
+        const playerColor = getPlayer(unit.trueOwner)?.playerColor;
+        if (playerColor) mirror.playerColor = playerColor;
+      }
 
       // Randomize positions
       if (Math.random() < 0.5) {

@@ -231,9 +231,7 @@ export const leave = (client?: Client) => {
   const lobby = lobbyContext.current;
 
   // Distribute gold to allies if player is leaving during a game (non-practice)
-  if (
-    lobby.round && !isPractice() && client.team
-  ) {
+  if (lobby.round && !isPractice() && client.team) {
     const leavingPlayerGold = getPlayer(client.id)?.gold ?? 0;
 
     if (leavingPlayerGold > 0) {
@@ -272,9 +270,7 @@ export const leave = (client?: Client) => {
   }
 
   // Clean up player entities (including sheep and spirits)
-  if (lobby.round?.ecs) {
-    removePlayerFromEcs(client.id);
-  }
+  if (lobby.round?.ecs) removePlayerFromEcs(client.id);
 
   lobby.players.delete(client);
 

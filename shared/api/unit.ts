@@ -303,9 +303,10 @@ export const isWard = (entity: Entity) => {
     !!entity.owner;
 };
 
-/** Checks if an entity has an invisibility buff */
+/** Checks if an entity has an invisibility buff (buildings under construction can't be invisible) */
 export const isInvisible = (entity: Entity): boolean =>
-  entity.buffs?.some((b) => b.invisible) ?? false;
+  typeof entity.progress !== "number" &&
+  (entity.buffs?.some((b) => b.invisible) ?? false);
 
 const isSpirit = (entity: Entity) => !!entity.targetedAs?.includes("spirit");
 

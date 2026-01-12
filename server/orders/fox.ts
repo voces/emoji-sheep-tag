@@ -4,6 +4,7 @@ import { OrderDefinition } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { pathingMap } from "../systems/pathing.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 export const foxOrder = {
   id: "fox",
@@ -61,6 +62,10 @@ export const foxOrder = {
       }];
     }
 
-    if (unit.trueOwner) fox.trueOwner = unit.trueOwner;
+    if (unit.trueOwner) {
+      fox.trueOwner = unit.trueOwner;
+      const playerColor = getPlayer(unit.trueOwner)?.playerColor;
+      if (playerColor) fox.playerColor = playerColor;
+    }
   },
 } satisfies OrderDefinition;

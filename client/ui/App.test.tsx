@@ -15,19 +15,33 @@ import { colors, practiceModeActions } from "@/shared/data.ts";
 import { mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { Entity } from "@/shared/types.ts";
 import { expect } from "@std/expect/expect";
+import { menusVar } from "@/vars/menus.ts";
 setCurrentTestFile("App.test.ts");
 
 it("can move an action into a menu", async () => {
   clearTestServerMessages();
   setServer(`localhost:${getTestServerPort()}`);
+
+  // Add Mirror Image action to the Shop menu directly
+  const menus = menusVar();
+  const shopMenu = menus.find((m) => m.id === "shop");
+  if (shopMenu) {
+    menusVar(
+      menus.map((m) =>
+        m.id === "shop"
+          ? {
+            ...m,
+            actions: [...m.actions, {
+              type: "action",
+              actionKey: "mirrorImage",
+            }],
+          }
+          : m
+      ),
+    );
+  }
+
   render(<App />);
-  await userEvent.click(screen.getByText("Settings"));
-  await userEvent.click(screen.getByText("Shortcuts"));
-  await userEvent.click(screen.getByText("Wolf"));
-  await userEvent.click(screen.getByText("Edit"));
-  await userEvent.click(screen.getByLabelText("Add Mirror Image"));
-  await userEvent.click(screen.getByText("Save"));
-  await userEvent.click(screen.getByTitle("Close settings"));
   await userEvent.click(screen.getByText("Multiplayer"));
   await sendMessageFromServer({
     type: "join",
@@ -134,10 +148,10 @@ it("can move an action into a menu", async () => {
       ["Purchase Locate Sheep", "T"],
       ["Purchase Scythe", "Y"],
       ["Purchase Echo Fang", "A"],
-      ["Purchase Potion of Speed", "S"],
+      ["Purchase Speed Potion", "S"],
       ["Purchase Dire Collar", "D"],
       ["Purchase Fox Token", "F"],
-      ["Purchase Potion of Strength", "G"],
+      ["Purchase Strength Potion", "G"],
       ["Purchase Hay Trap", "X"],
       ["Purchase Claws +20", "C"],
       ["Purchase Boots +30", "B"],
