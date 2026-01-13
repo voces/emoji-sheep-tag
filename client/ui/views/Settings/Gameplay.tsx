@@ -85,6 +85,21 @@ export const Gameplay = () => {
           Raw mouse input (bypass OS acceleration)
         </SettingLabel>
       </SettingRow>
+
+      <SettingRow>
+        <Checkbox
+          id="show-healthbars"
+          checked={settings.showHealthbars}
+          onChange={(e) =>
+            gameplaySettingsVar({
+              ...settings,
+              showHealthbars: e.currentTarget.checked,
+            })}
+        />
+        <SettingLabel htmlFor="show-healthbars">
+          Show healthbars above damaged units
+        </SettingLabel>
+      </SettingRow>
     </SettingsPanelContainer>
   );
 };

@@ -14,6 +14,7 @@ import { tileDefs } from "@/shared/data.ts";
 import { Terrain2D } from "./Terrain2D.ts";
 import { FogPass } from "./FogPass.ts";
 import { floatingTextScene } from "../systems/floatingText.ts";
+import { healthbarScene } from "../systems/healthbars.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 
 const terrainTilePalette = [
@@ -237,8 +238,9 @@ const animate = () => {
   fogPass.render(renderer, renderTarget, renderTarget, delta);
   renderer.setRenderTarget(null);
 
-  // Render floating text on top
+  // Render healthbars and floating text on top
   renderer.autoClear = false;
+  renderer.render(healthbarScene, camera);
   renderer.render(floatingTextScene, camera);
   renderer.autoClear = true;
 

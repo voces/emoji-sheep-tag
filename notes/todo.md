@@ -57,7 +57,6 @@
 - Custom control groups (4+)
 - Cabin model
   - Remove right room & well & scale
-- Healthbars
 - Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
 - Allow spirits to jump off the pen
 - Modifying a shortcut should swap instead of conflict

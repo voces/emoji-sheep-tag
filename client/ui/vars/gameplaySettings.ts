@@ -7,6 +7,7 @@ const gameplaySettingsSchema = z.object({
   spiritZoom: z.number().min(1).max(50).catch(9),
   clearOrderOnRightClick: z.boolean().catch(true),
   rawMouseInput: z.boolean().catch(false),
+  showHealthbars: z.boolean().catch(false),
 });
 
 export type GameplaySettings = z.infer<typeof gameplaySettingsSchema>;
