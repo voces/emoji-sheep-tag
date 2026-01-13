@@ -401,6 +401,7 @@ type DataEntity =
     //
     | "attack"
     | "targetedAs"
+    | "isMirror"
     //
     | "radius"
     | "pathing"
@@ -453,6 +454,14 @@ const tilemap2x4 = {
 
 const tilemap4x4 = {
   map: Array(16).fill(b),
+  top: -2,
+  left: -2,
+  width: 4,
+  height: 4,
+};
+
+const tilemap4x4Passable = {
+  map: Array(16).fill(PATHING_RESERVED),
   top: -2,
   left: -2,
   width: 4,
@@ -780,12 +789,13 @@ export const prefabs: Record<string, DataEntity> = {
         name: "Illusify",
         description:
           "Makes the hut an illusion, allowing units to pass through it.",
-        type: "auto",
-        order: "illusify",
+        type: "upgrade",
+        prefab: "illusionHut",
         icon: "hut",
         iconEffect: "mirror",
         goldCost: 12,
         binding: ["KeyS"],
+        castDuration: 0,
       },
       upgradeToFrostCastle("hut"),
       {
@@ -800,6 +810,18 @@ export const prefabs: Record<string, DataEntity> = {
       selfDestruct,
     ],
     bounty: 1,
+  },
+  illusionHut: {
+    name: "Illusion Hut",
+    model: "hut",
+    sightRadius: 4,
+    radius: 0.5,
+    tilemap: tilemap4x4Passable,
+    maxHealth: 120,
+    isMirror: true,
+    sounds: { death: ["explosion1"] },
+    actions: [selfDestruct],
+    bounty: 2,
   },
   cabin: {
     name: "Cabin",

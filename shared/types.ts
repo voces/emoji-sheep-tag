@@ -151,6 +151,7 @@ export type UnitDataActionUpgrade = {
   readonly prefab: string;
   readonly description?: string;
   readonly icon?: string;
+  readonly iconEffect?: IconEffect;
   readonly binding?: ReadonlyArray<string>;
   readonly goldCost?: number;
   readonly castDuration?: number;
@@ -286,7 +287,7 @@ export type Entity = {
   trueVision?: boolean;
   gait?: Gait;
   actions?: ReadonlyArray<UnitDataAction>;
-  completionTime?: number;
+  completionTime?: number | null;
   progress?: number | null;
   // Maybe replace with selectable?
   /** A doodad cannot be clicked */

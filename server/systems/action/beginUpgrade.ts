@@ -31,21 +31,24 @@ export const beginUpgrade = (e: Entity) => {
 
   const prevPrefab = e.prefab;
 
-  e.progress = 0;
-  e.completionTime = upgradeTime;
-
   changePrefab(e, prefabId);
 
-  e.actions = [{
-    type: "auto",
-    order: "cancel-upgrade",
-    name: "Cancel upgrade",
-    icon: "cancel",
-    prefab: prevPrefab,
-    binding: ["Backquote"],
-    goldCost: goldCost ? -goldCost * UPGRADE_REFUND_RATE : undefined,
-    canExecuteWhileConstructing: true,
-  }, ...(e.actions ?? [])];
+  // For instant upgrades (castDuration: 0), don't set progress
+  if (upgradeTime > 0) {
+    e.progress = 0;
+    e.completionTime = upgradeTime;
+
+    e.actions = [{
+      type: "auto",
+      order: "cancel-upgrade",
+      name: "Cancel upgrade",
+      icon: "cancel",
+      prefab: prevPrefab,
+      binding: ["Backquote"],
+      goldCost: goldCost ? -goldCost * UPGRADE_REFUND_RATE : undefined,
+      canExecuteWhileConstructing: true,
+    }, ...(e.actions ?? [])];
+  }
 
   delete e.order;
 };

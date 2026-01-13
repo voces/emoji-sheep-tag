@@ -868,6 +868,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
         prefab: action.prefab,
         queue,
       });
+      if (action.prefab === "illusionHut") selectPrimaryUnit();
       break;
     case "target":
       setActiveOrder(
@@ -990,8 +991,6 @@ const handleAutoAction = (
   } else {
     playOrderSound();
   }
-
-  if (action.order === "illusify") selectPrimaryUnit();
 
   send({
     type: "unitOrder",

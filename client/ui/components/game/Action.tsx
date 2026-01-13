@@ -126,6 +126,9 @@ export const Action = memo(({ action, current, entity }: {
           icon={action.icon ?? prefabs[action.prefab]?.model ??
             action.prefab}
           iconScale={prefabs[action.prefab]?.modelScale}
+          iconProps={action.iconEffect
+            ? iconEffects[action.iconEffect](owningPlayer?.id)
+            : undefined}
           binding={action.binding}
           pressed={current}
           disabled={disabled}

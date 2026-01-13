@@ -71,8 +71,6 @@
   - Per-player pathing calc limits?
 - Runaway number of canvas/renderers?
 - Sheep count keeps getting reset?
-- Illusified huts are treated the same as regular huts, making multi-selection
-  bad
 
 # Code quality
 

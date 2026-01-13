@@ -98,6 +98,7 @@ const zBaseAction = z.discriminatedUnion("type", [
     type: z.literal("upgrade"),
     description: z.string().optional(),
     icon: z.string().optional(),
+    iconEffect: zIconEffect.optional(),
     prefab: z.string(),
     binding: z.array(z.string()).readonly().optional(),
     goldCost: z.number().optional(),
@@ -174,6 +175,7 @@ type ActionType = z.infer<typeof zBaseAction> | {
 const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
   z.union([
     zBaseAction,
+    // TODO: remove?
     z.object({
       name: z.string(),
       type: z.literal("menu"),
@@ -301,7 +303,7 @@ export const zUpdate = z.object({
     ).readonly(),
   }).optional(),
   actions: z.array(zAction).readonly().optional(),
-  completionTime: z.number().optional(),
+  completionTime: z.number().nullable().optional(),
   progress: z.number().nullable().optional(),
   isDoodad: z.boolean().nullable().optional(),
   isTimer: z.boolean().optional(),

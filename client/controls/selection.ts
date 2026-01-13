@@ -37,25 +37,23 @@ type PreviewGlowBuff = {
   modelAlpha: number;
   modelPlayerColor: string;
 };
-type StoredGlow = { preview: PreviewGlowBuff; hidden: readonly unknown[] };
-const previewGlowBuffs = new Map<Entity, StoredGlow>();
+// Only store the preview buff - selection system's readdBuff handles restoring selection glows
+const previewGlowBuffs = new Map<Entity, PreviewGlowBuff>();
 
 export const clearPreviewGlow = () => {
-  for (const [entity, { preview, hidden }] of previewGlowBuffs) {
-    // Remove preview glow and restore hidden glow buffs
-    const remaining = entity.buffs?.filter((b) => b !== preview) ?? [];
-    entity.buffs = [...remaining, ...hidden] as typeof entity.buffs;
+  for (const [entity, preview] of previewGlowBuffs) {
+    // Just remove preview glow - readdBuff system will restore selection glow if needed
+    entity.buffs = entity.buffs?.filter((b) => b !== preview) ?? null;
   }
   previewGlowBuffs.clear();
 };
 
 export const updatePreviewGlow = (entities: Entity[]) => {
   // Remove glow from entities no longer in preview
-  for (const [entity, { preview, hidden }] of previewGlowBuffs) {
+  for (const [entity, preview] of previewGlowBuffs) {
     if (!entities.includes(entity)) {
-      // Remove preview and restore hidden glows
-      const remaining = entity.buffs?.filter((b) => b !== preview) ?? [];
-      entity.buffs = [...remaining, ...hidden] as typeof entity.buffs;
+      // Just remove preview - readdBuff system will restore selection glow if needed
+      entity.buffs = entity.buffs?.filter((b) => b !== preview) ?? null;
       previewGlowBuffs.delete(entity);
     }
   }
@@ -64,8 +62,8 @@ export const updatePreviewGlow = (entities: Entity[]) => {
   const playerColor = getLocalPlayer()?.playerColor ?? "#ffffff";
   for (const entity of entities) {
     if (!previewGlowBuffs.has(entity)) {
-      // Hide existing glow buffs so preview glow takes precedence
-      const hidden = entity.buffs?.filter((b) =>
+      // Remove existing glow buffs so preview glow takes precedence
+      const existingGlows = entity.buffs?.filter((b) =>
         typeof b === "object" && b !== null && "model" in b &&
         b.model === "glow"
       ) ?? [];
@@ -81,11 +79,11 @@ export const updatePreviewGlow = (entities: Entity[]) => {
       // Remove existing glows and add preview
       entity.buffs = [
         ...(entity.buffs?.filter((b) =>
-          !hidden.includes(b)
+          !existingGlows.includes(b)
         ) ?? []),
         preview,
       ];
-      previewGlowBuffs.set(entity, { preview, hidden });
+      previewGlowBuffs.set(entity, preview);
     }
   }
 };
