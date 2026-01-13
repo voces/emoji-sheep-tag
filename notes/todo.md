@@ -60,7 +60,6 @@
 - Healthbars
 - Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
 - Allow spirits to jump off the pen
-- Transfer host
 - Modifying a shortcut should swap instead of conflict
 
 # Bugs

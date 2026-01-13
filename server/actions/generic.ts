@@ -33,6 +33,10 @@ export const zGenericEvent = z.object({
       ]),
       playerId: z.string().optional(),
     }),
+    z.object({
+      type: z.literal("transferHost"),
+      playerId: z.string(),
+    }),
   ]),
 });
 
@@ -47,6 +51,10 @@ type NameChangeEvent = Extract<
 type TeamChangeEvent = Extract<
   z.TypeOf<typeof zGenericEvent>["event"],
   { type: "teamChange" }
+>;
+type TransferHostEvent = Extract<
+  z.TypeOf<typeof zGenericEvent>["event"],
+  { type: "transferHost" }
 >;
 
 const updatePlayerProperties = (
@@ -225,6 +233,53 @@ const handleTeamChange = (client: Client, event: TeamChangeEvent) => {
   send({ type: "lobbySettings", ...serializeLobbySettings(client.lobby) });
 };
 
+const handleTransferHost = (client: Client, event: TransferHostEvent) => {
+  if (!client.lobby) {
+    console.error(
+      `Client ${client.id} attempted to transfer host but is not in a lobby`,
+    );
+    return;
+  }
+
+  // Only the current host can transfer host
+  if (client.lobby.host?.id !== client.id) {
+    console.error(
+      `Client ${client.id} attempted to transfer host but is not the host`,
+    );
+    return;
+  }
+
+  // Find the target client
+  const targetClient = Array.from(client.lobby.players).find((c) =>
+    c.id === event.playerId
+  );
+  if (!targetClient) {
+    console.error(`Target player ${event.playerId} not found in lobby`);
+    return;
+  }
+
+  // Can't transfer to yourself
+  if (targetClient.id === client.id) {
+    console.error(`Client ${client.id} attempted to transfer host to self`);
+    return;
+  }
+
+  // Transfer host
+  client.lobby.host = targetClient;
+  console.log(
+    new Date(),
+    "Host transferred from",
+    client.id,
+    "to",
+    targetClient.id,
+    "in lobby",
+    client.lobby.name,
+  );
+
+  // Broadcast updated lobby settings to all players
+  send({ type: "lobbySettings", ...serializeLobbySettings(client.lobby) });
+};
+
 export const generic = (
   client: Client,
   event: z.TypeOf<typeof zGenericEvent>,
@@ -237,6 +292,8 @@ export const generic = (
       return handleNameChange(client, eventData);
     case "teamChange":
       return handleTeamChange(client, eventData);
+    case "transferHost":
+      return handleTransferHost(client, eventData);
     default:
       absurd(eventData);
   }

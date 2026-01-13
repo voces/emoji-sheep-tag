@@ -160,6 +160,14 @@ const PlayerIcon = (
     setMenuOpen(false);
   };
 
+  const handleTransferHost = () => {
+    send({
+      type: "generic",
+      event: { type: "transferHost", playerId: player.id },
+    });
+    setMenuOpen(false);
+  };
+
   const handleChangeName = () => {
     setMenuOpen(false);
     nameInputRef.current?.startEditing();
@@ -214,6 +222,11 @@ const PlayerIcon = (
                     Set team: Observer
                   </MenuItem>
                 )}
+                {!isLocalPlayer && (
+                  <MenuItem onClick={handleTransferHost}>
+                    Transfer host
+                  </MenuItem>
+                )}
               </>
             )}
             {isLocalPlayer && !isHost && (
@@ -259,16 +272,18 @@ const PlayerIcon = (
 type PlayerRowProps = Player & {
   isLocalPlayer: boolean;
   isHost: boolean;
+  isPlayerHost: boolean;
   isCaptain: boolean;
 };
 
 const PlayerRow = (props: PlayerRowProps) => {
-  const { name, isLocalPlayer, isCaptain } = props;
+  const { name, isLocalPlayer, isPlayerHost, isCaptain } = props;
   const nameInputRef = useRef<NameInputRef>(null);
 
   return (
     <PlayerRowContainer>
       <PlayerIcon {...props} player={props} nameInputRef={nameInputRef} />
+      {isPlayerHost && <CaptainStar title="Host">👑</CaptainStar>}
       {isCaptain && <CaptainStar>⭐</CaptainStar>}
       <NameInput
         ref={nameInputRef}
@@ -313,6 +328,7 @@ export const Players = () => {
                 {...p}
                 isLocalPlayer={p.id === localPlayer?.id}
                 isHost={localPlayer?.id === lobbySettings.host}
+                isPlayerHost={p.id === lobbySettings.host}
                 isCaptain={captains?.includes(p.id) ?? false}
               />
               <GridHeader $align="right">
