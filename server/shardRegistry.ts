@@ -214,6 +214,15 @@ export const endShardRound = (
     `[Shard] Round ended in ${lobbyId}${options.canceled ? " (canceled)" : ""}`,
   );
 
+  // Clean up Fly machine tracking before clearing activeShard
+  if (lobby.activeShard) {
+    const shard = shards.get(lobby.activeShard);
+    if (shard?.flyMachineId) {
+      removeLobbyFromFlyMachine(shard.flyMachineId, lobbyId);
+    }
+    shard?.lobbies.delete(lobbyId);
+  }
+
   lobbyContext.with(lobby, () => {
     if (options.canceled && lobby.settings.mode !== "switch") {
       undoDraft();
@@ -268,6 +277,22 @@ export const endShardRound = (
       },
     );
   });
+};
+
+/** Clean up shard tracking when a lobby is deleted */
+export const cleanupShardForDeletedLobby = (
+  lobbyId: string,
+  activeShardId?: string,
+) => {
+  if (!activeShardId) return;
+
+  const shard = shards.get(activeShardId);
+  if (shard) {
+    shard.lobbies.delete(lobbyId);
+    if (shard.flyMachineId) {
+      removeLobbyFromFlyMachine(shard.flyMachineId, lobbyId);
+    }
+  }
 };
 
 export const handleShardSocket = (

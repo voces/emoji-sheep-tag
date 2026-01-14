@@ -2,6 +2,7 @@ import { type Client } from "./client.ts";
 import { broadcastLobbyList } from "./hub.ts";
 import { generateLobbyName } from "./util/lobbyNames.ts";
 import { cleanupSmartDrafter } from "./st/roundHelpers.ts";
+import { cleanupShardForDeletedLobby } from "./shardRegistry.ts";
 import type { Game } from "./ecs.ts";
 
 /**
@@ -95,6 +96,7 @@ export const deleteLobby = (lobby: Lobby) => {
   lobby.round?.clearInterval();
   delete lobby.round;
   cleanupSmartDrafter(lobby);
+  cleanupShardForDeletedLobby(lobby.name, lobby.activeShard);
   console.log(new Date(), "Lobby deleted", lobby.name);
   broadcastLobbyList();
 };
