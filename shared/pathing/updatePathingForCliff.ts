@@ -28,8 +28,7 @@ export const updatePathingForCliff = (
 
   const tileX = Math.floor(worldX);
   const tileY = Math.floor(worldY);
-  const tilesPerPathingCell = pathingMap.resolution /
-    pathingMap.tileResolution;
+  const tilesPerPathingCell = pathingMap.resolution / pathingMap.tileResolution;
 
   // Update pathing for a 5x5 tile area around the changed tile
   for (let dy = -2; dy <= 2; dy++) {

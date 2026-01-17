@@ -58,8 +58,11 @@ export const biteOrder = {
       removeEntity(target);
 
       if (target.owner) {
+        const [spiritX, spiritY, spiritPenAreaIndex] = getSpiritSpawn();
         const spawn = isPractice()
-          ? newUnit(target.owner, "spirit", ...getSpiritSpawn())
+          ? newUnit(target.owner, "spirit", spiritX, spiritY, {
+            penAreaIndex: spiritPenAreaIndex,
+          })
           : newUnit(
             target.owner,
             "sheep",

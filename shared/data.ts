@@ -4,7 +4,6 @@ import {
   PATHING_NONE,
   PATHING_RESERVED,
   PATHING_SOLID,
-  PATHING_SPIRIT,
   PATHING_WALKABLE,
 } from "./constants.ts";
 import { Buff, Entity, Item, UnitDataAction } from "./types.ts";
@@ -436,14 +435,6 @@ const tilemap2x2None = {
   height: 2,
 };
 
-const tilemap2x2Spirit = {
-  map: Array(4).fill(b | PATHING_SPIRIT),
-  top: -1,
-  left: -1,
-  width: 2,
-  height: 2,
-};
-
 const tilemap2x4 = {
   map: Array(8).fill(b),
   top: -1,
@@ -735,11 +726,12 @@ export const prefabs: Record<string, DataEntity> = {
     model: "sheep",
     modelScale: 0.5,
     alpha: 0.7,
-    movementSpeed: 1,
-    turnSpeed: 5,
+    movementSpeed: 1.8,
+    turnSpeed: 8,
     sightRadius: 3,
     radius: 0.125,
-    pathing: PATHING_SPIRIT,
+    pathing: PATHING_RESERVED,
+    requiresPathing: PATHING_NONE,
     blocksPathing: PATHING_NONE,
     actions: [move, stop],
     targetedAs: ["spirit"],
@@ -1036,7 +1028,7 @@ export const prefabs: Record<string, DataEntity> = {
   fence: {
     name: "Fence",
     radius: 0.25,
-    tilemap: tilemap2x2Spirit,
+    tilemap: tilemap2x2,
     requiresTilemap: tilemap2x2None,
     isDoodad: true,
     type: "static",
@@ -1215,13 +1207,9 @@ export const prefabs: Record<string, DataEntity> = {
 };
 
 export const tileDefs = [
-  { name: "Grass", pathing: PATHING_SPIRIT, color: 0x6caa00 },
+  { name: "Grass", pathing: PATHING_NONE, color: 0x6caa00 },
   { name: "Pen", pathing: PATHING_BUILDABLE | PATHING_BLIGHT, color: 0x4b3061 },
-  {
-    name: "Water",
-    pathing: PATHING_BUILDABLE | PATHING_SPIRIT,
-    color: 0x385670,
-  },
+  { name: "Water", pathing: PATHING_BUILDABLE, color: 0x385670 },
 ];
 
 export const colors: string[] = [

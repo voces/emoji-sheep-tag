@@ -184,21 +184,22 @@ const onSheepDeath = (sheep: Entity) => {
       if (attacker) orderAttack(attacker, newSheep);
     }
   } else {
-    const location: [number, number] = lobby.settings.mode === "vip"
-      ? [sheep.position?.x ?? 0, sheep.position?.y ?? 0]
-      : getSpiritSpawn();
-    newUnit(
-      sheep.owner,
-      "spirit",
-      ...location,
-      lobby.settings.mode === "vip"
-        ? {
+    if (lobby.settings.mode === "vip") {
+      newUnit(
+        sheep.owner,
+        "spirit",
+        sheep.position?.x ?? 0,
+        sheep.position?.y ?? 0,
+        {
           requiresPathing: PATHING_NONE,
           blocksPathing: PATHING_NONE,
           facing: sheep.facing,
-        }
-        : undefined,
-    );
+        },
+      );
+    } else {
+      const [x, y, penAreaIndex] = getSpiritSpawn();
+      newUnit(sheep.owner, "spirit", x, y, { penAreaIndex });
+    }
 
     // Redistribute the dying sheep's individual gold to surviving allies
     const dyingSheepPlayer = getPlayer(sheep.owner);

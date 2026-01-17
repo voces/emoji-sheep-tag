@@ -182,7 +182,10 @@ const convertStartLocationsToSheep = <T extends PlayerLike>(
 
 export const spawnPracticeUnits = (playerId: string): Entity => {
   const sheep = newUnit(playerId, "sheep", ...getSheepSpawn());
-  newUnit(playerId, "spirit", ...getSpiritSpawn());
+  const [spiritX, spiritY, spiritPenAreaIndex] = getSpiritSpawn();
+  newUnit(playerId, "spirit", spiritX, spiritY, {
+    penAreaIndex: spiritPenAreaIndex,
+  });
   const { x, y } = getMapCenter();
   const wolf = newUnit(playerId, "wolf", x, y);
   if (wolf.manaRegen) wolf.manaRegen *= 10;

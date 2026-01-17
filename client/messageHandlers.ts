@@ -215,6 +215,8 @@ export const handlers = {
         send({ type: "start", practice: true, editor: true });
       }
     }
+
+    if (data.status === "playing") applyZoom(true);
   },
   start: (e: Extract<ServerToClientMessage, { type: "start" }>) => {
     stateVar("lobby");

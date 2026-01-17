@@ -208,6 +208,7 @@ import("./systems/practiceMode.ts");
 import("./systems/projectile.ts");
 import("./systems/queues.ts");
 import("./systems/regen.ts");
+import("./systems/spiritPen.ts");
 import("./systems/tickDamage.ts");
 import("./systems/sheepTime.ts");
 import("@/shared/systems/mapCenterMarker.ts");

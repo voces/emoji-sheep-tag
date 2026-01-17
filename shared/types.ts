@@ -376,6 +376,9 @@ export type Entity = {
 
   // Action cooldowns (keyed by order ID)
   actionCooldowns?: Readonly<Record<string, number>> | null;
+
+  // Spirit pen tracking (index into getPenAreas() array)
+  penAreaIndex?: number;
 };
 
 export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;

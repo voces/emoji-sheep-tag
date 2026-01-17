@@ -154,11 +154,15 @@ export const getSheepSpawn = (): [x: number, y: number] => {
   );
 };
 
-export const getSpiritSpawn = (): [x: number, y: number] => {
+export const getSpiritSpawn = (): [
+  x: number,
+  y: number,
+  penAreaIndex: number,
+] => {
   const penAreas = getPenAreas();
 
   if (penAreas.length === 0) {
-    return [0, 0];
+    return [0, 0, -1];
   }
 
   const totalArea = penAreas.reduce((sum, area) => {
@@ -178,14 +182,17 @@ export const getSpiritSpawn = (): [x: number, y: number] => {
     return [
       firstArea.x + firstArea.width / 2,
       firstArea.y + firstArea.height / 2,
+      0,
     ];
   }
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     let random = Math.random() * totalArea;
     let selectedArea = penAreas[0];
+    let selectedIndex = 0;
 
-    for (const area of penAreas) {
+    for (let i = 0; i < penAreas.length; i++) {
+      const area = penAreas[i];
       const usableWidth = Math.max(
         0,
         area.width - 2 * MIN_DISTANCE_FROM_PEN_EDGE,
@@ -198,6 +205,7 @@ export const getSpiritSpawn = (): [x: number, y: number] => {
 
       if (random < areaSize) {
         selectedArea = area;
+        selectedIndex = i;
         break;
       }
       random -= areaSize;
@@ -209,10 +217,14 @@ export const getSpiritSpawn = (): [x: number, y: number] => {
     );
 
     if (isPathable(x, y, "spirit")) {
-      return [x, y];
+      return [x, y, selectedIndex];
     }
   }
 
   const firstArea = penAreas[0];
-  return getRandomPointInRectangle(firstArea, MIN_DISTANCE_FROM_PEN_EDGE);
+  const [x, y] = getRandomPointInRectangle(
+    firstArea,
+    MIN_DISTANCE_FROM_PEN_EDGE,
+  );
+  return [x, y, 0];
 };

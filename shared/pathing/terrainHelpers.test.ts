@@ -4,12 +4,12 @@ import { getPathingMaskFromTerrainMasks } from "@/shared/pathing/terrainHelpers.
 
 it("1x1", () => {
   const terrain = getPathingMaskFromTerrainMasks([[0]], [[0]]);
-  expect(terrain).toEqual([[8, 8], [8, 8]]);
+  expect(terrain).toEqual([[0, 0], [0, 0]]);
 });
 
 it("1x1 cliff", () => {
   const terrain = getPathingMaskFromTerrainMasks([[0]], [[1]]);
-  expect(terrain).toEqual([[8, 8], [8, 8]]);
+  expect(terrain).toEqual([[0, 0], [0, 0]]);
 });
 
 it("1x1 tile", () => {
@@ -23,12 +23,12 @@ it("3x3", () => {
     [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
   );
   expect(terrain).toEqual([
-    [8, 8, 8, 8, 8, 8],
-    [8, 8, 8, 8, 8, 8],
-    [8, 8, 8, 8, 8, 8],
-    [8, 8, 8, 8, 8, 8],
-    [8, 8, 8, 8, 8, 8],
-    [8, 8, 8, 8, 8, 8],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
   ]);
 });
 
@@ -39,12 +39,12 @@ it("3x3 center cliff", () => {
   );
   expect(terrain).toEqual(
     [
-      [8, 8, 8, 8, 8, 8],
-      [8, 11, 11, 11, 11, 8],
-      [8, 11, 11, 11, 11, 8],
-      [8, 11, 11, 11, 11, 8],
-      [8, 11, 11, 11, 11, 8],
-      [8, 8, 8, 8, 8, 8],
+      [0, 0, 0, 0, 0, 0],
+      [0, 3, 3, 3, 3, 0],
+      [0, 3, 3, 3, 3, 0],
+      [0, 3, 3, 3, 3, 0],
+      [0, 3, 3, 3, 3, 0],
+      [0, 0, 0, 0, 0, 0],
     ],
   );
 });

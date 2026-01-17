@@ -364,6 +364,7 @@ export const zUpdate = z.object({
   tilemap: zTilemap.optional(),
   requiresTilemap: zTilemap.optional(),
   structure: z.boolean().optional(),
+  penAreaIndex: z.number().optional(),
 
   // Orders
   order: zOrder.nullable().optional(),
