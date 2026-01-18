@@ -82,7 +82,7 @@ type Mouse = {
     y: number,
   ) => { intersects: ExtendedSet<Entity>; world: Vector2 } | null;
   getActiveOrder?: () =>
-    | { order: string; variant: string; aoe: number }
+    | { order: string; variant: string; aoe?: number }
     | undefined;
   getBlueprint?: () => { prefab: string } | undefined;
 };

@@ -32,7 +32,7 @@ const playAckAttackSound = (entity: Entity, targetId: string | undefined) => {
 };
 
 let activeOrder:
-  | { order: string; variant: CursorVariant; aoe: number }
+  | { order: string; variant: CursorVariant; aoe?: number }
   | undefined;
 
 export const queued = { state: false };
@@ -42,7 +42,7 @@ export const getActiveOrder = () => activeOrder;
 export const setActiveOrder = (
   order: string,
   variant: CursorVariant,
-  aoe: number,
+  aoe?: number,
 ) => {
   activeOrder = { order, variant, aoe };
   updateCursor();
@@ -169,8 +169,6 @@ export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
       : undefined,
     scale: targetTarget && target?.radius ? target.radius * 4 : 1,
   });
-
-  cancelOrder();
 
   return true;
 };

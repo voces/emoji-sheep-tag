@@ -207,7 +207,22 @@ mouse.addEventListener("mouseButtonDown", (e) => {
       cancelPaste();
       return;
     }
-    if (gameplaySettingsVar().clearOrderOnRightClick) cancelOrder();
+    // Check if we should clear active orders/blueprints on right click
+    const activeOrder = getActiveOrder();
+    const hadBlueprint = hasBlueprint();
+
+    // Non-blocking = build order or target order with AOE (allows ground)
+    // aoe: 0 is still a valid AOE (attack-ground), so check typeof === "number"
+    const isNonBlocking = hadBlueprint ||
+      (activeOrder && typeof activeOrder.aoe === "number");
+
+    if (isNonBlocking) {
+      if (gameplaySettingsVar().clearOrderOnRightClick) cancelOrder();
+    } else if (activeOrder) {
+      // Blocking order = target order without AOE (requires unit target)
+      // Always clear blocking orders on right click
+      cancelOrder();
+    }
     if (selection.size) {
       playOrderSound(e.world.x, e.world.y);
       handleSmartTarget(e);
@@ -884,7 +899,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
           action.order === "meteor"
           ? "enemy"
           : "ally",
-        action.aoe ?? 0,
+        action.aoe,
       );
       break;
     case "purchase":

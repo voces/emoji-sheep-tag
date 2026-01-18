@@ -31,4 +31,5 @@ export const sounds: Record<string, string> = {
   thud1: new URL("./assets/thud1.opus", import.meta.url).pathname,
   thud2: new URL("./assets/thud2.opus", import.meta.url).pathname,
   treefall1: new URL("./assets/treefall1.opus", import.meta.url).pathname,
+  chimes1: new URL("./assets/chimes1.opus", import.meta.url).pathname,
 };

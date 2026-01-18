@@ -14,6 +14,7 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { getEffectivePlayerGold } from "../../../api/player.ts";
 import { send } from "../../../client.ts";
+import { playSound } from "../../../api/sound.ts";
 
 const TEAM_ENTITY_IDS = {
   sheep: "team-sheep",
@@ -101,12 +102,15 @@ export const Action = memo(({ action, current, entity }: {
     if (unitsWithAction.length === 0) return;
 
     // Use primary unit's state to determine enable/disable for all
+    const enabling = !isAutocastEnabled;
     send({
       type: "unitOrder",
       order: orderId,
       units: unitsWithAction,
-      autocast: !isAutocastEnabled,
+      autocast: enabling,
     });
+
+    playSound("ui", enabling ? "chimes1" : "click1", { volume: 0.3 });
   }, [isAutocastable, orderId, isAutocastEnabled]);
 
   const disabled = !hasMana || !hasGold || blockedByConstructing || onCooldown;

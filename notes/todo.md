@@ -41,8 +41,6 @@
   - Starts day, night at 1:45. Nights last 1:15 and days last 2:00.
 - Death animation (sheep)
 - Animated Crystal
-- When targeting, there's a cancel key, but it's not discoverable
-  - Left click drag should work even with an active order placement
 - Shortcut UX improvements
   - Simplify settings further with WC3 mode, which:
     - Build menu

@@ -48,6 +48,12 @@ const Description = styled.div`
   line-height: 1.25;
 `;
 
+const AutocastHint = styled.div`
+  margin-top: 8px;
+  opacity: 0.6;
+  line-height: 1.25;
+`;
+
 const IconContainer = styled.span`
   width: 24px;
   height: 24px;
@@ -143,8 +149,15 @@ export const Command = ({
           <Description>{description}</Description>
         </>
       )}
+      {autocast && (
+        <AutocastHint>
+          Right-click to {autocast === "enabled" ? "deactivate" : "activate"}
+          {" "}
+          auto-casting.
+        </AutocastHint>
+      )}
     </>
-  ), [name, goldCost, manaCost, description]));
+  ), [name, goldCost, manaCost, description, autocast]));
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const isRightClick = e.button === 2;
