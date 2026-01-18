@@ -308,6 +308,19 @@ export const isInvisible = (entity: Entity): boolean =>
   typeof entity.progress !== "number" &&
   (entity.buffs?.some((b) => b.invisible) ?? false);
 
+/** Checks if an entity has a buff with the given name */
+export const hasBuff = (entity: Entity, buffName: string): boolean =>
+  entity.buffs?.some((b) => b.name === buffName) ?? false;
+
+/** Gets the remaining duration of a buff with the given name, or undefined if not found */
+export const getBuffRemainingDuration = (
+  entity: Entity,
+  buffName: string,
+): number | undefined => {
+  const buff = entity.buffs?.find((b) => b.name === buffName);
+  return buff?.remainingDuration;
+};
+
 const isSpirit = (entity: Entity) => !!entity.targetedAs?.includes("spirit");
 
 const isNotSpirit = (entity: Entity) => {

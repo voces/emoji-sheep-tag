@@ -7,11 +7,11 @@ export const crystalInvisibilityOrder = {
   id: "crystalInvisibility",
 
   onIssue: (unit, target, queue) => {
+    const action = findActionByOrder(unit, "crystalInvisibility");
+    if (!action || action.type !== "auto") return "failed";
     if (typeof target !== "string") return "failed";
 
-    const action = findActionByOrder(unit, "crystalInvisibility");
-    const castDuration =
-      (action?.type === "target" ? action.castDuration : undefined) ?? 0.5;
+    const castDuration = action.castDuration ?? 0.5;
 
     const order: Order = {
       type: "cast",
@@ -25,7 +25,6 @@ export const crystalInvisibilityOrder = {
       delete unit.queue;
       unit.order = order;
     }
-
     return "ordered";
   },
 
@@ -35,12 +34,17 @@ export const crystalInvisibilityOrder = {
     const target = lookup(unit.order.targetId);
     if (!target) return;
 
-    const buffDuration = 60;
+    const action = findActionByOrder(unit, "crystalInvisibility");
+    const buffDuration =
+      (action?.type === "auto" ? action.buffDuration : undefined) ?? 60;
+    const name = action && "buffName" in action
+      ? action.buffName
+      : "Invisiibiltiy";
 
     target.buffs = [
       ...(target.buffs ?? []),
       {
-        name: "Invisibility",
+        name,
         description: "Invisible to enemies",
         remainingDuration: buffDuration,
         totalDuration: buffDuration,

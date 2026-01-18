@@ -1,6 +1,6 @@
 import { afterEach, describe } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { canExecuteActionOnUnit } from "./allyPermissions.ts";
+import { allowedToExecuteActionOnUnit } from "./allyPermissions.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 
@@ -41,12 +41,20 @@ describe("allyPermissions", () => {
 
       yield;
 
-      expect(canExecuteActionOnUnit(client, ownedEntity, actionWithoutAllies))
-        .toBe(true);
-      expect(canExecuteActionOnUnit(client, ownedEntity, actionWithAllies))
+      expect(
+        allowedToExecuteActionOnUnit(client, ownedEntity, actionWithoutAllies),
+      )
         .toBe(true);
       expect(
-        canExecuteActionOnUnit(client, ownedEntity, actionNoAlliesProperty),
+        allowedToExecuteActionOnUnit(client, ownedEntity, actionWithAllies),
+      )
+        .toBe(true);
+      expect(
+        allowedToExecuteActionOnUnit(
+          client,
+          ownedEntity,
+          actionNoAlliesProperty,
+        ),
       ).toBe(true);
     });
 
@@ -64,7 +72,7 @@ describe("allyPermissions", () => {
 
       yield;
       // Test that permission system properly evaluates ally relationships
-      const result = canExecuteActionOnUnit(
+      const result = allowedToExecuteActionOnUnit(
         client1,
         otherPlayerEntity,
         actionWithAllies,
@@ -88,10 +96,16 @@ describe("allyPermissions", () => {
       });
 
       yield;
-      expect(canExecuteActionOnUnit(client1, allyEntity, actionWithoutAllies))
+      expect(
+        allowedToExecuteActionOnUnit(client1, allyEntity, actionWithoutAllies),
+      )
         .toBe(false);
       expect(
-        canExecuteActionOnUnit(client1, allyEntity, actionNoAlliesProperty),
+        allowedToExecuteActionOnUnit(
+          client1,
+          allyEntity,
+          actionNoAlliesProperty,
+        ),
       ).toBe(false);
     });
 
@@ -109,7 +123,13 @@ describe("allyPermissions", () => {
       });
 
       yield;
-      expect(canExecuteActionOnUnit(sheepClient, enemyEntity, actionWithAllies))
+      expect(
+        allowedToExecuteActionOnUnit(
+          sheepClient,
+          enemyEntity,
+          actionWithAllies,
+        ),
+      )
         .toBe(false);
     });
 
@@ -155,18 +175,22 @@ describe("allyPermissions", () => {
 
       yield;
       // Direct ownership should work for all action types
-      expect(canExecuteActionOnUnit(client, ownedEntity, buildAction)).toBe(
-        true,
-      );
-      expect(canExecuteActionOnUnit(client, ownedEntity, purchaseAction)).toBe(
-        true,
-      );
-      expect(canExecuteActionOnUnit(client, ownedEntity, targetAction)).toBe(
-        true,
-      );
-      expect(canExecuteActionOnUnit(client, ownedEntity, menuAction)).toBe(
-        true,
-      );
+      expect(allowedToExecuteActionOnUnit(client, ownedEntity, buildAction))
+        .toBe(
+          true,
+        );
+      expect(allowedToExecuteActionOnUnit(client, ownedEntity, purchaseAction))
+        .toBe(
+          true,
+        );
+      expect(allowedToExecuteActionOnUnit(client, ownedEntity, targetAction))
+        .toBe(
+          true,
+        );
+      expect(allowedToExecuteActionOnUnit(client, ownedEntity, menuAction))
+        .toBe(
+          true,
+        );
     });
   });
 });

@@ -1,6 +1,8 @@
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { Entity } from "../../../ecs.ts";
 import { lookup } from "../../../systems/lookup.ts";
+import { selection } from "../../../systems/selection.ts";
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { items, prefabs } from "@/shared/data.ts";
 import { absurd } from "@/shared/util/absurd.ts";
@@ -11,6 +13,7 @@ import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { getEffectivePlayerGold } from "../../../api/player.ts";
+import { send } from "../../../client.ts";
 
 const TEAM_ENTITY_IDS = {
   sheep: "team-sheep",
@@ -79,6 +82,33 @@ export const Action = memo(({ action, current, entity }: {
   );
   const onCooldown = cooldownRemaining > 0;
 
+  const isAutocastable = action.type === "auto" && !!action.autocast;
+  const isAutocastEnabled = useListenToEntityProps(
+    entity,
+    isAutocastable && orderId ? ["autocast"] : [],
+    ({ autocast }) => orderId ? autocast?.includes(orderId) ?? false : false,
+  );
+
+  // Handler for right-click to toggle autocast for all selected units with this action
+  const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 2 || !isAutocastable || !orderId) return;
+
+    // Find all selected units that have this action
+    const unitsWithAction = Array.from(selection)
+      .filter((e) => findActionByOrder(e, orderId))
+      .map((e) => e.id);
+
+    if (unitsWithAction.length === 0) return;
+
+    // Use primary unit's state to determine enable/disable for all
+    send({
+      type: "unitOrder",
+      order: orderId,
+      units: unitsWithAction,
+      autocast: !isAutocastEnabled,
+    });
+  }, [isAutocastable, orderId, isAutocastEnabled]);
+
   const disabled = !hasMana || !hasGold || blockedByConstructing || onCooldown;
 
   switch (action.type) {
@@ -100,6 +130,10 @@ export const Action = memo(({ action, current, entity }: {
           count={action.count}
           cooldownRemaining={cooldownRemaining}
           cooldownTotal={actionCooldown}
+          onClick={handleClick}
+          autocast={isAutocastable
+            ? isAutocastEnabled ? "enabled" : "disabled"
+            : undefined}
         />
       );
     case "build":

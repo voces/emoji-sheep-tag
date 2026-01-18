@@ -84,6 +84,7 @@ export const Command = ({
   accentColor,
   cooldownRemaining,
   cooldownTotal,
+  autocast,
   ...rest
 }: {
   name: string;
@@ -98,11 +99,11 @@ export const Command = ({
   hideTooltip?: boolean;
   iconProps?: Partial<React.ComponentProps<typeof SvgIcon>>;
   count?: number;
-  onClick?: () => void;
   flashDuration?: number;
   accentColor?: string;
   cooldownRemaining?: number;
   cooldownTotal?: number;
+  autocast?: "enabled" | "disabled";
 } & React.ComponentProps<typeof CommandButton>) => {
   const localPlayer = useLocalPlayer();
 
@@ -145,8 +146,16 @@ export const Command = ({
     </>
   ), [name, goldCost, manaCost, description]));
 
-  const handleClick = () => {
-    onClick?.();
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const isRightClick = e.button === 2;
+
+    // Right-clicks always work (for autocast toggle), even when disabled
+    if (isRightClick) return onClick?.(e);
+
+    // Left-clicks are blocked when disabled
+    // if (disabled) return;
+
+    onClick?.(e);
 
     if (!binding?.length) return;
 
@@ -178,7 +187,9 @@ export const Command = ({
       aria-disabled={disabled}
       aria-pressed={pressed}
       onClick={handleClick}
+      onContextMenu={handleClick}
       data-flashing={flashDuration && flashDuration > 0 ? "true" : undefined}
+      data-autocast={autocast}
       style={flashDuration && flashDuration > 0
         ? { "--flash-duration": `${flashDuration}s` } as React.CSSProperties
         : undefined}

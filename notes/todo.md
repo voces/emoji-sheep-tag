@@ -41,10 +41,6 @@
   - Starts day, night at 1:45. Nights last 1:15 and days last 2:00.
 - Death animation (sheep)
 - Animated Crystal
-- Crystal buffs should auto target?
-  - Target own sheep if in range
-  - Otherwise closest?
-- Allow targeting units too far then cast when near enough (requires shift)
 - When targeting, there's a cancel key, but it's not discoverable
   - Left click drag should work even with an active order placement
 - Shortcut UX improvements
@@ -58,6 +54,8 @@
   - Remove right room & well & scale
 - Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
 - Modifying a shortcut should swap instead of conflict
+- Duplicate buffs should stack with a number
+- Make Translocate an autocast action
 
 # Bugs
 
@@ -67,6 +65,8 @@
   - Per-player pathing calc limits?
 - Runaway number of canvas/renderers?
 - Sheep count keeps getting reset?
+- No Frost debuff icon
+- Two units with autocast next to each other both cast at the same time
 
 # Code quality
 

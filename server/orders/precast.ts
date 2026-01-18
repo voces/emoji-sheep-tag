@@ -3,6 +3,35 @@ import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { playSoundAt } from "../api/sound.ts";
 import { getPlayerGold } from "../api/player.ts";
 
+/** Check if an action can be executed (constructing, mana, gold, cooldown) without consuming resources */
+export const canExecuteAction = (
+  entity: Entity,
+  action: UnitDataAction,
+): boolean => {
+  // Check if action can execute during construction
+  const isConstructing = typeof entity.progress === "number";
+  const canExecuteWhileConstructing = "canExecuteWhileConstructing" in action &&
+    action.canExecuteWhileConstructing === true;
+  if (isConstructing && !canExecuteWhileConstructing) return false;
+
+  // Check gold cost
+  if (action.goldCost && entity.owner) {
+    if (getPlayerGold(entity.owner) < action.goldCost) return false;
+  }
+
+  // Check cooldown
+  if ("cooldown" in action && action.cooldown && "order" in action) {
+    if ((entity.actionCooldowns?.[action.order] ?? 0) > 0) return false;
+  }
+
+  // Check mana
+  if ("manaCost" in action && action.manaCost) {
+    if ((entity.mana ?? 0) < action.manaCost) return false;
+  }
+
+  return true;
+};
+
 export const precast = (
   entity: Entity,
   action?: UnitDataAction,
@@ -15,22 +44,12 @@ export const precast = (
     );
   if (!a) return false;
 
-  // Check gold cost (validation only, actual consumption happens in postCast)
-  if (a.goldCost && entity.owner) {
-    if (getPlayerGold(entity.owner) < a.goldCost) return false;
-  }
+  // Check if action can be executed
+  if (!canExecuteAction(entity, a)) return false;
 
-  // Check if action is on cooldown
-  if ("cooldown" in a && a.cooldown && "order" in a) {
-    if ((entity.actionCooldowns?.[a.order] ?? 0) > 0) return false;
-  }
-
-  // Check and consume mana
-  if ("manaCost" in a && a.manaCost) {
-    if ((entity.mana ?? 0) < a.manaCost) return false;
-
-    const manaCost = a.manaCost;
-    if (manaCost > 0 && entity.mana) entity.mana -= manaCost;
+  // Consume mana
+  if ("manaCost" in a && a.manaCost && a.manaCost > 0 && entity.mana) {
+    entity.mana -= a.manaCost;
   }
 
   if (

@@ -7,11 +7,11 @@ export const crystalSpeedOrder = {
   id: "crystalSpeed",
 
   onIssue: (unit, target, queue) => {
+    const action = findActionByOrder(unit, "crystalSpeed");
+    if (!action || action.type !== "auto") return "failed";
     if (typeof target !== "string") return "failed";
 
-    const action = findActionByOrder(unit, "crystalSpeed");
-    const castDuration =
-      (action?.type === "target" ? action.castDuration : undefined) ?? 0.5;
+    const castDuration = action.castDuration ?? 0.5;
 
     const order: Order = {
       type: "cast",
@@ -25,7 +25,6 @@ export const crystalSpeedOrder = {
       delete unit.queue;
       unit.order = order;
     }
-
     return "ordered";
   },
 
@@ -35,17 +34,25 @@ export const crystalSpeedOrder = {
     const target = lookup(unit.order.targetId);
     if (!target) return;
 
-    const buffDuration = 20;
+    const action = findActionByOrder(unit, "crystalSpeed");
+    const buffDuration =
+      (action?.type === "auto" ? action.buffDuration : undefined) ?? 20;
+    const movementSpeedMultiplier =
+      (action?.type === "auto" ? action.movementSpeedMultiplier : undefined) ??
+        1.25;
+    const name = action && "buffName" in action ? action.buffName : "Gemstride";
 
     // Add speed buff to target
     target.buffs = [
       ...(target.buffs ?? []),
       {
-        name: "Crystal Speed",
-        description: "+25% movement speed",
+        name,
+        description: `+${
+          Math.round((movementSpeedMultiplier - 1) * 100)
+        }% movement speed`,
         remainingDuration: buffDuration,
         totalDuration: buffDuration,
-        movementSpeedMultiplier: 1.25,
+        movementSpeedMultiplier,
         model: "sparkle2",
         modelOffset: { x: -0.23, y: 0.4 },
       },

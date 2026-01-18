@@ -194,6 +194,10 @@ export type UnitDataAction =
     readonly prefab?: string;
     readonly canExecuteWhileConstructing?: boolean;
     readonly cooldown?: number;
+    readonly range?: number;
+    readonly targeting?: ReadonlyArray<ReadonlyArray<Classification>>;
+    readonly buffName?: string;
+    readonly autocast?: boolean;
   }
   | {
     readonly name: string;
@@ -373,6 +377,7 @@ export type Entity = {
   // Orders
   order?: Order | null;
   queue?: ReadonlyArray<Order> | null;
+  autocast?: ReadonlyArray<string> | null;
 
   // Action cooldowns (keyed by order ID)
   actionCooldowns?: Readonly<Record<string, number>> | null;

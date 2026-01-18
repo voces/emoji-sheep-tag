@@ -6,12 +6,13 @@ import { addSystem } from "@/shared/context.ts";
 import { selection } from "./systems/selection.ts";
 import { jumpToNextPing } from "./systems/indicators.ts";
 import { camera, terrain } from "./graphics/three.ts";
-import { getEffectivePlayerGold } from "./api/player.ts";
+import { getEffectivePlayerGold, getLocalPlayer } from "./api/player.ts";
 import { UnitDataAction, UnitDataActionTarget } from "@/shared/types.ts";
 import { formatTargeting } from "@/shared/util/formatTargeting.ts";
 import { findAction } from "@/shared/util/actionLookup.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { canBuild } from "./api/unit.ts";
+import { findAutoTarget } from "@/shared/util/autoTargeting.ts";
 import { updateCursor } from "./graphics/cursor.ts";
 import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
@@ -178,7 +179,16 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   ) {
     const passThrough = isGameElement(e.element);
     if (!passThrough) e.element.focus();
-    if ("click" in e.element) e.element.click();
+    if (e.button === "right") {
+      e.element.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+          button: 2,
+        }),
+      );
+    } else if ("click" in e.element) e.element.click();
     else {
       e.element.dispatchEvent(
         new MouseEvent("click", {
@@ -821,11 +831,22 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   if (!queue) cancelOrder();
   else queued.state = true;
 
-  const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
-  const unitsTotal = units.length;
-  units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
+  units = units.filter((unit) => {
+    const isConstructing = typeof unit.progress === "number";
+    if (!isConstructing) return true;
+    const canExecute = "canExecuteWhileConstructing" in action &&
+      action.canExecuteWhileConstructing === true;
+    return canExecute;
+  });
+  if (!units.length) {
+    playSound("ui", pick("error1"), { volume: 0.3 });
+    showFeedback("Unit is busy");
+    return;
+  }
 
-  if (units.length === 0 && unitsTotal) {
+  const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
+  units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
+  if (!units.length) {
     playSound("ui", pick("error1"), { volume: 0.3 });
     showFeedback("Not enough mana");
     return;
@@ -838,20 +859,6 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
       showFeedback("Not enough gold");
       return;
     }
-  }
-
-  units = units.filter((unit) => {
-    const isConstructing = typeof unit.progress === "number";
-    if (!isConstructing) return true;
-    const canExecute = "canExecuteWhileConstructing" in action &&
-      action.canExecuteWhileConstructing === true;
-    return canExecute;
-  });
-
-  if (units.length === 0 && unitsTotal > 0) {
-    playSound("ui", pick("error1"), { volume: 0.3 });
-    showFeedback("Unit is busy");
-    return;
   }
 
   switch (action.type) {
@@ -984,6 +991,46 @@ const handleAutoAction = (
       }
       return;
     }
+  }
+
+  // Handle auto-targeting actions (e.g., crystal buffs)
+  if (action.targeting && units.length > 0) {
+    const localPlayer = getLocalPlayer();
+    if (!localPlayer) return;
+
+    // Select caster with most mana
+    const caster = units.reduce((best, unit) =>
+      (unit.mana ?? 0) > (best.mana ?? 0) ? unit : best
+    );
+
+    const range = action.range ?? 5;
+    const target = findAutoTarget(
+      caster,
+      range,
+      action.targeting,
+      action.buffName,
+      localPlayer.id,
+    );
+    if (!target) {
+      playSound("ui", pick("error1"), { volume: 0.3 });
+      showFeedback("No valid targets in range");
+      return;
+    }
+
+    if (caster.position) {
+      playOrderSound(caster.position.x, caster.position.y);
+    } else {
+      playOrderSound();
+    }
+
+    send({
+      type: "unitOrder",
+      order: action.order,
+      units: [caster.id],
+      target: target.id,
+      queue,
+    });
+    return;
   }
 
   if (units.length > 0 && units[0].position) {

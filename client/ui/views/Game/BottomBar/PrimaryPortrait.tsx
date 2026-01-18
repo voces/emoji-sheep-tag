@@ -32,7 +32,7 @@ const StyledCommand = styled(Command)`
 const Bars = () => {
   const theme = useTheme();
   const selection = useReactiveVar(selectionVar);
-  useListenToEntityProps(selection, ["health", "mana", "buffs"]);
+  useListenToEntityProps(selection, ["health", "mana", "buffs", "progress"]);
   const localPlayer = useLocalPlayer();
 
   if (!selection) return null;

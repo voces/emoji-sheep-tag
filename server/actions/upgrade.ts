@@ -5,7 +5,7 @@ import { orderUpgrade } from "../api/unit.ts";
 import { Client } from "../client.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionAndItem } from "@/shared/util/actionLookup.ts";
-import { canExecuteActionOnUnit } from "../util/allyPermissions.ts";
+import { allowedToExecuteActionOnUnit } from "../util/allyPermissions.ts";
 
 export const zUpgrade = z.object({
   type: z.literal("upgrade"),
@@ -27,7 +27,7 @@ export const upgrade = (
 
     const { action } = result;
 
-    if (!canExecuteActionOnUnit(client, u, action)) return;
+    if (!allowedToExecuteActionOnUnit(client, u, action)) return;
 
     if (!queue) {
       delete u.order;

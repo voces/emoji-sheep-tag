@@ -126,6 +126,11 @@ const zBaseAction = z.discriminatedUnion("type", [
     soundOnCastStart: z.string().optional(),
     allowAllies: z.boolean().optional(),
     canExecuteWhileConstructing: z.boolean().optional(),
+    range: z.number().optional(),
+    targeting: z.array(z.array(zClassification).readonly()).readonly()
+      .optional(),
+    buffName: z.string().optional(),
+    autocast: z.boolean().optional(),
   }),
   z.object({
     name: z.string(),
@@ -373,6 +378,9 @@ export const zUpdate = z.object({
   // Action cooldowns (keyed by order ID)
   actionCooldowns: z.record(z.string(), z.number()).readonly().nullable()
     .optional(),
+
+  // Autocast orders
+  autocast: z.string().array().readonly().nullable().optional(),
 
   // Art
   model: z.string().nullable().optional(),

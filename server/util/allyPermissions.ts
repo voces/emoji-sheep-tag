@@ -7,7 +7,7 @@ import { lobbyContext } from "../contexts.ts";
  * Checks if a client can execute an action on a unit
  * Considers both ownership and ally permissions
  */
-export const canExecuteActionOnUnit = (
+export const allowedToExecuteActionOnUnit = (
   client: Client,
   unit: Entity,
   action: UnitDataAction,
