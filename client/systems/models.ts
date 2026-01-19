@@ -184,6 +184,7 @@ export const svgs: Record<string, string> = {
   vip,
   sparkle,
   sparkle2,
+  frostOrb,
 
   // misc
   square,

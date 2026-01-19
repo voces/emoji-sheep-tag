@@ -52,7 +52,6 @@
   - Remove right room & well & scale
 - Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
 - Modifying a shortcut should swap instead of conflict
-- Duplicate buffs should stack with a number
 - Make Translocate an autocast action
 
 # Bugs
@@ -63,7 +62,6 @@
   - Per-player pathing calc limits?
 - Runaway number of canvas/renderers?
 - Sheep count keeps getting reset?
-- No Frost debuff icon
 - Two units with autocast next to each other both cast at the same time
 
 # Code quality

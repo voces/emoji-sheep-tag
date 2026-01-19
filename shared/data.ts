@@ -343,6 +343,7 @@ export const buffs: Record<string, Buff> = {
     remainingDuration: 5,
     movementSpeedMultiplier: 0.85,
     attackSpeedMultiplier: 0.95,
+    icon: "frostOrb",
   },
   totemMovementAura: {
     name: "Totem Speed Aura",

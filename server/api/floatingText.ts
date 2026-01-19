@@ -12,7 +12,7 @@ export const newFloatingText = (
       duration?: number;
       owner?: string;
     } = {},
-) => {
+) =>
   addEntity({
     isFloatingText: true,
     position,
@@ -30,7 +30,6 @@ export const newFloatingText = (
       }],
     }),
   });
-};
 
 export const newGoldText = (
   position: { x: number; y: number },

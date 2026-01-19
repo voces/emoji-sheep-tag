@@ -6,6 +6,7 @@ import { computeBlueprintColor } from "../util/colorHelpers.ts";
 import { prefabs } from "@/shared/data.ts";
 
 const applyModifiers = (e: Entity) => {
+  if (e.isFloatingText) return;
   const p = getLocalPlayer();
 
   const baseAlpha = e.prefab ? prefabs[e.prefab]?.alpha ?? 1 : 1;

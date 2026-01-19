@@ -85,23 +85,38 @@ export const Buffs = (
 ) => {
   const buffs = useListenToEntityProp(entity, "buffs");
   const ownerColor = getPlayer(entity.owner)?.playerColor ?? undefined;
-  if (!buffs?.length) return null;
+
+  const grouped = useMemo(() => {
+    const filtered = buffs?.filter((b) =>
+      !b.expiration && (b.icon ?? b.model ?? "") in svgs
+    ) ?? [];
+    const grouped: Record<string, typeof filtered> = {};
+    for (const buff of filtered) {
+      const key = buff.name ?? buff.icon ?? buff.model ?? "";
+      if (grouped[key]) {
+        grouped[key].push(buff);
+      } else grouped[key] = [buff];
+    }
+    return Object.values(grouped);
+  }, [buffs]);
+
+  if (!grouped.length) return null;
 
   return (
     <MiniIconWrapper $rows={rows}>
-      {buffs.filter((b) => !b.expiration && (b.icon ?? b.model ?? "") in svgs)
-        .map(
-          (buff, i) => (
-            <Command
-              key={i}
-              name={buff.name ?? ""}
-              description={buff.description}
-              icon={buff.icon ?? buff.model ?? ""}
-              flashDuration={getFlashDuration(buff.remainingDuration)}
-              accentColor={ownerColor}
-            />
-          ),
-        )}
+      {grouped.map((g, i) => (
+        <Command
+          key={i}
+          name={g[0].name ?? ""}
+          description={g[0].description}
+          icon={g[0].icon ?? g[0].model ?? ""}
+          flashDuration={getFlashDuration(
+            Math.min(...g.map((b) => b.remainingDuration ?? Infinity)),
+          )}
+          accentColor={ownerColor}
+          count={g.length > 1 ? g.length : undefined}
+        />
+      ))}
     </MiniIconWrapper>
   );
 };
