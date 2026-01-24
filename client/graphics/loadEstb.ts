@@ -425,13 +425,15 @@ ${svgPaths.join("\n")}
 
 export const loadEstb = (
   buffer: ArrayBuffer,
-  options?: { scale?: number },
+  options?: { scale?: number; xOffset?: number; yOffset?: number },
 ): LoadedEstb => {
   const { paths, groups, clips } = parseEstb(buffer);
   const scale = options?.scale ?? 1;
+  const xOffset = options?.xOffset ?? 0;
+  const yOffset = options?.yOffset ?? 0;
 
   // Build geometry
-  const geometry = buildGeometry(paths, scale);
+  const geometry = buildGeometry(paths, scale, xOffset, yOffset);
 
   // Build animation data
   const animationData = buildAnimationData(paths, groups, clips, scale);
@@ -443,7 +445,12 @@ export const loadEstb = (
   };
 };
 
-const buildGeometry = (paths: ParsedPath[], scale: number): BufferGeometry => {
+const buildGeometry = (
+  paths: ParsedPath[],
+  scale: number,
+  xOffset: number,
+  yOffset: number,
+): BufferGeometry => {
   const allPositions: number[] = [];
   const allColors: number[] = [];
   const allPartIDs: number[] = [];
@@ -547,8 +554,8 @@ const buildGeometry = (paths: ParsedPath[], scale: number): BufferGeometry => {
       for (let i = 0; i < indices.count; i++) {
         const idx = indices.getX(i);
         allPositions.push(
-          positions.getX(idx),
-          positions.getY(idx),
+          positions.getX(idx) + xOffset,
+          positions.getY(idx) + yOffset,
           positions.getZ(idx),
         );
         allColors.push(
@@ -562,8 +569,8 @@ const buildGeometry = (paths: ParsedPath[], scale: number): BufferGeometry => {
     } else {
       for (let i = 0; i < vertexCount; i++) {
         allPositions.push(
-          positions.getX(i),
-          positions.getY(i),
+          positions.getX(i) + xOffset,
+          positions.getY(i) + yOffset,
           positions.getZ(i),
         );
         allColors.push(colors[i * 3], colors[i * 3 + 1], colors[i * 3 + 2]);

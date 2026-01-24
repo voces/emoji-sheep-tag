@@ -18,10 +18,16 @@ export const loadEstbModel = (
     layer?: number;
     zOrder: number;
     scale?: number;
+    xOffset?: number;
+    yOffset?: number;
   },
 ): AnimatedInstancedMesh => {
   const scale = options.scale ?? 1;
-  const { geometry, animationData } = loadEstb(buffer, { scale });
+  const { geometry, animationData } = loadEstb(buffer, {
+    scale,
+    xOffset: options.xOffset,
+    yOffset: options.yOffset,
+  });
 
   const material = getAnimatedMeshMaterial();
   const count = options.count ?? 0;

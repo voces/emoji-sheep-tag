@@ -40,7 +40,6 @@
   - Reduce wolf/sheep/fox visibility at night
   - Starts day, night at 1:45. Nights last 1:15 and days last 2:00.
 - Death animation (sheep)
-- Animated Crystal
 - Shortcut UX improvements
   - Simplify settings further with WC3 mode, which:
     - Build menu

@@ -80,7 +80,7 @@ import bird1 from "../assets/bird1.estb" with { type: "bytes" };
 import bird2 from "../assets/bird2.estb" with { type: "bytes" };
 import bee from "../assets/bee.svg" with { type: "text" };
 import alignment from "../assets/alignment.svg" with { type: "text" };
-import crystal from "../assets/crystal.svg" with { type: "text" };
+import crystal from "../assets/crystal.estb" with { type: "bytes" };
 import sparkle2 from "../assets/sparkle2.svg" with { type: "text" };
 import shack from "../assets/shack.svg" with { type: "text" };
 import cabin from "../assets/cabin.svg" with { type: "text" };
@@ -113,7 +113,7 @@ export const svgs: Record<string, string> = {
   watchtower,
   castle,
   totem,
-  crystal,
+  crystal: estbToSvg(crystal.buffer),
   monolith,
 
   // items
@@ -277,7 +277,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   windmill: svg(windmill, 0.24, { layer: 2, yOffset: 0.1, xOffset: -0.1 }),
   tree: svg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
   totem: svg(totem, 0.18, { yOffset: 0.12 }),
-  crystal: svg(crystal, 1, { yOffset: 0.2 }),
+  crystal: estme(crystal.buffer, 0.014, { yOffset: 0.2 }),
   hayCube: svg(hayCube, 0.05),
   brokenHayCube: svg(brokenHayCube, 0.05),
 
