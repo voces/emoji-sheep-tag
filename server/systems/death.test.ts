@@ -50,16 +50,16 @@ describe("death system bounty integration", () => {
 
     expect(getPlayerGold("wolf-player") - goldBefore).toBeCloseTo(4, 1);
 
-    const translocationHut = newUnit(
+    const blinkGate = newUnit(
       "sheep-player",
-      "translocationHut",
+      "blinkGate",
       15,
       15,
     );
     yield;
 
     goldBefore = getPlayerGold("wolf-player");
-    damageEntity(wolf, translocationHut, 1000, true);
+    damageEntity(wolf, blinkGate, 1000, true);
     yield;
 
     expect(getPlayerGold("wolf-player") - goldBefore).toBeCloseTo(5, 1);

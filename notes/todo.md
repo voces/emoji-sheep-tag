@@ -51,7 +51,6 @@
   - Remove right room & well & scale
 - Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
 - Modifying a shortcut should swap instead of conflict
-- Make Translocate an autocast action
 
 # Bugs
 

@@ -52,7 +52,7 @@ addSystem({
 
       unit.order = order;
 
-      // If it's an immediate cast, execute it now
+      // If it's an immediate cast, execute it now and clear order
       if (castDuration === 0) {
         if (!precast(unit, action)) {
           delete unit.order;
@@ -61,6 +61,7 @@ addSystem({
         orderDef.onCastStart?.(unit);
         orderDef.onCastComplete?.(unit);
         postCast(unit, undefined, action);
+        delete unit.order;
       }
 
       // Only issue one autocast per frame

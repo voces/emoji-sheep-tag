@@ -20,6 +20,7 @@ import { crystalSpeedOrder } from "./crystalSpeed.ts";
 import { crystalInvisibilityOrder } from "./crystalInvisibility.ts";
 import { hayTrapOrder } from "./hayTrap.ts";
 import { beamOrder } from "./beam.ts";
+import { translocateOrder } from "./translocate.ts";
 import { editorRemoveEntity } from "./editorRemoveEntity.ts";
 import {
   editorMoveEntityDown,
@@ -55,6 +56,7 @@ registerOrder(crystalSpeedOrder);
 registerOrder(crystalInvisibilityOrder);
 registerOrder(hayTrapOrder);
 registerOrder(beamOrder);
+registerOrder(translocateOrder);
 registerOrder(editorRemoveEntity);
 registerOrder(editorMoveEntityDown);
 registerOrder(editorMoveEntityLeft);

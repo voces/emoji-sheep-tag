@@ -395,6 +395,7 @@ type DataEntity =
     | "gait"
     | "blocksLineOfSight"
     | "actions"
+    | "autocast"
     | "buffs"
     | "completionTime"
     | "isDoodad"
@@ -582,7 +583,7 @@ export const prefabs: Record<string, DataEntity> = {
         name: "Build Blink Gate",
         description: "Translocates the sheep upon construction.",
         type: "build",
-        unitType: "translocationHut",
+        unitType: "blinkGate",
         binding: ["KeyE"],
         goldCost: 70,
       },
@@ -898,15 +899,34 @@ export const prefabs: Record<string, DataEntity> = {
     actions: [selfDestruct],
     bounty: 4,
   },
-  translocationHut: {
+  blinkGate: {
     name: "Blink Gate",
     model: "divinity",
     sightRadius: 4,
     radius: 0.5,
     tilemap: tilemap4x4,
     maxHealth: 10,
+    mana: 5,
+    maxMana: 50,
+    manaRegen: 1,
     sounds: { birth: ["construction1"], death: ["explosion1"] },
-    actions: [selfDestruct],
+    actions: [
+      {
+        name: "Translocate",
+        description: "Blink a nearby ally to the opposite side of the gate.",
+        type: "auto",
+        order: "translocate",
+        icon: "dash",
+        binding: ["KeyT"],
+        manaCost: 10,
+        range: 1.25,
+        targeting: [["ally", "unit"]],
+        allowAllies: true,
+        autocast: true,
+      },
+      selfDestruct,
+    ],
+    autocast: ["translocate"],
     bounty: 5,
   },
   watchtower: {

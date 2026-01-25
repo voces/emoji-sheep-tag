@@ -35,6 +35,66 @@ import { isAlly } from "@/shared/api/unit.ts";
 
 const INITIAL_BUILDING_PROGRESS = 0.1;
 
+export const translocateUnit = (
+  target: SystemEntity<"position" | "radius"> & { buffs?: Entity["buffs"] },
+  gatePosition: { x: number; y: number },
+  gateId?: string,
+) => {
+  const p = pathingMap();
+  const app = appContext.current;
+
+  // Add cooldown buff to prevent rapid translocations by this gate
+  const buffName = gateId ? `Translocated:${gateId}` : "Translocated";
+  target.buffs = [
+    ...(target.buffs ?? []),
+    { name: buffName, remainingDuration: 1, totalDuration: 1 },
+  ];
+
+  playSoundAt(target.position, "poof1");
+
+  const dx = target.position.x - gatePosition.x;
+  const dy = target.position.y - gatePosition.y;
+
+  const distance = Math.min(
+    Math.max(Math.sqrt(dx * dx + dy * dy) * 1.5, 1),
+    1.25,
+  );
+  console.log("actual distance", Math.sqrt(dx * dx + dy * dy));
+  console.log("multiple distance", Math.sqrt(dx * dx + dy * dy) * 1.5);
+  console.log("final", distance);
+  const angle = Math.atan2(dy, dx) + Math.PI;
+  console.log("angle", angle);
+
+  const layer = p.layer(target.position.x, target.position.y);
+  const { x: newX, y: newY } = p.nearestSpiralPathing(
+    gatePosition.x + 1.25 * Math.cos(angle),
+    gatePosition.y + 1.25 * Math.sin(angle),
+    target,
+    layer,
+  );
+
+  const dashFacing = Math.atan2(
+    newY - target.position.y,
+    newX - target.position.x,
+  );
+
+  newSfx(target.position, "dash", dashFacing, 0.3, "ease-out");
+
+  const oldPos = { ...target.position };
+  target.position = { x: newX, y: newY };
+
+  app.enqueue(() => {
+    if (target.position) {
+      playSoundAt(target.position, "poof1");
+      const endDashFacing = Math.atan2(
+        oldPos.y - target.position.y,
+        oldPos.x - target.position.x,
+      );
+      newSfx(target.position, "dash", endDashFacing, 0.3, "ease-out");
+    }
+  });
+};
+
 export const build = (builder: Entity, type: string, x: number, y: number) => {
   const app = appContext.current;
   if (
@@ -81,58 +141,22 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
   });
   if (!pathable) return;
 
-  // Handle translocation for Translocation Hut
-  if (type === "translocationHut" && builder.position && temp.position) {
-    // Play poof sound at sheep's start position
-    playSoundAt(builder.position, "poof1");
-
-    // Calculate the vector from structure center to builder
-    const dx = builder.position.x - temp.position.x;
-    const dy = builder.position.y - temp.position.y;
-
-    // Convert to polar coordinates and add 180 degrees
-    const distance = Math.max(Math.sqrt(dx * dx + dy * dy) * 1.5, 1);
-    const angle = Math.atan2(dy, dx) + Math.PI; // Add 180 degrees (π radians)
-
-    // Calculate new position on opposite side
-    const layer = p.layer(builder.position.x, builder.position.y);
-    const { x: newX, y: newY } = p.nearestSpiralPathing(
-      temp.position.x + distance * Math.cos(angle),
-      temp.position.y + distance * Math.sin(angle),
-      builder,
-      layer,
+  // Set unique buff name for this gate's translocate action
+  const translocateAction = temp.actions?.find((a) =>
+    a.type === "auto" && a.order === "translocate"
+  );
+  if (translocateAction) {
+    temp.actions = temp.actions?.map((a) =>
+      a === translocateAction
+        ? { ...a, buffName: `Translocated:${temp.id}` }
+        : a
     );
-
-    // Calculate facing for dash SFX (movement direction)
-    const dashFacing = Math.atan2(
-      newY - builder.position.y,
-      newX - builder.position.x,
-    );
-
-    // Create dash SFX at start position
-    newSfx(builder.position, "dash", dashFacing, 0.3, "ease-out");
-
-    // Move the builder to the new position
-    builder.position = { x: newX, y: newY };
   }
 
-  // Relocate entity if position not valid
   app.enqueue(() => {
+    if (translocateAction) translocateUnit(builder, temp.position, temp.id);
+
     updatePathing(builder);
-
-    if (type === "translocationHut" && builder.position) {
-      playSoundAt(builder.position, "poof1");
-
-      // Create dash SFX at end position (facing is same as movement direction)
-      const startPos = temp.position;
-      if (startPos) {
-        const dashFacing = Math.atan2(
-          startPos.y - builder.position.y,
-          startPos.x - builder.position.x,
-        );
-        newSfx(builder.position, "dash", dashFacing, 0.3, "ease-out");
-      }
-    }
   });
 
   return temp;
