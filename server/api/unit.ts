@@ -309,6 +309,7 @@ export const orderAttack = (
 
     // If within attack range..
     if (canSwing(attacker, target)) {
+      delete attacker.swing;
       processOrder(attacker, { type: "attack", targetId: target.id }, queue);
       return true;
     }
@@ -319,6 +320,7 @@ export const orderAttack = (
       return false;
     }
 
+    delete attacker.swing;
     processOrder(attacker, { type: "attack", targetId: target.id }, queue);
     return true;
   }
