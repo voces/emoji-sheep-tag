@@ -46,7 +46,7 @@ export const calcPath = (
         entity,
         targetEntity as TargetEntity,
         {
-          distanceFromTarget: (shouldLead
+          distanceFromTarget: shouldLead
             ? Math.max(
               0,
               (distanceFromTarget ?? entity.attack?.range ?? 0) -
@@ -54,7 +54,7 @@ export const calcPath = (
                   ? (targetEntity.movementSpeed ?? 0) * 0.2
                   : 0),
             )
-            : distanceFromTarget),
+            : distanceFromTarget,
           removeMovingEntities,
         },
       ).slice(1);
