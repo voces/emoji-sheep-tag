@@ -21,6 +21,7 @@ import {
   withPathingMap,
 } from "../systems/pathing.ts";
 import { buffs, items, prefabs } from "@/shared/data.ts";
+import { getOrder } from "../orders/index.ts";
 import { findAction } from "@/shared/util/actionLookup.ts";
 import { BUILD_REFUND_RATE, FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
@@ -55,15 +56,7 @@ export const translocateUnit = (
   const dx = target.position.x - gatePosition.x;
   const dy = target.position.y - gatePosition.y;
 
-  const distance = Math.min(
-    Math.max(Math.sqrt(dx * dx + dy * dy) * 1.5, 1),
-    1.25,
-  );
-  console.log("actual distance", Math.sqrt(dx * dx + dy * dy));
-  console.log("multiple distance", Math.sqrt(dx * dx + dy * dy) * 1.5);
-  console.log("final", distance);
   const angle = Math.atan2(dy, dx) + Math.PI;
-  console.log("angle", angle);
 
   const layer = p.layer(target.position.x, target.position.y);
   const { x: newX, y: newY } = p.nearestSpiralPathing(
@@ -233,10 +226,10 @@ const isReachableTarget = (attacker: Entity, target: Entity) => {
   if (!attacker.movementSpeed) return false;
 
   const path = calcPath(attacker, "id" in target ? target.id : target);
+  if (!path.length) return false;
 
-  return path.length > 0 &&
-    (path.at(-1)?.x !== attacker.position.x ||
-      path.at(-1)?.y !== attacker.position.y);
+  const end = path.at(-1)!;
+  return canSwing({ ...attacker, position: end }, target, true);
 };
 
 // Calculate attack priority for a target entity (higher = more important to attack)
@@ -288,7 +281,7 @@ export const acquireTarget = (e: Entity) => {
       return a[1] - b[1];
     }).find(([e2]) =>
       // canSee checks LOS and invisibility (requires ally with trueVision to see invisible)
-      isReachableTarget(e, e2) && canSee(e, e2)
+      canSee(e, e2) && isReachableTarget(e, e2)
     )?.[0];
 };
 
@@ -300,12 +293,24 @@ export const orderAttack = (
 ): boolean => {
   updatePathing(attacker, 1);
   if (!attacker.attack || !attacker.position) return false;
+  if (
+    attacker.order?.type === "attack" && "targetId" in attacker.order &&
+    "id" in target && attacker.order.targetId === target.id
+  ) return true;
 
   if ("id" in target) {
     if (
       !target.position ||
       !testClassification(attacker, target, attacker.attack.targetsAllowed)
     ) return false;
+
+    // Already attacking this target - ignore the order
+    if (
+      !queue &&
+      attacker.order?.type === "attack" &&
+      "targetId" in attacker.order &&
+      attacker.order.targetId === target.id
+    ) return true;
 
     // If within attack range..
     if (canSwing(attacker, target)) {
@@ -447,6 +452,46 @@ export const orderUpgrade = (
   return true;
 };
 
+export const orderCast = (
+  unit: Entity,
+  orderId: string,
+  target: Point | string | undefined,
+  queue = false,
+): boolean => {
+  const order = getOrder(orderId);
+  if (!order) return false;
+
+  // Already casting this order on same target - ignore
+  if (
+    !queue &&
+    unit.order?.type === "cast" &&
+    unit.order.orderId === orderId &&
+    (typeof target === "string"
+      ? "targetId" in unit.order && unit.order.targetId === target
+      : "target" in unit.order &&
+        unit.order.target?.x === target?.x &&
+        unit.order.target?.y === target?.y)
+  ) return true;
+
+  const result = order.onIssue(unit, target, queue);
+  return result !== "failed";
+};
+
+export const orderPurchase = (unit: Entity, itemId: string) => {
+  if (!unit.inventory) return;
+
+  const item = items[itemId];
+  if (!item) return;
+
+  if (item.unique && unit.inventory.some((i) => i.id === itemId)) return;
+
+  if (!unit.owner || getPlayerGold(unit.owner) < item.gold) return;
+
+  deductPlayerGold(unit.owner, item.gold);
+
+  addItem(unit, itemId);
+};
+
 export const isAlive = (unit: Entity) => {
   if (!appContext.current.entities.has(unit)) return false;
   return typeof unit.health !== "number" || unit.health > 0;
@@ -509,7 +554,7 @@ const deductBuildGold = (builder: Entity, type: string) => {
 /**
  * Applies damage mitigation and amplification modifiers
  */
-const applyDamageModifiers = (
+export const applyDamageModifiers = (
   damage: number,
   attacker: Entity,
   target: Entity,

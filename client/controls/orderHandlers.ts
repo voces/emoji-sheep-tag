@@ -218,7 +218,7 @@ export const handleTargetOrder = (e: MouseButtonEvent): TargetOrderResult => {
 
       if (typeof entity.movementSpeed !== "number") {
         const range = action.range ?? 0;
-        const distance = distanceBetweenEntities(entity, target);
+        const distance = distanceBetweenEntities(entity, target, range);
         if (distance > range) {
           anyOutOfRange = true;
           return false;

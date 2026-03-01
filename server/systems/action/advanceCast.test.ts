@@ -5,6 +5,7 @@ import { advanceCast } from "./advanceCast.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 import { mirrorImageOrder } from "../../orders/mirrorImage.ts";
 import { nonNull } from "@/shared/types.ts";
+import { biteOrder } from "../../orders/bite.ts";
 
 afterEach(cleanupTest);
 
@@ -247,5 +248,29 @@ describe("advanceCast other abilities", () => {
 
     // Order should be completed and cleared
     expect(wolf.order).toBeFalsy();
+  });
+});
+
+describe("advanceCast bite", () => {
+  it("should not get stuck when target moves away during bite cast", {
+    sheep: ["sheep-player", "sheep-player-2"],
+  }, function* () {
+    const sheep = newUnit("sheep-player", "sheep", 10, 10);
+    const spirit = newUnit("sheep-player-2", "spirit", 10, 10);
+    yield;
+
+    biteOrder.onIssue(sheep, spirit.id, false);
+    yield;
+
+    expect(sheep.order?.type).toBe("cast");
+
+    // Teleport spirit away and have it walk further
+    spirit.position = { x: 12, y: 10 };
+    spirit.order = { type: "walk", target: { x: 20, y: 10 } };
+
+    for (let i = 0; i < 40; i++) yield;
+
+    // Sheep should have chased the spirit, not gotten stuck
+    expect(sheep.position!.x).toBeGreaterThan(10);
   });
 });

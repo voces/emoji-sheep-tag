@@ -39,7 +39,7 @@ export const advanceCast = (e: Entity, delta: number): number => {
 
     const dist = "x" in target
       ? distanceBetweenPoints(e.position, target)
-      : distanceBetweenEntities(e, target);
+      : distanceBetweenEntities(e, target, range);
     if (dist > range) {
       if (!e.order.path) {
         const path = calcPath(e, "x" in target ? target : target.id, {
@@ -48,7 +48,7 @@ export const advanceCast = (e: Entity, delta: number): number => {
         if (!path.length) {
           const currentDist = "x" in target
             ? distanceBetweenPoints(e.position, target)
-            : distanceBetweenEntities(e, target);
+            : distanceBetweenEntities(e, target, range);
           if (currentDist > range) {
             // Target unreachable and out of cast range
             delete e.order;
@@ -73,6 +73,14 @@ export const advanceCast = (e: Entity, delta: number): number => {
           return delta;
         }
         return delta;
+      }
+
+      if (
+        e.order.path?.at(-1)?.x === e.position?.x &&
+        e.order.path?.at(-1)?.y === e.position?.y
+      ) {
+        const { path: _, ...rest } = e.order;
+        e.order = rest;
       }
 
       return tweenResult.delta;
@@ -106,7 +114,13 @@ export const advanceCast = (e: Entity, delta: number): number => {
 
   delta -= e.order.remaining;
 
-  if (getOrder(e.order.orderId)?.onCastComplete?.(e) === false) return delta;
+  if (getOrder(e.order.orderId)?.onCastComplete?.(e) === false) {
+    const castDuration = action && "castDuration" in action
+      ? action.castDuration ?? 0
+      : 0;
+    e.order = { ...e.order, remaining: castDuration };
+    return 0;
+  }
 
   postCast(e, item);
 

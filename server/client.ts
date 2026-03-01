@@ -59,6 +59,7 @@ import {
   zSelectCaptain,
   zStartCaptains,
 } from "./actions/captains.ts";
+import { computer, zComputerEvent } from "./actions/computer.ts";
 import {
   handleMessage,
   type Socket,
@@ -182,6 +183,7 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zCaptainPick,
   zCancelCaptains,
   zReverseTeams,
+  zComputerEvent,
 ]);
 
 export type ClientToServerMessage = z.TypeOf<typeof zClientToServerMessage>;
@@ -215,6 +217,7 @@ const actions = {
   captainPick,
   cancelCaptains,
   reverseTeams,
+  computer,
 };
 
 export const handleSocket = (socket: Socket, url?: URL, ip?: string) => {

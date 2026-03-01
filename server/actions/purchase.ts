@@ -3,9 +3,7 @@ import { z } from "zod";
 import { Entity } from "@/shared/types.ts";
 import { Client } from "../client.ts";
 import { lookup } from "../systems/lookup.ts";
-import { deductPlayerGold, getPlayerGold } from "../api/player.ts";
-import { items } from "@/shared/data.ts";
-import { addItem } from "../api/unit.ts";
+import { orderPurchase } from "../api/unit.ts";
 import { allowedToExecuteActionOnUnit } from "../util/allyPermissions.ts";
 import { findAction } from "@/shared/util/actionLookup.ts";
 
@@ -33,18 +31,7 @@ export const purchase = (
   // Check if client can execute this purchase action
   if (!allowedToExecuteActionOnUnit(client, u, action)) return;
 
-  // Find the item in the predefined items
-  const item = items[itemId];
-  if (!item) return;
-
-  // Check if unit has enough gold
-  if (!u.owner || getPlayerGold(u.owner) < item.gold) return;
-
-  // Deduct gold from player
-  deductPlayerGold(u.owner, item.gold);
-
-  // Add item to inventory using the addItem API
-  addItem(u, itemId);
+  orderPurchase(u, itemId);
 
   return u;
 };

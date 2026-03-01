@@ -66,12 +66,17 @@ applies to every tool invocation regardless of apparent independence.
   perfunctorily
 - Aim for test driven development. When fixing a bug, first try to reproduce it
   with a test, then fix the bug
+- To run a specific test file: `deno task test server/rl/env.test.ts`
+- To run a specific test: use `it.only(...)` on the test, then run the file
+- Do not use `--filter` with `deno task test`
 
 # Workflow
 
 - Create tests, format, typecheck, lint, and run tests when done making code
   changes
-- When updating shared types, remember to update corresponding zod schemas
+- When updating shared types (especially `shared/types.ts` Entity), remember to
+  update the corresponding zod schema in `client/schemas.ts` (the `zUpdate`
+  schema uses `.strict()` which rejects unknown keys)
 
 # Game System Implementation Patterns
 

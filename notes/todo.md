@@ -54,11 +54,6 @@
 
 # Bugs
 
-- Pathing falls over with lots of foxes
-  - Attack loops killed play
-  - Falls over when spam clicking movement orders
-  - Per-player pathing calc limits?
-- Runaway number of canvas/renderers?
 - Sheep count keeps getting reset?
 - Two units with autocast next to each other both cast at the same time
 

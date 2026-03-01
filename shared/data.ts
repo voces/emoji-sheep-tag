@@ -118,10 +118,11 @@ export const items: Record<string, Item> = {
     id: "echoFang",
     name: "Echo Fang",
     description:
-      "Adds +6 damage and creates a splash that deals +15 damage to nearby enemy structures.",
+      "Adds +6 damage and creates a splash that deals +15 damage to nearby enemy structures. Cannot not stack.",
     icon: "fangs",
     gold: 250,
     binding: ["KeyA"],
+    unique: true,
     buffs: [{
       damageBonus: 6,
       splashDamage: 15,
@@ -199,10 +200,11 @@ export const items: Record<string, Item> = {
   boots: {
     id: "boots",
     name: "Boots +30",
-    description: "Increases movement speed by 30.",
+    description: "Increases movement speed by 30. Cannot not stack.",
     icon: "runningShoes",
     gold: 110,
     binding: ["KeyB"],
+    unique: true,
     buffs: [{ movementSpeedBonus: 0.3 }],
   },
   speedPot: {
@@ -294,6 +296,7 @@ export const items: Record<string, Item> = {
       bountyMultiplier: 2,
       bountyBonus: 1,
     }],
+    unique: true,
   },
   hayTrap: {
     id: "hayTrap",

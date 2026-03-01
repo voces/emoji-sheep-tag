@@ -276,7 +276,7 @@ export const isStructure = (entity: Entity) => {
     entity.targetedAs?.includes("tree") ||
     entity.targetedAs?.includes("ward")
   ) return false;
-  return !!entity.tilemap;
+  return !!entity.tilemap && !!entity.owner;
 };
 
 export const isUnit = (entity: Entity) => {
@@ -287,7 +287,7 @@ export const isUnit = (entity: Entity) => {
     entity.targetedAs?.includes("tree") ||
     entity.targetedAs?.includes("ward")
   ) return false;
-  return !!entity.movementSpeed;
+  return !!entity.movementSpeed && !!entity.owner;
 };
 
 export const isTree = (entity: Entity) => !!entity.targetedAs?.includes("tree");

@@ -40,7 +40,10 @@ export const handleBlockedPath = (
   // If path is the same or empty, try without moving entities
   if (
     !retryPath.length ||
-    JSON.stringify(retryPath) === JSON.stringify(currentPath)
+    (retryPath.length === currentPath.length &&
+      retryPath.every((a, i) =>
+        a.x === currentPath[i].x && a.y === currentPath[i].y
+      ))
   ) {
     const finalPath = calcPath(entity, target, {
       ...options,

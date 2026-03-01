@@ -47,3 +47,24 @@ it(
     yield* yieldFor(() => expect(wolf.swing).toBeDefined(), { timeout: 10 });
   },
 );
+
+it("integration: wolf attacking sheep between huts", {
+  sheep: ["player-0"],
+  wolves: ["player-1"],
+}, function* () {
+  const sheep = newUnit("player-0", "sheep", 57.5, 36.75);
+  const hut1 = newUnit("player-0", "hut", 57.5, 37.5);
+  const hut2 = newUnit("player-0", "hut", 57.5, 36);
+  const wolf = newUnit("player-1", "wolf", 53, 38.5, {
+    facing: 5.497787143782135,
+    order: { type: "attackMove", target: { x: 51, y: 40 }, targetId: sheep.id },
+  });
+
+  yield* yieldFor(() =>
+    expect(
+      [hut1.id, hut2.id],
+    ).toContain(
+      wolf.order && "targetId" in wolf.order ? wolf.order.targetId : undefined,
+    ), { timeout: 10 });
+  expect(sheep.health).toBe(20);
+});

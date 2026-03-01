@@ -1,7 +1,7 @@
 import { addSystem } from "@/shared/context.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { lobbyContext } from "../contexts.ts";
-import { getSheep } from "./sheep.ts";
+import { getSheep } from "./collections.ts";
 import { getDistanceMultiplier } from "@/shared/penAreas.ts";
 import {
   grantTeamGold,

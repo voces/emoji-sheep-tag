@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getPlayers } from "@/shared/api/player.ts";
+import { playerEntities } from "@/shared/api/player.ts";
 import { getTeamEntity } from "../api/teamGold.ts";
 import { isPractice } from "../api/st.ts";
 import type { Client } from "../client.ts";
@@ -30,7 +30,7 @@ export const resetGold = (client: Client | GameClient) => {
   }
 
   // Reset all player gold
-  for (const player of getPlayers()) {
+  for (const player of playerEntities()) {
     player.gold = 0;
   }
 

@@ -3,8 +3,9 @@ import type { Lobby } from "../lobby.ts";
 import { smart } from "../util/smart.ts";
 import { lobbyContext } from "../contexts.ts";
 
+// Ideal sheep for N vs N+1 pattern: 1v3, 2v3, 2v4, 3v4, 3v5, 4v5, 4v6, etc.
 export const getIdealSheep = (players: number) =>
-  Math.max(Math.floor((players - 1) / 2), 1);
+  Math.max(Math.ceil((players - 2) / 2), 1);
 
 export const getIdealTime = (players: number, sheep: number) => {
   const delta = sheep - (players - sheep) + 2; // deviation from the "n vs (n+2)" standard
@@ -96,14 +97,20 @@ export const cleanupSmartDrafter = (lobby: Lobby) => {
 };
 
 // Helper function to auto-assign sheep or wolf based on desired count
-export const autoAssignSheepOrWolf = (lobby: Lobby): "sheep" | "wolf" => {
-  const currentSheep = Array.from(lobby.players).filter((p) =>
-    p.team === "sheep"
+// The additionalParticipants parameter is used when adding a computer player
+// to determine what team they should be on (before they're added to the set)
+export const autoAssignSheepOrWolf = (
+  lobby: Lobby,
+  additionalParticipants = 0,
+): "sheep" | "wolf" => {
+  const nonObservers = Array.from(lobby.players).filter((p) =>
+    p.team !== "observer" && p.team !== "pending"
   );
-  const totalPlayers = lobby.players.size;
+  const currentSheep = nonObservers.filter((p) => p.team === "sheep").length;
+  const totalParticipants = nonObservers.length + additionalParticipants;
   const desiredSheep = lobby.settings.sheep === "auto"
-    ? getIdealSheep(totalPlayers)
+    ? getIdealSheep(totalParticipants)
     : lobby.settings.sheep;
 
-  return currentSheep.length < desiredSheep ? "sheep" : "wolf";
+  return currentSheep < desiredSheep ? "sheep" : "wolf";
 };

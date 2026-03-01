@@ -112,6 +112,7 @@ export const getEntitiesToSelect = (
     if (entity.isDoodad && !editorVar()) continue;
     if (entity.id === "selection-rectangle") continue;
     if (entity.isEffect) continue;
+    if (entity.isFloatingText) continue;
     if ((entity as Entity).hiddenByFog) continue;
 
     if (entity.owner === localPlayerId) {

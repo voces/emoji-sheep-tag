@@ -1,7 +1,7 @@
 import { Order } from "@/shared/types.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { OrderDefinition } from "./types.ts";
-import { getSheep } from "../systems/sheep.ts";
+import { getSheep } from "../systems/collections.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { timeout } from "../api/timing.ts";
 import { getPlayer } from "@/shared/api/player.ts";

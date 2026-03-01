@@ -190,6 +190,7 @@ export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
   return app;
 };
 
+import("./api/timing.ts");
 import("./systems/clearFlags.ts");
 import("./systems/action/action.ts");
 import("./systems/actionCooldowns.ts");

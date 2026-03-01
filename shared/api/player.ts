@@ -22,13 +22,13 @@ export const getPlayers = (): readonly Player[] =>
   Array.from(map.get(appContext.current) ?? []);
 
 export const getPlayer = (playerId: string | undefined): Player | undefined =>
-  getPlayers().find((p) => p.id === playerId);
+  playerEntities().find((p) => p.id === playerId);
 
-export const getSheepPlayers = (): Player[] =>
-  getPlayers().filter((p) => p.team === "sheep");
+export const getSheepPlayers = () =>
+  playerEntities().filter((p) => p.team === "sheep");
 
-export const getWolfPlayers = (): Player[] =>
-  getPlayers().filter((p) => p.team === "wolf");
+export const getWolfPlayers = () =>
+  playerEntities().filter((p) => p.team === "wolf");
 
 export const colorName = (
   player: { color: string; name: string } | {

@@ -2,15 +2,10 @@ import { DIRECTION, PATHING_TYPES } from "./constants.ts";
 import { BinaryHeap } from "./BinaryHeap.ts";
 import {
   angleDifference,
-  behind,
   distanceBetweenEntities,
   distanceBetweenPoints,
-  infront,
   offset,
   Point,
-  polarProject,
-  trueMaxX,
-  trueMinX,
 } from "./math.ts";
 import { memoize } from "./memoize.ts";
 import { Tile } from "./Tile.ts";
@@ -27,6 +22,34 @@ import {
   yTileToWorld as tileToWorldY,
   yWorldToTile as worldToTileY,
 } from "./coordinates.ts";
+
+// Raw-coordinate versions of trueMinX/trueMaxX for tile-native _linearPathable
+// Avoids Point object allocation by accepting px, py directly
+const trueMinXRaw = (
+  px: number,
+  py: number,
+  radiusSq: number,
+  yCoord: number,
+  offValue: number,
+): number => {
+  if (Math.abs(py - yCoord) - 0.5 <= 1) return offValue;
+  const yRef = yCoord > py ? yCoord : yCoord + 1;
+  const squared = -(py * py) + 2 * py * yRef + radiusSq - yRef * yRef;
+  return Math.floor(px - Math.sign(squared) * Math.abs(squared) ** 0.5);
+};
+
+const trueMaxXRaw = (
+  px: number,
+  py: number,
+  radiusSq: number,
+  yCoord: number,
+  offValue: number,
+): number => {
+  if (Math.abs(py - yCoord) - 0.5 <= 1) return offValue;
+  const yRef = yCoord > py ? yCoord : yCoord + 1;
+  const squared = -(py * py) + 2 * py * yRef + radiusSq - yRef * yRef;
+  return Math.floor(px + Math.sign(squared) * Math.abs(squared) ** 0.5);
+};
 
 const PLAYER_PATHING_BUDGET = 5000;
 const MIN_UNIT_BUDGET = 50;
@@ -125,6 +148,13 @@ export class PathingMap {
   // Maps entities to tiles
   private readonly entities: Map<PathingEntity, Tile[]> = new Map();
 
+  // Precomputed context for _linearPathable, set during path()
+  private _losCtx?: {
+    radius: number;
+    pathing: Pathing;
+    radiusTileOffset: number;
+  };
+
   // Per-player pathing iteration tracking
   private readonly pathingIterationsPerPlayer = new Map<string, number>();
 
@@ -211,7 +241,8 @@ export class PathingMap {
     }
 
     // Return existing tile if already created
-    if (this.grid[y][x]) return this.grid[y][x]!;
+    const existing = this.grid[y][x];
+    if (existing) return existing;
 
     // Calculate which pathing cell this tile belongs to
     const tilesPerPathingCell = this.resolution / this.tileResolution;
@@ -769,20 +800,49 @@ export class PathingMap {
       throw new Error("Can only path find radial entities");
     }
 
-    if (distanceFromTarget) distanceFromTarget *= this.resolution;
-
     // If already in range, just return start
     if (
       typeof distanceFromTarget === "number" && "position" in target &&
-      distanceBetweenEntities(entity, target) * this.resolution <
+      distanceBetweenEntities(entity, target, distanceFromTarget) <
         distanceFromTarget
       // Should I return start?
     ) return [];
 
+    if (distanceFromTarget) distanceFromTarget *= this.resolution;
+
+    const losCache = new Map<Tile, Map<Tile, boolean>>();
+    const pathableCache = new Map<number, boolean>();
     const cache: Cache = {
-      _linearPathable: memoize((...args) => this._linearPathable(...args)),
-      _pathable: memoize((...args) => this._pathable(...args)),
+      _linearPathable: (_entity, startTile, endTile) => {
+        let inner = losCache.get(startTile);
+        if (inner) {
+          const cached = inner.get(endTile);
+          if (cached !== undefined) return cached;
+        } else {
+          inner = new Map();
+          losCache.set(startTile, inner);
+        }
+        const result = this._linearPathable(_entity, startTile, endTile);
+        inner.set(endTile, result);
+        return result;
+      },
+      _pathable: (map, x, y) => {
+        const key = x * this.heightMap + y;
+        const cached = pathableCache.get(key);
+        if (cached !== undefined) return cached;
+        const result = this._pathable(map, x, y);
+        pathableCache.set(key, result);
+        return result;
+      },
       pointToTilemap: memoize((...args) => this.pointToTilemap(...args)),
+    };
+
+    this._losCtx = {
+      radius: entity.radius * this.resolution -
+        EPSILON * entity.radius * this.widthWorld * this.resolution,
+      pathing: (entity.requiresPathing ?? entity.pathing)!,
+      radiusTileOffset: (entity.radius % (1 / this.resolution)) *
+        this.resolution,
     };
 
     const removed = this.entities.has(entity);
@@ -800,7 +860,22 @@ export class PathingMap {
           continue;
         }
 
-        const dist = distanceBetweenEntities(e, entity);
+        // Pre-filter: skip expensive distanceBetweenEntities for distant entities
+        const dx = e.position.x - entity.position.x;
+        const dy = e.position.y - entity.position.y;
+        const maxRadius = (e.radius ?? 0) + (entity.radius ?? 0);
+        const threshold = PATHING_WALK_IGNORE_DISTANCE + maxRadius;
+        if (dx * dx + dy * dy > threshold * threshold) {
+          removedMovingEntities.add(e);
+          this.removeEntity(e);
+          continue;
+        }
+
+        const dist = distanceBetweenEntities(
+          e,
+          entity,
+          PATHING_WALK_IGNORE_DISTANCE,
+        );
         const aDist = Math.abs(angleDifference(
           Math.atan2(
             e.order.path[0].y - e.position.y,
@@ -834,13 +909,28 @@ export class PathingMap {
       { type: pathing },
     );
 
+    const entityAtTile = { ...entity, position: { x: 0, y: 0 } };
+
     const offset = entity.radius % (1 / this.resolution);
     const startReal = {
       x: start.x * this.resolution,
       y: start.y * this.resolution,
     };
 
-    const targetPosition = "x" in target ? target : target.position;
+    const rawTarget = "x" in target ? target : target.position;
+    const targetRadius = "x" in target
+      ? entity.radius
+      : ("radius" in target ? target.radius as number : entity.radius);
+    const targetPosition = {
+      x: Math.max(
+        targetRadius,
+        Math.min(rawTarget.x, this.widthWorld - targetRadius),
+      ),
+      y: Math.max(
+        targetRadius,
+        Math.min(rawTarget.y, this.heightWorld - targetRadius),
+      ),
+    };
 
     // Get start tile - if not pathable, find nearest pathable tile
     let startTile = this.entityToTile(entity);
@@ -859,6 +949,7 @@ export class PathingMap {
 
       if (distanceSquared > maxDistanceFromStart ** 2) {
         // Too far to reasonably path - return empty path
+        this._losCtx = undefined;
         if (removed) this.addEntity(entity);
         for (const entity of removedMovingEntities) this.addEntity(entity);
         return [];
@@ -869,6 +960,7 @@ export class PathingMap {
         Math.round((nearestStart.y - offset) * this.resolution),
       );
       if (!nearestTile) {
+        this._losCtx = undefined;
         if (removed) this.addEntity(entity);
         for (const entity of removedMovingEntities) this.addEntity(entity);
         return [];
@@ -893,7 +985,7 @@ export class PathingMap {
       (node: Tile) => node.__endRealPlusEstimatedCost ?? 0,
     );
     let endBest = targetTile;
-    const endTiles = [targetTile];
+    const endTiles = new Set([targetTile]);
 
     if (targetPathable) {
       const targetClosestReal = targetPathable
@@ -905,6 +997,7 @@ export class PathingMap {
 
       // If we start and end on the same tile, just move between them
       if (startTile === targetTile && this.pathable(entity)) {
+        this._losCtx = undefined;
         if (removed) this.addEntity(entity);
         for (const entity of removedMovingEntities) this.addEntity(entity);
         return [
@@ -945,31 +1038,24 @@ export class PathingMap {
       if (!tile) {
         endBest = endHeap[0] || targetTile;
       } else {
+        entityAtTile.position.x = this.xTileToWorld(tile.x);
+        entityAtTile.position.y = this.yTileToWorld(tile.y);
         const maxEndEstimate = "position" in target
-          ? distanceBetweenEntities({
-            ...entity,
-            position: {
-              x: this.xTileToWorld(tile.x),
-              y: this.yTileToWorld(tile.y),
-            },
-          }, target) * this.resolution
+          ? distanceBetweenEntities(entityAtTile, target) * this.resolution
           : h(targetReal, tile);
 
         // TODO: This is unbounded and does not scale!
         while (
           tile &&
           ("position" in target
-            ? distanceBetweenEntities({
-                  ...entity,
-                  position: {
-                    x: this.xTileToWorld(tile.x),
-                    y: this.yTileToWorld(tile.y),
-                  },
-                }, target) * this.resolution <= maxEndEstimate
+            ? (entityAtTile.position.x = this.xTileToWorld(tile.x),
+              entityAtTile.position.y = this.yTileToWorld(tile.y),
+              distanceBetweenEntities(entityAtTile, target) * this.resolution <=
+                maxEndEstimate)
             : h(targetReal, tile) <= maxEndEstimate)
         ) {
           if (cache._pathable(minimalTilemap, tile.x, tile.y)) {
-            endTiles.push(tile);
+            endTiles.add(tile);
             endHeap.push(tile);
             tile.__endTag = endTag;
             tile.__endRealCostFromOrigin = 0;
@@ -1026,7 +1112,7 @@ export class PathingMap {
       // Start to End
       const startCurrent = startHeap.pop();
 
-      if (endTiles.includes(startCurrent)) {
+      if (endTiles.has(startCurrent)) {
         startBest = startCurrent;
         break;
       } else if (startCurrent.__endTag === endTag) {
@@ -1034,19 +1120,18 @@ export class PathingMap {
         break;
       } else if (
         typeof distanceFromTarget === "number" &&
-        ("position" in target
-          ? distanceBetweenEntities(
-                {
-                  ...entity,
-                  position: { x: startCurrent.xWorld, y: startCurrent.yWorld },
-                },
-                target,
-              ) * this.resolution < distanceFromTarget
-          : distanceBetweenPoints({
-                x: startCurrent.xWorld,
-                y: startCurrent.yWorld,
-              }, target) *
-              this.resolution < distanceFromTarget)
+        (entityAtTile.position.x = startCurrent.xWorld,
+          entityAtTile.position.y = startCurrent.yWorld,
+          "position" in target
+            ? distanceBetweenEntities(
+                  entityAtTile,
+                  target,
+                  distanceFromTarget / this.resolution,
+                ) * this.resolution < distanceFromTarget
+            : distanceBetweenPoints(
+                  entityAtTile.position,
+                  target,
+                ) * this.resolution < distanceFromTarget)
       ) {
         startBest = startCurrent;
         break;
@@ -1443,10 +1528,10 @@ export class PathingMap {
     if (
       typeof distanceFromTarget === "number" && "position" in target &&
       path.length > 1 &&
-      distanceBetweenEntities(
-              { ...entity, position: path[path.length - 1] },
-              target,
-            ) * this.resolution < distanceFromTarget - tolerance
+      (entityAtTile.position.x = path[path.length - 1].x,
+        entityAtTile.position.y = path[path.length - 1].y,
+        distanceBetweenEntities(entityAtTile, target) * this.resolution <
+          distanceFromTarget - tolerance)
     ) {
       let a = path[path.length - 1];
       let b = path[path.length - 2];
@@ -1455,10 +1540,10 @@ export class PathingMap {
       while (itrs < 15) {
         itrs++;
         mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-        const currentDistance = distanceBetweenEntities({
-          ...entity,
-          position: mid,
-        }, target) * this.resolution;
+        entityAtTile.position.x = mid.x;
+        entityAtTile.position.y = mid.y;
+        const currentDistance = distanceBetweenEntities(entityAtTile, target) *
+          this.resolution;
         const diff = distanceFromTarget - currentDistance;
         if (diff >= 0 && diff <= tolerance) break;
         if (currentDistance < distanceFromTarget) a = mid;
@@ -1466,6 +1551,8 @@ export class PathingMap {
       }
       if (mid && itrs < 15) path[path.length - 1] = mid;
     }
+
+    this._losCtx = undefined;
 
     if (removed) this.addEntity(entity);
     for (const entity of removedMovingEntities) this.addEntity(entity);
@@ -1559,12 +1646,180 @@ export class PathingMap {
     startTile: Tile,
     endTile: Tile,
   ): boolean {
-    const radiusOffset = entity.radius % (1 / this.resolution);
-    return this.linearPathable(
-      entity,
-      offset({ x: startTile.xWorld, y: startTile.yWorld }, radiusOffset),
-      offset({ x: endTile.xWorld, y: endTile.yWorld }, radiusOffset),
-    );
+    const ctx = this._losCtx;
+    if (!ctx) {
+      const radiusOffset = entity.radius % (1 / this.resolution);
+      return this.linearPathable(
+        entity,
+        offset({ x: startTile.xWorld, y: startTile.yWorld }, radiusOffset),
+        offset({ x: endTile.xWorld, y: endTile.yWorld }, radiusOffset),
+      );
+    }
+
+    const { radius, pathing, radiusTileOffset } = ctx;
+
+    // Work directly in tile-float coordinates
+    let startX = startTile.x + radiusTileOffset;
+    let startY = startTile.y + radiusTileOffset;
+    let endX = endTile.x + radiusTileOffset;
+    let endY = endTile.y + radiusTileOffset;
+
+    // Same-tile early exit
+    if (
+      Math.floor(startX) === Math.floor(endX) &&
+      Math.floor(startY) === Math.floor(endY)
+    ) {
+      const tileX = Math.floor(startX);
+      const tileY = Math.floor(startY);
+      const tile = this.grid[tileY]?.[tileX];
+      return !!tile && tile.pathable(pathing);
+    }
+
+    // Swap so we're going right
+    if (startX > endX) {
+      const tmpX = startX;
+      const tmpY = startY;
+      startX = endX;
+      startY = endY;
+      endX = tmpX;
+      endY = tmpY;
+    }
+
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const dist = (dx * dx + dy * dy) ** 0.5;
+    const cosA = dx / dist;
+    const sinA = dy / dist;
+    const tan = dx / dy;
+    const positiveSlope = endY > startY;
+
+    const minY = positiveSlope
+      ? Math.floor(startY - radius)
+      : Math.floor(endY - radius);
+    const maxY = positiveSlope
+      ? Math.floor(endY + radius)
+      : Math.floor(startY + radius);
+    const yStart = positiveSlope ? minY : maxY;
+    const yStep = positiveSlope ? 1 : -1;
+    const ySteps = Math.abs(minY - maxY);
+
+    const minX = Math.floor(startX - radius);
+    const maxX = Math.floor(endX + radius);
+
+    // Trig identities: cos(a-π/2)=sinA, sin(a-π/2)=-cosA,
+    //                   cos(a+π/2)=-sinA, sin(a+π/2)=cosA
+    const sinAR = sinA * radius;
+    const cosAR = cosA * radius;
+    const leftTangentX = startX + sinAR;
+    const leftTangentY = startY - cosAR;
+    const rightTangentX = startX - sinAR;
+    const rightTangentY = startY + cosAR;
+    const endLeftTangentX = endX + sinAR;
+    const endLeftTangentY = endY - cosAR;
+
+    // Precompute orientation constants: both tangent pairs share same dy/dx
+    const tangentDy = 2 * cosAR;
+    const tangentDx = -2 * sinAR;
+
+    const radiusSq = radius * radius;
+
+    const startFloor = positiveSlope
+      ? Math.floor(startY - radius) + 1
+      : Math.ceil(startY + radius) - 1;
+
+    const rightGuideX = isFinite(tan)
+      ? rightTangentX + (startFloor - rightTangentY) * tan
+      : rightTangentX - radius;
+    const leftGuideX = isFinite(tan)
+      ? leftTangentX - (leftTangentY - startFloor) * tan
+      : leftTangentX - radius;
+
+    const guide = Math.max(rightGuideX, leftGuideX);
+    const guideDistance = Math.abs(rightGuideX - leftGuideX);
+
+    const absTan = Math.abs(tan);
+    const finiteAbsTan = isFinite(absTan);
+    const totalShift = finiteAbsTan ? absTan + guideDistance : guideDistance;
+
+    let xStartRaw = guide - totalShift;
+    for (let y = 0; y <= ySteps; y++) {
+      const xEndRaw = xStartRaw + (finiteAbsTan ? totalShift : Infinity);
+
+      const xStartTest = Math.floor(xStartRaw);
+      const xEndTest = Math.floor(xEndRaw);
+
+      const yCoord = yStart + y * yStep;
+
+      // Inline behind: orientation(left, right, {x,y}) < 0
+      // = (x - ltX) * tangentDy - (y - ltY) * tangentDx < 0
+      const xStartMin = xStartRaw < startX &&
+          (xStartTest + 1 - leftTangentX) * tangentDy -
+                (yCoord - leftTangentY) * tangentDx <
+            0
+        ? trueMinXRaw(
+          startX,
+          startY,
+          radiusSq,
+          yCoord,
+          Math.max(xStartTest, minX),
+        )
+        : -Infinity;
+
+      // Inline infront: orientation(endLeft, endRight, {x,y}) > 0
+      const xEndMin = xStartRaw < endX &&
+          (xStartTest - 1 - endLeftTangentX) * tangentDy -
+                (yCoord - endLeftTangentY) * tangentDx >
+            0
+        ? trueMinXRaw(
+          endX,
+          endY,
+          radiusSq,
+          yCoord,
+          Math.max(xStartTest, minX),
+        )
+        : -Infinity;
+
+      const xStart = Math.max(xStartMin, xEndMin, xStartTest, minX);
+
+      const xStartMax = xEndRaw > startX &&
+          (xEndTest + 1 - leftTangentX) * tangentDy -
+                (yCoord - leftTangentY) * tangentDx <
+            0
+        ? trueMaxXRaw(
+          startX,
+          startY,
+          radiusSq,
+          yCoord,
+          Math.min(xEndTest, maxX),
+        )
+        : Infinity;
+
+      const xEndMax = xEndRaw > endX &&
+          (xEndTest - 1 - endLeftTangentX) * tangentDy -
+                (yCoord - endLeftTangentY) * tangentDx >
+            0
+        ? trueMaxXRaw(
+          endX,
+          endY,
+          radiusSq,
+          yCoord,
+          Math.min(xEndTest, maxX),
+        )
+        : Infinity;
+
+      const xEnd = Math.min(xStartMax, xEndMax, xEndTest, maxX);
+
+      const row = this.grid[yCoord];
+      if (!row) return false;
+      for (let x = xStart; x <= xEnd; x++) {
+        const tile = row[x];
+        if (!tile || !tile.pathable(pathing)) return false;
+      }
+
+      xStartRaw += finiteAbsTan ? absTan : 0;
+    }
+
+    return true;
   }
 
   entityToTileCoordsBounded(
@@ -1639,174 +1894,140 @@ export class PathingMap {
       }
     }
 
-    /** Floating point on tilemap (so world * resolution) */
-    const startPoint = {
-      x: startWorld.x * this.resolution,
-      y: startWorld.y * this.resolution,
-    };
-    /** Floating point on tilemap (so world * resolution) */
-    const endPoint = {
-      x: endWorld.x * this.resolution,
-      y: endWorld.y * this.resolution,
-    };
+    const startPX = startWorld.x * this.resolution;
+    const startPY = startWorld.y * this.resolution;
+    const endPX = endWorld.x * this.resolution;
+    const endPY = endWorld.y * this.resolution;
 
-    // Describe approach
-    const angle = Math.atan2(
-      endPoint.y - startPoint.y,
-      endPoint.x - startPoint.x,
-    );
-    const tan = (endPoint.x - startPoint.x) / (endPoint.y - startPoint.y);
-    const positiveSlope = endPoint.y > startPoint.y;
+    const lpDx = endPX - startPX;
+    const lpDy = endPY - startPY;
+    const lpDist = (lpDx * lpDx + lpDy * lpDy) ** 0.5;
+    const cosA = lpDx / lpDist;
+    const sinA = lpDy / lpDist;
+    const tan = lpDx / lpDy;
+    const positiveSlope = endPY > startPY;
 
-    // for looping
     const minY = positiveSlope
-      ? Math.floor(startPoint.y - radius)
-      : Math.floor(endPoint.y - radius);
+      ? Math.floor(startPY - radius)
+      : Math.floor(endPY - radius);
     const maxY = positiveSlope
-      ? Math.floor(endPoint.y + radius)
-      : Math.floor(startPoint.y + radius);
+      ? Math.floor(endPY + radius)
+      : Math.floor(startPY + radius);
     const yStart = positiveSlope ? minY : maxY;
     const yStep = positiveSlope ? 1 : -1;
     const ySteps = Math.abs(minY - maxY);
 
-    // for clamping
-    const minX = Math.floor(startPoint.x - radius);
-    const maxX = Math.floor(endPoint.x + radius);
+    const minX = Math.floor(startPX - radius);
+    const maxX = Math.floor(endPX + radius);
 
-    const leftTangent = polarProject(
-      startPoint,
-      angle - Math.PI / 2,
-      radius,
-    );
-    const rightTangent = polarProject(
-      startPoint,
-      angle + Math.PI / 2,
-      radius,
-    );
-    const endLeftTangent = polarProject(
-      endPoint,
-      angle - Math.PI / 2,
-      radius,
-    );
-    const endRightTangent = polarProject(
-      endPoint,
-      angle + Math.PI / 2,
-      radius,
-    );
+    // Trig identities: cos(a-π/2)=sinA, sin(a-π/2)=-cosA,
+    //                   cos(a+π/2)=-sinA, sin(a+π/2)=cosA
+    const sinAR = sinA * radius;
+    const cosAR = cosA * radius;
+    const leftTangentX = startPX + sinAR;
+    const leftTangentY = startPY - cosAR;
+    const rightTangentX = startPX - sinAR;
+    const rightTangentY = startPY + cosAR;
+    const endLeftTangentX = endPX + sinAR;
+    const endLeftTangentY = endPY - cosAR;
+
+    // Precompute orientation constants: both tangent pairs share same dy/dx
+    const tangentDy = 2 * cosAR;
+    const tangentDx = -2 * sinAR;
+
+    const radiusSq = radius * radius;
 
     const startFloor = positiveSlope
-      ? Math.floor(startPoint.y - radius) + 1
-      : Math.ceil(startPoint.y + radius) - 1;
+      ? Math.floor(startPY - radius) + 1
+      : Math.ceil(startPY + radius) - 1;
 
-    const rightGuide = {
-      x: isFinite(tan)
-        ? rightTangent.x + (startFloor - rightTangent.y) * tan
-        : rightTangent.x - radius,
-      y: startFloor,
-    };
-    const leftGuide = {
-      x: isFinite(tan)
-        ? leftTangent.x - (leftTangent.y - startFloor) * tan
-        : leftTangent.x - radius,
-      y: startFloor,
-    };
+    const rightGuideX = isFinite(tan)
+      ? rightTangentX + (startFloor - rightTangentY) * tan
+      : rightTangentX - radius;
+    const leftGuideX = isFinite(tan)
+      ? leftTangentX - (leftTangentY - startFloor) * tan
+      : leftTangentX - radius;
 
-    const guide = Math.max(rightGuide.x, leftGuide.x);
-    const guideDistance = Math.abs(rightGuide.x - leftGuide.x);
+    const guide = Math.max(rightGuideX, leftGuideX);
+    const guideDistance = Math.abs(rightGuideX - leftGuideX);
 
     const absTan = Math.abs(tan);
-    const totalShift = isFinite(absTan)
-      ? absTan + guideDistance
-      : guideDistance;
+    const finiteAbsTan = isFinite(absTan);
+    const totalShift = finiteAbsTan ? absTan + guideDistance : guideDistance;
 
     let xStartRaw = guide - totalShift;
     for (let y = 0; y <= ySteps; y++) {
-      const xEndRaw = xStartRaw + (isFinite(absTan) ? totalShift : Infinity);
+      const xEndRaw = xStartRaw + (finiteAbsTan ? totalShift : Infinity);
 
       const xStartTest = Math.floor(xStartRaw);
       const xEndTest = Math.floor(xEndRaw);
 
-      // Imagine an entity going right:
-      // 0110
-      // 1111
-      // 1111
-      // 0110
-      // We don't want to check the top-left or bottom-left tiles
-      const xStartMin = xStartRaw < startPoint.x &&
-          behind(
-            leftTangent,
-            rightTangent,
-            xStartTest + 1,
-            yStart + y * yStep,
-          )
-        ? trueMinX(
-          startPoint,
-          radius,
-          yStart + y * yStep,
+      const yCoord = yStart + y * yStep;
+
+      const xStartMin = xStartRaw < startPX &&
+          (xStartTest + 1 - leftTangentX) * tangentDy -
+                (yCoord - leftTangentY) * tangentDx <
+            0
+        ? trueMinXRaw(
+          startPX,
+          startPY,
+          radiusSq,
+          yCoord,
           Math.max(xStartTest, minX),
         )
         : -Infinity;
 
-      // Similar to the above, but to the left of the end location
-      const xEndMin = xStartRaw < endPoint.x &&
-          infront(
-            endLeftTangent,
-            endRightTangent,
-            xStartTest - 1,
-            yStart + y * yStep,
-          )
-        ? trueMinX(
-          endPoint,
-          radius,
-          yStart + y * yStep,
+      const xEndMin = xStartRaw < endPX &&
+          (xStartTest - 1 - endLeftTangentX) * tangentDy -
+                (yCoord - endLeftTangentY) * tangentDx >
+            0
+        ? trueMinXRaw(
+          endPX,
+          endPY,
+          radiusSq,
+          yCoord,
           Math.max(xStartTest, minX),
         )
         : -Infinity;
 
       const xStart = Math.max(xStartMin, xEndMin, xStartTest, minX);
 
-      // Similar to the above, but to the right of the start location
-      const xStartMax = xEndRaw > startPoint.x &&
-          behind(
-            leftTangent,
-            rightTangent,
-            xEndTest + 1,
-            yStart + y * yStep,
-          )
-        ? trueMaxX(
-          startPoint,
-          radius,
-          yStart + y * yStep,
+      const xStartMax = xEndRaw > startPX &&
+          (xEndTest + 1 - leftTangentX) * tangentDy -
+                (yCoord - leftTangentY) * tangentDx <
+            0
+        ? trueMaxXRaw(
+          startPX,
+          startPY,
+          radiusSq,
+          yCoord,
           Math.min(xEndTest, maxX),
         )
         : Infinity;
 
-      // Similar to the above, but to the right of the end location
-      const xEndMax = xEndRaw > endPoint.x &&
-          infront(
-            endLeftTangent,
-            endRightTangent,
-            xEndTest - 1,
-            yStart + y * yStep,
-          )
-        ? trueMaxX(
-          endPoint,
-          radius,
-          yStart + y * yStep,
+      const xEndMax = xEndRaw > endPX &&
+          (xEndTest - 1 - endLeftTangentX) * tangentDy -
+                (yCoord - endLeftTangentY) * tangentDx >
+            0
+        ? trueMaxXRaw(
+          endPX,
+          endPY,
+          radiusSq,
+          yCoord,
           Math.min(xEndTest, maxX),
         )
         : Infinity;
 
       const xEnd = Math.min(xStartMax, xEndMax, xEndTest, maxX);
 
+      const row = this.grid[yCoord];
+      if (!row) return false;
       for (let x = xStart; x <= xEnd; x++) {
-        const tile = this.grid[yStart + y * yStep]?.[x];
-        if (!tile || !tile.pathable(pathing)) {
-          return false;
-        }
+        const tile = row[x];
+        if (!tile || !tile.pathable(pathing)) return false;
       }
 
-      xStartRaw += isFinite(absTan) ? absTan : 0;
+      xStartRaw += finiteAbsTan ? absTan : 0;
     }
 
     return true;
@@ -1899,12 +2120,258 @@ export class PathingMap {
   }
 
   /**
+   * Find a path that may require destroying entities.
+   *
+   * Unlike path(), this uses unidirectional A* and can pass through
+   * entities that the canDestroy callback approves. Returns both the
+   * path and the list of entities that must be destroyed (in order).
+   *
+   * @param entity The entity to path
+   * @param target Target position
+   * @param canDestroy Callback that returns destruction cost for an entity,
+   *                   or undefined if the entity cannot be destroyed
+   * @param maxCost Maximum path cost before bailing out (default 100)
+   * @returns Path and entities to destroy, or undefined if no path exists
+   */
+  pathWithDestruction(
+    entity: PathingEntity,
+    target: Readonly<Point>,
+    canDestroy: (e: PathingEntity) => number | undefined,
+    maxCost = 100,
+  ): { path: Point[]; toDestroy: PathingEntity[] } | undefined {
+    if (typeof entity.radius !== "number") {
+      throw new Error("Can only path find radial entities");
+    }
+
+    const removed = this.entities.has(entity);
+    if (removed) this.removeEntity(entity);
+
+    try {
+      const pathing = entity.requiresPathing ?? entity.pathing;
+      if (pathing === undefined) return undefined;
+
+      const minimalTilemap = this.pointToTilemap(
+        entity.radius,
+        entity.radius,
+        entity.radius,
+        { type: pathing },
+      );
+      const entityOffset = entity.radius % (1 / this.resolution);
+
+      const startTile = this.entityToTile(entity);
+      const targetTile = this.entityToTile(entity, target);
+      if (!startTile || !targetTile) return undefined;
+
+      const targetReal = {
+        x: target.x * this.resolution,
+        y: target.y * this.resolution,
+      };
+
+      // Node type for our search - tracks destroyed entities per path
+      type Node = {
+        tile: Tile;
+        g: number;
+        f: number;
+        parent: Node | null;
+        destroyed: Set<PathingEntity>;
+      };
+
+      const heuristic = (tile: Tile) => h(tile, targetReal);
+
+      const startNode: Node = {
+        tile: startTile,
+        g: 0,
+        f: heuristic(startTile),
+        parent: null,
+        destroyed: new Set(),
+      };
+
+      const open = new BinaryHeap<Node>((n) => n.f);
+      open.push(startNode);
+
+      // Track best cost to reach each tile
+      const bestG = new Map<Tile, number>();
+      bestG.set(startTile, 0);
+
+      // Track best partial path (closest to target)
+      let bestPartial: Node | null = null;
+      let bestPartialH = Infinity;
+
+      const maxIterations = 2000;
+      let iterations = 0;
+
+      while (open.length > 0 && iterations++ < maxIterations) {
+        const current = open.pop();
+
+        // Track best partial path (node closest to target)
+        const currentH = heuristic(current.tile);
+        if (currentH < bestPartialH) {
+          bestPartialH = currentH;
+          bestPartial = current;
+        }
+
+        // Bail out if cost exceeds maximum
+        if (current.g > maxCost) continue;
+
+        // Reached target?
+        if (current.tile === targetTile) {
+          // Build path
+          const pathTiles: Tile[] = [];
+          let node: Node | null = current;
+          while (node) {
+            pathTiles.unshift(node.tile);
+            node = node.parent;
+          }
+
+          // Convert to world coordinates
+          const path = pathTiles.map((tile) => ({
+            x: this.xTileToWorld(tile.x) + entityOffset,
+            y: this.yTileToWorld(tile.y) + entityOffset,
+          }));
+
+          // Collect destroyed entities in order by walking the path
+          const toDestroy: PathingEntity[] = [];
+          const seen = new Set<PathingEntity>();
+          const nodesInOrder: Node[] = [];
+          node = current;
+          while (node) {
+            nodesInOrder.unshift(node);
+            node = node.parent;
+          }
+          for (const n of nodesInOrder) {
+            for (const e of n.destroyed) {
+              if (!seen.has(e)) {
+                seen.add(e);
+                toDestroy.push(e);
+              }
+            }
+          }
+
+          return { path, toDestroy };
+        }
+
+        // Explore neighbors
+        const neighbors = this.getNeighbors(current.tile);
+
+        for (const neighborTile of neighbors) {
+          let moveCost = 1;
+          let newDestroyed = current.destroyed;
+          let passable = neighborTile.pathable(pathing) &&
+            this._pathable(minimalTilemap, neighborTile.x, neighborTile.y);
+
+          if (!passable) {
+            // Blocked by terrain - impassable
+            if ((neighborTile.originalPathing & pathing) !== 0) continue;
+
+            // Check what entities are blocking and if we can destroy them
+            const blockers: Array<{ entity: PathingEntity; cost: number }> = [];
+            let canPass = true;
+
+            for (
+              const [blockingEntity, entityPathing] of neighborTile.entities
+            ) {
+              if ((entityPathing & pathing) !== 0) {
+                // Already committed to destroying this one
+                if (current.destroyed.has(blockingEntity)) continue;
+
+                const cost = canDestroy(blockingEntity);
+                if (cost === undefined) {
+                  canPass = false;
+                  break;
+                }
+                blockers.push({ entity: blockingEntity, cost });
+              }
+            }
+
+            if (!canPass) continue;
+
+            passable = true;
+            if (blockers.length > 0) {
+              newDestroyed = new Set(current.destroyed);
+              for (const { entity: blocker, cost } of blockers) {
+                newDestroyed.add(blocker);
+                moveCost += cost;
+              }
+            }
+          }
+
+          if (!passable) continue;
+
+          const g = current.g + moveCost;
+
+          // Skip if exceeds max cost
+          if (g > maxCost) continue;
+
+          // Skip if we've found a better path to this tile
+          const existingG = bestG.get(neighborTile);
+          if (existingG !== undefined && existingG <= g) continue;
+          bestG.set(neighborTile, g);
+
+          open.push({
+            tile: neighborTile,
+            g,
+            f: g + heuristic(neighborTile),
+            parent: current,
+            destroyed: newDestroyed,
+          });
+        }
+      }
+
+      // No complete path found - return best partial path if it has structures to destroy
+      if (bestPartial && bestPartial.destroyed.size > 0) {
+        const pathTiles: Tile[] = [];
+        let node: Node | null = bestPartial;
+        while (node) {
+          pathTiles.unshift(node.tile);
+          node = node.parent;
+        }
+
+        const path = pathTiles.map((tile) => ({
+          x: this.xTileToWorld(tile.x) + entityOffset,
+          y: this.yTileToWorld(tile.y) + entityOffset,
+        }));
+
+        const toDestroy: PathingEntity[] = [];
+        const seen = new Set<PathingEntity>();
+        const nodesInOrder: Node[] = [];
+        node = bestPartial;
+        while (node) {
+          nodesInOrder.unshift(node);
+          node = node.parent;
+        }
+        for (const n of nodesInOrder) {
+          for (const e of n.destroyed) {
+            if (!seen.has(e)) {
+              seen.add(e);
+              toDestroy.push(e);
+            }
+          }
+        }
+
+        return { path, toDestroy };
+      }
+
+      return undefined;
+    } finally {
+      if (removed) this.addEntity(entity);
+    }
+  }
+
+  /**
    * Removes the entity from the PathingMap, clearing it from all tiles.
    */
   removeEntity(entity: Entity): void {
     const tiles = this.entities.get(entity as PathingEntity);
     if (tiles) tiles.forEach((tile) => tile.removeEntity(entity));
     this.entities.delete(entity as PathingEntity);
+  }
+
+  getExistingTile(x: number, y: number): Tile | undefined {
+    return this.grid[y]?.[x];
+  }
+
+  getEntityTiles(entity: PathingEntity): readonly Tile[] | undefined {
+    return this.entities.get(entity);
   }
 
   // paint(): void {

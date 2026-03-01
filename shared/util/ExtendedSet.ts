@@ -38,12 +38,32 @@ export class ExtendedSet<T> extends Set<T> {
     return newSet;
   }
 
+  filterToArray<U extends T>(
+    predicate: ((value: T) => value is U) | ((value: T) => unknown),
+  ): U[] {
+    const result: U[] = [];
+    for (const element of this) {
+      if (predicate(element)) result.push(element as U);
+    }
+    return result;
+  }
+
   clone() {
     return new ExtendedSet(this);
   }
 
   first() {
     return this.values().next().value;
+  }
+
+  get length() {
+    return this.size;
+  }
+
+  map<U>(mapper: (item: T) => U): U[] {
+    const result: U[] = [];
+    for (const element of this) result.push(mapper(element));
+    return result;
   }
 
   find(mapper: (item: T) => boolean) {

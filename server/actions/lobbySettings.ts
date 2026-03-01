@@ -54,7 +54,7 @@ export const serializeLobbySettings = (
   lobby: Lobby,
   playerOffset = 0,
 ): LobbySettings => {
-  // Count only non-observer, non-pending players
+  // Count only non-observer, non-pending players (includes computers)
   const nonObserverCount =
     Array.from(lobby.players).filter((p) =>
       p.team !== "observer" && p.team !== "pending"

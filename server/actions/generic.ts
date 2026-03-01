@@ -1,5 +1,6 @@
 import z from "zod";
 import { Client, getAllClients } from "../client.ts";
+import { isComputerPlayer } from "../computerPlayer.ts";
 import { send } from "../lobbyApi.ts";
 import { generateUniqueName } from "../util/uniqueName.ts";
 import { colors } from "@/shared/data.ts";
@@ -107,7 +108,7 @@ const handleColorChange = (client: Client, event: ColorChangeEvent) => {
     }
   }
 
-  // Find the target client
+  // Find the target client (could be human or computer)
   const targetClient = Array.from(client.lobby?.players ?? []).find((c) =>
     c.id === targetPlayerId
   );
@@ -148,9 +149,28 @@ const handleTeamChange = (client: Client, event: TeamChangeEvent) => {
   const targetPlayerId = event.playerId ?? client.id;
   const requestedTeam = event.team;
 
+  // Find the target client (could be human or computer)
+  const targetClient = Array.from(client.lobby.players).find((c) =>
+    c.id === targetPlayerId
+  );
+  if (!targetClient) {
+    console.error(`Target player ${targetPlayerId} not found in lobby`);
+    return;
+  }
+
+  const isComputerTarget = isComputerPlayer(targetClient);
+
   // Permission checking
   const isHost = client.lobby.host?.id === client.id;
   const isSelf = targetPlayerId === client.id;
+
+  // Computer players can only be modified by host
+  if (isComputerTarget && !isHost) {
+    console.error(
+      `Client ${client.id} attempted to change computer team but is not the host`,
+    );
+    return;
+  }
 
   if (!isSelf && !isHost) {
     console.error(
@@ -170,12 +190,9 @@ const handleTeamChange = (client: Client, event: TeamChangeEvent) => {
     return;
   }
 
-  // Find the target client
-  const targetClient = Array.from(client.lobby.players).find((c) =>
-    c.id === targetPlayerId
-  );
-  if (!targetClient) {
-    console.error(`Target player ${targetPlayerId} not found in lobby`);
+  // Computers cannot be observers
+  if (isComputerTarget && requestedTeam === "observer") {
+    console.error(`Computer players cannot be set to observer`);
     return;
   }
 

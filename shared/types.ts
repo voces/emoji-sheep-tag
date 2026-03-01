@@ -72,6 +72,7 @@ export type Item = {
   readonly gold: number;
   readonly binding: ReadonlyArray<string>;
   readonly charges?: number;
+  readonly unique?: boolean;
   readonly actions?: ReadonlyArray<UnitDataAction>;
   readonly buffs?: ReadonlyArray<Buff>;
 };
@@ -276,6 +277,7 @@ export type Entity = {
 
   // Player data
   isPlayer?: boolean;
+  isComputer?: boolean;
   isTeam?: boolean;
   team?: "pending" | "observer" | "sheep" | "wolf";
   gold?: number;

@@ -15,8 +15,49 @@ import { appContext } from "@/shared/context.ts";
 import { practiceModeActions } from "@/shared/data.ts";
 import { send } from "../lobbyApi.ts";
 import type { Round } from "../lobby.ts";
-import { interval, timeout } from "../api/timing.ts";
-import { lobbyContext } from "../contexts.ts";
+import { timeout } from "../api/timing.ts";
+import { clientContext, lobbyContext } from "../contexts.ts";
+
+const tryGetClient = () => {
+  try {
+    return clientContext.current;
+  } catch {
+    return undefined;
+  }
+};
+
+const realtimeInterval = (
+  cb: () => void,
+  seconds: number,
+): () => void => {
+  const lobby = lobbyContext.current;
+  const ecs = appContext.current;
+  const lobbyRef = new WeakRef(lobby);
+  const ecsRef = new WeakRef(ecs);
+  const client = tryGetClient();
+  const clientRef = client ? new WeakRef(client) : undefined;
+  const i = setInterval(() => {
+    const lobby = lobbyRef.deref();
+    const ecs = ecsRef.deref();
+    const client = clientRef?.deref();
+    if (!lobby || !ecs || ecs !== lobby.round?.ecs) return clearInterval(i);
+    lobbyContext.with(lobby, () => {
+      appContext.with(ecs, () => {
+        if (client) {
+          clientContext.with(client, () => {
+            if (ecs.flushScheduled) cb();
+            else ecs.batch(cb);
+          });
+        } else {
+          if (ecs.flushScheduled) cb();
+          else ecs.batch(cb);
+        }
+      });
+      flushUpdates();
+    });
+  }, seconds * 1000);
+  return () => clearInterval(i);
+};
 
 type PlayerLike = {
   id: string;
@@ -29,6 +70,7 @@ type PlayerLike = {
   team?: "sheep" | "wolf" | "pending" | "observer";
   isPlayer: true;
   startLocation?: { x: number; y: number; map: string };
+  isComputer?: boolean;
 };
 
 type LobbySettingsLike = {
@@ -82,6 +124,7 @@ const createPlayerEntities = <T extends PlayerLike>(
       name: c.name,
       playerColor: c.playerColor,
       isPlayer: true,
+      isComputer: "isComputer" in c ? c.isComputer : undefined,
       team: "sheep",
       gold: practice ? 100_000 : sheepPlayerGold,
       sheepCount: settings.mode !== "switch"
@@ -98,6 +141,7 @@ const createPlayerEntities = <T extends PlayerLike>(
       name: c.name,
       playerColor: c.playerColor,
       isPlayer: true,
+      isComputer: "isComputer" in c ? c.isComputer : undefined,
       team: "wolf",
       gold: isTeamGold ? 0 : settings.startingGold.wolves,
       sheepCount: c.sheepCount,
@@ -111,6 +155,7 @@ const createPlayerEntities = <T extends PlayerLike>(
       id: "practice-enemy",
       name: "Enemy",
       isPlayer: true,
+      isComputer: true,
       team: "wolf",
       gold: 100_000,
       playerColor: "#ff0000",
@@ -355,9 +400,9 @@ export const initializeGame = <T extends PlayerLike>(
 
   appContext.with(ecs, () =>
     ecs.batch(() => {
-      clearIntervalFn = interval(() => {
+      clearIntervalFn = realtimeInterval(() => {
         ecs.tick++;
-        ecs.update();
+        ecs.update(TICK_RATE);
       }, TICK_RATE);
 
       generateDoodads(editor ? undefined : ["static", "dynamic"]);

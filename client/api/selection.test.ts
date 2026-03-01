@@ -375,44 +375,26 @@ describe("selectAllMirrors", () => {
 });
 
 describe("selectPrimaryUnit", () => {
-  it("should select sheep primary unit and move camera (with extra primary units)", () => {
-    // Create sheep primary unit (first one) plus extra primary units
-    // Note: sheep auto-selects and centers camera on creation
+  it("should select sheep primary unit and move camera", () => {
     app.addEntity({
       id: "sheep-1",
       prefab: "sheep",
       owner: "player-1",
       position: { x: 10, y: 20 },
     });
-    app.addEntity({
-      id: "sheep-2",
-      prefab: "sheep",
-      owner: "player-1",
-      position: { x: 30, y: 40 },
-    });
-    app.addEntity({
-      id: "wolf-1",
-      prefab: "wolf",
-      owner: "player-1",
-      position: { x: 50, y: 60 },
-    });
 
-    // Clear selection and set camera to a different position
     clearSelection();
     camera.position.x = 100;
     camera.position.y = 100;
 
     selectPrimaryUnit();
 
-    // Should select first sheep (the primary unit)
     expect(Array.from(selection, (e) => e.id)).toEqual(["sheep-1"]);
-
-    // selectPrimaryUnit only moves camera when unit was already selected
-    // Since we cleared selection first, camera doesn't move on first call
+    // First call selects but doesn't move camera
     expect(camera.position.x).toBe(100);
     expect(camera.position.y).toBe(100);
 
-    // Call selectPrimaryUnit again - now it should move camera
+    // Second call moves camera to primary unit
     selectPrimaryUnit();
     expect(camera.position.x).toBe(10);
     expect(camera.position.y).toBe(20);

@@ -224,11 +224,23 @@ export class KdTree {
    * at the first true result. Returns null if no point satisfies the filter.
    */
   nearest(x: number, y: number, filter: (p: Point) => boolean): Point | null {
-    if (!this.root) return null;
+    return this.kNearest(x, y, 1, filter)[0] ?? null;
+  }
+
+  /**
+   * Returns up to k nearest points to (x, y) for which filter(point) returns true,
+   * ordered nearest-first.
+   */
+  kNearest(
+    x: number,
+    y: number,
+    k: number,
+    filter: (p: Point) => boolean,
+  ): Point[] {
+    if (!this.root || k <= 0) return [];
 
     type Bounds = { minX: number; minY: number; maxX: number; maxY: number };
 
-    // Distance helpers (squared distances to avoid sqrt).
     const dist2Point = (p: Point) => {
       const dx = p.x - x;
       const dy = p.y - y;
@@ -244,33 +256,28 @@ export class KdTree {
       return dx * dx + dy * dy;
     };
 
-    // We push two kinds of work items: regions (subtrees) and actual points.
     type NodeItem = {
       kind: "node";
       node: KdTreeNode;
       bounds: Bounds;
-      key: number; // lower bound distance^2 to the region
+      key: number;
     };
-    type PointItem = {
-      kind: "point";
-      point: Point;
-      key: number; // exact distance^2 to the point
-    };
+    type PointItem = { kind: "point"; point: Point; key: number };
     type Item = NodeItem | PointItem;
 
     const heap = new BinaryHeap<Item>((it) => it.key);
 
-    // Start with the root covering all space (use large finite bounds).
     const INF = Number.POSITIVE_INFINITY;
-    const rootBounds: Bounds = { minX: -INF, minY: -INF, maxX: INF, maxY: INF };
+    const rootBounds: Bounds = {
+      minX: -INF,
+      minY: -INF,
+      maxX: INF,
+      maxY: INF,
+    };
     heap.push({ kind: "node", node: this.root, bounds: rootBounds, key: 0 });
 
-    // Expand a node into its point and its children regions.
     const enqueueChildren = (n: KdTreeNode, b: Bounds) => {
-      // Enqueue the node's point itself (so points are tested in true nearest-first order).
       heap.push({ kind: "point", point: n.point, key: dist2Point(n.point) });
-
-      // Split bounds for children based on axis.
       if (n.left) {
         const lb: Bounds = n.axis === 0
           ? { minX: b.minX, maxX: n.point.x, minY: b.minY, maxY: b.maxY }
@@ -295,19 +302,16 @@ export class KdTree {
       }
     };
 
-    // Best-first search: always expand the closest pending thing.
-    while (heap.length) {
+    const results: Point[] = [];
+    while (heap.length && results.length < k) {
       const item = heap.pop()!;
       if (item.kind === "point") {
-        // Call the filter in strictly nearest-first order.
-        if (filter(item.point)) return item.point;
-        // else keep going
+        if (filter(item.point)) results.push(item.point);
       } else {
-        // Expand this subtree: its lower-bound distance is <= any of its contents.
         enqueueChildren(item.node, item.bounds);
       }
     }
 
-    return null; // no point satisfied the filter
+    return results;
   }
 }

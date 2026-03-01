@@ -9,6 +9,21 @@ import { findActionAndItem } from "@/shared/util/actionLookup.ts";
 import { canExecuteAction, precast } from "../orders/precast.ts";
 import { postCast } from "../orders/postCast.ts";
 import { allowedToExecuteActionOnUnit } from "../util/allyPermissions.ts";
+import { Point } from "@/shared/pathing/math.ts";
+import { Entity } from "@/shared/types.ts";
+
+const isAlreadyCasting = (
+  unit: Entity,
+  orderId: string,
+  target: Point | string | undefined,
+): boolean =>
+  unit.order?.type === "cast" &&
+  unit.order.orderId === orderId &&
+  (typeof target === "string"
+    ? "targetId" in unit.order && unit.order.targetId === target
+    : "target" in unit.order &&
+      unit.order.target?.x === target?.x &&
+      unit.order.target?.y === target?.y);
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),
@@ -71,6 +86,9 @@ export const unitOrder = (
     if (orderDef) {
       // Order-specific validation
       if (orderDef.canExecute && !orderDef.canExecute(unit, target)) continue;
+
+      // Already casting this order on same target - ignore
+      if (!queue && isAlreadyCasting(unit, order, target)) continue;
 
       const issueResult = orderDef.onIssue(unit, target, queue);
 

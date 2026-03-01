@@ -14,6 +14,7 @@ import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
+import { Button } from "@/components/forms/Button.tsx";
 
 const PlayerMenuButton = styled.button<{ $clickable: boolean }>`
   width: 24px;
@@ -112,11 +113,12 @@ type PlayerIconProps = {
   player: Player;
   isLocalPlayer: boolean;
   isHost: boolean;
+  isComputer: boolean;
   nameInputRef: React.RefObject<NameInputRef | null>;
 };
 
 const PlayerIcon = (
-  { player, isLocalPlayer, isHost, nameInputRef }: PlayerIconProps,
+  { player, isLocalPlayer, isHost, isComputer, nameInputRef }: PlayerIconProps,
 ) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -173,6 +175,14 @@ const PlayerIcon = (
     nameInputRef.current?.startEditing();
   };
 
+  const handleRemoveComputer = () => {
+    send({
+      type: "computer",
+      event: { type: "remove", computerId: player.id },
+    });
+    setMenuOpen(false);
+  };
+
   return (
     <>
       <PlayerMenuButton
@@ -217,14 +227,19 @@ const PlayerIcon = (
                     Set team: Wolf
                   </MenuItem>
                 )}
-                {player.team !== "observer" && (
+                {player.team !== "observer" && !isComputer && (
                   <MenuItem onClick={() => handleTeamChange("observer")}>
                     Set team: Observer
                   </MenuItem>
                 )}
-                {!isLocalPlayer && (
+                {!isLocalPlayer && !isComputer && (
                   <MenuItem onClick={handleTransferHost}>
                     Transfer host
+                  </MenuItem>
+                )}
+                {isComputer && (
+                  <MenuItem onClick={handleRemoveComputer}>
+                    Remove computer
                   </MenuItem>
                 )}
               </>
@@ -274,10 +289,16 @@ type PlayerRowProps = Player & {
   isHost: boolean;
   isPlayerHost: boolean;
   isCaptain: boolean;
+  isComputer: boolean;
 };
 
+const ComputerLabel = styled.span`
+  opacity: 0.6;
+  font-size: 0.9em;
+`;
+
 const PlayerRow = (props: PlayerRowProps) => {
-  const { name, isLocalPlayer, isPlayerHost, isCaptain } = props;
+  const { name, isLocalPlayer, isPlayerHost, isCaptain, isComputer } = props;
   const nameInputRef = useRef<NameInputRef>(null);
 
   return (
@@ -285,27 +306,52 @@ const PlayerRow = (props: PlayerRowProps) => {
       <PlayerIcon {...props} player={props} nameInputRef={nameInputRef} />
       {isPlayerHost && <CaptainStar title="Host">👑</CaptainStar>}
       {isCaptain && <CaptainStar>⭐</CaptainStar>}
-      <NameInput
-        ref={nameInputRef}
-        value={name ?? ""}
-        onChange={(e) => {
-          send({ type: "generic", event: { type: "nameChange", name: e } });
-        }}
-        readonly={!isLocalPlayer}
-      />
+      {isComputer
+        ? (
+          <>
+            <span>{name ?? ""}</span>
+            <ComputerLabel>(CPU)</ComputerLabel>
+          </>
+        )
+        : (
+          <NameInput
+            ref={nameInputRef}
+            value={name ?? ""}
+            onChange={(e) => {
+              send({ type: "generic", event: { type: "nameChange", name: e } });
+            }}
+            readonly={!isLocalPlayer}
+          />
+        )}
     </PlayerRowContainer>
   );
 };
 
+const AddComputerButton = styled(Button)`
+  margin-top: ${({ theme }) => theme.spacing.md};
+`;
+
 export const Players = () => {
   const players = usePlayers();
-  useListenToEntities(players, ["playerColor", "name", "team", "sheepCount"]);
+  useListenToEntities(players, [
+    "playerColor",
+    "name",
+    "team",
+    "sheepCount",
+    "isComputer",
+  ]);
   const rounds = useReactiveVar(roundsVar);
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const captainsDraft = useReactiveVar(captainsDraftVar);
   const localPlayer = useLocalPlayer();
 
   const captains = captainsDraft?.captains;
+  const isHost = localPlayer?.id === lobbySettings.host;
+  const isPlaying = lobbySettings.practice || lobbySettings.editor;
+
+  const handleAddComputer = () => {
+    send({ type: "computer", event: { type: "add" } });
+  };
 
   return (
     <PlayersCard>
@@ -327,9 +373,10 @@ export const Players = () => {
               <PlayerRow
                 {...p}
                 isLocalPlayer={p.id === localPlayer?.id}
-                isHost={localPlayer?.id === lobbySettings.host}
+                isHost={isHost}
                 isPlayerHost={p.id === lobbySettings.host}
                 isCaptain={captains?.includes(p.id) ?? false}
+                isComputer={p.isComputer ?? false}
               />
               <GridHeader $align="right">
                 {p.sheepCount}
@@ -347,6 +394,11 @@ export const Players = () => {
           );
         })}
       </PlayersGrid>
+      {isHost && !isPlaying && (
+        <AddComputerButton onClick={handleAddComputer}>
+          Add Computer
+        </AddComputerButton>
+      )}
     </PlayersCard>
   );
 };

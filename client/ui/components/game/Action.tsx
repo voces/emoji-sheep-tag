@@ -113,7 +113,12 @@ export const Action = memo(({ action, current, entity }: {
     playSound("ui", enabling ? "chimes1" : "click1", { volume: 0.3 });
   }, [isAutocastable, orderId, isAutocastEnabled]);
 
-  const disabled = !hasMana || !hasGold || blockedByConstructing || onCooldown;
+  const alreadyOwnsUnique = action.type === "purchase" &&
+    items[action.itemId]?.unique === true &&
+    !!entity.inventory?.some((i) => i.id === action.itemId);
+
+  const disabled = !hasMana || !hasGold || blockedByConstructing ||
+    onCooldown || alreadyOwnsUnique;
 
   switch (action.type) {
     case "auto":

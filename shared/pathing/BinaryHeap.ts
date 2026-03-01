@@ -1,5 +1,7 @@
 export class BinaryHeap<T> extends Array<T> {
   scoreFunc: (element: T) => number;
+  private indexMap: Map<T, number> = new Map();
+  private scores: number[] = [];
 
   constructor(scoreFunc: (element: T) => number) {
     super();
@@ -7,95 +9,121 @@ export class BinaryHeap<T> extends Array<T> {
   }
 
   override push(element: T): number {
-    this.bubbleUp(super.push(element) - 1);
-
-    // todo: return final index?
+    const idx = super.push(element) - 1;
+    this.indexMap.set(element, idx);
+    this.bubbleUp(idx);
     return 0;
   }
 
   override pop(): T {
     const top = this[0];
-    const bottom = super.pop();
+    const end = this.length - 1;
+    this.indexMap.delete(top);
 
-    if (this.length > 0) {
-      this[0] = bottom as T;
+    if (end > 0) {
+      const bottom = this[end];
+      super.pop();
+      this[0] = bottom;
+      this.scores[0] = this.scores[end];
+      this.indexMap.set(bottom, 0);
       this.sinkDown(0);
+    } else {
+      super.pop();
     }
 
     return top;
   }
 
   remove(element: T): void {
-    const length = this.length;
+    const i = this.indexMap.get(element);
+    if (i === undefined) return;
 
-    for (let i = 0; i < length; i++) {
-      if (this[i] !== element) continue;
+    const end = this.length - 1;
+    this.indexMap.delete(element);
 
-      const bottom = super.pop();
-
-      if (i === length - 1) break;
-
-      this[i] = bottom as T;
-      this.bubbleUp(i);
-      this.sinkDown(i);
-
-      break;
+    if (i === end) {
+      super.pop();
+      return;
     }
+
+    const bottom = this[end];
+    super.pop();
+    this[i] = bottom;
+    this.scores[i] = this.scores[end];
+    this.indexMap.set(bottom, i);
+    this.bubbleUp(i);
+    this.sinkDown(i);
+  }
+
+  override indexOf(element: T): number {
+    return this.indexMap.get(element) ?? -1;
   }
 
   bubbleUp(index: number): void {
     const element = this[index];
     const score = this.scoreFunc(element);
+    this.scores[index] = score;
 
     while (index > 0) {
-      const parentIndex = Math.floor((index + 1) / 2) - 1,
-        parent = this[parentIndex];
+      const parentIndex = ((index + 1) >> 1) - 1;
+      const parentScore = this.scores[parentIndex];
 
-      if (score >= this.scoreFunc(parent)) break;
+      if (score >= parentScore) break;
 
+      const parent = this[parentIndex];
       this[parentIndex] = element;
       this[index] = parent;
+      this.scores[parentIndex] = score;
+      this.scores[index] = parentScore;
+      this.indexMap.set(parent, index);
 
       index = parentIndex;
     }
+
+    this.indexMap.set(element, index);
   }
 
   sinkDown(index: number): void {
     const length = this.length;
     const element = this[index];
     const score = this.scoreFunc(element);
+    this.scores[index] = score;
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const rightIndex = (index + 1) * 2;
       const leftIndex = rightIndex - 1;
-      let leftScore;
 
-      let swapIndex = undefined;
+      let swapIndex: number | undefined;
+      let swapScore = score;
 
       if (leftIndex < length) {
-        const left = this[leftIndex];
-        leftScore = this.scoreFunc(left);
-
-        if (leftScore < score) swapIndex = leftIndex;
+        const leftScore = this.scores[leftIndex];
+        if (leftScore < swapScore) {
+          swapIndex = leftIndex;
+          swapScore = leftScore;
+        }
       }
 
       if (rightIndex < length) {
-        const right = this[rightIndex];
-
-        if (
-          this.scoreFunc(right) <
-            (swapIndex === undefined ? score : (leftScore as number))
-        ) {
+        const rightScore = this.scores[rightIndex];
+        if (rightScore < swapScore) {
           swapIndex = rightIndex;
         }
       }
 
       if (swapIndex === undefined) break;
 
-      this[index] = this[swapIndex];
+      const swapped = this[swapIndex];
+      const swappedScore = this.scores[swapIndex];
+      this[index] = swapped;
       this[swapIndex] = element;
+      this.scores[index] = swappedScore;
+      this.scores[swapIndex] = score;
+      this.indexMap.set(swapped, index);
       index = swapIndex;
     }
+
+    this.indexMap.set(element, index);
   }
 }

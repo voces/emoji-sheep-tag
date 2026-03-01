@@ -125,6 +125,8 @@ export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
       cameraMovement.dispose();
       raycast.dispose();
       minimapRenderer.dispose();
+      renderer.forceContextLoss();
+      renderer.dispose();
     };
   }, [canvas]);
 

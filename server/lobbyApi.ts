@@ -1,5 +1,6 @@
 import { ServerToClientMessage } from "../client/client.ts";
 import { Client } from "./client.ts";
+import { isComputerPlayer } from "./computerPlayer.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { deleteLobby } from "./lobby.ts";
 import { clearUpdatesCache, flushUpdates } from "./updates.ts";
@@ -7,7 +8,7 @@ import { serializeLobbySettings } from "./actions/lobbySettings.ts";
 import { findPlayerUnit } from "./systems/playerEntities.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { removePlayerFromEcs, sendPlayerGold } from "./api/player.ts";
-import { getSheep } from "./systems/sheep.ts";
+import { getSheep } from "./systems/collections.ts";
 import { distributeEquitably } from "./util/equitableDistribution.ts";
 import { isPractice } from "./api/st.ts";
 import { broadcastLobbyList, joinHub } from "./hub.ts";
@@ -274,14 +275,15 @@ export const leave = (client?: Client) => {
 
   lobby.players.delete(client);
 
-  // Kill the lobby
-  if (lobby.players.size === 0) return deleteLobby(lobby);
+  // Kill the lobby if no human players remain
+  const humanPlayers = Array.from(lobby.players).filter(
+    (p) => !isComputerPlayer(p),
+  ) as Client[];
+  if (humanPlayers.length === 0) return deleteLobby(lobby);
 
-  // Elevate new host
+  // Elevate new host (only human players can be host)
   if (lobby.host === client) {
-    const next = lobby.players.values().next();
-    if (next.done) throw new Error("Expected lobby to be non-empty");
-    lobby.host = next.value;
+    lobby.host = humanPlayers[0];
   }
 
   // Handle captains draft when a non-observer player leaves during active draft

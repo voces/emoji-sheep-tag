@@ -1,9 +1,12 @@
 import { type Client } from "./client.ts";
+import { type ComputerPlayer } from "./computerPlayer.ts";
 import { broadcastLobbyList } from "./hub.ts";
 import { generateLobbyName } from "./util/lobbyNames.ts";
 import { cleanupSmartDrafter } from "./st/roundHelpers.ts";
 import { cleanupShardForDeletedLobby } from "./shardRegistry.ts";
 import type { Game } from "./ecs.ts";
+
+export type LobbyPlayer = Client | ComputerPlayer;
 
 /**
  * Contexts:
@@ -74,7 +77,7 @@ export type Round = {
 };
 
 export type Lobby = {
-  players: Set<Client>;
+  players: Set<LobbyPlayer>;
   host: Client | undefined; // Auto (ranked) lobbies have no host
   name: string;
   settings: LobbySettings;

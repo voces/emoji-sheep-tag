@@ -4,7 +4,7 @@ import { timeout } from "../api/timing.ts";
 import { grantPlayerGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
 import { addSystem } from "@/shared/context.ts";
-import { getSheep } from "./sheep.ts";
+import { getSheep } from "./collections.ts";
 import { distributeEquitably } from "../util/equitableDistribution.ts";
 import { newUnit, orderAttack } from "../api/unit.ts";
 import { Entity } from "@/shared/types.ts";

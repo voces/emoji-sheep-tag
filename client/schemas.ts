@@ -251,6 +251,7 @@ const zItem = z.object({
   gold: z.number(),
   binding: z.string().array().readonly(),
   charges: z.number().optional(),
+  unique: z.boolean().optional(),
   actions: z.array(zAction).readonly().optional(),
   buffs: z.array(zBuff).readonly().optional(),
 });
@@ -278,6 +279,7 @@ export const zUpdate = z.object({
 
   // Player data
   isPlayer: z.boolean().optional(),
+  isComputer: z.boolean().optional(),
   isTeam: z.boolean().optional(),
   team: z.union([
     z.literal("pending"),

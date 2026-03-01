@@ -1,7 +1,7 @@
 import { styled } from "styled-components";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { useLocalPlayer } from "@/hooks/usePlayers.ts";
+import { useLocalPlayer, usePlayer } from "@/hooks/usePlayers.ts";
 import { Entity } from "../../../ecs.ts";
 import { lookup } from "../../../systems/lookup.ts";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
@@ -11,6 +11,8 @@ import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { getDistanceMultiplier } from "@/shared/penAreas.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { getEffectivePlayerGold } from "../../../api/player.ts";
+import { selection } from "../../../systems/selection.ts";
+import { useSet } from "@/hooks/useSet.ts";
 
 const Container = styled.div(({ theme }) => ({
   width: 100,
@@ -111,7 +113,26 @@ export const Gold = () => {
   const editor = useReactiveVar(editorVar);
   const player = useLocalPlayer();
 
+  // For observers, track selection to show selected entity's owner gold
+  useSet(selection);
+  const selectedEntity = selection.first();
+  const selectedOwnerId = selectedEntity?.owner;
+  const selectedOwner = usePlayer(
+    player?.team === "observer" ? selectedOwnerId : undefined,
+  );
+
+  // Listen to selected entity's owner changes
+  useListenToEntityProp(
+    player?.team === "observer" ? selectedEntity : undefined,
+    "owner",
+  );
+
   if (!player || editor) return null;
+
+  // Observer viewing a selected entity's owner gold
+  if (player.team === "observer" && selectedOwner) {
+    return <InnerGold entity={selectedOwner} team={selectedOwner.team} />;
+  }
 
   return <InnerGold entity={player} team={player.team} />;
 };

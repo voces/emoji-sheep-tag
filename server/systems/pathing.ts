@@ -70,9 +70,11 @@ export const calcPath = (
     }
   }
 
+  // Extract only {x, y} from target to avoid passing extra properties
+  // (e.g., order objects have type, unitType, path etc. that shouldn't be in the path)
   const path = pathingMap().path(
     entity,
-    target,
+    { x: target.x, y: target.y },
     { distanceFromTarget, removeMovingEntities },
   ).slice(1);
 

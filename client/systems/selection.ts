@@ -12,6 +12,7 @@ import { isAlly } from "@/shared/api/unit.ts";
 import { Color } from "three";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { startFollowingEntity, stopFollowingEntity } from "../api/camera.ts";
+import { practiceVar } from "@/vars/practice.ts";
 
 // X'd farms not removed from selection
 export const selection = new ExtendedSet<SystemEntity<"selected">>();
@@ -149,7 +150,7 @@ addSystem({
     if (e.prefab === "startLocation") {
       selectEntity(e);
       startFollowingEntity(e);
-      if (!primaryUnitVar()) primaryUnitVar(e);
+      primaryUnitVar(e);
     } else if (e.prefab === "sheep") {
       // Sheep: select, center camera, stop following start location
       stopFollowingEntity();
@@ -158,7 +159,7 @@ addSystem({
         camera.position.x = e.position.x;
         camera.position.y = e.position.y;
       }
-      if (!primaryUnitVar()) primaryUnitVar(e);
+      primaryUnitVar(e);
     } else if (e.prefab === "wolf" || e.prefab === "spirit") {
       // Required to prevent selecting mirrors
       if (selection.size === 0) {
@@ -168,7 +169,7 @@ addSystem({
           camera.position.y = e.position.y;
         }
       }
-      if (!primaryUnitVar()) primaryUnitVar(e);
+      if (!practiceVar()) primaryUnitVar(e);
     }
 
     if (e.prefab === "wolf" && e.isMirror) mirrors.add(e);

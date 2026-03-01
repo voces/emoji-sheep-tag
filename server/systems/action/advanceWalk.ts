@@ -1,5 +1,5 @@
 import { lookup } from "../lookup.ts";
-import { FOLLOW_DISTANCE } from "@/shared/constants.ts";
+import { FOLLOW_DISTANCE, TICK_RATE } from "@/shared/constants.ts";
 import { isAlive } from "../../api/unit.ts";
 import { canSee } from "@/shared/api/unit.ts";
 import { Entity } from "@/shared/types.ts";
@@ -10,11 +10,12 @@ import {
   angleDifference,
   distanceBetweenEntities,
 } from "@/shared/pathing/math.ts";
+import { getTick } from "../../api/timing.ts";
 
 export const advanceWalk = (e: Entity, delta: number): number => {
   if (e.order?.type !== "walk") return delta;
 
-  const now = Date.now() / 1000;
+  const now = getTick() * TICK_RATE;
 
   // Continuously repath for moving targets (targetId)
   if ("targetId" in e.order) {
@@ -28,7 +29,7 @@ export const advanceWalk = (e: Entity, delta: number): number => {
     }
 
     const distance = e.position && target.position
-      ? distanceBetweenEntities(e, target)
+      ? distanceBetweenEntities(e, target, FOLLOW_DISTANCE)
       : Infinity;
 
     // Check if already within follow distance

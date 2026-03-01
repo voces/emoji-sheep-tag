@@ -1,3 +1,5 @@
+import { shuffle } from "./shuffle.ts";
+
 export const smart = () => {
   // State tracking
   const sheepCount = new Map<string, number>();
@@ -5,16 +7,6 @@ export const smart = () => {
   const lastSheepRound = new Map<string, number>();
   let currentRound = 0;
   let lastPlayers: string[] = [];
-
-  // Helper: shuffle array for randomization
-  const shuffle = <T>(arr: T[]): T[] => {
-    const result = [...arr];
-    for (let i = result.length - 1; i > 0; i--) {
-      const n = Math.floor(Math.random() * (i + 1));
-      [result[i], result[n]] = [result[n], result[i]];
-    }
-    return result;
-  };
 
   // Undo support
   let lastSelection: string[] | null = null;

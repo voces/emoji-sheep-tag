@@ -103,8 +103,19 @@ export const distanceBetweenPoints = (a: Point, b: Point) =>
 
 type Unit = SystemEntity<"radius" | "position">;
 
-export const distanceBetweenEntities = (entityA: Entity, entityB: Entity) => {
+export const distanceBetweenEntities = (
+  entityA: Entity,
+  entityB: Entity,
+  max?: number,
+) => {
   if (!entityA.position || !entityB.position) return Infinity;
+
+  if (max !== undefined && entityA.radius && entityB.radius) {
+    const cdx = entityA.position.x - entityB.position.x;
+    const cdy = entityA.position.y - entityB.position.y;
+    const centerDist = (cdx * cdx + cdy * cdy) ** 0.5;
+    if (centerDist - entityA.radius - entityB.radius > max + 1) return Infinity;
+  }
 
   const aPoints = entityPoints(entityA);
   if (!aPoints.length) return Infinity;
@@ -112,15 +123,24 @@ export const distanceBetweenEntities = (entityA: Entity, entityB: Entity) => {
   const bPoints = entityPoints(entityB);
   if (!bPoints.length) return Infinity;
 
-  let min = Infinity;
-  for (const a of aPoints) {
-    for (const b of bPoints) {
-      const d = ((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5;
-      if (d < min) min = d;
+  const aLen = aPoints.length;
+  const bLen = bPoints.length;
+
+  let minSq = Infinity;
+  for (let i = 0; i < aLen; i += 2) {
+    const ax = aPoints[i];
+    const ay = aPoints[i + 1];
+    for (let j = 0; j < bLen; j += 2) {
+      const dx = ax - bPoints[j];
+      const dxSq = dx * dx;
+      if (dxSq >= minSq) continue;
+      const dy = ay - bPoints[j + 1];
+      const dSq = dxSq + dy * dy;
+      if (dSq < minSq) minSq = dSq;
     }
   }
 
-  return min;
+  return minSq ** 0.5;
 };
 
 export const distanceToPoint = (entity: Entity, point: Point) => {
@@ -128,13 +148,19 @@ export const distanceToPoint = (entity: Entity, point: Point) => {
   const points = entityPoints(entity);
   if (!points.length) return Infinity;
 
-  let min = Infinity;
-  for (const p of points) {
-    const d = ((p.x - point.x) ** 2 + (p.y - point.y) ** 2) ** 0.5;
-    if (d < min) min = d;
+  const px = point.x;
+  const py = point.y;
+  let minSq = Infinity;
+  for (let i = 0; i < points.length; i += 2) {
+    const dx = points[i] - px;
+    const dxSq = dx * dx;
+    if (dxSq >= minSq) continue;
+    const dy = points[i + 1] - py;
+    const dSq = dxSq + dy * dy;
+    if (dSq < minSq) minSq = dSq;
   }
 
-  return min;
+  return minSq ** 0.5;
 };
 
 // Constants matching the PathingMap configuration
@@ -151,27 +177,118 @@ const unitToTilemap = (unit: Unit) =>
     { type: unit.pathing },
   );
 
-export const entityPoints = (entity: Entity) => {
-  if (!entity.position) return [];
+// Tier 1: grid-aligned positions produce identical footprint shapes per radius.
+// Cache relative offsets as flat [dx0, dy0, dx1, dy1, ...] keyed by radius.
+const gridRelativeCache = new Map<number, number[]>();
+
+const getGridRelativeFlat = (entity: Unit): number[] => {
+  const cached = gridRelativeCache.get(entity.radius);
+  if (cached) return cached;
+  const tilemap = unitToTilemap(entity);
+  const pts = footprintPointsFlat(tilemap, entity.position);
+  const ox = xTileToWorld(
+    xWorldToTile(entity.position.x, RESOLUTION),
+    RESOLUTION,
+  );
+  const oy = yTileToWorld(
+    yWorldToTile(entity.position.y, RESOLUTION),
+    RESOLUTION,
+  );
+  const relative = new Array<number>(pts.length);
+  for (let i = 0; i < pts.length; i += 2) {
+    relative[i] = pts[i] - ox;
+    relative[i + 1] = pts[i + 1] - oy;
+  }
+  gridRelativeCache.set(entity.radius, relative);
+  return relative;
+};
+
+// Structure tilemap cache: referentially identical tilemaps share relative offsets.
+const structureRelativeCache = new Map<Footprint, number[]>();
+
+// Tier 2: per-entity cache for non-grid-aligned positions
+type EntityPointsCache = { x: number; y: number; points: number[] };
+const entityCache = new WeakMap<Entity, EntityPointsCache>();
+
+const EMPTY: number[] = [];
+
+export const entityPoints = (entity: Entity): number[] => {
+  if (!entity.position) return EMPTY;
   if (entity.tilemap) {
-    const p = footprintPoints(entity.tilemap, entity.position);
-    return p.length ? p : [entity.position];
+    let relative = structureRelativeCache.get(entity.tilemap);
+    if (!relative) {
+      const pts = footprintPointsFlat(entity.tilemap, entity.position);
+      const ox = xTileToWorld(
+        xWorldToTile(entity.position.x, RESOLUTION),
+        RESOLUTION,
+      );
+      const oy = yTileToWorld(
+        yWorldToTile(entity.position.y, RESOLUTION),
+        RESOLUTION,
+      );
+      relative = new Array<number>(pts.length);
+      for (let i = 0; i < pts.length; i += 2) {
+        relative[i] = pts[i] - ox;
+        relative[i + 1] = pts[i + 1] - oy;
+      }
+      structureRelativeCache.set(entity.tilemap, relative);
+    }
+    if (!relative.length) return [entity.position.x, entity.position.y];
+    const ox = xTileToWorld(
+      xWorldToTile(entity.position.x, RESOLUTION),
+      RESOLUTION,
+    );
+    const oy = yTileToWorld(
+      yWorldToTile(entity.position.y, RESOLUTION),
+      RESOLUTION,
+    );
+    const result = new Array<number>(relative.length);
+    for (let i = 0; i < relative.length; i += 2) {
+      result[i] = relative[i] + ox;
+      result[i + 1] = relative[i + 1] + oy;
+    }
+    return result;
   }
   if (entity.radius) {
-    const p = footprintPoints(unitToTilemap(entity as Unit), entity.position);
-    return p.length ? p : [entity.position];
+    const { x, y } = entity.position;
+    const xTile = xWorldToTile(x, RESOLUTION);
+    const yTile = yWorldToTile(y, RESOLUTION);
+    const isGridAligned = Math.abs(x * RESOLUTION - xTile) < 1e-9 &&
+      Math.abs(y * RESOLUTION - yTile) < 1e-9;
+
+    if (isGridAligned) {
+      const relative = getGridRelativeFlat(entity as Unit);
+      const ox = xTileToWorld(xTile, RESOLUTION);
+      const oy = yTileToWorld(yTile, RESOLUTION);
+      const result = new Array<number>(relative.length);
+      for (let i = 0; i < relative.length; i += 2) {
+        result[i] = relative[i] + ox;
+        result[i + 1] = relative[i + 1] + oy;
+      }
+      return result;
+    }
+
+    const cached = entityCache.get(entity);
+    if (cached && cached.x === x && cached.y === y) return cached.points;
+
+    const p = footprintPointsFlat(
+      unitToTilemap(entity as Unit),
+      entity.position,
+    );
+    const points = p.length ? p : [entity.position.x, entity.position.y];
+    entityCache.set(entity, { x, y, points });
+    return points;
   }
-  return [entity.position];
+  return [entity.position.x, entity.position.y];
 };
 
 const tileSize = 0.25; // Each tile represents 0.25 units in world space
 
-const footprintPoints = (footprint: Footprint, position: Point) => {
-  const points: Point[] = [];
+const footprintPointsFlat = (footprint: Footprint, position: Point) => {
+  const points: number[] = [];
 
   const { width, height, left, top, map } = footprint;
 
-  // Calculate the origin (top-left corner) of the tilemap in world coordinates
   const tilemapOriginX =
     xTileToWorld(xWorldToTile(position.x, RESOLUTION), RESOLUTION) +
     left * tileSize;
@@ -182,35 +299,25 @@ const footprintPoints = (footprint: Footprint, position: Point) => {
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (!map[y * width + x]) continue;
+      const px = x * tileSize + tilemapOriginX;
+      const py = y * tileSize + tilemapOriginY;
       // Top left; could have been included by left, above, or left-and-above
       if (
         (y === 0 || !map[(y - 1) * width + x]) &&
         (y === 0 || x === 0 || !map[(y - 1) * width + x - 1]) &&
         (x === 0 || !map[y * width + x - 1])
       ) {
-        points.push({
-          x: x * tileSize + tilemapOriginX,
-          y: y * tileSize + tilemapOriginY,
-        });
+        points.push(px, py);
       }
       // Top right; could have only been included by above
       if (y === 0 || !map[(y - 1) * width + x]) {
-        points.push({
-          x: x * tileSize + tilemapOriginX + tileSize,
-          y: y * tileSize + tilemapOriginY,
-        });
+        points.push(px + tileSize, py);
       }
       // Bottom right; could not have been included by any previous iteration
-      points.push({
-        x: x * tileSize + tilemapOriginX + tileSize,
-        y: y * tileSize + tilemapOriginY + tileSize,
-      });
+      points.push(px + tileSize, py + tileSize);
       // Bottom left; could have only been included by left
       if (x === 0 || !map[y * width + x - 1]) {
-        points.push({
-          x: x * tileSize + tilemapOriginX,
-          y: y * tileSize + tilemapOriginY + tileSize,
-        });
+        points.push(px, py + tileSize);
       }
     }
   }
@@ -274,7 +381,7 @@ export const withinRange = (
   const targetEntity = "id" in target ? target : undefined;
 
   const distance = targetEntity
-    ? distanceBetweenEntities(mover, targetEntity)
+    ? distanceBetweenEntities(mover, targetEntity, range)
     // Kind of a hack, but trying to use distanceToPoint for building makes the
     // unit run around... Need a fix, but then pathing needs to be aware of
     // distanceToPoint
@@ -297,9 +404,13 @@ export const canSwing = (
 ) => {
   if (!attacker.position || !attacker.attack || !target.position) return false;
 
-  const distance = distanceBetweenEntities(attacker, target);
+  const distance = distanceBetweenEntities(
+    attacker,
+    target,
+    attacker.attack.range,
+  );
 
-  if (distance > attacker.attack?.range) return false;
+  if (distance > attacker.attack.range) return false;
 
   if (
     !skipFacingCheck &&

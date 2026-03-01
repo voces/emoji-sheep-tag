@@ -51,7 +51,7 @@ export const biteOrder = {
 
     if (
       action.range !== undefined &&
-      distanceBetweenEntities(unit, target) < action.range
+      distanceBetweenEntities(unit, target, action.range) > action.range
     ) return false;
 
     if (target.prefab === "spirit") {

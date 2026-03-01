@@ -22,7 +22,10 @@ export const tweenSwing = (e: Entity, delta: number): number => {
     }
   }
 
-  if (!targetPosition) return delta;
+  if (!targetPosition) {
+    delete e.swing;
+    return delta;
+  }
 
   // For ranged attacks (with projectileSpeed), don't abort during backswing
   const isRangedAttack = !!e.attack.projectileSpeed;

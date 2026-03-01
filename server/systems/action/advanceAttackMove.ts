@@ -15,6 +15,7 @@ export const advanceAttackMove = (e: Entity, delta: number): number => {
     const target = lookup(e.order.targetId);
     if (!target || !isAlive(target) || !canSee(e, target)) {
       const { targetId: _, ...rest } = e.order;
+      if (e.swing) delete e.swing;
       e.order = rest;
     }
   }
@@ -25,14 +26,15 @@ export const advanceAttackMove = (e: Entity, delta: number): number => {
     if (next) e.order = { ...e.order, targetId: next.id };
   } else {
     const target = lookup(e.order.targetId);
-    // Check if there's a higher priority target available
-    const acquired = acquireTarget(e);
-    if (
-      target && acquired &&
-      prioritizeTarget(acquired) > prioritizeTarget(target)
-    ) {
-      const { path: _, ...rest } = e.order;
-      e.order = { ...rest, targetId: acquired.id };
+    if (target && prioritizeTarget(target) < 0) {
+      const acquired = acquireTarget(e);
+      if (
+        acquired &&
+        prioritizeTarget(acquired) > prioritizeTarget(target)
+      ) {
+        const { path: _, ...rest } = e.order;
+        e.order = { ...rest, targetId: acquired.id };
+      }
     }
   }
 
