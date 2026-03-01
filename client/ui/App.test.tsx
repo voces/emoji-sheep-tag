@@ -6,8 +6,9 @@ import {
   setCurrentTestFile,
 } from "@/client-testing/integration-setup.ts";
 import "@/client-testing/setup.ts";
-import { it } from "@std/testing/bdd";
+import { afterEach, it } from "@std/testing/bdd";
 import { setServer } from "../client.ts";
+import { stopReconnecting } from "../connection.ts";
 import { render, screen, waitFor } from "@testing-library/react";
 import { App } from "./App.tsx";
 import { userEvent } from "@testing-library/user-event";
@@ -17,6 +18,10 @@ import { Entity } from "@/shared/types.ts";
 import { expect } from "@std/expect/expect";
 import { menusVar } from "@/vars/menus.ts";
 setCurrentTestFile("App.test.ts");
+
+afterEach(() => {
+  stopReconnecting();
+});
 
 it("can move an action into a menu", async () => {
   clearTestServerMessages();

@@ -32,8 +32,6 @@ Deno.test("InstancedSvg bounding box excludes infinite instances", () => {
   instancedSvg.computeBoundingBox();
   const bbox = instancedSvg.boundingBox;
 
-  console.log("Bounding box:", bbox);
-
   // Verify bounding box is finite
   assertEquals(
     Number.isFinite(bbox!.min.x),
@@ -60,8 +58,6 @@ Deno.test("InstancedSvg bounding box excludes infinite instances", () => {
   const width = bbox!.max.x - bbox!.min.x;
   const height = bbox!.max.y - bbox!.min.y;
 
-  console.log(`Width: ${width}, Height: ${height}`);
-
   assertEquals(Number.isFinite(width), true, "width should be finite");
   assertEquals(Number.isFinite(height), true, "height should be finite");
   assertEquals(width > 0, true, "width should be positive");
@@ -82,8 +78,6 @@ Deno.test("InstancedSvg bounding sphere excludes infinite instances", () => {
 
   instancedSvg.computeBoundingSphere();
   const sphere = instancedSvg.boundingSphere;
-
-  console.log("Bounding sphere:", sphere);
 
   // Verify bounding sphere is finite
   assertEquals(

@@ -30,7 +30,7 @@ const createMockClient = (id: string): Client => {
 
 const setupLobby = (playerCount: number) => {
   const host = createMockClient("host");
-  const lobby = newLobby(host);
+  const lobby = newLobby(host, true);
   lobby.players.add(host);
   host.lobby = lobby;
 

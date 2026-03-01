@@ -65,6 +65,8 @@ const buildJs = async (env: "dev" | "prod") => {
 };
 
 const copyHtml = async () => {
+  await ensureDir("dist");
+
   await Deno.copyFile("client/index.html", "dist/index.html");
 };
 

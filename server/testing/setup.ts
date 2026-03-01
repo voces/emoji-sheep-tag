@@ -76,7 +76,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   }
 
   // Set up lobby
-  const lobby = newLobby();
+  const lobby = newLobby(undefined, true);
   lobby.settings = {
     map: "revo",
     mode: "survival",

@@ -32,7 +32,7 @@ describe("lobbySettings action", () => {
 
   it("should update starting gold when host makes changes", () => {
     const hostClient = createMockClient(true);
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
     lobby.players.add(hostClient);
 
     // Set initial settings
@@ -77,7 +77,7 @@ describe("lobbySettings action", () => {
   it("should reject changes from non-host players", () => {
     const hostClient = createMockClient(true);
     const nonHostClient = createMockClient(false);
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
 
     lobby.players.add(hostClient);
     lobby.players.add(nonHostClient);
@@ -107,7 +107,7 @@ describe("lobbySettings action", () => {
 
   it("should handle undefined startingGold gracefully", () => {
     const hostClient = createMockClient(true);
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
     lobby.players.add(hostClient);
 
     // Set initial settings
@@ -150,7 +150,7 @@ describe("lobbySettings action", () => {
 
   it("should handle partial startingGold updates", () => {
     const hostClient = createMockClient(true);
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
     lobby.players.add(hostClient);
 
     // Set initial settings
@@ -215,7 +215,7 @@ describe("lobbySettings action", () => {
     player1.id = "player1";
     player2.id = "player2";
 
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
     lobby.players.add(hostClient);
     lobby.players.add(player1);
     lobby.players.add(player2);
@@ -265,7 +265,7 @@ describe("lobbySettings action", () => {
 
   it("should validate gold values within bounds", () => {
     const hostClient = createMockClient(true);
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
     lobby.players.add(hostClient);
 
     lobby.settings.startingGold = { sheep: 100, wolves: 150 };
@@ -314,7 +314,7 @@ describe("lobbySettings action", () => {
     observer1.team = "observer";
     observer2.team = "observer";
 
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
     lobby.players.add(hostClient);
     lobby.players.add(observer1);
     lobby.players.add(observer2);
@@ -349,7 +349,7 @@ describe("lobbySettings action", () => {
     player1.team = "sheep";
     observer1.team = "observer";
 
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
     lobby.players.add(hostClient);
     lobby.players.add(player1);
     lobby.players.add(observer1);
@@ -373,7 +373,7 @@ describe("lobbySettings action", () => {
 
   it("should clamp stored sheep count to 1 when only observers remain", () => {
     const hostClient = createMockClient(true);
-    const lobby = newLobby(hostClient);
+    const lobby = newLobby(hostClient, true);
     lobby.players.add(hostClient);
 
     hostClient.lobby = lobby;

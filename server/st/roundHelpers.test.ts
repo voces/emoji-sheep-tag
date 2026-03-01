@@ -33,7 +33,7 @@ describe("getIdealSheep", () => {
 
 describe("autoAssignSheepOrWolf", () => {
   it("assigns teams following N vs N+1 pattern when adding computers", () => {
-    const lobby = newLobby();
+    const lobby = newLobby(undefined, true);
     lobby.settings.sheep = "auto";
 
     // Create a host client as observer
@@ -97,7 +97,7 @@ describe("autoAssignSheepOrWolf", () => {
   });
 
   it("ignores observers when counting players", () => {
-    const lobby = newLobby();
+    const lobby = newLobby(undefined, true);
     lobby.settings.sheep = "auto";
 
     // Add an observer
@@ -119,7 +119,7 @@ describe("autoAssignSheepOrWolf", () => {
   });
 
   it("assigns sheep first when host is wolf", () => {
-    const lobby = newLobby();
+    const lobby = newLobby(undefined, true);
     lobby.settings.sheep = "auto";
 
     // Add host as wolf

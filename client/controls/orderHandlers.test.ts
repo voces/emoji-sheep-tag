@@ -9,7 +9,7 @@ import { waitFor } from "@testing-library/react";
 import { app, Entity } from "../ecs.ts";
 import { selection } from "../systems/selection.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
-import { connect, setServer } from "../connection.ts";
+import { connect, setServer, stopReconnecting } from "../connection.ts";
 import { connectionStatusVar } from "@/vars/state.ts";
 import {
   clearTestServerMessages,
@@ -43,6 +43,7 @@ describe("order handlers", () => {
 
   afterEach(() => {
     cancelOrder();
+    stopReconnecting();
   });
 
   describe("active order management", () => {

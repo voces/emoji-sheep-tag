@@ -3,11 +3,11 @@ import { setCurrentTestFile } from "@/client-testing/integration-setup.ts";
 
 // Set the current test file name for deterministic port assignment
 setCurrentTestFile("messaging.test.ts");
-import { beforeEach, describe, it } from "@std/testing/bdd";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { waitFor } from "@testing-library/react";
 import { send } from "./messaging.ts";
-import { connect, setServer } from "./connection.ts";
+import { connect, setServer, stopReconnecting } from "./connection.ts";
 import {
   clearTestServerMessages,
   getTestServerMessages,
@@ -17,6 +17,10 @@ import type { ClientToServerMessage } from "../server/client.ts";
 import { connectionStatusVar } from "./ui/vars/state.ts";
 
 describe("messaging.ts", () => {
+  afterEach(() => {
+    stopReconnecting();
+  });
+
   beforeEach(async () => {
     clearTestServerMessages();
     setServer(`localhost:${getTestServerPort()}`);

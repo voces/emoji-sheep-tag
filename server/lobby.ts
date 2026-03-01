@@ -104,7 +104,7 @@ export const deleteLobby = (lobby: Lobby) => {
   broadcastLobbyList();
 };
 
-export const newLobby = (host?: Client) => {
+export const newLobby = (host?: Client, silent = false) => {
   const lobby: Lobby = {
     players: new Set(host ? [host] : []),
     host: host,
@@ -124,7 +124,9 @@ export const newLobby = (host?: Client) => {
     status: "lobby",
     rounds: [],
   };
-  console.log(new Date(), "Lobby", lobby.name, "created with host", host?.id);
+  if (!silent) {
+    console.log(new Date(), "Lobby", lobby.name, "created with host", host?.id);
+  }
   lobbies.add(lobby);
 
   // Assign host to sheep team (first player should be sheep)
