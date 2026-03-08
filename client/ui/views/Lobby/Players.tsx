@@ -14,7 +14,6 @@ import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
-import { Button } from "@/components/forms/Button.tsx";
 
 const PlayerMenuButton = styled.button<{ $clickable: boolean }>`
   width: 24px;
@@ -327,9 +326,9 @@ const PlayerRow = (props: PlayerRowProps) => {
   );
 };
 
-const AddComputerButton = styled(Button)`
-  margin-top: ${({ theme }) => theme.spacing.md};
-`;
+// const AddComputerButton = styled(Button)`
+//   margin-top: ${({ theme }) => theme.spacing.md};
+// `;
 
 export const Players = () => {
   const players = usePlayers();
@@ -347,11 +346,11 @@ export const Players = () => {
 
   const captains = captainsDraft?.captains;
   const isHost = localPlayer?.id === lobbySettings.host;
-  const isPlaying = lobbySettings.practice || lobbySettings.editor;
+  // const isPlaying = lobbySettings.practice || lobbySettings.editor;
 
-  const handleAddComputer = () => {
-    send({ type: "computer", event: { type: "add" } });
-  };
+  // const handleAddComputer = () => {
+  //   send({ type: "computer", event: { type: "add" } });
+  // };
 
   return (
     <PlayersCard>
@@ -394,11 +393,13 @@ export const Players = () => {
           );
         })}
       </PlayersGrid>
-      {isHost && !isPlaying && (
+      {
+        /* {isHost && !isPlaying && (
         <AddComputerButton onClick={handleAddComputer}>
           Add Computer
         </AddComputerButton>
-      )}
+      )} */
+      }
     </PlayersCard>
   );
 };
