@@ -1,4 +1,4 @@
-import { send } from "../client.ts";
+import { send } from "../messaging.ts";
 import { getLocalMap } from "../storage/localMaps.ts";
 
 export const uploadAndSelectCustomMap = async (localMapId: string) => {

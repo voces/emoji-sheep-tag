@@ -11,7 +11,7 @@ import {
 import { SVGLoader } from "three/SVGLoader";
 import { InstancedSvg } from "./InstancedSvg.ts";
 import { scene } from "./three.ts";
-import { svgs } from "../systems/three.ts";
+import { svgs } from "../systems/models.ts";
 
 const loader = new SVGLoader();
 

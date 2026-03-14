@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { editorCurrentMapVar, editorVar } from "@/vars/editor.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { stateVar } from "@/vars/state.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import {

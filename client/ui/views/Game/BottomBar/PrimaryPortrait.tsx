@@ -12,13 +12,18 @@ import {
   startFollowingEntity,
   stopFollowingEntity,
 } from "../../../../api/camera.ts";
-import { getActiveOrder } from "../../../../controls.ts";
 import { mouse, MouseButtonEvent } from "../../../../mouse.ts";
-import { handleTargetOrder } from "../../../../controls/orderHandlers.ts";
+import {
+  getActiveOrder,
+  handleTargetOrder,
+} from "../../../../controls/orderHandlers.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { playSound } from "../../../../api/sound.ts";
 import { pick } from "../../../../util/pick.ts";
+import { AnimatedInstancedMesh } from "../../../../graphics/AnimatedInstancedMesh.ts";
+import { collections } from "../../../../systems/models.ts";
+import { PortraitCanvas } from "@/components/game/PortraitCanvas.tsx";
 
 const PrimaryPortraitContainer = styled(VStack)`
   gap: ${({ theme }) => theme.spacing.sm};
@@ -136,6 +141,12 @@ export const PrimaryPortrait = () => {
   }, []);
 
   const icon = selection?.icon || selection?.model || selection?.prefab;
+  const modelName = selection?.model ?? selection?.prefab;
+  const hasPortraitCamera = useMemo(() => {
+    if (!modelName) return false;
+    const col = collections[modelName];
+    return col instanceof AnimatedInstancedMesh && col.cameras.length > 0;
+  }, [modelName]);
 
   const handleClick = () => {
     const activeOrder = getActiveOrder();
@@ -166,12 +177,16 @@ export const PrimaryPortrait = () => {
     <PrimaryPortraitContainer>
       <StyledCommand
         role="button"
-        icon={icon}
+        icon={hasPortraitCamera ? undefined : icon}
         iconProps={iconProps}
         name={selection?.name ?? selection?.id ?? ""}
         hideTooltip
         onClick={handleClick}
-      />
+      >
+        {hasPortraitCamera && selection
+          ? <PortraitCanvas entity={selection} />
+          : undefined}
+      </StyledCommand>
       <Bars />
     </PrimaryPortraitContainer>
   );

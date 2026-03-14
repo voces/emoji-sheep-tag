@@ -5,7 +5,7 @@ import { Player } from "@/shared/api/player.ts";
 import { useLocalPlayer, usePlayers } from "@/hooks/usePlayers.ts";
 import { ColorPickerPopup } from "@/components/forms/ColorPicker.tsx";
 import { NameInput, NameInputRef } from "@/components/forms/NameInput.tsx";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { roundsVar } from "@/vars/rounds.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
 import { HStack } from "@/components/layout/Layout.tsx";

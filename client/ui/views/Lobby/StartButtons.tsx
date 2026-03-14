@@ -1,7 +1,7 @@
 import { styled } from "styled-components";
 import { Button } from "@/components/forms/Button.tsx";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { GameSettingsContainer } from "./lobbyStyles.tsx";
 import type { CaptainsDraft } from "../../../schemas.ts";
 

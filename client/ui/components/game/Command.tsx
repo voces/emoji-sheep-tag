@@ -91,6 +91,7 @@ export const Command = ({
   cooldownRemaining,
   cooldownTotal,
   autocast,
+  children,
   ...rest
 }: {
   name: string;
@@ -110,6 +111,7 @@ export const Command = ({
   cooldownRemaining?: number;
   cooldownTotal?: number;
   autocast?: "enabled" | "disabled";
+  children?: React.ReactNode;
 } & React.ComponentProps<typeof CommandButton>) => {
   const localPlayer = useLocalPlayer();
 
@@ -209,14 +211,14 @@ export const Command = ({
       {...(name ? tooltipContainerProps : undefined)}
       {...rest}
     >
-      {icon && (
+      {children ?? (icon && (
         <SvgIcon
           icon={icon}
           accentColor={accentColor ?? localPlayer?.playerColor ?? undefined}
           scale={(iconScale ?? 1) * 0.9}
           {...iconProps}
         />
-      )}
+      ))}
       {binding?.length
         ? <CommandShortcut>{formatShortcut(binding)}</CommandShortcut>
         : null}

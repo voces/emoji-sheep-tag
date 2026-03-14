@@ -9,15 +9,17 @@ import {
 } from "@/hooks/useListenToEntityProp.ts";
 import { styled } from "styled-components";
 import { Entity } from "../../../ecs.ts";
-import { svgs } from "../../../systems/three.ts";
+import { svgs } from "../../../systems/models.ts";
 import { useEntityIconProps } from "@/hooks/useEntityIconProps.ts";
 import {
   startFollowingEntity,
   stopFollowingEntity,
 } from "../../../api/camera.ts";
-import { getActiveOrder } from "../../../controls.ts";
 import { mouse, MouseButtonEvent } from "../../../mouse.ts";
-import { handleTargetOrder } from "../../../controls/orderHandlers.ts";
+import {
+  getActiveOrder,
+  handleTargetOrder,
+} from "../../../controls/orderHandlers.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { useEffect, useMemo, useRef } from "react";
 import { playSound } from "../../../api/sound.ts";

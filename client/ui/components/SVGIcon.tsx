@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { styled } from "styled-components";
 import { Color } from "three";
-import { svgs } from "../../systems/three.ts";
+import { svgs } from "../../systems/models.ts";
 import { computeBlueprintColor } from "../../util/colorHelpers.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 

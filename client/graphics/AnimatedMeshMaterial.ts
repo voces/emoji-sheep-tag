@@ -49,7 +49,8 @@ const VERTEX_ATTRIBUTES = `
   attribute float instanceMinimapMask;
   attribute vec3 instancePlayerColor;
   attribute vec3 instanceTint;
-  attribute vec3 instanceAnim;
+  attribute vec4 instanceAnim;
+  attribute vec4 instanceAnimB;
 
   uniform float uTime;
   uniform sampler2D uTransformTex;
@@ -60,9 +61,14 @@ const VERTEX_ATTRIBUTES = `
 `;
 
 const ANIMATION_FUNCTIONS = `
+  float animTime(float phase, float speed) {
+    float rawT = uTime * abs(speed) + phase;
+    return speed < 0.0 ? clamp(rawT, 0.0, 0.9999) : fract(rawT);
+  }
+
   vec4 sampleAnimation(float partId, float clip, float phase, float speed) {
     if (uPartCount <= 0.0 || uSampleCount <= 0.0) return vec4(0.0, 0.0, 0.0, 1.0);
-    float t = fract(uTime * speed + phase);
+    float t = animTime(phase, speed);
     float u = (t * (uSampleCount - 1.0) + 0.5) / uSampleCount;
     float textureHeight = uPartCount * uClipCount;
     float v = (clip * uPartCount + partId + 0.5) / textureHeight;
@@ -71,26 +77,12 @@ const ANIMATION_FUNCTIONS = `
 
   float sampleOpacity(float partId, float clip, float phase, float speed) {
     if (uPartCount <= 0.0 || uSampleCount <= 0.0) return 1.0;
-    float t = fract(uTime * speed + phase);
+    float t = animTime(phase, speed);
     float u = (t * (uSampleCount - 1.0) + 0.5) / uSampleCount;
     float textureHeight = uPartCount * uClipCount;
     float v = (clip * uPartCount + partId + 0.5) / textureHeight;
     return texture2D(uOpacityTex, vec2(u, v)).r;
   }
-`;
-
-const TRANSFORM_VERTEX = `
-  #include <begin_vertex>
-  transformed *= scale;
-  float cosR = cos(rot);
-  float sinR = sin(rot);
-  transformed = vec3(
-    transformed.x * cosR - transformed.y * sinR,
-    transformed.x * sinR + transformed.y * cosR,
-    transformed.z
-  );
-  transformed.x += tx;
-  transformed.y += ty;
 `;
 
 const addAnimationUniforms = (shader: WebGLProgramParametersWithUniforms) => {
@@ -149,22 +141,43 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
         vPlayerColor = instancePlayerColor;
         vTint = instanceTint;
 
-        float clip = instanceAnim.x;
-        float phase = instanceAnim.y;
-        float speed = instanceAnim.z;
-        vec4 animTransform = sampleAnimation(partID, clip, phase, speed);
-        vAnimOpacity = sampleOpacity(partID, clip, phase, speed);
-
-        float tx = animTransform.r;
-        float ty = animTransform.g;
-        float rot = animTransform.b;
-        float scale = animTransform.a;
+        vec4 animA = sampleAnimation(partID, instanceAnim.x, instanceAnim.y, instanceAnim.z);
+        float opacityA = sampleOpacity(partID, instanceAnim.x, instanceAnim.y, instanceAnim.z);
+        float wB = instanceAnimB.w;
       `,
     );
 
     shader.vertexShader = shader.vertexShader.replace(
       "#include <begin_vertex>",
-      TRANSFORM_VERTEX,
+      `
+      #include <begin_vertex>
+      {
+        vec3 posA = transformed * animA.a;
+        float cosA = cos(animA.b);
+        float sinA = sin(animA.b);
+        posA = vec3(posA.x * cosA - posA.y * sinA, posA.x * sinA + posA.y * cosA, posA.z);
+        posA.x += animA.r;
+        posA.y += animA.g;
+
+        if (wB > 0.001) {
+          vec4 animB = sampleAnimation(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
+          float opacityB = sampleOpacity(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
+          vAnimOpacity = mix(opacityA, opacityB, wB);
+
+          vec3 posB = transformed * animB.a;
+          float cosB = cos(animB.b);
+          float sinB = sin(animB.b);
+          posB = vec3(posB.x * cosB - posB.y * sinB, posB.x * sinB + posB.y * cosB, posB.z);
+          posB.x += animB.r;
+          posB.y += animB.g;
+
+          transformed = mix(posA, posB, wB);
+        } else {
+          transformed = posA;
+          vAnimOpacity = opacityA;
+        }
+      }
+      `,
     );
 
     shader.vertexShader = shader.vertexShader.replace(
@@ -286,24 +299,46 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
       `
       ${ANIMATION_FUNCTIONS}
       void main() {
-        float clip = instanceAnim.x;
-        float phase = instanceAnim.y;
-        float speed = instanceAnim.z;
-        vec4 animTransform = sampleAnimation(partID, clip, phase, speed);
-        float animOpacity = sampleOpacity(partID, clip, phase, speed);
-        vFinalOpacity = instanceAlpha * animOpacity;
-        vInstanceAlpha = instanceAlpha;
-
-        float tx = animTransform.r;
-        float ty = animTransform.g;
-        float rot = animTransform.b;
-        float scale = animTransform.a;
+        vec4 animA = sampleAnimation(partID, instanceAnim.x, instanceAnim.y, instanceAnim.z);
+        float opacityA = sampleOpacity(partID, instanceAnim.x, instanceAnim.y, instanceAnim.z);
+        float wB = instanceAnimB.w;
       `,
     );
 
     shader.vertexShader = shader.vertexShader.replace(
       "#include <begin_vertex>",
-      TRANSFORM_VERTEX,
+      `
+      #include <begin_vertex>
+      {
+        vec3 posA = transformed * animA.a;
+        float cosA = cos(animA.b);
+        float sinA = sin(animA.b);
+        posA = vec3(posA.x * cosA - posA.y * sinA, posA.x * sinA + posA.y * cosA, posA.z);
+        posA.x += animA.r;
+        posA.y += animA.g;
+        float animOpacity;
+
+        if (wB > 0.001) {
+          vec4 animBVal = sampleAnimation(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
+          float opacityB = sampleOpacity(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
+          animOpacity = mix(opacityA, opacityB, wB);
+
+          vec3 posB = transformed * animBVal.a;
+          float cosB = cos(animBVal.b);
+          float sinB = sin(animBVal.b);
+          posB = vec3(posB.x * cosB - posB.y * sinB, posB.x * sinB + posB.y * cosB, posB.z);
+          posB.x += animBVal.r;
+          posB.y += animBVal.g;
+
+          transformed = mix(posA, posB, wB);
+        } else {
+          transformed = posA;
+          animOpacity = opacityA;
+        }
+        vFinalOpacity = instanceAlpha * animOpacity;
+        vInstanceAlpha = instanceAlpha;
+      }
+      `,
     );
 
     shader.vertexShader = shader.vertexShader.replace(

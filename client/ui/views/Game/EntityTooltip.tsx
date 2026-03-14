@@ -6,7 +6,7 @@ import { Entity } from "../../../ecs.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { camera } from "../../../graphics/three.ts";
 import { getBlueprint } from "../../../controls/blueprintHandlers.ts";
-import { getActiveOrder } from "../../../controls.ts";
+import { getActiveOrder } from "../../../controls/orderHandlers.ts";
 
 const HOVER_DELAY_MS = 500;
 

@@ -1,4 +1,4 @@
-import { send } from "../client.ts";
+import { send } from "../messaging.ts";
 import { Entity } from "../ecs.ts";
 import { selection } from "../systems/selection.ts";
 import { UnitDataActionTarget } from "@/shared/types.ts";

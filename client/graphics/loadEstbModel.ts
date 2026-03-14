@@ -23,7 +23,7 @@ export const loadEstbModel = (
   },
 ): AnimatedInstancedMesh => {
   const scale = options.scale ?? 1;
-  const { geometry, animationData } = loadEstb(buffer, {
+  const { geometry, animationData, cameras } = loadEstb(buffer, {
     scale,
     xOffset: options.xOffset,
     yOffset: options.yOffset,
@@ -38,6 +38,7 @@ export const loadEstbModel = (
     count,
     modelName,
     animationData,
+    { cameras, modelScale: scale },
   );
 
   if (typeof options.layer === "number") {

@@ -3,7 +3,7 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useIsLocalPlayerHost, usePlayers } from "@/hooks/usePlayers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { TimeInput } from "@/components/forms/TimeInput.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";

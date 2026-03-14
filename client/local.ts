@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { setServer } from "./client.ts";
+import { setServer } from "./connection.ts";
 
 let worker: SharedWorker | undefined;
 

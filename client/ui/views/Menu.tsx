@@ -1,5 +1,5 @@
 import { loadLocal } from "../../local.ts";
-import { connect } from "../../client.ts";
+import { connect } from "../../connection.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { openEditor } from "../util/openEditor.ts";
 import { styled } from "styled-components";

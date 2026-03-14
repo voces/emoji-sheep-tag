@@ -18,7 +18,7 @@ import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import type { ServerToClientMessage, Update } from "./schemas.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { practiceVar } from "@/vars/practice.ts";
-import { send } from "./client.ts";
+import { send } from "./messaging.ts";
 import { colorName, getPlayer, getPlayers } from "@/shared/api/player.ts";
 import { getWebSocket } from "./connection.ts";
 import { LocalWebSocket } from "./local.ts";

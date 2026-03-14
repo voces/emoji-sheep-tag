@@ -1,4 +1,4 @@
-import { connect } from "../../client.ts";
+import { connect } from "../../connection.ts";
 import { loadLocal } from "../../local.ts";
 import { editorCurrentMapVar, editorVar } from "@/vars/editor.ts";
 import { switchToEditorMode } from "@/shared/systems/kd.ts";

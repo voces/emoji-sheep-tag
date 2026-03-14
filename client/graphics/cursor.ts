@@ -1,6 +1,6 @@
 import { setFirst } from "../../server/util/set.ts";
 import { isAlly, isEnemy } from "@/shared/api/unit.ts";
-import { getActiveOrder } from "../controls.ts";
+import { getActiveOrder } from "../controls/orderHandlers.ts";
 import { getBlueprint } from "../controls/blueprintHandlers.ts";
 import { Entity } from "../ecs.ts";
 import { mouse } from "../mouse.ts";

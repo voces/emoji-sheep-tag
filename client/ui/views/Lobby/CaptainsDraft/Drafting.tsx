@@ -6,7 +6,7 @@ import { usePlayers } from "@/hooks/usePlayers.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { Button } from "@/components/forms/Button.tsx";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
-import { send } from "../../../../client.ts";
+import { send } from "../../../../messaging.ts";
 import { nonNull } from "@/shared/types.ts";
 import {
   ButtonRow,

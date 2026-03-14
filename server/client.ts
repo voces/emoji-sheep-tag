@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ServerToClientMessage } from "../client/client.ts";
+import { ServerToClientMessage } from "../client/schemas.ts";
 import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import type { Entity } from "@/shared/types.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";

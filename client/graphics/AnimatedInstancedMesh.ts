@@ -27,7 +27,7 @@ import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { getMapBounds } from "@/shared/map.ts";
-import type { AnimationData } from "./loadEstb.ts";
+import type { AnimationData, ParsedCamera } from "./loadEstb.ts";
 import {
   createDepthMaterial,
   getShaderRefs,
@@ -53,6 +53,10 @@ export class AnimatedInstancedMesh extends InstancedMesh {
 
   /** Animation data (textures, clip info) */
   readonly animationData: AnimationData | null;
+  /** Camera definitions from the estb file */
+  readonly cameras: ParsedCamera[];
+  /** Scale factor used when building geometry */
+  readonly modelScale: number;
   /** Depth pre-pass mesh for intra-instance occlusion */
   readonly depthMesh: InstancedMesh;
   /** Callback when shader is ready (for re-applying animations) */
@@ -65,6 +69,8 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     readonly modelName?: string,
     animationData?: AnimationData,
     options?: {
+      cameras?: ParsedCamera[];
+      modelScale?: number;
       skipBoundsRecalc?: boolean;
       mapUtilizationThreshold?: number;
     },
@@ -72,6 +78,8 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     super(geometry, material, count);
 
     this.animationData = animationData ?? null;
+    this.cameras = options?.cameras ?? [];
+    this.modelScale = options?.modelScale ?? 1;
     this.bvh = new BVH(modelName);
     this.bvh.setGetBoundingBox((index) => {
       this.getMatrixAt(index, _instanceLocalMatrix);
@@ -169,19 +177,24 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     instanceTintAttr.setUsage(DynamicDrawUsage);
     geo.setAttribute("instanceTint", instanceTintAttr);
 
-    // instanceAnim: [clipIndex, phase, speed] - phase is 0-1 offset, speed is multiplier
+    // instanceAnim: [clipIndex, phase, speed, decayRate]
     const instanceAnimAttr = new InstancedBufferAttribute(
-      new Float32Array(count * 3),
-      3,
+      new Float32Array(count * 4),
+      4,
     );
-    // Default: clip 0 ("default" = T-pose), phase 0, speed 0 (frozen)
     for (let i = 0; i < count; i++) {
-      instanceAnimAttr.array[i * 3] = 0; // clip 0 = "default" (T-pose)
-      instanceAnimAttr.array[i * 3 + 1] = 0; // phase
-      instanceAnimAttr.array[i * 3 + 2] = 0; // speed (frozen)
+      instanceAnimAttr.array[i * 4 + 3] = 1 / 0.15; // default decay rate
     }
     instanceAnimAttr.setUsage(DynamicDrawUsage);
     geo.setAttribute("instanceAnim", instanceAnimAttr);
+
+    // instanceAnimB: [clipIndex, phase, speed, weight] - blend target
+    const instanceAnimBAttr = new InstancedBufferAttribute(
+      new Float32Array(count * 4),
+      4,
+    );
+    instanceAnimBAttr.setUsage(DynamicDrawUsage);
+    geo.setAttribute("instanceAnimB", instanceAnimBAttr);
   }
 
   resize(value: number) {
@@ -261,27 +274,44 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     newTintAttr.setUsage(DynamicDrawUsage);
     geo.setAttribute("instanceTint", newTintAttr);
 
-    // Resize instanceAnim (default: clip 0 = T-pose, phase 0, speed 0)
+    // Resize instanceAnim (default: clip 0, phase 0, speed 0, decayRate)
     const oldAnimAttr = geo.getAttribute("instanceAnim");
     const newAnimAttr = new InstancedBufferAttribute(
-      new Float32Array(value * 3),
-      3,
+      new Float32Array(value * 4),
+      4,
     );
     for (let i = 0; i < value; i++) {
-      newAnimAttr.array[i * 3] = 0;
-      newAnimAttr.array[i * 3 + 1] = 0;
-      newAnimAttr.array[i * 3 + 2] = 0;
+      newAnimAttr.array[i * 4 + 3] = 1 / 0.15;
     }
     if (oldAnimAttr) {
-      (newAnimAttr.array as Float32Array).set(
-        (oldAnimAttr.array as Float32Array).slice(
-          0,
-          Math.min(value, this.innerCount) * 3,
-        ),
-      );
+      const oldComponents = oldAnimAttr.itemSize;
+      const copyCount = Math.min(value, this.innerCount);
+      for (let i = 0; i < copyCount; i++) {
+        for (let c = 0; c < Math.min(oldComponents, 4); c++) {
+          newAnimAttr.array[i * 4 + c] =
+            (oldAnimAttr.array as Float32Array)[i * oldComponents + c];
+        }
+      }
     }
     newAnimAttr.setUsage(DynamicDrawUsage);
     geo.setAttribute("instanceAnim", newAnimAttr);
+
+    // Resize instanceAnimB (default: all zeros)
+    const oldAnimBAttr = geo.getAttribute("instanceAnimB");
+    const newAnimBAttr = new InstancedBufferAttribute(
+      new Float32Array(value * 4),
+      4,
+    );
+    if (oldAnimBAttr) {
+      (newAnimBAttr.array as Float32Array).set(
+        (oldAnimBAttr.array as Float32Array).slice(
+          0,
+          Math.min(value, this.innerCount) * 4,
+        ),
+      );
+    }
+    newAnimBAttr.setUsage(DynamicDrawUsage);
+    geo.setAttribute("instanceAnimB", newAnimBAttr);
 
     // Update map for removed instances
     for (let i = this.innerCount; i > value; i--) {
@@ -338,7 +368,8 @@ export class AnimatedInstancedMesh extends InstancedMesh {
       copyAttr("instanceMinimapMask", 1);
       copyAttr("instancePlayerColor", 3);
       copyAttr("instanceTint", 3);
-      copyAttr("instanceAnim", 3);
+      copyAttr("instanceAnim", 4);
+      copyAttr("instanceAnimB", 4);
 
       this.map[swapId] = index;
       this.reverseMap[index] = swapId;
@@ -373,7 +404,8 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     setAttrDefault("instanceMinimapMask", [0]);
     setAttrDefault("instancePlayerColor", [1, 1, 1]);
     setAttrDefault("instanceTint", [1, 1, 1]);
-    setAttrDefault("instanceAnim", [0, 0, 0]); // clip 0 = "default" (T-pose), phase 0, speed 0
+    setAttrDefault("instanceAnim", [0, 0, 0, 1 / 0.15]);
+    setAttrDefault("instanceAnimB", [0, 0, 0, 0]);
 
     return index;
   }
@@ -586,12 +618,14 @@ export class AnimatedInstancedMesh extends InstancedMesh {
    * @param clip Animation clip index or name
    * @param phase Phase offset (0-1, added to time for desync)
    * @param speed Playback speed multiplier
+   * @param crossfade Whether to crossfade from the previous animation
    */
   setAnimationAt(
     index: number | string,
     clip: number | string,
     phase: number = 0,
     speed: number = 1,
+    crossfade: boolean = false,
   ) {
     if (typeof index === "string") index = this.getIndex(index);
 
@@ -600,8 +634,50 @@ export class AnimatedInstancedMesh extends InstancedMesh {
       : clip;
 
     const animAttr = this.geometry.getAttribute("instanceAnim");
-    animAttr.setXYZ(index, clipIndex, phase, speed);
+    const animBAttr = this.geometry.getAttribute("instanceAnimB");
+
+    if (crossfade) {
+      const arr = animAttr.array as Float32Array;
+      const prevClip = arr[index * 4];
+      const prevPhase = arr[index * 4 + 1];
+      const prevSpeed = arr[index * 4 + 2];
+      animBAttr.setXYZW(index, prevClip, prevPhase, prevSpeed, 1);
+    } else {
+      animBAttr.setXYZW(index, 0, 0, 0, 0);
+    }
+    animBAttr.needsUpdate = true;
+
+    const newClipInfo = typeof clip === "string"
+      ? this.animationData?.clips.get(clip)
+      : undefined;
+    const crossfadeDuration = Math.min(
+      0.15,
+      (newClipInfo?.duration ?? 1) * 0.3,
+    );
+
+    animAttr.setXYZW(index, clipIndex, phase, speed, 1 / crossfadeDuration);
     animAttr.needsUpdate = true;
+  }
+
+  /** Decay all blend weights toward 0. Returns true if any were non-zero. */
+  decayBlendWeights(delta: number, rateScale: number = 1): boolean {
+    const animAttr = this.geometry.getAttribute("instanceAnim");
+    const animBAttr = this.geometry.getAttribute("instanceAnimB");
+    if (!animBAttr || !animAttr) return false;
+    const animArr = animAttr.array as Float32Array;
+    const blendArr = animBAttr.array as Float32Array;
+    let dirty = false;
+    for (let i = 0; i < this.innerCount; i++) {
+      const w = blendArr[i * 4 + 3];
+      if (w > 0) {
+        const rate = animArr[i * 4 + 3] * rateScale;
+        const next = Math.max(0, w - delta * rate);
+        blendArr[i * 4 + 3] = next;
+        dirty = true;
+      }
+    }
+    if (dirty) animBAttr.needsUpdate = true;
+    return dirty;
   }
 
   /** Get clip info by name. */

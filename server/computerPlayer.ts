@@ -2,7 +2,7 @@ import { colors } from "@/shared/data.ts";
 import type { Lobby } from "./lobby.ts";
 import { setSome } from "./util/set.ts";
 import type { Entity } from "@/shared/types.ts";
-import type { ServerToClientMessage } from "../client/client.ts";
+import { ServerToClientMessage } from "../client/schemas.ts";
 import type { Socket } from "./util/socketHandler.ts";
 
 let computerIndex = 0;

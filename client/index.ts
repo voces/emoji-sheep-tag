@@ -1,4 +1,3 @@
-import "./client.ts";
 import { startPing } from "./messaging.ts";
 import "./ui/root.tsx";
 import "./controls.ts";

@@ -1,4 +1,4 @@
-import { ServerToClientMessage } from "../client/client.ts";
+import { ServerToClientMessage } from "../client/schemas.ts";
 import { Client } from "./client.ts";
 import { isComputerPlayer } from "./computerPlayer.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";

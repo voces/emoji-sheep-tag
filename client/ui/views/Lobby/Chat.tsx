@@ -14,7 +14,7 @@ import {
   toggleChatChannel,
 } from "@/vars/chat.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { Card } from "@/components/layout/Card.tsx";
 
 const ChatCard = styled(Card)`

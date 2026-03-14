@@ -1,6 +1,6 @@
 import { mouse, MouseButtonEvent } from "./mouse.ts";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
-import { send } from "./client.ts";
+import { send } from "./messaging.ts";
 import { Entity } from "./ecs.ts";
 import { addSystem } from "@/shared/context.ts";
 import { selection } from "./systems/selection.ts";
@@ -110,7 +110,6 @@ import {
 } from "./editor/clipboard.ts";
 
 // Re-export for external use
-export { getActiveOrder, keyboard };
 export const clearBlueprint = clearBlueprintHandler;
 export const hasBlueprint = hasBlueprintHandler;
 
@@ -1071,7 +1070,8 @@ document.addEventListener("keyup", (e) => {
   ) cancelOrder();
 });
 
-globalThis.addEventListener("blur", clearKeyboard);
+// Indirect since clearKeyboard has not yet be initialized due to circular imports
+globalThis.addEventListener("blur", () => clearKeyboard());
 
 // Camera controls
 let zoomTimeout = 0;

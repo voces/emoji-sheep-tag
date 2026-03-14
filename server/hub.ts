@@ -1,5 +1,5 @@
 import type { Client } from "./client.ts";
-import { ServerToClientMessage } from "../client/client.ts";
+import { ServerToClientMessage } from "../client/schemas.ts";
 import { lobbies } from "./lobby.ts";
 import { colors } from "@/shared/data.ts";
 

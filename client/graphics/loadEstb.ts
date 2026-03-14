@@ -144,6 +144,7 @@ export type LoadedEstb = {
   geometry: BufferGeometry;
   animationData: AnimationData;
   parts: { index: number }[];
+  cameras: ParsedCamera[];
 };
 
 const intToRgb = (n: number): { r: number; g: number; b: number } => ({
@@ -231,10 +232,17 @@ const getPivotOffset = (pivot: Point, rot: number, scale: number): Point => {
   return { x: pivot.x - rotatedX, y: pivot.y - rotatedY };
 };
 
+export type ParsedCamera = {
+  x: number;
+  y: number;
+  size: number;
+};
+
 type ParsedEstb = {
   paths: ParsedPath[];
   groups: ParsedGroup[];
   clips: ParsedClip[];
+  cameras: ParsedCamera[];
 };
 
 const parseCache = new WeakMap<ArrayBuffer, ParsedEstb>();
@@ -253,12 +261,15 @@ const parseEstb = (buffer: ArrayBuffer): ParsedEstb => {
   if (magic0 !== 0x45 || magic1 !== 0x53 || magic2 !== 0x54) {
     throw new Error("Invalid estb file: bad magic");
   }
-  if (version !== 3) throw new Error(`Unsupported estb version: ${version}`);
+  if (version !== 3 && version !== 4) {
+    throw new Error(`Unsupported estb version: ${version}`);
+  }
 
   // Read counts
   const pathCount = r.readU16();
   const groupCount = r.readU16();
   const clipCount = r.readU16();
+  const cameraCount = version >= 4 ? r.readU16() : 0;
 
   // Read paths
   const paths: ParsedPath[] = [];
@@ -355,7 +366,13 @@ const parseEstb = (buffer: ArrayBuffer): ParsedEstb => {
     clips.push({ name, duration, fps, parts });
   }
 
-  const result = { paths, groups, clips };
+  // Read cameras
+  const cameras: ParsedCamera[] = [];
+  for (let i = 0; i < cameraCount; i++) {
+    cameras.push({ x: r.readF16(), y: r.readF16(), size: r.readF16() });
+  }
+
+  const result = { paths, groups, clips, cameras };
   parseCache.set(buffer, result);
   return result;
 };
@@ -427,7 +444,7 @@ export const loadEstb = (
   buffer: ArrayBuffer,
   options?: { scale?: number; xOffset?: number; yOffset?: number },
 ): LoadedEstb => {
-  const { paths, groups, clips } = parseEstb(buffer);
+  const { paths, groups, clips, cameras } = parseEstb(buffer);
   const scale = options?.scale ?? 1;
   const xOffset = options?.xOffset ?? 0;
   const yOffset = options?.yOffset ?? 0;
@@ -442,6 +459,7 @@ export const loadEstb = (
     geometry,
     animationData,
     parts: paths.map((_, i) => ({ index: i })),
+    cameras,
   };
 };
 

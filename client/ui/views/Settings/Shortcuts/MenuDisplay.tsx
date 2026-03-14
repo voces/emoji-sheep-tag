@@ -12,7 +12,7 @@ import { ConflictWarning } from "./ConflictWarning.tsx";
 import { registerDropTarget } from "./useDragState.ts";
 import { Command } from "@/components/game/Command.tsx";
 import { colors } from "@/shared/data.ts";
-import { svgs } from "../../../../systems/three.ts";
+import { svgs } from "../../../../systems/models.ts";
 
 const MenuActionsContainer = styled(VStack)`
   padding-left: 16px;

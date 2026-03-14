@@ -11,6 +11,9 @@ import { collections } from "./models.ts";
 // Animation state tracking for AnimatedInstancedMesh models
 const entityAnimationState = new WeakMap<Entity, string | undefined>();
 
+// Collections with active blend weights that need per-frame decay
+const blendingCollections = new Set<AnimatedInstancedMesh>();
+
 // Track entities with extended cast animation after mirror image
 const mirrorCastOverride = new Set<Entity>();
 const MIRROR_CAST_EXTENSION_MS = 100;
@@ -67,43 +70,52 @@ export const getCurrentAnimation = (e: Entity): string | undefined => {
   return collection.getClipInfo("idle") ? "idle" : undefined;
 };
 
+export const computeAnimationParams = (
+  animationName: string | undefined,
+  collection: AnimatedInstancedMesh,
+  e: Entity,
+): { phase: number; speed: number } => {
+  if (!animationName) return { phase: 0, speed: 0 };
+  const clipInfo = collection.getClipInfo(animationName);
+  let targetDuration = clipInfo?.duration ?? 1;
+  if (animationName === "build" && e.completionTime) {
+    targetDuration = e.completionTime * (1 - (e.progress ?? 0));
+  }
+  const speed = 1 / targetDuration;
+  const phase = 1 - ((getAnimationTime() * speed) % 1);
+  return { phase, speed };
+};
+
+export const FADEABLE_ANIMS = new Set(["idle", "run", "cast"]);
+
 export const updateAnimationState = (e: Entity) => {
   const model = e.model ?? e.prefab;
   if (!model) return;
 
   const collection = collections[model];
-  // Only handle AnimatedInstancedMesh (estme models)
   if (!(collection instanceof AnimatedInstancedMesh)) return;
 
-  // Set up shader ready callback to re-apply animations after shader compiles
   setupShaderReadyCallback(collection);
 
-  // Determine the appropriate animation based on entity state
   const animationName = getCurrentAnimation(e);
 
-  // Only update if animation changed
   const currentAnim = entityAnimationState.get(e);
   if (currentAnim !== animationName) {
+    const shouldCrossfade = FADEABLE_ANIMS.has(currentAnim ?? "");
     entityAnimationState.set(e, animationName);
-    if (animationName) {
-      const clipInfo = collection.getClipInfo(animationName);
-      // For build animations, scale speed to match remaining build time
-      // Buildings start at 10% progress, so remaining time is completionTime * (1 - progress)
-      let targetDuration = clipInfo?.duration ?? 1;
-      if (animationName === "build" && e.completionTime) {
-        const remainingProgress = 1 - (e.progress ?? 0);
-        targetDuration = e.completionTime * remainingProgress;
-      }
-      const speed = 1 / targetDuration;
-      // Calculate phase offset so animation starts at frame 0 now
-      // Shader uses: t = fract(time * speed + phase)
-      // We want t = 0 at current time, so phase = -(time * speed) mod 1
-      const phase = 1 - ((getAnimationTime() * speed) % 1);
-      collection.setAnimationAt(e.id, animationName, phase, speed);
-    } else {
-      // No animation - use "default" clip (T-pose), frozen
-      collection.setAnimationAt(e.id, "default", 0, 0);
-    }
+    const { phase, speed } = computeAnimationParams(
+      animationName,
+      collection,
+      e,
+    );
+    collection.setAnimationAt(
+      e.id,
+      animationName ?? "default",
+      phase,
+      speed,
+      shouldCrossfade,
+    );
+    if (shouldCrossfade) blendingCollections.add(collection);
   }
 };
 
@@ -149,5 +161,10 @@ addSystem({
   props: ["model"],
   onAdd: updateAnimationState,
   onChange: updateAnimationState,
-  update: (_delta, time) => updateAnimationTime(time),
+  update: (delta, time) => {
+    updateAnimationTime(time);
+    for (const col of blendingCollections) {
+      if (!col.decayBlendWeights(delta)) blendingCollections.delete(col);
+    }
+  },
 });

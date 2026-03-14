@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";
 import {
   chatChannelVar,

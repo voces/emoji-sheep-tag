@@ -13,7 +13,7 @@ import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { getEffectivePlayerGold } from "../../../api/player.ts";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { playSound } from "../../../api/sound.ts";
 
 const TEAM_ENTITY_IDS = {

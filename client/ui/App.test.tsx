@@ -7,8 +7,7 @@ import {
 } from "@/client-testing/integration-setup.ts";
 import "@/client-testing/setup.ts";
 import { afterEach, it } from "@std/testing/bdd";
-import { setServer } from "../client.ts";
-import { stopReconnecting } from "../connection.ts";
+import { setServer, stopReconnecting } from "../connection.ts";
 import { render, screen, waitFor } from "@testing-library/react";
 import { App } from "./App.tsx";
 import { userEvent } from "@testing-library/user-event";

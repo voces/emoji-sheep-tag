@@ -2,7 +2,7 @@ import "./setup.ts";
 import { afterEach, beforeEach } from "@std/testing/bdd";
 import { cleanup, waitFor } from "@testing-library/react";
 import type { ClientToServerMessage } from "../../server/client.ts";
-import { ServerToClientMessage } from "../client.ts";
+import { ServerToClientMessage } from "../schemas.ts";
 import { expect } from "@std/expect/expect";
 
 // Test WebSocket server for messaging tests - fresh server per test for true isolation

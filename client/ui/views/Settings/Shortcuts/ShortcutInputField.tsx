@@ -1,7 +1,7 @@
 import { styled } from "styled-components";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { Button } from "@/components/forms/Button.tsx";
-import { keyboard } from "../../../../controls.ts";
+import { keyboard } from "../../../../controls/keyboardHandlers.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";
 import { ShortcutInput } from "./styles.ts";
 

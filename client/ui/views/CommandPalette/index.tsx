@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { styled } from "styled-components";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
 import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";

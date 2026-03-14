@@ -1,7 +1,7 @@
 import { Panel } from "./common.ts";
 import { Minimap } from "../../../components/Minimap/index.tsx";
 import { useEffect, useState } from "react";
-import { send } from "../../../../client.ts";
+import { send } from "../../../../messaging.ts";
 import { styled } from "styled-components";
 import { onMapChange } from "@/shared/map.ts";
 

@@ -51,11 +51,13 @@
   - Remove right room & well & scale
 - Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
 - Modifying a shortcut should swap instead of conflict
+- Tooltips on modes
 
 # Bugs
 
 - Sheep count keeps getting reset?
 - Two units with autocast next to each other both cast at the same time
+- Switch broken - won without timer expiring
 
 # Code quality
 
@@ -63,3 +65,5 @@
   intrinsic type with fields that modify that. The order handler should be
   generic, based on the fields being used.
 - WebGPU
+- Store .estme files in git; build to .estb during build, similar to audio
+  processing

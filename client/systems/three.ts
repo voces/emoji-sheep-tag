@@ -8,10 +8,8 @@ import { getPlayer } from "@/shared/api/player.ts";
 import { getFps } from "../graphics/three.ts";
 import { computeUnitMovementSpeed, isAlly } from "@/shared/api/unit.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
-import { collections, svgs } from "./models.ts";
+import { collections } from "./models.ts";
 import { getCurrentAnimation, updateAnimationState } from "./animation.ts";
-
-export { collections, svgs };
 
 const isVisibleToLocalPlayer = (e: Entity) => {
   if (e.hiddenByFog) return false;

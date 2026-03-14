@@ -1,7 +1,7 @@
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
-import { send } from "../../../client.ts";
+import { send } from "../../../messaging.ts";
 import { HStack } from "@/components/layout/Layout.tsx";
 import { Checkbox } from "@/components/forms/Checkbox.tsx";
 import { useTooltip } from "@/hooks/useTooltip.tsx";

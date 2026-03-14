@@ -253,7 +253,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
 
   // Units that can hide behind things
   sentry: svg(sentry, 0.03),
-  sheep: estme(sheep.buffer, 0.12),
+  sheep: estme(sheep.buffer, 0.0005),
 
   // Background decor units can hide behind
   hayPile: svg(hayPile, 0.12, { layer: 2 }),
