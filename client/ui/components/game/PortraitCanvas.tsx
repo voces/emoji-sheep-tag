@@ -9,7 +9,7 @@ import { collections } from "../../../systems/models.ts";
 import {
   computeAnimationParams,
   FADEABLE_ANIMS,
-  getCurrentAnimation,
+  getResolvedAnimation,
 } from "../../../systems/animation.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 
@@ -79,7 +79,7 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
     let lastAnimName: string | undefined;
 
     const syncAnimation = () => {
-      const animName = getCurrentAnimation(entity);
+      const animName = getResolvedAnimation(entity);
       if (animName === lastAnimName) return;
       const shouldCrossfade = FADEABLE_ANIMS.has(lastAnimName ?? "");
       lastAnimName = animName;

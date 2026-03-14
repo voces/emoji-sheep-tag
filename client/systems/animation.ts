@@ -88,6 +88,79 @@ export const computeAnimationParams = (
 
 export const FADEABLE_ANIMS = new Set(["idle", "run", "cast"]);
 
+const VARIANT_CHANCE = 0.25;
+
+type VariantState = {
+  base: string;
+  resolved: string;
+  cycleEnd: number;
+};
+
+const entityVariants = new WeakMap<Entity, VariantState>();
+const variantEntities = new Set<Entity>();
+
+const variantCache = new WeakMap<
+  AnimatedInstancedMesh,
+  Map<string, string[]>
+>();
+
+const getVariants = (
+  collection: AnimatedInstancedMesh,
+  base: string,
+): string[] => {
+  let cache = variantCache.get(collection);
+  if (!cache) {
+    cache = new Map();
+    variantCache.set(collection, cache);
+  }
+  let variants = cache.get(base);
+  if (variants) return variants;
+
+  variants = [];
+  if (!collection.animationData) return variants;
+  for (const name of collection.animationData.clips.keys()) {
+    if (
+      name !== base && name.startsWith(base) &&
+      /^\d+$/.test(name.slice(base.length))
+    ) {
+      variants.push(name);
+    }
+  }
+  cache.set(base, variants);
+  return variants;
+};
+
+/** Returns the resolved animation name (including variants) for an entity. */
+export const getResolvedAnimation = (e: Entity): string | undefined => {
+  const variant = entityVariants.get(e);
+  return variant?.resolved ?? entityAnimationState.get(e);
+};
+
+const applyAnimation = (
+  e: Entity,
+  collection: AnimatedInstancedMesh,
+  animName: string,
+  crossfade: boolean,
+) => {
+  const { phase, speed } = computeAnimationParams(animName, collection, e);
+  collection.setAnimationAt(e.id, animName, phase, speed, crossfade);
+  if (crossfade) blendingCollections.add(collection);
+
+  const duration = collection.getClipInfo(animName)?.duration ?? 1;
+  const variants = getVariants(collection, entityAnimationState.get(e) ?? "");
+  if (variants.length > 0) {
+    entityVariants.set(e, {
+      base: entityAnimationState.get(e) ?? animName,
+      resolved: animName,
+      cycleEnd: getAnimationTime() + duration,
+    });
+    variantEntities.add(e);
+  } else {
+    entityVariants.delete(e);
+    variantEntities.delete(e);
+  }
+};
+
 export const updateAnimationState = (e: Entity) => {
   const model = e.model ?? e.prefab;
   if (!model) return;
@@ -103,19 +176,7 @@ export const updateAnimationState = (e: Entity) => {
   if (currentAnim !== animationName) {
     const shouldCrossfade = FADEABLE_ANIMS.has(currentAnim ?? "");
     entityAnimationState.set(e, animationName);
-    const { phase, speed } = computeAnimationParams(
-      animationName,
-      collection,
-      e,
-    );
-    collection.setAnimationAt(
-      e.id,
-      animationName ?? "default",
-      phase,
-      speed,
-      shouldCrossfade,
-    );
-    if (shouldCrossfade) blendingCollections.add(collection);
+    applyAnimation(e, collection, animationName ?? "default", shouldCrossfade);
   }
 };
 
@@ -165,6 +226,25 @@ addSystem({
     updateAnimationTime(time);
     for (const col of blendingCollections) {
       if (!col.decayBlendWeights(delta)) blendingCollections.delete(col);
+    }
+    for (const e of variantEntities) {
+      const v = entityVariants.get(e);
+      if (!v || getAnimationTime() < v.cycleEnd) continue;
+      if (entityAnimationState.get(e) !== v.base) {
+        variantEntities.delete(e);
+        entityVariants.delete(e);
+        continue;
+      }
+      const model = e.model ?? e.prefab;
+      if (!model) continue;
+      const collection = collections[model];
+      if (!(collection instanceof AnimatedInstancedMesh)) continue;
+      const variants = getVariants(collection, v.base);
+      const isVariant = v.resolved !== v.base;
+      const next = isVariant || Math.random() > VARIANT_CHANCE
+        ? v.base
+        : variants[Math.floor(Math.random() * variants.length)];
+      applyAnimation(e, collection, next, FADEABLE_ANIMS.has(v.base));
     }
   },
 });
