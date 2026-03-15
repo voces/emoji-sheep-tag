@@ -42,40 +42,53 @@ const deepEqual = (
   return false;
 };
 
-// Shared throttling logic with trailing call
+// Shared batch flush: one timer for all throttled listeners
+let batchTimeout: number | undefined;
+const pendingFlushes = new Set<() => void>();
+
+const scheduleBatchFlush = (flush: () => void) => {
+  pendingFlushes.add(flush);
+  if (batchTimeout === undefined) {
+    batchTimeout = setTimeout(() => {
+      batchTimeout = undefined;
+      const flushing = [...pendingFlushes];
+      pendingFlushes.clear();
+      for (const fn of flushing) fn();
+    }, 100);
+  }
+};
+
 const throttle = <T>(
   callback: (value: T) => void,
-  delay: number,
 ) => {
-  let timeoutId: number | undefined;
   let pendingValue: T | undefined;
   let hasPendingUpdate = false;
+  let coolingDown = false;
+
+  const flush = () => {
+    coolingDown = false;
+    if (hasPendingUpdate) {
+      hasPendingUpdate = false;
+      callback(pendingValue!);
+    }
+  };
 
   const throttledCallback = (value: T) => {
     pendingValue = value;
-
-    // Throttle: execute immediately if not already scheduled, otherwise queue
-    if (timeoutId === undefined) {
+    if (!coolingDown) {
+      coolingDown = true;
       callback(value);
-      timeoutId = setTimeout(() => {
-        if (hasPendingUpdate) {
-          callback(pendingValue!);
-          hasPendingUpdate = false;
-        }
-        timeoutId = undefined;
-      }, delay);
+      scheduleBatchFlush(flush);
     } else {
       hasPendingUpdate = true;
     }
   };
 
   const cleanup = () => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-      // Apply trailing update
-      if (hasPendingUpdate) {
-        callback(pendingValue!);
-      }
+    pendingFlushes.delete(flush);
+    if (hasPendingUpdate) {
+      hasPendingUpdate = false;
+      callback(pendingValue!);
     }
   };
 
@@ -109,7 +122,7 @@ export const useListenToEntityProp = <P extends keyof Entity, T = Entity[P]>(
         }
       };
 
-      const { throttledCallback, cleanup } = throttle(setValueIfChanged, 100);
+      const { throttledCallback, cleanup } = throttle(setValueIfChanged);
       const cb = (e: Entity) =>
         throttledCallback(
           transform ? transform(e[prop]) : (e[prop] as T),
@@ -160,7 +173,7 @@ export const useListenToEntityProps = <
         }
       };
 
-      const { throttledCallback, cleanup } = throttle(setValueIfChanged, 100);
+      const { throttledCallback, cleanup } = throttle(setValueIfChanged);
       const cb = (e: Entity) => {
         const propsValue = Object.fromEntries(
           props.map((prop) => [prop, e?.[prop]]),
@@ -192,7 +205,6 @@ export const useListenToEntities = (
     () => {
       const { throttledCallback, cleanup } = throttle(
         () => setValue((v) => v + 1),
-        100,
       );
       const unsubs = Array.from(
         entities,

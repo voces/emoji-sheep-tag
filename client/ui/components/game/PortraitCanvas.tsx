@@ -1,10 +1,18 @@
-import { useEffect, useState } from "react";
-import { Color, OrthographicCamera, Scene, WebGLRenderer } from "three";
+import { useEffect, useRef, useState } from "react";
+import {
+  Color,
+  LinearFilter,
+  OrthographicCamera,
+  RGBAFormat,
+  Scene,
+  UnsignedByteType,
+  WebGLRenderTarget,
+} from "three";
 import { styled } from "styled-components";
 import { type Entity } from "../../../ecs.ts";
 import { AnimatedInstancedMesh } from "../../../graphics/AnimatedInstancedMesh.ts";
 import { getAnimatedMeshMaterial } from "../../../graphics/AnimatedMeshMaterial.ts";
-import { onRender } from "../../../graphics/three.ts";
+import { onRender, renderer } from "../../../graphics/three.ts";
 import { collections } from "../../../systems/models.ts";
 import {
   computeAnimationParams,
@@ -21,25 +29,40 @@ const Canvas = styled.canvas`
 
 const tmpColor = new Color();
 
+const PORTRAIT_SIZE = 128;
+
+let sharedRenderTarget: WebGLRenderTarget | undefined;
+const getSharedRenderTarget = () =>
+  sharedRenderTarget ??= new WebGLRenderTarget(PORTRAIT_SIZE, PORTRAIT_SIZE, {
+    format: RGBAFormat,
+    type: UnsignedByteType,
+    minFilter: LinearFilter,
+    magFilter: LinearFilter,
+  });
+
+const pixelBuffer = new Uint8ClampedArray(
+  PORTRAIT_SIZE * PORTRAIT_SIZE * 4,
+);
+
 export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+  const ctx2dRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const modelName = entity?.model ?? entity?.prefab;
 
   useEffect(() => {
-    if ("Deno" in globalThis || !canvas || !modelName) return;
+    if ("Deno" in globalThis || !canvas || !modelName || !renderer) return;
 
     const collection = collections[modelName];
     if (!(collection instanceof AnimatedInstancedMesh)) return;
     if (collection.cameras.length === 0) return;
 
+    canvas.width = PORTRAIT_SIZE;
+    canvas.height = PORTRAIT_SIZE;
+    ctx2dRef.current = canvas.getContext("2d");
+
     const cam = collection.cameras[0];
     const s = collection.modelScale;
-
-    const renderer = new WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio, 2));
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-    renderer.setClearColor(0x222222, 1);
 
     const portraitScene = new Scene();
 
@@ -47,8 +70,8 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
     const camera = new OrthographicCamera(
       (cam.x - size) * s,
       (cam.x + size) * s,
-      (cam.y + size) * s,
       (cam.y - size) * s,
+      (cam.y + size) * s,
       0.1,
       100,
     );
@@ -109,28 +132,42 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
       mesh.setAlphaAt(0, entity.alpha ?? 1);
     };
 
+    const rt = getSharedRenderTarget();
+
     const disposeRender = onRender((delta) => {
+      const ctx = ctx2dRef.current;
+      if (!ctx || !renderer) return;
+
       syncAnimation();
       syncColors();
       mesh.decayBlendWeights(delta, 0.15 / 0.2);
-      renderer.render(portraitScene, camera);
-    });
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        renderer.setSize(
-          entry.contentRect.width,
-          entry.contentRect.height,
-          false,
-        );
-      }
+      const prevTarget = renderer.getRenderTarget();
+      renderer.setRenderTarget(rt);
+      renderer.setClearColor(0x222222, 1);
+      renderer.clear();
+      renderer.render(portraitScene, camera);
+      renderer.readRenderTargetPixels(
+        rt,
+        0,
+        0,
+        PORTRAIT_SIZE,
+        PORTRAIT_SIZE,
+        pixelBuffer,
+      );
+      renderer.setRenderTarget(prevTarget);
+
+      const imageData = new ImageData(
+        pixelBuffer,
+        PORTRAIT_SIZE,
+        PORTRAIT_SIZE,
+      );
+      ctx.putImageData(imageData, 0, 0);
     });
-    resizeObserver.observe(canvas);
 
     return () => {
-      resizeObserver.disconnect();
       disposeRender();
-      renderer.dispose();
+      mesh.geometry.dispose();
     };
   }, [canvas, modelName, entity.id]);
 

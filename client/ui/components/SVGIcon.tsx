@@ -28,6 +28,76 @@ const Overlay = styled.div`
   mix-blend-mode: multiply;
 `;
 
+const svgNodeCache = new Map<string, Node>();
+
+const buildSvgNode = (icon: string, accentColor?: string): Node | null => {
+  const cacheKey = `${icon}:${accentColor ?? ""}`;
+  const cached = svgNodeCache.get(cacheKey);
+  if (cached) return cached.cloneNode(true);
+
+  const html = svgs[icon];
+  if (!html) return null;
+
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+
+  const svg = tmp.querySelector("svg");
+  if (svg) svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+  if (accentColor) {
+    const playerColor = new Color(accentColor);
+    tmp.style.cssText =
+      "position:absolute;visibility:hidden;pointer-events:none";
+    document.body.appendChild(tmp);
+
+    tmp.querySelectorAll("[data-player]").forEach((n) => {
+      if (!(n instanceof SVGElement)) return;
+      const current = getComputedStyle(n).fill;
+      if (!current) return;
+
+      let alpha: number | undefined;
+      let rgbOnly = current;
+      if (current.startsWith("rgba(")) {
+        const match = current.match(/rgba?\(([^)]+)\)/);
+        if (match) {
+          const values = match[1].split(",").map((v) => v.trim());
+          rgbOnly = `rgb(${values[0]}, ${values[1]}, ${values[2]})`;
+          alpha = parseFloat(values[3]);
+        }
+      }
+
+      const baseColor = new Color(rgbOnly).convertLinearToSRGB();
+      const lum = (baseColor.r + baseColor.g + baseColor.b) / 3;
+      let newColor: Color;
+      if (lum < 0.5) {
+        newColor = playerColor.clone().multiplyScalar(lum * 2);
+      } else {
+        newColor = playerColor.clone().lerp(
+          new Color(1, 1, 1),
+          (lum - 0.5) * 2,
+        );
+      }
+
+      const hexColor = "#" + newColor.getHexString();
+      if (alpha !== undefined) {
+        n.style.fill = `rgba(${parseInt(hexColor.slice(1, 3), 16)}, ${
+          parseInt(hexColor.slice(3, 5), 16)
+        }, ${parseInt(hexColor.slice(5, 7), 16)}, ${alpha})`;
+      } else {
+        n.style.fill = hexColor;
+      }
+    });
+
+    document.body.removeChild(tmp);
+  }
+
+  // Cache the first child (the SVG wrapper content), not the tmp div
+  const fragment = document.createDocumentFragment();
+  while (tmp.firstChild) fragment.appendChild(tmp.firstChild);
+  svgNodeCache.set(cacheKey, fragment);
+  return fragment.cloneNode(true);
+};
+
 export const SvgIcon = ({
   icon,
   accentColor,
@@ -44,61 +114,9 @@ export const SvgIcon = ({
 
   useEffect(() => {
     if (!ref.current) return;
-    ref.current.innerHTML = svgs[icon];
-
-    // Ensure SVG maintains aspect ratio
-    const svg = ref.current.querySelector("svg");
-    if (svg) {
-      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    }
-
-    if (!accentColor) return;
-    const playerColor = new Color(accentColor);
-    ref.current.querySelectorAll("[data-player]").forEach((n) => {
-      if (!(n instanceof SVGElement)) return;
-      const current = getComputedStyle(n).fill;
-      if (!current) return;
-
-      let alpha: number | undefined;
-
-      // Extract alpha channel if present
-      let rgbOnly = current;
-      if (current.startsWith("rgba(")) {
-        const match = current.match(/rgba?\(([^)]+)\)/);
-        if (match) {
-          const values = match[1].split(",").map((v) => v.trim());
-          rgbOnly = `rgb(${values[0]}, ${values[1]}, ${values[2]})`;
-          alpha = parseFloat(values[3]);
-        }
-      }
-
-      // Luminosity blend: 0=black, 0.5=playerColor, 1=white
-      // Three.js converts colors to linear space; convert back to sRGB for luminosity calc
-      const baseColor = new Color(rgbOnly).convertLinearToSRGB();
-      const lum = (baseColor.r + baseColor.g + baseColor.b) / 3;
-      let newColor: Color;
-      if (lum < 0.5) {
-        // 0 -> 0.5 maps to black -> playerColor
-        newColor = playerColor.clone().multiplyScalar(lum * 2);
-      } else {
-        // 0.5 -> 1 maps to playerColor -> white
-        newColor = playerColor.clone().lerp(
-          new Color(1, 1, 1),
-          (lum - 0.5) * 2,
-        );
-      }
-
-      const hexColor = "#" + newColor.getHexString();
-
-      // Apply color with alpha if present
-      if (alpha !== undefined) {
-        n.style.fill = `rgba(${parseInt(hexColor.slice(1, 3), 16)}, ${
-          parseInt(hexColor.slice(3, 5), 16)
-        }, ${parseInt(hexColor.slice(5, 7), 16)}, ${alpha})`;
-      } else {
-        n.style.fill = hexColor;
-      }
-    });
+    const node = buildSvgNode(icon, accentColor);
+    if (!node) return;
+    ref.current.replaceChildren(node);
   }, [icon, accentColor]);
 
   if (!(icon in svgs)) return null;
