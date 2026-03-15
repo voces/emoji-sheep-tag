@@ -17,11 +17,11 @@ import {
   Intersection,
   Material,
   Matrix4,
-  Mesh,
   Object3D,
   Ray,
   Raycaster,
   Sphere,
+  Vector3,
 } from "three";
 import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
@@ -39,6 +39,7 @@ const _tempBox = new Box3();
 const _instanceLocalMatrix = new Matrix4();
 const _box3 = new Box3();
 const _sphere = new Sphere();
+const _raycastRay = new Ray();
 
 export class AnimatedInstancedMesh extends InstancedMesh {
   private map: Record<string, number> = {};
@@ -66,7 +67,7 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     geometry: BufferGeometry,
     material: Material,
     count: number = 1,
-    readonly modelName?: string,
+    readonly modelName: string,
     animationData?: AnimationData,
     options?: {
       cameras?: ParsedCamera[];
@@ -740,31 +741,16 @@ export class AnimatedInstancedMesh extends InstancedMesh {
   }
 
   override raycast(raycaster: Raycaster, intersects: Intersection[]) {
-    const ray = new Ray().copy(raycaster.ray);
-    const candidates = this.bvh.raycast(ray);
+    _raycastRay.copy(raycaster.ray);
+    const candidates = this.bvh.raycast(_raycastRay);
 
     for (const candidate of candidates) {
-      const instanceMatrix = new Matrix4();
-      this.getMatrixAt(candidate, instanceMatrix);
-
-      const invMat = new Matrix4().copy(instanceMatrix).invert();
-      const localRay = new Ray().copy(ray).applyMatrix4(invMat);
-
-      const testMesh = new Mesh(this.geometry, this.material as Material);
-      const localIntersects: Intersection[] = [];
-      testMesh.raycast(
-        { ...raycaster, ray: localRay } as Raycaster,
-        localIntersects,
-      );
-
-      if (localIntersects.length > 0) {
-        for (const hit of localIntersects) {
-          hit.point.applyMatrix4(instanceMatrix);
-          hit.object = this;
-          hit.instanceId = candidate;
-          intersects.push(hit);
-        }
-      }
+      intersects.push({
+        distance: -this.renderOrder,
+        point: new Vector3(),
+        object: this,
+        instanceId: candidate,
+      });
     }
 
     return false;

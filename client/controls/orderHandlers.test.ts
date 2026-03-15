@@ -26,7 +26,7 @@ import {
   playOrderSound,
   setActiveOrder,
 } from "./orderHandlers.ts";
-import { newUnit } from "../../server/api/unit.ts";
+import { newTestUnit } from "@/client-testing/utils.tsx";
 import { addEntity } from "@/shared/api/entity.ts";
 
 describe("order handlers", () => {
@@ -125,7 +125,7 @@ describe("order handlers", () => {
     });
 
     it("should issue move order when right-clicking on ground with wolf", async () => {
-      const wolf = newUnit("player-1", "wolf", 10, 10);
+      const wolf = newTestUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
 
       // Mock mouse event for ground click (no intersections)
@@ -165,9 +165,9 @@ describe("order handlers", () => {
     });
 
     it("should issue attack order when right-clicking on enemy structure", async () => {
-      const wolf = newUnit("player-1", "wolf", 10, 10);
+      const wolf = newTestUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
-      const enemyHut = newUnit("player-2", "hut", 15, 15);
+      const enemyHut = newTestUnit("player-2", "hut", 15, 15);
 
       // Mock mouse event for enemy structure click
       const mockIntersects = new ExtendedSet([enemyHut]);
@@ -207,9 +207,9 @@ describe("order handlers", () => {
     });
 
     it("should issue attack order when right-clicking on enemy unit", async () => {
-      const wolf = newUnit("player-1", "wolf", 10, 10);
+      const wolf = newTestUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
-      const enemySheep = newUnit("player-2", "sheep", 12, 12);
+      const enemySheep = newTestUnit("player-2", "sheep", 12, 12);
 
       // Mock mouse event for enemy unit click
       const mockIntersects = new ExtendedSet([enemySheep]);
@@ -334,7 +334,7 @@ describe("order handlers", () => {
     });
 
     it("should send queue flag when shift is held for smart target", async () => {
-      const wolf = newUnit("player-1", "wolf", 10, 10);
+      const wolf = newTestUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
 
       // Mock mouse event with queue flag
@@ -373,7 +373,7 @@ describe("order handlers", () => {
     });
 
     it("should not send queue flag when shift is not held", async () => {
-      const wolf = newUnit("player-1", "wolf", 10, 10);
+      const wolf = newTestUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
 
       // Mock mouse event without queue flag
@@ -411,9 +411,9 @@ describe("order handlers", () => {
     });
 
     it("should handle queued attack orders", async () => {
-      const wolf = newUnit("player-1", "wolf", 10, 10);
+      const wolf = newTestUnit("player-1", "wolf", 10, 10);
       (wolf as Entity).selected = true;
-      const enemySheep = newUnit("player-2", "sheep", 15, 15);
+      const enemySheep = newTestUnit("player-2", "sheep", 15, 15);
 
       // Mock mouse event with queue flag
       const mockIntersects = new ExtendedSet([enemySheep]);
@@ -453,8 +453,8 @@ describe("order handlers", () => {
     });
 
     it("should handle queued orders with multiple units", async () => {
-      const wolf1 = newUnit("player-1", "wolf", 10, 10);
-      const wolf2 = newUnit("player-1", "wolf", 12, 12);
+      const wolf1 = newTestUnit("player-1", "wolf", 10, 10);
+      const wolf2 = newTestUnit("player-1", "wolf", 12, 12);
       (wolf1 as Entity).selected = true;
       (wolf2 as Entity).selected = true;
 

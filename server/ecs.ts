@@ -184,7 +184,7 @@ export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
 
   appContext.with(app, () => {
     setMapForApp(app, map);
-    initApp(app);
+    initApp();
   });
 
   return app;

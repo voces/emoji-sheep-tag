@@ -159,6 +159,13 @@ export const CommandPalette = () => {
       valid: () => practice && isLocalPlayerHost(),
       callback: () => send({ type: "resetGold" }),
     },
+    {
+      name: `${lobbySettings.view ? "Enable" : "Disable"} fog`,
+      description: `${lobbySettings.view ? "Enable" : "Disable"} fog of war`,
+      valid: () => practice && isLocalPlayerHost(),
+      callback: () =>
+        send({ type: "lobbySettings", view: !lobbySettings.view }),
+    },
     ...(!isEditor
       ? [{
         name: "Open settings",

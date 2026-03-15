@@ -263,7 +263,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   house: svg(house, 0.14),
   shack: svg(shack, 0.04),
   cabin: svg(cabin, 0.085),
-  cottage: svg(cottage, 0.14, { yOffset: 0.02 }),
+  cottage: svg(cottage, 0.17),
   watchtower: svg(watchtower, 0.06),
   divinity: svg(divinity, 1.1),
   castle: svg(castle, 0.7),

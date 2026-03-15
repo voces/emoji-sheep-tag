@@ -166,6 +166,7 @@ export const LobbySettings = () => {
               $active={lobbySettings.mode === "survival"}
               onClick={() => send({ type: "lobbySettings", mode: "survival" })}
               disabled={settingsDisabled}
+              title="Wolves win by capturing all sheep."
             >
               Survival
             </ModeButton>
@@ -174,6 +175,7 @@ export const LobbySettings = () => {
               $active={lobbySettings.mode === "vip"}
               onClick={() => send({ type: "lobbySettings", mode: "vip" })}
               disabled={settingsDisabled}
+              title="Wolves win by capturing the VIP sheep."
             >
               VIP
             </ModeButton>
@@ -182,6 +184,7 @@ export const LobbySettings = () => {
               $active={lobbySettings.mode === "switch"}
               onClick={() => send({ type: "lobbySettings", mode: "switch" })}
               disabled={settingsDisabled}
+              title="Capturing swaps both players' teams."
             >
               Switch
             </ModeButton>
@@ -190,6 +193,7 @@ export const LobbySettings = () => {
               $active={lobbySettings.mode === "vamp"}
               onClick={() => send({ type: "lobbySettings", mode: "vamp" })}
               disabled={settingsDisabled}
+              title="Captured sheep become wolves."
             >
               Vamp
             </ModeButton>

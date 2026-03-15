@@ -655,27 +655,6 @@ class VisibilityGrid {
     // modifies visibility during iteration
     return Array.from(this.entityToCells.keys());
   }
-
-  reset() {
-    // Clear all visibility tracking
-    this.entityToCells.clear();
-    this.entityLastPos.clear();
-    this.modifiedCells.clear();
-    this.changedCells.clear();
-
-    // Reset all cells to not visible
-    for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < this.width; x++) {
-        const cell = this.cells[y][x];
-        cell.visible.clear();
-        cell.isVisible = false;
-      }
-    }
-
-    // Clear fog data
-    this.fogData.fill(0);
-    this.fogTexture.needsUpdate = true;
-  }
 }
 
 const createVisibilityGrid = () =>
@@ -804,7 +783,8 @@ const everSeen = new Set<string>();
 
 export const resetFog = () => {
   everSeen.clear();
-  visibilityGrid.reset();
+  visibilityGrid = createVisibilityGrid();
+  createFogPass();
   if (fogPass && renderer) fogPass.reset(renderer);
 };
 registerFogReset(resetFog);

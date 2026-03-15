@@ -1,6 +1,6 @@
 import { camera } from "../graphics/three.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
-import { getPlayer, getPlayers, Player } from "@/shared/api/player.ts";
+import { getPlayer, Player, playerEntities } from "@/shared/api/player.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 // Import triggers module resolution order that prevents circular dependency issues
@@ -12,7 +12,7 @@ import { addChatMessage } from "@/vars/chat.ts";
 import { stateVar } from "@/vars/state.ts";
 
 export const getLocalPlayer = (): Player | undefined =>
-  getPlayers().find((p) => p.id === localPlayerIdVar());
+  playerEntities().find((p) => p.id === localPlayerIdVar());
 
 export const isLocalPlayerHost = () =>
   getLocalPlayer()?.id === lobbySettingsVar().host;

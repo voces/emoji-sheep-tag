@@ -9,8 +9,8 @@ export const onInit = (fn: (app: App<Entity>) => void) => {
   initHooks.push(fn);
 };
 
-export const initApp = (app: App<Entity>) => {
-  for (const hook of initHooks) hook(app);
+export const initApp = () => {
+  for (const hook of initHooks) hook(appContext.current);
 };
 
 export const addSystem = <E extends Entity, K extends keyof E>(

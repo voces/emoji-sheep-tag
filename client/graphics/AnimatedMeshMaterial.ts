@@ -191,35 +191,33 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
     shader.vertexShader = shader.vertexShader.replace(
       /#include <color_vertex>/,
       `
-      #if defined( USE_COLOR_ALPHA )
+      #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
         vColor = vec4( 1.0 );
-      #elif defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
-        vColor = vec3( 1.0 );
       #endif
       #ifdef USE_COLOR
-        vColor *= color;
+        vColor.rgb *= color;
       #endif
 
       if (vPlayerMask < 0.5) {
-        vColor *= vTint;
+        vColor.rgb *= vTint;
       }
 
       if (vPlayerMask > 0.5) {
         vec3 srgb = mix(
-          vColor.xyz * 12.92,
-          pow(vColor.xyz, vec3(1.0 / 2.4)) * 1.055 - 0.055,
-          step(0.0031308, vColor.xyz)
+          vColor.rgb * 12.92,
+          pow(vColor.rgb, vec3(1.0 / 2.4)) * 1.055 - 0.055,
+          step(0.0031308, vColor.rgb)
         );
         float lum = (srgb.r + srgb.g + srgb.b) / 3.0;
         if (lum < 0.5) {
-          vColor.xyz = instancePlayerColor * (lum * 2.0);
+          vColor.rgb = instancePlayerColor * (lum * 2.0);
         } else {
-          vColor.xyz = mix(instancePlayerColor, vec3(1.0), (lum - 0.5) * 2.0);
+          vColor.rgb = mix(instancePlayerColor, vec3(1.0), (lum - 0.5) * 2.0);
         }
       }
       #ifdef USE_INSTANCING_COLOR
       else {
-        vColor.xyz *= instanceColor.xyz;
+        vColor.rgb *= instanceColor.rgb;
       }
       #endif
       `,
@@ -245,10 +243,8 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
     shader.fragmentShader = shader.fragmentShader.replace(
       /#include <color_fragment>/,
       `
-      #if defined( USE_COLOR_ALPHA )
+      #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
         diffuseColor *= vInstanceMinimapMask > 0.5 ? vec4(vPlayerColor, 1.0) : vColor;
-      #elif defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
-        diffuseColor.rgb *= vInstanceMinimapMask > 0.5 ? vPlayerColor : vColor;
       #endif
       `,
     );

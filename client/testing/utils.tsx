@@ -1,6 +1,9 @@
 import React from "react";
 import { ThemeProvider } from "styled-components";
 import { theme } from "../ui/theme.ts";
+import { Entity } from "../ecs.ts";
+import { addEntity } from "@/shared/api/entity.ts";
+import { tempUnit } from "@/shared/api/unit.ts";
 
 /**
  * Test wrapper that provides theme context
@@ -59,3 +62,11 @@ export const getAllTexts = (element?: HTMLElement): string[] => {
 
   return textContent;
 };
+
+export const newTestUnit = (
+  owner: string,
+  type: string,
+  x: number,
+  y: number,
+  extra?: Partial<Entity>,
+): Entity => addEntity(tempUnit(owner, type, x, y, extra));

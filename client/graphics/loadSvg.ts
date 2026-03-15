@@ -54,13 +54,11 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
   // Apply colors: base vertex color, then either instanceColor or playerColor luminosity blend
   shader.vertexShader = shader.vertexShader.replace(
     /#include <color_vertex>/,
-    `#if defined( USE_COLOR_ALPHA )
+    `#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
       vColor = vec4( 1.0 );
-    #elif defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
-      vColor = vec3( 1.0 );
     #endif
     #ifdef USE_COLOR
-      vColor *= color;
+      vColor.rgb *= color;
     #endif
     // playerColor: luminosity blend for player-masked vertices
     // vertex color encodes luminosity: 0=black, 0.5=playerColor, 1=white
@@ -68,23 +66,23 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     if (vPlayerMask > 0.5) {
       // sRGB transfer function (matches Three.js LinearToSRGB)
       vec3 srgb = mix(
-        vColor.xyz * 12.92,
-        pow(vColor.xyz, vec3(1.0 / 2.4)) * 1.055 - 0.055,
-        step(0.0031308, vColor.xyz)
+        vColor.rgb * 12.92,
+        pow(vColor.rgb, vec3(1.0 / 2.4)) * 1.055 - 0.055,
+        step(0.0031308, vColor.rgb)
       );
       float lum = (srgb.r + srgb.g + srgb.b) / 3.0;
       if (lum < 0.5) {
         // 0 -> 0.5 maps to black -> playerColor
-        vColor.xyz = instancePlayerColor * (lum * 2.0);
+        vColor.rgb = instancePlayerColor * (lum * 2.0);
       } else {
         // 0.5 -> 1 maps to playerColor -> white
-        vColor.xyz = mix(instancePlayerColor, vec3(1.0), (lum - 0.5) * 2.0);
+        vColor.rgb = mix(instancePlayerColor, vec3(1.0), (lum - 0.5) * 2.0);
       }
     }
     #ifdef USE_INSTANCING_COLOR
     else {
       // instanceColor only applies to non-player vertices
-      vColor.xyz *= instanceColor.xyz;
+      vColor.rgb *= instanceColor.rgb;
     }
     #endif`,
   );
@@ -118,10 +116,8 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
   // In minimap mode, use player color only (solid silhouette); otherwise use vColor
   shader.fragmentShader = shader.fragmentShader.replace(
     /#include <color_fragment>/,
-    `#if defined( USE_COLOR_ALPHA )
+    `#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
       diffuseColor *= vInstanceMinimapMask > 0.5 ? vec4(vPlayerColor, 1.0) : vColor;
-    #elif defined( USE_COLOR ) || defined( USE_INSTANCING_COLOR )
-      diffuseColor.rgb *= vInstanceMinimapMask > 0.5 ? vPlayerColor : vColor;
     #endif`,
   );
 };

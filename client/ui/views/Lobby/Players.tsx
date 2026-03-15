@@ -14,6 +14,7 @@ import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
+import { useTooltip } from "@/hooks/useTooltip.tsx";
 
 const PlayerMenuButton = styled.button<{ $clickable: boolean }>`
   width: 24px;
@@ -63,10 +64,24 @@ const PlayerRowContainer = styled(HStack)`
   gap: ${({ theme }) => theme.spacing.sm};
 `;
 
-const CaptainStar = styled.span`
+const StyledSpecialIcon = styled.span`
   font-size: 14px;
   line-height: 1;
 `;
+
+const SpecialIcon = (
+  { title, children }: { title?: string; children: React.ReactNode },
+) => {
+  const { tooltipContainerProps, tooltip } = useTooltip(title);
+  return (
+    <>
+      <StyledSpecialIcon {...tooltipContainerProps}>
+        {children}
+      </StyledSpecialIcon>
+      {tooltip}
+    </>
+  );
+};
 
 const PlayersGrid = styled.div`
   display: grid;
@@ -303,8 +318,8 @@ const PlayerRow = (props: PlayerRowProps) => {
   return (
     <PlayerRowContainer>
       <PlayerIcon {...props} player={props} nameInputRef={nameInputRef} />
-      {isPlayerHost && <CaptainStar title="Host">👑</CaptainStar>}
-      {isCaptain && <CaptainStar>⭐</CaptainStar>}
+      {isPlayerHost && <SpecialIcon title="Host">👑</SpecialIcon>}
+      {isCaptain && <SpecialIcon title="Team captain">⭐</SpecialIcon>}
       {isComputer
         ? (
           <>

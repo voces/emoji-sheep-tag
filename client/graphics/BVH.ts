@@ -1,5 +1,8 @@
 import { Box3, Ray, Vector3 } from "three";
 
+const tempVec = new Vector3();
+const sizeVec = new Vector3();
+
 interface BVHNode {
   parent: number;
   left: number;
@@ -245,26 +248,8 @@ export class BVH {
 
   private allocateNode(): number {
     if (this.freeList === -1) {
-      let parent = -1;
-      // deno-lint-ignore no-this-alias
-      const bvh = this;
       const node: BVHNode = {
-        set parent(value: number) {
-          parent = value;
-          const set = new Set<BVHNode>([this]);
-          // deno-lint-ignore no-this-alias
-          let cur = this;
-          if (value === -1) return;
-          while (cur.parent !== -1) {
-            const next = bvh.nodes[cur.parent];
-            set.add(next);
-            cur = next;
-          }
-        },
-        get parent() {
-          return parent;
-        },
-        // parent: ,
+        parent: -1,
         left: -1,
         right: -1,
         height: -1,
@@ -562,9 +547,10 @@ export class BVH {
   }
 
   private surfaceArea(box: Box3): number {
-    const size = new Vector3();
-    box.getSize(size);
-    return 2 * (size.x * size.y + size.y * size.z + size.z * size.x);
+    box.getSize(sizeVec);
+    return 2 *
+      (sizeVec.x * sizeVec.y + sizeVec.y * sizeVec.z +
+        sizeVec.z * sizeVec.x);
   }
 
   private unionBoxes(a: Box3, b: Box3): Box3 {
@@ -590,6 +576,6 @@ export class BVH {
 
   private rayIntersectsBox(ray: Ray, box: Box3): boolean {
     // Utilize Three.js Ray/Box intersection method
-    return ray.intersectBox(box, new Vector3()) !== null;
+    return ray.intersectBox(box, tempVec) !== null;
   }
 }

@@ -5,7 +5,7 @@ import { getPlayer } from "@/shared/api/player.ts";
 import { selection } from "../systems/selection.ts";
 import { canBuild } from "../api/unit.ts";
 import { updateCursor } from "../graphics/cursor.ts";
-import { setFind } from "../../server/util/set.ts";
+import { setFind } from "@/shared/util/set.ts";
 import { computeBlueprintColor } from "../util/colorHelpers.ts";
 import { queued } from "./orderHandlers.ts";
 import { editorVar } from "@/vars/editor.ts";

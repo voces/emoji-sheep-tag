@@ -210,25 +210,27 @@ export const getMapEntities = () => getMap().entities;
 
 export const generateDoodads = (types?: Entity["type"][]) => {
   const map = getMap();
-  for (const entityData of map.entities) {
-    if (types?.length) {
-      const prefabData = entityData.prefab
-        ? prefabs[entityData.prefab]
-        : undefined;
-      const prefabType = prefabData?.type;
-      const entityType = prefabType ?? entityData.type ?? "dynamic";
-      if (!types.includes(entityType as Entity["type"])) continue;
+  appContext.current.batch(() => {
+    for (const entityData of map.entities) {
+      if (types?.length) {
+        const prefabData = entityData.prefab
+          ? prefabs[entityData.prefab]
+          : undefined;
+        const prefabType = prefabData?.type;
+        const entityType = prefabType ?? entityData.type ?? "dynamic";
+        if (!types.includes(entityType as Entity["type"])) continue;
+      }
+
+      const entity = addEntity({
+        ...entityData,
+        facing: typeof entityData.facing === "number"
+          ? deg2rad(entityData.facing)
+          : undefined,
+      });
+
+      trackGeneratedEntity(entity, entity.type ?? "unknown");
     }
-
-    const entity = addEntity({
-      ...entityData,
-      facing: typeof entityData.facing === "number"
-        ? deg2rad(entityData.facing)
-        : undefined,
-    });
-
-    trackGeneratedEntity(entity, entity.type ?? "unknown");
-  }
+  });
 };
 
 export const clearDoodads = (types?: Entity["type"][]) => {

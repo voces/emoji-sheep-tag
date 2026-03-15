@@ -4,6 +4,17 @@ import { cleanup, configure } from "@testing-library/react";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
 import { app, map, unloadEcs } from "../ecs.ts";
 
+// jsdom perf: bypass css-tree validation for modern CSS syntax (relative colors etc.)
+CSSStyleDeclaration.prototype.setProperty = () => {};
+
+// jsdom perf: getComputedStyle walks the full DOM + stylesheets on every call
+const emptyStyle = new CSSStyleDeclaration();
+const origGetComputedStyle = globalThis.getComputedStyle;
+globalThis.getComputedStyle = (elt: Element, pseudoElt?: string | null) => {
+  if (pseudoElt) return origGetComputedStyle(elt, pseudoElt);
+  return elt instanceof HTMLElement ? elt.style : emptyStyle;
+};
+
 localStorage.clear();
 
 // Configure Testing Library to use compact output

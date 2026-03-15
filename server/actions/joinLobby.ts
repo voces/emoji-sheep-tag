@@ -5,7 +5,7 @@ import { lobbyContext } from "../contexts.ts";
 import { lobbies } from "../lobby.ts";
 import { send, sendJoinMessage } from "../lobbyApi.ts";
 import { colors } from "@/shared/data.ts";
-import { setSome } from "../util/set.ts";
+import { setSome } from "@/shared/util/set.ts";
 import { addPlayerToPracticeGame } from "../api/player.ts";
 import { appContext } from "@/shared/context.ts";
 import { flushUpdates } from "../updates.ts";

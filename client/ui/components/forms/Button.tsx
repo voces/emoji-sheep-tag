@@ -1,5 +1,6 @@
 import { styled } from "styled-components";
 import { type ButtonHTMLAttributes, forwardRef } from "react";
+import { useTooltip } from "@/hooks/useTooltip.tsx";
 
 const StyledButton = styled.button`
   border: 0;
@@ -30,7 +31,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ children, accessKey, ...props }, ref) => {
+  ({ children, accessKey, title, ...props }, ref) => {
+    const { tooltipContainerProps, tooltip } = useTooltip<HTMLButtonElement>(
+      title,
+    );
+
     let content = children;
 
     if (accessKey && typeof children === "string") {
@@ -49,17 +54,26 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     return (
-      <StyledButton
-        ref={ref}
-        accessKey={accessKey}
-        aria-label={accessKey && typeof children === "string" &&
-            typeof content != "string"
-          ? children
-          : undefined}
-        {...props}
-      >
-        {content}
-      </StyledButton>
+      <>
+        <StyledButton
+          ref={(el) => {
+            tooltipContainerProps.ref.current = el;
+            if (typeof ref === "function") ref(el);
+            else if (ref) ref.current = el;
+          }}
+          accessKey={accessKey}
+          aria-label={accessKey && typeof children === "string" &&
+              typeof content != "string"
+            ? children
+            : undefined}
+          onMouseEnter={tooltipContainerProps.onMouseEnter}
+          onMouseLeave={tooltipContainerProps.onMouseLeave}
+          {...props}
+        >
+          {content}
+        </StyledButton>
+        {tooltip}
+      </>
     );
   },
 );

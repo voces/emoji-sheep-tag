@@ -82,7 +82,7 @@ setMapForApp(app, buildDefaultMap());
 
 appContext.current = app;
 
-queueMicrotask(() => initApp(app));
+queueMicrotask(appContext.bind(initApp));
 
 onRender((delta, time) => app.update(delta, time));
 

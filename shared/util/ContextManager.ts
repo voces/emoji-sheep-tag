@@ -52,6 +52,10 @@ export class ContextManager<Context extends object> {
     }
   }
 
+  bind<T extends unknown[]>(fn: (...args: T) => void, context = this.current) {
+    return (...args: T) => this.with(context, () => fn(...args));
+  }
+
   /**
    * Sets the current context to an ephemeral clone of the current context.
    */

@@ -45,7 +45,9 @@ export const playSoundAt = (
     sound.play();
 
     // clean up node after it’s done
-    if (sound.source) sound.source.onended = () => sound.removeFromParent();
+    if (sound.source) {
+      sound.source.addEventListener("ended", () => sound.removeFromParent());
+    }
   };
 
   if (audioCache[soundPath]) {
@@ -85,7 +87,7 @@ export const playSound = (
 
     sound.play();
     if (!loop && sound.source) {
-      sound.source.onended = () => sound.removeFromParent();
+      sound.source.addEventListener("ended", () => sound.removeFromParent());
     }
   };
 

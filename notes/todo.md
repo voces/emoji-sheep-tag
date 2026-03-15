@@ -47,11 +47,8 @@
     - Stop -> S
 - Monolith needs new model
 - Custom control groups (4+)
-- Cabin model
-  - Remove right room & well & scale
 - Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
 - Modifying a shortcut should swap instead of conflict
-- Tooltips on modes
 
 # Bugs
 
