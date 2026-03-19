@@ -1,15 +1,17 @@
 export const sounds: Record<string, string> = {
   ambientBirds: new URL("./assets/ambientBirds.opus", import.meta.url).pathname,
+  charging1: new URL("./assets/charging1.opus", import.meta.url).pathname,
+  charging2: new URL("./assets/charging2.opus", import.meta.url).pathname,
+  chimes1: new URL("./assets/chimes1.opus", import.meta.url).pathname,
   click1: new URL("./assets/click1.opus", import.meta.url).pathname,
   click2: new URL("./assets/click2.opus", import.meta.url).pathname,
   click3: new URL("./assets/click3.opus", import.meta.url).pathname,
   click4: new URL("./assets/click4.opus", import.meta.url).pathname,
-  charging1: new URL("./assets/charging1.opus", import.meta.url).pathname,
-  charging2: new URL("./assets/charging2.opus", import.meta.url).pathname,
   construction1:
     new URL("./assets/construction1.opus", import.meta.url).pathname,
   error1: new URL("./assets/error1.opus", import.meta.url).pathname,
   explosion1: new URL("./assets/explosion1.opus", import.meta.url).pathname,
+  fire1: new URL("./assets/fire1.opus", import.meta.url).pathname,
   frostburst1: new URL("./assets/frostburst1.opus", import.meta.url).pathname,
   growl1: new URL("./assets/growl1.opus", import.meta.url).pathname,
   growl2: new URL("./assets/growl2.opus", import.meta.url).pathname,
@@ -31,5 +33,4 @@ export const sounds: Record<string, string> = {
   thud1: new URL("./assets/thud1.opus", import.meta.url).pathname,
   thud2: new URL("./assets/thud2.opus", import.meta.url).pathname,
   treefall1: new URL("./assets/treefall1.opus", import.meta.url).pathname,
-  chimes1: new URL("./assets/chimes1.opus", import.meta.url).pathname,
 };

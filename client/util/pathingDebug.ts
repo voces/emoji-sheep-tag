@@ -4,11 +4,11 @@ import { flags } from "../flags.ts";
 
 const WAYPOINT_SIZE = 0.5;
 const SEGMENT_WIDTH = 0.02;
-const CIRCLE_RADIUS = WAYPOINT_SIZE * 0.08 * 3.5; // rendered circle radius in world units
+const RING_RADIUS = WAYPOINT_SIZE * 0.08 * 3.5; // rendered ring radius in world units
 
 const debugPathsMap = new Map<Entity, Map<string, Entity>>();
 
-export const clearDebugCircles = (e: Entity) => {
+export const clearDebugRings = (e: Entity) => {
   const prev = debugPathsMap.get(e);
   if (prev) {
     for (const [, e2] of prev) app.removeEntity(e2);
@@ -21,16 +21,16 @@ type Spec = {
   modelScale: number;
   facing?: number;
   aspectRatio?: number;
-  prefab: "circle" | "square";
+  prefab: "ring" | "square";
   vertexColor?: number;
 };
 
-export const updateDebugCircles = (e: Entity) => {
+export const updateDebugRings = (e: Entity) => {
   if (
     !flags.debug || !flags.debugPathing || !e.position || !e.order ||
     !("path" in e.order) || !e.order.path?.length ||
     e.type === "cosmetic"
-  ) return clearDebugCircles(e);
+  ) return clearDebugRings(e);
 
   // 1) build the new set of "keys" and record their specs
   const newKeys = new Set<string>();
@@ -42,21 +42,21 @@ export const updateDebugCircles = (e: Entity) => {
     specs.set(key, spec);
   };
 
-  // start‐point circle
+  // start‐point ring
   register(`start`, {
     position: e.position,
     modelScale: WAYPOINT_SIZE,
-    prefab: "circle",
+    prefab: "ring",
   });
 
   // each path point + segment rectangle
   for (let i = e.order.path.length - 1; i >= 0; i--) {
     const p = e.order.path[i];
-    // register the node circle
+    // register the node ring
     register(`node-${i}`, {
       position: p,
       modelScale: WAYPOINT_SIZE,
-      prefab: "circle",
+      prefab: "ring",
     });
 
     // figure out the start of this segment
@@ -66,8 +66,8 @@ export const updateDebugCircles = (e: Entity) => {
     const dx = p.x - prev.x;
     const dy = p.y - prev.y;
     const dist = Math.hypot(dx, dy);
-    // shrink segment to not overlap with circles at each end
-    const segmentDist = dist - CIRCLE_RADIUS * 2;
+    // shrink segment to not overlap with rings at each end
+    const segmentDist = dist - RING_RADIUS * 2;
     if (segmentDist < 0.01) continue;
 
     const angle = Math.atan2(dy, dx);

@@ -7,7 +7,7 @@ import {
 import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
-import { clearDebugCircles, updateDebugCircles } from "../util/pathingDebug.ts";
+import { clearDebugRings, updateDebugRings } from "../util/pathingDebug.ts";
 import { pathable } from "./pathing.ts";
 
 const tweenPath = (e: Entity, delta: number): number => {
@@ -131,7 +131,7 @@ app.addSystem({
       }
     }
 
-    updateDebugCircles(e);
+    updateDebugRings(e);
   },
-  onRemove: clearDebugCircles,
+  onRemove: clearDebugRings,
 });

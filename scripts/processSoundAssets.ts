@@ -100,7 +100,7 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
         : cfg.opusBitrateLong,
       mp3Quality: cfg.mp3Quality,
       longThresholdSec: cfg.longThresholdSec,
-      filtersVersion: 2, // bump if you change the filter graph below
+      filtersVersion: 3, // bump if you change the filter graph below
       engine: "cli",
     }));
 
@@ -391,6 +391,7 @@ async function encodeOne(
     "-i",
     inputPath,
     "-vn",
+    ...(opts.category === "sfx" ? ["-ac", "1"] : []),
     "-af",
     af,
     ...codecArgs,

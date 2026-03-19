@@ -24,6 +24,8 @@ export const playSoundAt = (
   x: number,
   y: number,
   volume = 1,
+  { loop = false, channel = "sfx" as Channel, rolloff = 3, refDistance = 15 } =
+    {},
 ) => {
   if (!listener) return;
   const soundPath = sounds[soundKey];
@@ -32,20 +34,20 @@ export const playSoundAt = (
 
   const setupSound = () => {
     sound.setBuffer(audioCache[soundPath]);
-    sound.setRefDistance(15);
-    sound.setRolloffFactor(2);
-    sound.setLoop(false);
+    sound.setRefDistance(refDistance);
+    sound.setRolloffFactor(rolloff);
+    sound.setLoop(loop);
 
     const now = listener?.context.currentTime ?? 0;
     sound.gain.gain.setValueAtTime(sound.gain.gain.value, now);
     sound.gain.gain.linearRampToValueAtTime(volume, now + 0.01);
 
-    if (channels.sfx) routeToBus(sound, channels.sfx);
+    const bus = channels[channel];
+    if (bus) routeToBus(sound, bus);
     sound.position.set(x, y, 0);
     sound.play();
 
-    // clean up node after it’s done
-    if (sound.source) {
+    if (!loop && sound.source) {
       sound.source.addEventListener("ended", () => sound.removeFromParent());
     }
   };

@@ -67,10 +67,10 @@ addSystem({
 
 export const newIndicator = (
   position: { x: number; y: number },
-  { color = "#33dd33", scale = 1, model = "circle" }: {
+  { color = "#33dd33", scale = 1, model = "ring" }: {
     color?: string;
     scale?: number;
-    model?: "circle" | "gravity";
+    model?: "ring" | "gravity";
   } = {},
 ) => {
   addEntity({

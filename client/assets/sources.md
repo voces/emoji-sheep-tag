@@ -107,6 +107,7 @@
 - laser1: https://freesound.org/people/wcoltd/sounds/440776/
 - charging1: https://freesound.org/people/wildweasel/sounds/39043/
 - chimes1: https://freesound.org/people/13712885766/sounds/789596/
+- fire1: https://freesound.org/people/NoahBangs/sounds/636086/
 
 ## To consider
 

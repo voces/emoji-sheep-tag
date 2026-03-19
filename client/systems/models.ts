@@ -15,7 +15,7 @@ import collision from "../assets/collision.svg" with { type: "text" };
 import flowers from "../assets/flowers.svg" with { type: "text" };
 import grass from "../assets/grass.svg" with { type: "text" };
 import suspend from "../assets/suspend.svg" with { type: "text" };
-import circle from "../assets/circle.svg" with { type: "text" };
+import ring from "../assets/ring.svg" with { type: "text" };
 import gravity from "../assets/gravity.svg" with { type: "text" };
 import hinduTemple from "../assets/hindu-temple.svg" with { type: "text" };
 import route from "../assets/route.svg" with { type: "text" };
@@ -93,6 +93,7 @@ import beamStart from "../assets/beamStart.svg" with { type: "text" };
 import startLocation from "../assets/startLocation.estb" with { type: "bytes" };
 import eye from "../assets/eye.svg" with { type: "text" };
 import monolith from "../assets/monolith.svg" with { type: "text" };
+import circle from "../assets/circle.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   // units
@@ -170,9 +171,10 @@ export const svgs: Record<string, string> = {
 
   // effects (buffs + sfx)
   flag,
+  circle,
   fire,
   collision,
-  circle,
+  ring,
   gravity,
   sapphire,
   dash,
@@ -297,6 +299,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   rune2: svg(rune2, 0.05, { layer: 2 }),
   eye: svg(eye, 0.05, { layer: 2 }),
   swap: svg(swap, 0.1, { layer: 2 }),
+  circle: svg(circle, 0.08, { layer: 2 }),
   fire: svg(fire, 1, { layer: 2 }),
   crimsonArc: svg(crimsonArc, 0.1, { layer: 2 }),
   vip: svg(vip, 0.03, { layer: 2 }),
@@ -312,7 +315,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   square: svg(square, 1, { layer: 2 }),
 
   // Top-layer indicators (render above everything)
-  circle: svg(circle, 0.08, { layer: 2 }),
+  ring: svg(ring, 0.08, { layer: 2 }),
   gravity: svg(gravity, 2, { layer: 2 }),
 };
 

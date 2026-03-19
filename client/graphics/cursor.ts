@@ -6,7 +6,7 @@ import { Entity } from "../ecs.ts";
 import { mouse } from "../mouse.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import cursorSvg from "../assets/cursor.svg" with { type: "text" };
-import circleSvg from "../assets/circle.svg" with { type: "text" };
+import ringSvg from "../assets/ring.svg" with { type: "text" };
 import { camera, renderer } from "./three.ts";
 import { MathUtils } from "three";
 
@@ -15,7 +15,7 @@ const pointerSvg = new DOMParser().parseFromString(
   "application/xml",
 );
 const aoeSvg = new DOMParser().parseFromString(
-  circleSvg.replace("#ffffff", "#31aaef"),
+  ringSvg.replace("#ffffff", "#31aaef"),
   "application/xml",
 );
 
@@ -69,7 +69,7 @@ const worldUnitsPerPixel = () => {
 /** pixels per world unit (inverse of the above) */
 const pixelsPerWorldUnit = () => 1 / worldUnitsPerPixel();
 
-/** AOE circle size in pixels for a given world-space radius */
+/** AOE ring size in pixels for a given world-space radius */
 const aoeDiameterPx = (radiusWorld: number) =>
   2 * radiusWorld * pixelsPerWorldUnit();
 
@@ -120,6 +120,12 @@ export const updateCursor = (updatePosition = false) => {
       cursor.style.width = `${diameter}px`;
       cursor.style.height = `${diameter}px`;
       cursor.style.transform = "translate(-50%, -50%)";
+      cursor.style.color = "blue";
+      for (const n of cursor.querySelectorAll("[data-player")) {
+        if (!(n instanceof SVGElement)) return;
+        n.style.fill = `hsl(${variants[variant].hue - 150}, 90%, 60%)`;
+      }
+      return;
     }
 
     cursor.style.filter = `hue-rotate(${variants[variant].hue}deg)`;
