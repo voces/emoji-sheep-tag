@@ -58,6 +58,12 @@ const scheduleBatchFlush = (flush: () => void) => {
   }
 };
 
+export const __testing_clearBatchFlush = () => {
+  clearTimeout(batchTimeout);
+  batchTimeout = undefined;
+  pendingFlushes.clear();
+};
+
 const throttle = <T>(
   callback: (value: T) => void,
 ) => {

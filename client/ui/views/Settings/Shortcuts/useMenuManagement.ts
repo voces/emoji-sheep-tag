@@ -7,6 +7,7 @@ import {
   findMenuForAction,
 } from "./menuActionHelpers.ts";
 import { prefabs } from "@/shared/data.ts";
+import { actionToShortcutKey } from "../../../../util/actionToShortcutKey.ts";
 
 export const useMenuManagement = (
   section: string,
@@ -180,6 +181,33 @@ export const useMenuManagement = (
 
     if (buildActions.length === 0) return;
 
+    // Find non-build actions that conflict with the build menu's KeyB binding
+    const buildActionKeys = new Set(
+      buildActions.map((a) => actionToShortcutKey(a)),
+    );
+    const conflicting = prefab.actions.filter((a) => {
+      const key = actionToShortcutKey(a);
+      return !buildActionKeys.has(key) &&
+        a.binding?.length === 1 && a.binding[0] === "KeyB";
+    });
+
+    // Keys freed by moving build actions into the menu, sorted alphabetically
+    const freedKeys = buildActions
+      .filter((a) => a.binding?.length === 1)
+      .map((a) => a.binding![0])
+      .sort();
+
+    // Assign freed keys to conflicting actions
+    let bindingOverrides: Record<string, string[]> | undefined;
+    if (conflicting.length > 0) {
+      bindingOverrides = {};
+      let freedIdx = 0;
+      for (const a of conflicting) {
+        const freed = freedKeys[freedIdx++];
+        bindingOverrides[actionToShortcutKey(a)] = freed ? [freed] : [];
+      }
+    }
+
     // Create menu with all build actions
     const buildMenu: MenuConfig = {
       id: `build-${Date.now()}`,
@@ -194,6 +222,7 @@ export const useMenuManagement = (
           actionKey: `build-${action.unitType}`,
         })),
       ],
+      bindingOverrides,
     };
 
     menusVar([...menusVar(), buildMenu]);

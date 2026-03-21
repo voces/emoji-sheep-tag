@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { items } from "@/shared/data.ts";
+import { items, prefabs } from "@/shared/data.ts";
 import type { MenuConfig } from "@/vars/menus.ts";
 import type { ConflictInfo } from "@/util/shortcutUtils.ts";
 import { detectMenuConflicts } from "@/util/shortcutUtils.ts";
+import { actionToShortcutKey } from "../../../../util/actionToShortcutKey.ts";
 import {
   buildActionsInMenusSet,
   getMenuActionInfo,
@@ -24,10 +25,26 @@ export const useShortcutGroups = (
   shortcuts: Record<string, string[]>,
   sectionMenus: MenuConfig[],
   section: string,
+  useSlotBindings = false,
 ): ShortcutGroups => {
   return useMemo(() => {
     // Build a set of actions that are in menus to filter them out from top-level
     const actionsInMenus = buildActionsInMenusSet(sectionMenus);
+
+    // When slot bindings are enabled, hide individual item action keys and
+    // show slot-N keys instead. When disabled, hide slot-N keys.
+    const hiddenKeys = new Set<string>();
+    if ("inventory" in (prefabs[section] ?? {})) {
+      if (useSlotBindings) {
+        for (const item of Object.values(items)) {
+          for (const a of item.actions ?? []) {
+            hiddenKeys.add(actionToShortcutKey(a));
+          }
+        }
+      } else {
+        for (let i = 1; i <= 6; i++) hiddenKeys.add(`slot-${i}`);
+      }
+    }
 
     // Group shortcuts by menu context (nested vs top-level)
     const topLevelShortcuts: Record<string, string[]> = {};
@@ -44,7 +61,7 @@ export const useShortcutGroups = (
       } else if (key.startsWith("menu-")) {
         menuBindings[key] = binding;
       } else {
-        if (actionsInMenus.has(key)) {
+        if (actionsInMenus.has(key) || hiddenKeys.has(key)) {
           continue;
         }
         topLevelShortcuts[key] = binding;
@@ -112,5 +129,5 @@ export const useShortcutGroups = (
       menuConflicts,
       hasConflicts,
     };
-  }, [shortcuts, sectionMenus, section]);
+  }, [shortcuts, sectionMenus, section, useSlotBindings]);
 };

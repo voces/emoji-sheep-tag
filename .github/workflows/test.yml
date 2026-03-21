@@ -54,7 +54,7 @@ jobs:
       - name: Run all tests (parallel)
         run: |
           # Run all tests in parallel - integration tests use unique ports via registry
-          deno task test --parallel --reporter=dot
+          deno task test:fast
 
   test-summary:
     name: Test Summary

@@ -5,6 +5,7 @@ import {
   type ConflictInfo,
   defaultBindings,
   getActionDisplayName,
+  getEffectiveDefault,
   isDefaultBinding,
 } from "@/util/shortcutUtils.ts";
 import { ShortcutInputField } from "./ShortcutInputField.tsx";
@@ -154,7 +155,7 @@ export const ShortcutRow = memo(({
         </LabelContainer>
         <ShortcutInputField
           binding={shortcut}
-          defaultBinding={defaultBindings[section]?.[fullKey] ?? []}
+          defaultBinding={getEffectiveDefault(section, fullKey)}
           isDefault={isDefault}
           onSetBinding={(binding) => onSetBinding(fullKey, binding)}
         />

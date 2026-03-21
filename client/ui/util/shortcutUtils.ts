@@ -6,6 +6,8 @@ import {
   getMenuShortcutKeys,
 } from "../../util/actionToShortcutKey.ts";
 import { menusVar } from "@/vars/menus.ts";
+import { shortcutSettingsVar } from "@/vars/shortcutSettings.ts";
+import { presetOverrides } from "@/vars/presets.ts";
 
 // Find all prefabs that can be upgraded to, and map them to their source prefabs
 const getUpgradeTargets = (): Map<string, string[]> => {
@@ -60,6 +62,16 @@ export const miscNames = {
   toggleScoreboard: "Toggle scoreboard",
 };
 
+export const SLOT_COUNT = 6;
+export const slotDefaults: [string, string[]][] = [
+  ["slot-1", ["Numpad7"]],
+  ["slot-2", ["Numpad8"]],
+  ["slot-3", ["Numpad4"]],
+  ["slot-4", ["Numpad5"]],
+  ["slot-5", ["Numpad1"]],
+  ["slot-6", ["Numpad2"]],
+];
+
 export const bindingsEqual = (a: string[], b: string[]): boolean =>
   a.length === b.length && a.every((key, i) => key === b[i]);
 
@@ -95,7 +107,7 @@ export const isDefaultBinding = (
   const defaultBinding = defaults[section]?.[fullKey];
   if (!defaultBinding) return false;
 
-  return bindingsEqual(shortcut, defaultBinding);
+  return bindingsEqual(shortcut, getEffectiveDefault(section, fullKey));
 };
 
 export const defaultBindings: Shortcuts = {
@@ -153,18 +165,39 @@ export const defaultBindings: Shortcuts = {
             }),
           // Add shortcuts for item actions if this prefab has inventory
           ...("inventory" in d
-            ? Object.values(items).flatMap((item) => {
-              if (!item.actions) return [];
-              return item.actions.map((itemAction) => [
-                actionToShortcutKey(itemAction),
-                itemAction.binding ?? [],
-              ]);
-            })
+            ? [
+              ...Object.values(items).flatMap((item) => {
+                if (!item.actions) return [];
+                return item.actions.map((itemAction) => [
+                  actionToShortcutKey(itemAction),
+                  itemAction.binding ?? [],
+                ]);
+              }),
+              ...slotDefaults,
+            ]
             : []),
         ],
       ),
     ]),
   ),
+};
+
+export const getEffectiveDefault = (
+  section: string,
+  fullKey: string,
+): string[] => {
+  const base = defaultBindings[section]?.[fullKey] ?? [];
+  const { preset } = shortcutSettingsVar();
+  const overrides = presetOverrides[preset].bindings;
+  const presetBinding = overrides[section]?.[fullKey];
+  if (presetBinding) return presetBinding;
+  const allMenus = menusVar();
+  for (const m of allMenus) {
+    if (m.prefabs.includes(section) && m.bindingOverrides?.[fullKey]) {
+      return m.bindingOverrides[fullKey];
+    }
+  }
+  return base;
 };
 
 export const createInitialShortcuts = (): Shortcuts => ({
@@ -239,23 +272,29 @@ export const createInitialShortcuts = (): Shortcuts => ({
                 }),
               // Add shortcuts for item actions if this prefab has inventory
               ...("inventory" in d
-                ? Object.values(items).flatMap((item) => {
-                  if (!item.actions) return [];
-                  const storedSectionShortcuts = pluck(
-                    localStorageShortcuts,
-                    u,
-                    z.record(z.string(), zShortcut),
-                  );
-                  return item.actions.map((itemAction) => {
-                    const itemKey = actionToShortcutKey(itemAction);
-                    const storedBinding = storedSectionShortcuts?.[itemKey];
-                    return [
-                      itemKey,
-                      storedBinding ?? pluckShortcut(`${u}.${itemKey}`) ??
-                        itemAction.binding ?? [],
-                    ];
-                  });
-                })
+                ? [
+                  ...Object.values(items).flatMap((item) => {
+                    if (!item.actions) return [];
+                    const storedSectionShortcuts = pluck(
+                      localStorageShortcuts,
+                      u,
+                      z.record(z.string(), zShortcut),
+                    );
+                    return item.actions.map((itemAction) => {
+                      const itemKey = actionToShortcutKey(itemAction);
+                      const storedBinding = storedSectionShortcuts?.[itemKey];
+                      return [
+                        itemKey,
+                        storedBinding ?? pluckShortcut(`${u}.${itemKey}`) ??
+                          itemAction.binding ?? [],
+                      ];
+                    });
+                  }),
+                  ...slotDefaults.map(([key, def]) => [
+                    key,
+                    pluckShortcut(`${u}.${key}`) ?? def,
+                  ]),
+                ]
                 : []),
             ],
           ),
@@ -270,6 +309,8 @@ export const getActionDisplayName = (
 ): string => {
   if (section === "misc") {
     return miscNames[key as keyof typeof miscNames] || key;
+  } else if (key.startsWith("slot-")) {
+    return `Item slot ${key.substring(5)}`;
   } else if (key === "cancel-upgrade") {
     return "Cancel upgrade";
   } else if (key.startsWith("menu-back-")) {

@@ -1,12 +1,13 @@
 import "@/client-testing/setup.ts";
 import { afterEach, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { fireEvent, render } from "@testing-library/react";
+import { fireEvent, render, renderHook } from "@testing-library/react";
 import { Wrapper } from "../../../Wrapper.tsx";
 import { SettingsSection } from "./SettingsSection.tsx";
 import { defaultBindings } from "@/util/shortcutUtils.ts";
 import { type MenuConfig, menusVar } from "@/vars/menus.ts";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
+import { useMenuManagement } from "./useMenuManagement.ts";
 
 afterEach(() => {
   // Reset all vars to their initial state
@@ -399,4 +400,78 @@ it("should detect conflicts with default menu bindings", () => {
   const text = container.textContent || "";
   expect(text).toContain("Build");
   expect(text).toContain("Conflicts with: Bite");
+});
+
+it("should include bindingOverrides when creating build menu with conflicts", () => {
+  const { result } = renderHook(() => useMenuManagement("sheep"), {
+    wrapper: Wrapper,
+  });
+
+  result.current.creation.createBuildMenu();
+
+  const menus = menusVar();
+  const buildMenu = menus.find((m) => m.name === "Build");
+  expect(buildMenu).toBeDefined();
+
+  // Build menu should reassign bite from KeyB to KeyA (first freed key alphabetically)
+  expect(buildMenu!.bindingOverrides).toEqual({ bite: ["KeyA"] });
+});
+
+it("should apply and revert bindingOverrides in shortcuts", async () => {
+  const { shortcutsVar } = await import("@/vars/shortcuts.ts");
+
+  // Bite should start at KeyB
+  expect(shortcutsVar()["sheep"]?.["bite"]).toEqual(["KeyB"]);
+
+  // Create a build menu with bite override
+  const buildMenu: MenuConfig = {
+    id: "build-test",
+    name: "Build",
+    binding: ["KeyB"],
+    prefabs: ["sheep"],
+    actions: [{ type: "action", actionKey: "back" }],
+    bindingOverrides: { bite: ["KeyF"] },
+  };
+  menusVar([...menusVar(), buildMenu]);
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Bite should now be overridden to KeyF
+  expect(shortcutsVar()["sheep"]?.["bite"]).toEqual(["KeyF"]);
+
+  // Remove the build menu
+  menusVar(menusVar().filter((m) => m.id !== "build-test"));
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Bite should revert to KeyB
+  expect(shortcutsVar()["sheep"]?.["bite"]).toEqual(["KeyB"]);
+});
+
+it("should not override custom binding when creating build menu", async () => {
+  const { shortcutsVar } = await import("@/vars/shortcuts.ts");
+
+  // User customizes bite to KeyD
+  shortcutsVar({
+    ...shortcutsVar(),
+    sheep: { ...shortcutsVar()["sheep"], bite: ["KeyD"] },
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Create a build menu with bite override
+  const buildMenu: MenuConfig = {
+    id: "build-custom",
+    name: "Build",
+    binding: ["KeyB"],
+    prefabs: ["sheep"],
+    actions: [{ type: "action", actionKey: "back" }],
+    bindingOverrides: { bite: ["KeyA"] },
+  };
+  menusVar([...menusVar(), buildMenu]);
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  // Bite should stay at KeyD (user's custom binding), not be overridden to KeyA
+  expect(shortcutsVar()["sheep"]?.["bite"]).toEqual(["KeyD"]);
 });

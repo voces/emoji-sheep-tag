@@ -2,6 +2,7 @@ import "global-jsdom/register";
 import { afterEach, beforeEach } from "@std/testing/bdd";
 import { cleanup, configure } from "@testing-library/react";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
+import { __testing_clearBatchFlush } from "@/hooks/useListenToEntityProp.ts";
 import { app, map, unloadEcs } from "../ecs.ts";
 
 // jsdom perf: bypass css-tree validation for modern CSS syntax (relative colors etc.)
@@ -167,5 +168,6 @@ afterEach(() => {
   for (const entity of app.entities) app.removeEntity(entity);
   for (const key in map) delete map[key];
   cleanup();
+  __testing_clearBatchFlush();
   localStorage.clear();
 });

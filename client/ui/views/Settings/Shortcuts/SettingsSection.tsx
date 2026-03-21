@@ -32,6 +32,7 @@ type SettingsSectionProps = {
   shortcuts: Record<string, string[]>;
   setBinding: (shortcut: string, binding: string[]) => void;
   defaultOpen?: boolean;
+  useSlotBindings?: boolean;
 };
 
 export const SettingsSection = memo(({
@@ -39,8 +40,11 @@ export const SettingsSection = memo(({
   shortcuts,
   setBinding,
   defaultOpen = false,
+  useSlotBindings = false,
 }: SettingsSectionProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const hasBeenOpened = useRef(defaultOpen);
+  if (isOpen) hasBeenOpened.current = true;
   const sectionMenus = useReactiveVar(
     menusVar,
     (menus) => menus.filter((menu) => menu.prefabs.includes(section)),
@@ -56,16 +60,27 @@ export const SettingsSection = memo(({
     topLevelConflicts,
     menuConflicts,
     hasConflicts,
-  } = useShortcutGroups(shortcuts, sectionMenus, section);
+  } = useShortcutGroups(shortcuts, sectionMenus, section, useSlotBindings);
 
-  // Check if there are any non-default bindings or menu configurations (overrides)
-  const hasBindingOverrides = Object.entries(shortcuts).some(([key, binding]) =>
-    !isDefaultBinding(section, key, binding, defaultBindings)
+  // Check visible shortcuts for non-default bindings
+  const visibleShortcuts = {
+    ...topLevelShortcuts,
+    ...Object.fromEntries(
+      Object.entries(menuShortcuts).flatMap(([menuKey, bindings]) =>
+        Object.entries(bindings).map(([k, v]) => [`${menuKey}.${k}`, v])
+      ),
+    ),
+  };
+  const hasBindingOverrides = Object.entries(visibleShortcuts).some(
+    ([key, binding]) =>
+      !isDefaultBinding(section, key, binding, defaultBindings),
   );
-  const hasNonDefaultMenus = sectionMenus.some((menu) => !isDefaultMenu(menu));
+  const hasCustomMenus = sectionMenus.some((menu) =>
+    !isDefaultMenu(menu) && !menu.bindingOverrides
+  );
   const hasDeletedDefaultMenus =
     menuManagement.restoration.getDeleted().length > 0;
-  const hasOverrides = hasBindingOverrides || hasNonDefaultMenus ||
+  const hasOverrides = hasBindingOverrides || hasCustomMenus ||
     hasDeletedDefaultMenus;
 
   const handleSetBinding = useCallback(
@@ -199,40 +214,43 @@ export const SettingsSection = memo(({
         {hasConflicts && <span style={{ marginLeft: "8px" }}>⚠</span>}
       </HoverHighlight>
       <Collapse isOpen={isOpen}>
-        <TopLevelDropZone ref={dropZoneRef}>
-          {renderTopLevelItems()}
-          {renderLegacyMenuShortcuts()}
-          {section !== "misc" && (
-            <HStack>
-              <Button
-                type="button"
-                onClick={menuManagement.creation.createMenu}
-                style={{ marginTop: "8px", alignSelf: "flex-start" }}
-              >
-                + Create Menu
-              </Button>
-              {!menuManagement.creation.hasNestedBuildActions() && (
+        {hasBeenOpened.current && (
+          <TopLevelDropZone ref={dropZoneRef}>
+            {renderTopLevelItems()}
+            {renderLegacyMenuShortcuts()}
+            {section !== "misc" && (
+              <HStack>
                 <Button
                   type="button"
-                  onClick={menuManagement.creation.createBuildMenu}
+                  onClick={menuManagement.creation.createMenu}
                   style={{ marginTop: "8px", alignSelf: "flex-start" }}
                 >
-                  + Create Build Menu
+                  + Create Menu
                 </Button>
-              )}
-              {menuManagement.restoration.getDeleted().map((menu) => (
-                <Button
-                  key={menu.id}
-                  type="button"
-                  onClick={() => menuManagement.restoration.restore(menu.id)}
-                  style={{ marginTop: "8px", alignSelf: "flex-start" }}
-                >
-                  ↻ Restore {menu.name}
-                </Button>
-              ))}
-            </HStack>
-          )}
-        </TopLevelDropZone>
+                {prefabs[section]?.actions?.some((a) => a.type === "build") &&
+                  !menuManagement.creation.hasNestedBuildActions() && (
+                  <Button
+                    type="button"
+                    onClick={menuManagement.creation.createBuildMenu}
+                    style={{ marginTop: "8px", alignSelf: "flex-start" }}
+                  >
+                    + Create Build Menu
+                  </Button>
+                )}
+                {menuManagement.restoration.getDeleted().map((menu) => (
+                  <Button
+                    key={menu.id}
+                    type="button"
+                    onClick={() => menuManagement.restoration.restore(menu.id)}
+                    style={{ marginTop: "8px", alignSelf: "flex-start" }}
+                  >
+                    ↻ Restore {menu.name} menu
+                  </Button>
+                ))}
+              </HStack>
+            )}
+          </TopLevelDropZone>
+        )}
       </Collapse>
     </VStack>
   );

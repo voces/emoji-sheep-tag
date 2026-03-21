@@ -59,7 +59,7 @@ const MenuNameContainer = styled.span<{ $enableHover?: boolean }>`
   cursor: pointer;
 
   .edit-icon {
-    opacity: 0;
+    opacity: 0.3;
     font-size: 16px;
     transition: opacity 0.15s;
   }
@@ -113,7 +113,7 @@ const DeleteButton = styled.button.attrs({ className: "delete-button" })`
   border: none;
   padding: 2px;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.3;
   transition: opacity 0.15s, filter 0.15s;
   display: flex;
   align-items: center;
@@ -260,6 +260,7 @@ export const MenuDisplay = memo(({
           icon={menu.icon ?? "shop"}
           accentColor={colors[0]}
           hideTooltip
+          role="button"
           onClick={() => setShowIconPicker(!showIconPicker)}
         />
         {editingName

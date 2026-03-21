@@ -1,8 +1,10 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { SettingsSection } from "./SettingsSection.tsx";
 import { SettingsPanelContainer } from "../commonStyles.tsx";
+import { Checkbox } from "@/components/forms/Checkbox.tsx";
+import { shortcutSettingsVar } from "@/vars/shortcutSettings.ts";
 import {
   defaultBindings,
   getActionDisplayName,
@@ -192,10 +194,29 @@ export const Shortcuts = () => {
   };
 
   const sectionEntries = Object.entries(sections);
+  const { useSlotBindings } = useReactiveVar(shortcutSettingsVar);
+  const handleSlotBindingsChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      shortcutSettingsVar({
+        ...shortcutSettingsVar(),
+        useSlotBindings: e.target.checked,
+      }),
+    [],
+  );
 
   return (
     <>
       <SettingsPanelContainer>
+        <label
+          style={{ display: "flex", alignItems: "center", gap: "8px" }}
+        >
+          <Checkbox
+            id="use-slot-bindings"
+            checked={useSlotBindings}
+            onChange={handleSlotBindingsChange}
+          />
+          Use item slot bindings
+        </label>
         {sectionEntries.map(([section, shortcuts], index) => (
           <SettingsSection
             key={section}
@@ -204,6 +225,7 @@ export const Shortcuts = () => {
             defaultOpen={index === 0}
             setBinding={(shortcut, binding) =>
               handleSetBinding(section, shortcut, binding)}
+            useSlotBindings={useSlotBindings}
           />
         ))}
       </SettingsPanelContainer>

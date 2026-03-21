@@ -1,10 +1,18 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { styled } from "styled-components";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import { Dialog } from "@/components/layout/Dialog.tsx";
 import { Button } from "@/components/forms/Button.tsx";
+import { ToggleButton, ToggleGroup } from "@/components/forms/ToggleGroup.tsx";
+import {
+  type Preset,
+  presets,
+  shortcutSettingsVar,
+} from "@/vars/shortcutSettings.ts";
+import { presetOverrides } from "@/vars/presets.ts";
+import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { Gameplay } from "./Gameplay.tsx";
 import { Shortcuts } from "./Shortcuts/Shortcuts.tsx";
 import { Audio } from "./Audio.tsx";
@@ -61,8 +69,8 @@ const TabContent = styled.div`
 
 const SettingsHeader = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: ${({ theme }) => theme.spacing.lg};
 `;
 
 const Header = styled.h1`
@@ -71,16 +79,37 @@ const Header = styled.h1`
 
 const CloseButton = styled(Button)`
   padding: 0 ${({ theme }) => theme.spacing.md};
+  margin-left: auto;
   margin-right: ${({ theme }) => theme.spacing.lg};
   font-weight: 800;
 `;
 
 export const Settings = () => {
   const showSettings = useReactiveVar(showSettingsVar);
+  const { preset } = useReactiveVar(shortcutSettingsVar);
   const [activeTab, setActiveTab] = useState<
     "gameplay" | "shortcuts" | "audio" | "maps" | "ui"
   >(
     "gameplay",
+  );
+  const setPreset = useCallback(
+    (p: Preset) => {
+      const overrides = presetOverrides[p];
+      shortcutSettingsVar({
+        ...shortcutSettingsVar(),
+        preset: p,
+        ...(overrides.useSlotBindings != null
+          ? { useSlotBindings: overrides.useSlotBindings }
+          : {}),
+      });
+      if (overrides.clearOrderOnRightClick != null) {
+        gameplaySettingsVar({
+          ...gameplaySettingsVar(),
+          clearOrderOnRightClick: overrides.clearOrderOnRightClick,
+        });
+      }
+    },
+    [],
   );
 
   if (!showSettings) return null;
@@ -89,6 +118,18 @@ export const Settings = () => {
     <SettingsDialog>
       <SettingsHeader>
         <Header>Settings</Header>
+        <ToggleGroup>
+          {presets.map((p) => (
+            <ToggleButton
+              key={p}
+              type="button"
+              $active={preset === p}
+              onClick={() => setPreset(p)}
+            >
+              {p.toUpperCase()}
+            </ToggleButton>
+          ))}
+        </ToggleGroup>
         <CloseButton
           type="button"
           onClick={() => showSettingsVar(false)}

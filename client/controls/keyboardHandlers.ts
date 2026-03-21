@@ -1,4 +1,6 @@
 import { UnitDataAction } from "@/shared/types.ts";
+import { SLOT_COUNT } from "../ui/util/shortcutUtils.ts";
+import { shortcutSettingsVar } from "../ui/vars/shortcutSettings.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { Entity } from "../ecs.ts";
 import { selection } from "../systems/selection.ts";
@@ -142,8 +144,8 @@ export const findActionForShortcut = (
         }
       }
 
-      // Check item actions from inventory
-      if (entity.inventory) {
+      // Check item actions from inventory (skip when slot bindings are active)
+      if (entity.inventory && !shortcutSettingsVar().useSlotBindings) {
         for (const item of entity.inventory) {
           if (
             item.actions && item.actions.length > 0 &&
@@ -175,6 +177,38 @@ export const findActionForShortcut = (
                   }
                 }
               }
+            }
+          }
+        }
+      }
+
+      // Check slot bindings for inventory items
+      if (
+        entity.inventory && entity.prefab &&
+        shortcutSettingsVar().useSlotBindings
+      ) {
+        const prefabShortcuts = shortcuts[entity.prefab];
+        if (prefabShortcuts) {
+          const usableActions: UnitDataAction[] = [];
+          for (const item of entity.inventory) {
+            if (
+              item.actions && item.actions.length > 0 &&
+              (!item.charges || item.charges > 0)
+            ) {
+              for (const itemAction of item.actions) {
+                usableActions.push(itemAction);
+              }
+            }
+          }
+          for (let i = 0; i < Math.min(usableActions.length, SLOT_COUNT); i++) {
+            const slotBinding = prefabShortcuts[`slot-${i + 1}`];
+            if (!slotBinding) continue;
+            const matchQuality = checkShortcut(slotBinding, e.code);
+            if (matchQuality && matchQuality > bestMatchQuality) {
+              bestMatchQuality = matchQuality;
+              action = usableActions[i];
+              units.length = 0;
+              units.push(entity);
             }
           }
         }

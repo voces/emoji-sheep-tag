@@ -1,5 +1,7 @@
 import { makeVar } from "@/hooks/useVar.tsx";
 import { items } from "@/shared/data.ts";
+import { presetOverrides } from "./presets.ts";
+import { shortcutSettingsVar } from "./shortcutSettings.ts";
 
 export type MenuConfig = {
   id: string;
@@ -9,6 +11,7 @@ export type MenuConfig = {
   binding?: string[];
   prefabs: string[]; // Which prefabs this menu applies to
   actions: Array<MenuActionRef | MenuConfig>; // Can nest menus
+  bindingOverrides?: Record<string, string[]>; // actionKey → alt binding when this menu is active
 };
 
 export type MenuActionRef = {
@@ -17,6 +20,11 @@ export type MenuActionRef = {
 } | {
   type: "purchase";
   itemId: string;
+};
+
+export const getActiveDefaultMenus = (): MenuConfig[] => {
+  const { preset } = shortcutSettingsVar();
+  return [...defaultMenus, ...presetOverrides[preset].menus];
 };
 
 export const defaultMenus: MenuConfig[] = [
@@ -65,21 +73,24 @@ export const deletedMenusVar = makeVar<DeletedMenus>(
   loadDeletedMenusFromStorage(),
 );
 
-const loadMenusFromStorage = (): MenuConfig[] => {
+export const loadMenusFromStorage = (): MenuConfig[] => {
   const deletedMenus = deletedMenusVar();
+  const activeDefaults = getActiveDefaultMenus();
+
+  // Build set of prefabs covered by preset menus to avoid duplicates
+  const { preset } = shortcutSettingsVar();
+  const presetMenuPrefabs = new Set(
+    presetOverrides[preset].menus.flatMap((m) => m.prefabs),
+  );
 
   try {
     const stored = localStorage.getItem("menus");
     if (stored) {
       const storedMenus: MenuConfig[] = JSON.parse(stored);
-      // Merge stored non-default menus with default menus
-      // Start with default menus, then add/override with stored menus
       const menuMap = new Map<string, MenuConfig>();
 
-      // Add defaults first, filtering out deleted ones
-      for (const menu of defaultMenus) {
+      for (const menu of activeDefaults) {
         const deletedPrefabs = deletedMenus[menu.id] || [];
-        // Remove deleted prefabs from the menu
         const remainingPrefabs = menu.prefabs.filter(
           (p) => !deletedPrefabs.includes(p),
         );
@@ -88,8 +99,12 @@ const loadMenusFromStorage = (): MenuConfig[] => {
         }
       }
 
-      // Add/override with stored menus
       for (const menu of storedMenus) {
+        // Skip user build menus that conflict with preset menus
+        if (
+          menu.id.startsWith("build-") &&
+          menu.prefabs.some((p) => presetMenuPrefabs.has(p))
+        ) continue;
         menuMap.set(menu.id, menu);
       }
 
@@ -99,8 +114,7 @@ const loadMenusFromStorage = (): MenuConfig[] => {
     // Ignore parse errors
   }
 
-  // Filter defaults by deletedMenus
-  return defaultMenus
+  return activeDefaults
     .map((menu) => {
       const deletedPrefabs = deletedMenus[menu.id] || [];
       const remainingPrefabs = menu.prefabs.filter(
@@ -131,7 +145,7 @@ const sortActions = (actions: Array<MenuActionRef | MenuConfig>) =>
 
 // Helper to check if a menu matches its default
 export const isDefaultMenu = (menu: MenuConfig): boolean => {
-  const defaultMenu = defaultMenus.find((m) => m.id === menu.id);
+  const defaultMenu = getActiveDefaultMenus().find((m) => m.id === menu.id);
   if (!defaultMenu) return false;
 
   // Sort actions before comparing to ignore order differences
@@ -156,7 +170,7 @@ const filterNonDefaultMenus = (menus: MenuConfig[]): MenuConfig[] =>
 const calculateDeletedMenus = (currentMenus: MenuConfig[]): DeletedMenus => {
   const deleted: DeletedMenus = {};
 
-  for (const defaultMenu of defaultMenus) {
+  for (const defaultMenu of getActiveDefaultMenus()) {
     const currentMenu = currentMenus.find((m) => m.id === defaultMenu.id);
 
     if (!currentMenu) {
@@ -175,6 +189,11 @@ const calculateDeletedMenus = (currentMenus: MenuConfig[]): DeletedMenus => {
 
   return deleted;
 };
+
+// When preset changes, rebuild menus from storage
+shortcutSettingsVar.subscribe(() => {
+  menusVar(loadMenusFromStorage());
+});
 
 // Save to localStorage whenever menus change
 let previousMenus = menusVar();

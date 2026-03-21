@@ -6,7 +6,7 @@ const gameplaySettingsSchema = z.object({
   wolfZoom: z.number().min(1).max(50).catch(9),
   spiritZoom: z.number().min(1).max(50).catch(9),
   clearOrderOnRightClick: z.boolean().catch(true),
-  rawMouseInput: z.boolean().catch(false),
+  rawMouseInput: z.boolean().catch(true),
   showHealthbars: z.boolean().catch(false),
 });
 

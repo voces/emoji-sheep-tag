@@ -2,7 +2,7 @@ import { makeVar } from "@/hooks/useVar.tsx";
 import { z } from "zod";
 
 const uiSettingsSchema = z.object({
-  preferredActionsPerRow: z.number().min(0).max(11).catch(4),
+  preferredActionsPerRow: z.number().min(0).max(8).catch(4),
   showPing: z.boolean().catch(false),
   showFps: z.boolean().catch(false),
 });

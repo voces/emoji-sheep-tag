@@ -438,7 +438,7 @@ describe("actionsToRows", () => {
       createAction("E", ["KeyE"]),
     ];
 
-    const rows = actionsToRows(actions, 11); // Unlimited
+    const rows = actionsToRows(actions, 8);
 
     // Q, W, E should be in first row at positions 0, 1, 2
     expect(rows[0][0]?.name).toBe("Q");
@@ -454,7 +454,7 @@ describe("actionsToRows", () => {
       createAction("Unbound2"),
     ];
 
-    const rows = actionsToRows(actions, 11); // Unlimited
+    const rows = actionsToRows(actions, 8);
 
     // Q at 0, W at 1, then unbound actions fill row by row (row 0, then row 1, then row 2)
     expect(rows[0][0]?.name).toBe("Q");
@@ -546,20 +546,6 @@ describe("actionsToRows", () => {
 
     expect(row0.length).toBeLessThanOrEqual(3);
     expect(row1.length).toBeLessThanOrEqual(3);
-  });
-
-  it("should handle unlimited (11) columns by not compacting", () => {
-    const actions = Array.from(
-      { length: 15 },
-      (_, i) =>
-        createAction(`Action${i}`, [`Key${String.fromCharCode(65 + i)}`]),
-    );
-
-    const rows = actionsToRows(actions, 11);
-
-    // Should not compact, just place actions naturally
-    const totalActions = rows.flat().filter((a) => a !== undefined).length;
-    expect(totalActions).toBe(15);
   });
 
   it("should fill holes in target row before extending it", () => {

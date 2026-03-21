@@ -24,6 +24,7 @@ import { convertMenuConfigToAction } from "../../../../util/convertMenuConfigToA
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { Command } from "@/components/game/Command.tsx";
+import { shortcutSettingsVar } from "@/vars/shortcutSettings.ts";
 
 const Row = styled(HStack)<{ $preferredActionsPerRow: number }>`
   flex: 1;
@@ -135,12 +136,6 @@ export const actionsToRows = (
   const balancedRows = rows.map((r) =>
     Array.from({ length: r.length }, (_, i) => r[i])
   );
-
-  // Skip compaction if columns 11 (Unlimited)
-  if (columns === 11) {
-    const maxLength = Math.max(...balancedRows.map((r) => r.length));
-    return padRows(balancedRows, maxLength);
-  }
 
   // Compact rows to reach columns
   for (let y = 0; y < balancedRows.length; y++) {
@@ -294,18 +289,18 @@ export const ActionBar = () => {
   }
 
   // Add item actions from inventory and apply shortcut overrides
+  // When slot bindings are enabled, these go into the separate slot grid instead
+  const slotMode = shortcutSettingsVar().useSlotBindings;
+  const inventoryItemActions: (typeof displayActions)[number][] = [];
   if (!currentMenu && selection?.inventory && !selection.isMirror) {
-    const itemActions: (typeof displayActions)[number][] = [];
     for (const item of selection.inventory) {
       if (item.actions && (item.charges == null || item.charges > 0)) {
         for (const itemAction of item.actions) {
-          // Create an action with the charge count in the name if applicable
           let actionWithCharges = {
             ...itemAction,
             count: item.charges,
           };
 
-          // Apply shortcut overrides if the selection has a prefab
           if (selection.prefab) {
             actionWithCharges = applyShortcutOverride(
               actionWithCharges,
@@ -314,11 +309,13 @@ export const ActionBar = () => {
             );
           }
 
-          itemActions.push(actionWithCharges);
+          inventoryItemActions.push(actionWithCharges);
         }
       }
     }
-    displayActions = [...displayActions, ...itemActions];
+    if (!slotMode) {
+      displayActions = [...displayActions, ...inventoryItemActions];
+    }
   }
 
   const currentActionCheck = useMemo(
@@ -381,7 +378,7 @@ export const ActionBar = () => {
         <Row
           key={y}
           $gap="sm"
-          $preferredActionsPerRow={Math.min(preferredActionsPerRow, 10)}
+          $preferredActionsPerRow={preferredActionsPerRow}
         >
           {r.map((action, x) =>
             action && selection

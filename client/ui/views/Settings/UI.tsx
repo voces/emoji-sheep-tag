@@ -28,7 +28,6 @@ export const UI = () => {
   const formatPreferredActionsPerRow = useCallback((value: number) => {
     const modified = value !== 4 ? "* " : "";
     if (value === 0) return `${modified}None`;
-    if (value === 11) return `${modified}Unlimited`;
     return `${modified}${value}`;
   }, []);
 
@@ -41,7 +40,7 @@ export const UI = () => {
         onChange={handlePreferredActionsPerRowChange}
         formatValue={formatPreferredActionsPerRow}
         min={0}
-        max={11}
+        max={8}
         step={1}
       />
 
