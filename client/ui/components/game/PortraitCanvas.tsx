@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Color,
-  LinearFilter,
-  OrthographicCamera,
-  RGBAFormat,
-  Scene,
-  UnsignedByteType,
-  WebGLRenderTarget,
-} from "three";
+import { Color, OrthographicCamera, Scene, Vector4 } from "three";
 import { styled } from "styled-components";
 import { type Entity } from "../../../ecs.ts";
 import { AnimatedInstancedMesh } from "../../../graphics/AnimatedInstancedMesh.ts";
@@ -28,21 +20,10 @@ const Canvas = styled.canvas`
 `;
 
 const tmpColor = new Color();
+const tmpViewport = new Vector4();
+const tmpScissor = new Vector4();
 
 const PORTRAIT_SIZE = 128;
-
-let sharedRenderTarget: WebGLRenderTarget | undefined;
-const getSharedRenderTarget = () =>
-  sharedRenderTarget ??= new WebGLRenderTarget(PORTRAIT_SIZE, PORTRAIT_SIZE, {
-    format: RGBAFormat,
-    type: UnsignedByteType,
-    minFilter: LinearFilter,
-    magFilter: LinearFilter,
-  });
-
-const pixelBuffer = new Uint8ClampedArray(
-  PORTRAIT_SIZE * PORTRAIT_SIZE * 4,
-);
 
 export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
@@ -132,8 +113,6 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
       mesh.setAlphaAt(0, entity.alpha ?? 1);
     };
 
-    const rt = getSharedRenderTarget();
-
     const disposeRender = onRender((delta) => {
       const ctx = ctx2dRef.current;
       if (!ctx || !renderer) return;
@@ -142,27 +121,46 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
       syncColors();
       mesh.decayBlendWeights(delta, 0.15 / 0.2);
 
+      const glCanvas = renderer.domElement;
+
+      // Save renderer state
+      renderer.getViewport(tmpViewport);
+      renderer.getScissor(tmpScissor);
+      const prevScissorTest = renderer.getScissorTest();
       const prevTarget = renderer.getRenderTarget();
-      renderer.setRenderTarget(rt);
+
+      // Render portrait to a small viewport on the WebGL canvas
+      renderer.setRenderTarget(null);
+      renderer.setViewport(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
+      renderer.setScissor(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
+      renderer.setScissorTest(true);
       renderer.setClearColor(0x222222, 1);
       renderer.clear();
       renderer.render(portraitScene, camera);
-      renderer.readRenderTargetPixels(
-        rt,
-        0,
-        0,
-        PORTRAIT_SIZE,
-        PORTRAIT_SIZE,
-        pixelBuffer,
-      );
-      renderer.setRenderTarget(prevTarget);
 
-      const imageData = new ImageData(
-        pixelBuffer,
+      // Blit from WebGL canvas to 2D canvas (GPU-composited, no pipeline stall)
+      // Flip vertically: WebGL origin is bottom-left, canvas origin is top-left
+      ctx.save();
+      ctx.translate(0, PORTRAIT_SIZE);
+      ctx.scale(1, -1);
+      ctx.drawImage(
+        glCanvas,
+        0,
+        glCanvas.height - PORTRAIT_SIZE,
+        PORTRAIT_SIZE,
+        PORTRAIT_SIZE,
+        0,
+        0,
         PORTRAIT_SIZE,
         PORTRAIT_SIZE,
       );
-      ctx.putImageData(imageData, 0, 0);
+      ctx.restore();
+
+      // Restore renderer state
+      renderer.setRenderTarget(prevTarget);
+      renderer.setViewport(tmpViewport);
+      renderer.setScissor(tmpScissor);
+      renderer.setScissorTest(prevScissorTest);
     });
 
     return () => {
