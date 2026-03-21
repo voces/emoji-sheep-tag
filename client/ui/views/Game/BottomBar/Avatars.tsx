@@ -4,6 +4,8 @@ import { Avatar } from "@/components/game/Avatar.tsx";
 import { useSet } from "@/hooks/useSet.ts";
 import { useMemo } from "react";
 import { Entity } from "../../../../ecs.ts";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
+import { selectionFocusVar } from "@/vars/selectionFocus.ts";
 
 const AvatarContainer = styled.div`
   display: grid;
@@ -19,6 +21,8 @@ export const Avatars = (
   props: React.ComponentProps<typeof AvatarContainer>,
 ) => {
   useSet(selection);
+  const focused = useReactiveVar(selectionFocusVar);
+  const focusedGroupKey = focused ? getGroupKey(focused) : undefined;
 
   const groups = useMemo(() => {
     const grouped = new Map<string, Entity[]>();
@@ -42,6 +46,7 @@ export const Avatars = (
           key={groupKey ?? "none"}
           entity={entities[0]}
           count={entities.length > 1 ? entities.length : undefined}
+          focused={groupKey === focusedGroupKey}
         />
       ))}
     </AvatarContainer>

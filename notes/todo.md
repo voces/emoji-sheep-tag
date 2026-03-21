@@ -24,7 +24,6 @@
 - Settings not discoverable in game
 - Birds & Bees
   - Should redirect target if occupied/avoid crowding
-- Should be able to Tab between types in a selection
 - Buff stack id & max stack
 - Pub functionality
 - Pausing?

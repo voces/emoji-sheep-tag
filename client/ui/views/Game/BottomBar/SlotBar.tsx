@@ -6,7 +6,7 @@ import { applyShortcutOverride } from "../../../../util/applyShortcutOverrides.t
 import { Command } from "@/components/game/Command.tsx";
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import { SLOT_COUNT } from "@/util/shortcutUtils.ts";
-import { selectionVar } from "./ActionBar.tsx";
+import { selectionFocusVar } from "@/vars/selectionFocus.ts";
 import { useSlotBarVisible } from "./useSlotBarVisible.ts";
 
 const SlotRow = styled(HStack)`
@@ -17,7 +17,7 @@ const slotRows = [[0, 1], [2, 3], [4, 5]];
 
 export const SlotBar = () => {
   const visible = useSlotBarVisible();
-  const selection = useReactiveVar(selectionVar);
+  const selection = useReactiveVar(selectionFocusVar);
   const shortcuts = useReactiveVar(shortcutsVar);
 
   if (!visible || !selection?.inventory) return null;

@@ -1,5 +1,5 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { selectionVar } from "./ActionBar.tsx";
+import { selectionFocusVar } from "@/vars/selectionFocus.ts";
 import { useSet } from "@/hooks/useSet.ts";
 import { selection } from "../../../../systems/selection.ts";
 import { Avatars } from "./Avatars.tsx";
@@ -40,7 +40,7 @@ const AttackSpeedStat = ({ attackSpeed }: { attackSpeed: number }) => {
 };
 
 const UnitStats = () => {
-  const selection = useReactiveVar(selectionVar);
+  const selection = useReactiveVar(selectionFocusVar);
 
   const attackDamage = useListenToEntityProps(selection, [
     "attack",

@@ -57,6 +57,7 @@ export const miscNames = {
   jumpToPing: "Jump to ping",
   applyZoom: "Apply zoom",
   toggleScoreboard: "Toggle scoreboard",
+  cycleSelection: "Cycle selection focus",
 };
 
 export const controlGroupNames: Record<string, string> = {
@@ -167,7 +168,8 @@ export const defaultBindings: Shortcuts = {
     ping: ["AltLeft", "KeyG"],
     jumpToPing: ["Space"],
     applyZoom: ["Backquote"],
-    toggleScoreboard: ["Tab"],
+    toggleScoreboard: ["Backquote"],
+    cycleSelection: ["Tab"],
   },
   controlGroups: {
     group1: ["Digit1"],
@@ -273,131 +275,35 @@ export const getPresetAltDefaults = (
   return results;
 };
 
-export const createInitialShortcuts = (): Shortcuts => ({
-  misc: {
-    openCommandPalette: pluckShortcut("misc.openCommandPalette") ?? ["Slash"],
-    openChat: pluckShortcut("misc.openChat") ?? ["Enter"],
-    cancel: pluckShortcut("misc.cancel") ?? ["Backquote"],
-    queueModifier: pluckShortcut("misc.queueModifier") ?? ["ShiftLeft"],
-    addToSelectionModifier: pluckShortcut("misc.addToSelectionModifier") ??
-      ["ShiftLeft"],
-    ping: pluckShortcut("misc.ping") ?? ["AltLeft", "KeyG"],
-    jumpToPing: pluckShortcut("misc.jumpToPing") ?? ["Space"],
-    applyZoom: pluckShortcut("misc.applyZoom") ?? ["Backquote"],
-    toggleScoreboard: pluckShortcut("misc.toggleScoreboard") ?? ["Tab"],
-  },
-  controlGroups: {
-    group1: pluckShortcut("controlGroups.group1") ?? ["Digit1"],
-    group2: pluckShortcut("controlGroups.group2") ?? ["Digit2"],
-    group3: pluckShortcut("controlGroups.group3") ?? ["Digit3"],
-    group4: pluckShortcut("controlGroups.group4") ?? ["Digit4"],
-    group5: pluckShortcut("controlGroups.group5") ?? ["Digit5"],
-    group6: pluckShortcut("controlGroups.group6") ?? ["Digit6"],
-    group7: pluckShortcut("controlGroups.group7") ?? ["Digit7"],
-    group8: pluckShortcut("controlGroups.group8") ?? ["Digit8"],
-    group9: pluckShortcut("controlGroups.group9") ?? ["Digit9"],
-    group0: pluckShortcut("controlGroups.group0") ?? ["Digit0"],
-    assignModifier: pluckShortcut("controlGroups.assignModifier") ??
-      ["ControlLeft"],
-  },
-  ...Object.fromEntries(
-    Object.entries(prefabs).filter(([, d]) => d.actions?.length)
-      .map((
-        [u, d],
-      ) => {
-        return [
-          u,
-          Object.fromEntries(
-            [
-              ...d.actions!
-                .map((
-                  a,
-                ) => [
-                  actionToShortcutKey(a),
-                  pluckShortcut(`${u}.${actionToShortcutKey(a)}`) ??
-                    a.binding ??
-                    [],
-                ]),
-              // Add cancel-upgrade entry if this prefab can be upgraded to
-              ...(upgradeTargets.has(u)
-                ? [[
-                  "cancel-upgrade",
-                  pluckShortcut(`${u}.cancel-upgrade`) ?? ["Backquote"],
-                ]]
-                : []),
-              // Add menu shortcuts as nested entries
-              ...d.actions!
-                .filter((a) => a.type === "menu")
-                .flatMap((menuAction) => {
-                  const menuName = actionToShortcutKey(menuAction);
-                  const menuShortcuts = getMenuShortcutKeys(
-                    menuAction,
-                    menuName,
-                  );
-                  const storedSectionShortcuts = pluck(
-                    localStorageShortcuts,
-                    u,
-                    z.record(z.string(), zShortcut),
-                  );
+export const createInitialShortcuts = (): Shortcuts => {
+  const result: Shortcuts = {};
 
-                  const shortcuts = Object.entries(menuShortcuts).map(
-                    ([key, binding]) => {
-                      // For nested keys like "shop.back", we need to access the stored shortcuts differently
-                      // The key contains dots, so we need to access it directly from the section
-                      const storedBinding = storedSectionShortcuts?.[key];
-                      return [
-                        key,
-                        storedBinding ?? binding,
-                      ];
-                    },
-                  );
+  for (const [section, bindings] of Object.entries(defaultBindings)) {
+    const sectionResult: Record<string, string[]> = {};
 
-                  return shortcuts;
-                }),
-              // Add shortcuts for item actions if this prefab has inventory
-              ...("inventory" in d
-                ? [
-                  ...Object.values(items).flatMap((item) => {
-                    if (!item.actions) return [];
-                    const storedSectionShortcuts = pluck(
-                      localStorageShortcuts,
-                      u,
-                      z.record(z.string(), zShortcut),
-                    );
-                    return item.actions.map((itemAction) => {
-                      const itemKey = actionToShortcutKey(itemAction);
-                      const storedBinding = storedSectionShortcuts?.[itemKey];
-                      return [
-                        itemKey,
-                        storedBinding ?? pluckShortcut(`${u}.${itemKey}`) ??
-                          itemAction.binding ?? [],
-                      ];
-                    });
-                  }),
-                  ...slotDefaults.map(([key, def]) => [
-                    key,
-                    pluckShortcut(`${u}.${key}`) ?? def,
-                  ]),
-                ]
-                : []),
-              // Load alt bindings from localStorage
-              ...(() => {
-                const stored = pluck(
-                  localStorageShortcuts,
-                  u,
-                  z.record(z.string(), zShortcut),
-                );
-                if (!stored) return [];
-                return Object.entries(stored)
-                  .filter(([key]) => key.includes(ALT_SEPARATOR))
-                  .map(([key, binding]) => [key, binding]);
-              })(),
-            ],
-          ),
-        ];
-      }),
-  ),
-});
+    for (const [key, defaultValue] of Object.entries(bindings)) {
+      sectionResult[key] = pluckShortcut(`${section}.${key}`) ?? defaultValue;
+    }
+
+    // Load alt bindings from localStorage for prefab sections
+    if (section !== "misc" && section !== "controlGroups") {
+      const stored = pluck(
+        localStorageShortcuts,
+        section,
+        z.record(z.string(), zShortcut),
+      );
+      if (stored) {
+        for (const [key, binding] of Object.entries(stored)) {
+          if (key.includes(ALT_SEPARATOR)) sectionResult[key] = binding;
+        }
+      }
+    }
+
+    result[section] = sectionResult;
+  }
+
+  return result;
+};
 
 export const getActionDisplayName = (
   key: string,

@@ -1,6 +1,6 @@
-import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { styled } from "styled-components";
-import { app, Entity } from "../../../../ecs.ts";
+import { app } from "../../../../ecs.ts";
 import { selection } from "../../../../systems/selection.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { useLocalPlayer } from "@/hooks/usePlayers.ts";
@@ -16,6 +16,7 @@ import { Action } from "@/components/game/Action.tsx";
 import { applyShortcutOverride } from "../../../../util/applyShortcutOverrides.ts";
 import { getExecutableActions } from "../../../../util/allyPermissions.ts";
 import { menusVar } from "@/vars/menus.ts";
+import { selectionFocusVar as selectionVar } from "@/vars/selectionFocus.ts";
 import {
   actionToShortcutKey,
   menuActionRefToKey,
@@ -34,7 +35,6 @@ const Row = styled(HStack)<{ $preferredActionsPerRow: number }>`
     })`};
 `;
 
-export const selectionVar = makeVar<Entity | undefined>(undefined);
 selection.addEventListener(
   "add",
   (e) => selectionVar((v) => v?.selected && app.entities.has(v) ? v : e),

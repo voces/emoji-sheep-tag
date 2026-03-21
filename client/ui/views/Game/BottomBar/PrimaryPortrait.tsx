@@ -1,5 +1,5 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { selectionVar } from "./ActionBar.tsx";
+import { selectionFocusVar } from "@/vars/selectionFocus.ts";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
 import { Command } from "@/components/game/Command.tsx";
 import { HorizontalBar } from "@/components/game/HorizontalBar.tsx";
@@ -36,7 +36,7 @@ const StyledCommand = styled(Command)`
 
 const Bars = () => {
   const theme = useTheme();
-  const selection = useReactiveVar(selectionVar);
+  const selection = useReactiveVar(selectionFocusVar);
   useListenToEntityProps(selection, ["health", "mana", "buffs", "progress"]);
   const localPlayer = useLocalPlayer();
 
@@ -122,7 +122,7 @@ const Bars = () => {
 };
 
 export const PrimaryPortrait = () => {
-  const selection = useReactiveVar(selectionVar);
+  const selection = useReactiveVar(selectionFocusVar);
   const iconProps = useEntityIconProps(selection);
   useListenToEntityProps(selection, ["icon", "model", "prefab"]);
   const startedFollowingRef = useRef(false);

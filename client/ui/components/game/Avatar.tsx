@@ -15,6 +15,7 @@ import {
   startFollowingEntity,
   stopFollowingEntity,
 } from "../../../api/camera.ts";
+import { selectionFocusVar as selectionVar } from "@/vars/selectionFocus.ts";
 import { mouse, MouseButtonEvent } from "../../../mouse.ts";
 import {
   getActiveOrder,
@@ -124,7 +125,11 @@ export const Buffs = (
 };
 
 export const Avatar = (
-  { entity, count }: { entity: Entity; count?: number },
+  { entity, count, focused }: {
+    entity: Entity;
+    count?: number;
+    focused?: boolean;
+  },
 ) => {
   const theme = useTheme();
   useListenToEntityProps(entity, [
@@ -167,7 +172,7 @@ export const Avatar = (
       const result = handleTargetOrder(syntheticEvent);
       if (!result.success) playSound("ui", pick("error1"), { volume: 0.3 });
     } else {
-      // Otherwise, start following the entity
+      selectionVar(entity);
       startFollowingEntity(entity);
       startedFollowingRef.current = true;
     }
@@ -195,6 +200,7 @@ export const Avatar = (
         iconProps={iconProps}
         hideTooltip
         count={count}
+        pressed={focused}
         onClick={handleClick}
         accentColor={ownerColor}
       />

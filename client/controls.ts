@@ -25,6 +25,7 @@ import { showSettingsVar } from "@/vars/showSettings.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { isSoftwareRenderer } from "./util/gpu.ts";
 import { selectEntity, selectPrimaryUnit } from "./api/selection.ts";
+import { selectionFocusVar } from "@/vars/selectionFocus.ts";
 import { handleControlGroupKey } from "./api/controlGroups.ts";
 import { applyZoom, setZoom, showZoomMessage } from "./api/player.ts";
 import {
@@ -108,6 +109,28 @@ import {
 // Re-export for external use
 export const clearBlueprint = clearBlueprintHandler;
 export const hasBlueprint = hasBlueprintHandler;
+
+const getGroupKey = (entity: Entity): string =>
+  entity.unique ? `unique:${entity.id}` : `prefab:${entity.prefab ?? "none"}`;
+
+const cycleSelectionFocus = () => {
+  const current = selectionFocusVar();
+  const groups = new Map<string, Entity[]>();
+  for (const entity of selection) {
+    const key = getGroupKey(entity);
+    const group = groups.get(key) ?? [];
+    group.push(entity);
+    groups.set(key, group);
+  }
+  if (groups.size <= 1) return;
+
+  const keys = [...groups.keys()];
+  const currentKey = current ? getGroupKey(current) : undefined;
+  const currentIndex = currentKey ? keys.indexOf(currentKey) : -1;
+  const nextIndex = (currentIndex + 1) % keys.length;
+  const nextGroup = groups.get(keys[nextIndex])!;
+  selectionFocusVar(nextGroup[0]);
+};
 
 const getTargetingMessage = (orderName: string): string => {
   for (const entity of selection) {
@@ -773,6 +796,19 @@ const handleUIShortcuts = (
     stateVar() === "playing"
   ) {
     handleControlGroupKey(e);
+  }
+
+  // Cycle selection focus through prefab groups
+  if (
+    checkShortcut(shortcuts.misc, "cycleSelection", e.code) &&
+    showChatBoxVar() !== "open" &&
+    showCommandPaletteVar() === "closed" &&
+    stateVar() === "playing" &&
+    selection.size > 1
+  ) {
+    e.preventDefault();
+    cycleSelectionFocus();
+    return true;
   }
 
   if (
