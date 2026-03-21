@@ -84,6 +84,7 @@ export class FogPass {
         },
         fogColor: { value: new Color(0x000000) },
         fogOpacity: { value: 0.95 },
+        nightAmount: { value: 0.0 },
         projInv: { value: new Matrix4() },
         viewInv: { value: new Matrix4() },
         deltaTime: { value: 0.016 },
@@ -116,6 +117,7 @@ export class FogPass {
         uniform float deltaTime;
         uniform vec2 fogTexelSize;
         uniform bool disableFogOfWar;
+        uniform float nightAmount;
 
         varying vec2 vUv;
 
@@ -195,13 +197,23 @@ export class FogPass {
 
           // If alpha is negligible, apply gamma and pass through
           if (alpha <= 0.0) {
-            gl_FragColor = vec4(linearToSRGB(base.rgb), 1.0);
+            vec3 srgb = linearToSRGB(base.rgb);
+            // Night tint: subtle blue shift and desaturation
+            vec3 nightColor = mix(srgb, srgb * vec3(0.8, 0.82, 1.0), nightAmount);
+            float lum = dot(srgb, vec3(0.299, 0.587, 0.114));
+            nightColor = mix(nightColor, vec3(lum * 0.7, lum * 0.73, lum * 0.95), nightAmount * 0.15);
+            gl_FragColor = vec4(nightColor, 1.0);
             return;
           }
 
           // Mix in linear space, then convert to sRGB for display
           vec3 outColor = mix(base.rgb, fogColor, alpha);
-          gl_FragColor = vec4(linearToSRGB(outColor), 1.0);
+          vec3 srgb = linearToSRGB(outColor);
+          // Night tint: desaturate and shift toward blue
+          vec3 nightColor = mix(srgb, srgb * vec3(0.6, 0.65, 1.0), nightAmount);
+          float lum = dot(srgb, vec3(0.299, 0.587, 0.114));
+          nightColor = mix(nightColor, vec3(lum * 0.5, lum * 0.55, lum * 0.9), nightAmount * 0.4);
+          gl_FragColor = vec4(nightColor, 1.0);
         }
       `,
     };
@@ -341,6 +353,10 @@ export class FogPass {
 
   setDisableFogOfWar(disable: boolean) {
     this.material.uniforms.disableFogOfWar.value = disable;
+  }
+
+  setNightAmount(amount: number) {
+    this.material.uniforms.nightAmount.value = amount;
   }
 
   reset(renderer: WebGLRenderer) {

@@ -1,6 +1,16 @@
 // styled.d.ts
 import "styled-components";
 
+// esbuild `define` replaces these expressions at build time
+declare global {
+  const process: {
+    env: {
+      NODE_ENV: string;
+      BUILD_TIME: string;
+    };
+  };
+}
+
 declare module "styled-components" {
   export interface DefaultTheme {
     colors: {

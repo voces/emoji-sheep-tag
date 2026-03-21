@@ -3,6 +3,7 @@ import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { prefabs } from "@/shared/data.ts";
 import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
+import { isNight } from "@/shared/dayNight.ts";
 
 // Track all living trees
 const trees = new Set<Entity>();
@@ -176,6 +177,8 @@ const selectTargetTree = (bird: Entity): Entity | null => {
 
 const scheduleNextTreeVisit = (bird: Entity) => {
   if (!appContext.current.entities.has(bird) || !bird.position) return;
+
+  if (isNight()) return setTimeout(() => scheduleNextTreeVisit(bird), 5000);
 
   const targetTree = selectTargetTree(bird);
   if (!targetTree?.position) return;

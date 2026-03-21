@@ -5,6 +5,7 @@ import { prefabs } from "@/shared/data.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { KdTree } from "@/shared/util/KDTree.ts";
 import { Point } from "@/shared/pathing/math.ts";
+import { computeUnitSightRadius } from "@/shared/api/unit.ts";
 
 type VisionEntity = SystemEntity<"position" | "sightRadius" | "owner">;
 type Team = "sheep" | "wolf" | "neutral";
@@ -57,11 +58,12 @@ export function* iterateViewersInRange(
     const entity = data.pointToEntity.get(point);
     if (!entity) continue;
 
-    // Filter by actual sight radius
+    // Filter by effective sight radius (accounting for day/night)
     const dx = entity.position.x - targetX;
     const dy = entity.position.y - targetY;
     const distSq = dx * dx + dy * dy;
-    const radiusSq = entity.sightRadius * entity.sightRadius;
+    const effectiveRadius = computeUnitSightRadius(entity);
+    const radiusSq = effectiveRadius * effectiveRadius;
 
     if (distSq <= radiusSq) {
       yield entity;

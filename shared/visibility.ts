@@ -2,6 +2,7 @@
 // Used by both client (for per-team visibility) and server (for attack/auto-attack)
 
 import { Entity } from "./types.ts";
+import { computeUnitSightRadius } from "./api/unit.ts";
 
 // terrainLayers is at 2x resolution relative to world coordinates
 export const TERRAIN_SCALE = 2;
@@ -326,10 +327,11 @@ export const canSeeTarget = (
 
   // Check sight radius if specified (use original target position for radius check)
   if (viewer.sightRadius !== undefined) {
+    const effectiveRadius = computeUnitSightRadius(viewer);
     const origDx = target.position.x - viewerX;
     const origDy = target.position.y - viewerY;
     const origDistSq = origDx * origDx + origDy * origDy;
-    const radiusSq = viewer.sightRadius * viewer.sightRadius;
+    const radiusSq = effectiveRadius * effectiveRadius;
     if (origDistSq > radiusSq) return false;
   }
 

@@ -1,4 +1,5 @@
 import { DEFAULT_FACING } from "../constants.ts";
+import { isNight, NIGHT_SIGHT_MULTIPLIER } from "../dayNight.ts";
 import {
   Classification,
   ClassificationGroup,
@@ -189,6 +190,13 @@ export const computeUnitAttackSpeed = (unit: Entity): number => {
   }
 
   return speedMultiplier;
+};
+
+export const computeUnitSightRadius = (
+  unit: Pick<Entity, "sightRadius">,
+): number => {
+  const base = unit.sightRadius ?? 0;
+  return isNight() ? base * NIGHT_SIGHT_MULTIPLIER : base;
 };
 
 const classificationToGroup = {} as {

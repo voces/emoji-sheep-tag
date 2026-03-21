@@ -5,6 +5,7 @@ import { KdTree } from "@/shared/util/KDTree.ts";
 import { normalizeAngle, Point } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { raise } from "@/shared/util/raise.ts";
+import { isNight } from "@/shared/dayNight.ts";
 
 // Dedicated KD-tree for flowers
 const flowerKd = new KdTree();
@@ -95,6 +96,8 @@ const spawnBeeAtFlower = (flower: Entity) => {
 
 const scheduleNextFlowerVisit = (bee: Entity) => {
   if (!appContext.current.entities.has(bee) || !bee.position) return;
+
+  if (isNight()) return setTimeout(() => scheduleNextFlowerVisit(bee), 5000);
 
   const visitedFlowers = beeVisitedFlowers.get(bee);
   if (!visitedFlowers) return;

@@ -35,6 +35,8 @@ import {
   getMinEntityHeight,
 } from "@/shared/visibility.ts";
 import { iterateViewersInRange } from "@/shared/systems/vision.ts";
+import { computeUnitSightRadius } from "@/shared/api/unit.ts";
+import { isNight } from "@/shared/dayNight.ts";
 
 // Fog resolution multiplier: 2 = 160x160, 4 = 320x320, etc.
 const FOG_RESOLUTION_MULTIPLIER = 4;
@@ -270,8 +272,10 @@ class VisibilityGrid {
   private readonly height: number;
   private readonly cells: Cell[][];
   private readonly entityToCells: Map<Entity, Set<Cell>> = new Map();
-  private readonly entityLastPos: Map<Entity, { x: number; y: number }> =
-    new Map();
+  private readonly entityLastPos: Map<
+    Entity,
+    { x: number; y: number; r: number }
+  > = new Map();
   readonly fogTexture: DataTexture;
   private readonly fogData: Uint8Array;
   private readonly changedCells: Set<number> = new Set();
@@ -309,20 +313,21 @@ class VisibilityGrid {
   updateEntity(entity: Entity) {
     if (!entity.sightRadius || !entity.position) return;
 
+    const effectiveSightRadius = computeUnitSightRadius(entity);
     const cx = Math.floor(entity.position.x * FOG_RESOLUTION_MULTIPLIER);
     const cy = Math.floor(entity.position.y * FOG_RESOLUTION_MULTIPLIER);
+    const r = Math.ceil(effectiveSightRadius * FOG_RESOLUTION_MULTIPLIER);
 
-    // Short-circuit if entity hasn't moved enough (stays within same fog cell)
+    // Short-circuit if entity hasn't moved and sight radius hasn't changed
     const lastPos = this.entityLastPos.get(entity);
-    if (lastPos && lastPos.x === cx && lastPos.y === cy) {
-      return; // No visibility change needed
+    if (lastPos && lastPos.x === cx && lastPos.y === cy && lastPos.r === r) {
+      return;
     }
-    this.entityLastPos.set(entity, { x: cx, y: cy });
+    this.entityLastPos.set(entity, { x: cx, y: cy, r });
 
     const oldCells = this.entityToCells.get(entity);
     const newCells = new Set<Cell>();
     const newCellKeys = new Set<number>();
-    const r = Math.ceil(entity.sightRadius * FOG_RESOLUTION_MULTIPLIER);
 
     // Get entity's height level (terrainLayers is 2x resolution)
     const terrainScale = FOG_RESOLUTION_MULTIPLIER / 2;
@@ -383,7 +388,8 @@ class VisibilityGrid {
     }
 
     // Use flood fill with shadow casting for blockers and cliffs
-    const radiusSquared = (entity.sightRadius * FOG_RESOLUTION_MULTIPLIER) ** 2;
+    const radiusSquared = (effectiveSightRadius * FOG_RESOLUTION_MULTIPLIER) **
+      2;
     const visited = new Set<number>();
     const blocked = new Set<number>(); // Cells in shadow of blockers/cliffs
     const queue: { x: number; y: number }[] = [{
@@ -428,7 +434,7 @@ class VisibilityGrid {
 
           // Cast shadow from this cliff cell
           const shadowLength = Math.ceil(
-            entity.sightRadius * FOG_RESOLUTION_MULTIPLIER,
+            effectiveSightRadius * FOG_RESOLUTION_MULTIPLIER,
           );
 
           // Perpendicular vector for cone width
@@ -483,7 +489,7 @@ class VisibilityGrid {
 
               // Cast shadow rays in a small cone to account for blocker width
               const shadowLength = Math.ceil(
-                entity.sightRadius * FOG_RESOLUTION_MULTIPLIER,
+                effectiveSightRadius * FOG_RESOLUTION_MULTIPLIER,
               );
 
               // Perpendicular vector for cone width
@@ -714,6 +720,11 @@ const triggerFogChecks = () => {
 
 // System to track visibility
 const sightedEntities = new Set<SystemEntity<"position" | "sightRadius">>();
+let lastNight = false;
+let nightTransitionIter:
+  | Iterator<SystemEntity<"position" | "sightRadius">>
+  | null = null;
+const NIGHT_TRANSITION_BUDGET_MS = 2;
 addSystem({
   props: ["position", "sightRadius"],
   entities: sightedEntities,
@@ -728,7 +739,27 @@ addSystem({
   onRemove: (entity) => {
     visibilityGrid.removeEntity(entity);
   },
-  update: triggerFogChecks,
+  update: () => {
+    const night = isNight();
+    if (night !== lastNight) {
+      lastNight = night;
+      nightTransitionIter = sightedEntities.values();
+    }
+    if (nightTransitionIter) {
+      const deadline = performance.now() + NIGHT_TRANSITION_BUDGET_MS;
+      while (performance.now() < deadline) {
+        const next = nightTransitionIter.next();
+        if (next.done) {
+          nightTransitionIter = null;
+          break;
+        }
+        if (visibleToLocalPlayer(next.value)) {
+          visibilityGrid.updateEntity(next.value);
+        }
+      }
+    }
+    triggerFogChecks();
+  },
 });
 
 // Track old positions for entity grid updates

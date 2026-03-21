@@ -16,6 +16,8 @@ import { FogPass } from "./FogPass.ts";
 import { floatingTextScene } from "../systems/floatingText.ts";
 import { healthbarScene } from "../systems/healthbars.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { isNight } from "@/shared/dayNight.ts";
+import { ambientBirdsSound } from "../api/sound.ts";
 
 const terrainTilePalette = [
   ...tileDefs.map((t) => ({
@@ -209,6 +211,7 @@ export const onRender = (fn: RenderListener) => {
 let last = performance.now() / 1000;
 const frameTimes: number[] = [];
 let fps = 0;
+let nightAmount = 0;
 const animate = () => {
   const time = performance.now() / 1000;
   const delta = time - last;
@@ -228,6 +231,19 @@ const animate = () => {
 
   fogPass.updateCamera(camera);
   fogPass.setDisableFogOfWar(lobbySettingsVar().view);
+
+  // Smoothly interpolate night tint and ambient volume
+  const nightTarget = isNight() ? 1 : 0;
+  nightAmount += (nightTarget - nightAmount) * Math.min(delta * 0.5, 1);
+  fogPass.setNightAmount(nightAmount);
+  if (ambientBirdsSound?.gain) {
+    const ctx = ambientBirdsSound.context;
+    ambientBirdsSound.gain.gain.setTargetAtTime(
+      0.05 * (1 - nightAmount * 0.95),
+      ctx.currentTime,
+      0.5,
+    );
+  }
 
   // Render scene to non-MSAA target with depth
   renderer.setRenderTarget(renderTarget);

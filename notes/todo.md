@@ -34,9 +34,6 @@
 - Enable queuing actions for gold? This would require monitoring gold...
 - Targeting range indicators
 - Per-player handicap
-- Day/night cycle
-  - Reduce wolf/sheep/fox visibility at night
-  - Starts day, night at 1:45. Nights last 1:15 and days last 2:00.
 - Death animation (sheep)
 - Monolith needs new model
 - Custom control groups (4+)

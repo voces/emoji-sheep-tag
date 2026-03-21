@@ -13,6 +13,7 @@ import {
 } from "@/shared/pathing/math.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
 import { Entity, Item, Order, SystemEntity } from "@/shared/types.ts";
+import { computeUnitSightRadius } from "@/shared/api/unit.ts";
 import {
   calcPath,
   pathable,
@@ -265,7 +266,7 @@ export const acquireTarget = (e: Entity) => {
   return getEntitiesInRange(
     attacker.position.x,
     attacker.position.y,
-    e.sightRadius ?? 5,
+    e.sightRadius ? computeUnitSightRadius(e) : 5,
   )
     .filter((e2): e2 is SystemEntity<"position"> =>
       !!e2.position &&

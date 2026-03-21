@@ -155,12 +155,17 @@ export const playEntitySound = (
   playSoundAt(sound, x, y, volume);
 };
 
+export let ambientBirdsSound: Audio | undefined;
+
 const startAmbient = () => {
   const sound = playSound("ambience", "ambientBirds", {
     volume: 0.05,
     loop: true,
   });
-  if (sound) sound.onEnded = () => void 0;
+  if (sound) {
+    sound.onEnded = () => void 0;
+    ambientBirdsSound = sound;
+  }
 
   for (const event of ["pointerdown", "keydown"]) {
     document.removeEventListener(event, startAmbient);

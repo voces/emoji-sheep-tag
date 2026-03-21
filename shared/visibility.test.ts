@@ -1,4 +1,4 @@
-import { describe, it } from "@std/testing/bdd";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import {
   canSeeTarget,
@@ -7,7 +7,18 @@ import {
   TERRAIN_SCALE,
 } from "./visibility.ts";
 import { buildLoadedMap } from "./map.ts";
+import { appContext } from "./context.ts";
+import type { App } from "@verit/ecs";
+import type { Entity } from "./types.ts";
 import revoMap from "./maps/revo.json" with { type: "json" };
+
+// canSeeTarget uses isNight() which requires an app context
+beforeEach(() => {
+  appContext.current = {} as App<Entity>;
+});
+afterEach(() => {
+  appContext.current = undefined;
+});
 
 // Helper to create a terrain grid with specified heights
 // terrainLayers is at 2x resolution (TERRAIN_SCALE=2)

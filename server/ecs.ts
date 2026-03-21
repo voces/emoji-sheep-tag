@@ -215,4 +215,5 @@ import("./systems/tickDamage.ts");
 import("./systems/sheepTime.ts");
 import("@/shared/systems/mapCenterMarker.ts");
 import("@/shared/systems/vision.ts");
+import("@/shared/dayNight.ts");
 import("./orders/index.ts");
