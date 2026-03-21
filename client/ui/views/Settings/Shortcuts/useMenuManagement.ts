@@ -5,6 +5,7 @@ import {
   buildActionsInMenusSet,
   createMenuActionRef,
   findMenuForAction,
+  removeActionFromMenuVar,
 } from "./menuActionHelpers.ts";
 import { prefabs } from "@/shared/data.ts";
 import { actionToShortcutKey } from "../../../../util/actionToShortcutKey.ts";
@@ -45,61 +46,23 @@ export const useMenuManagement = (
     // If already in this menu, do nothing
     if (existingMenuId === menuId) return;
 
+    if (existingMenuId) {
+      removeActionFromMenuVar(existingMenuId, actionKey);
+    }
+
     const actionRef = createMenuActionRef(actionKey);
-
-    // Build updated menus list
-    const updatedMenus = menus.map((m) => {
-      if (m.id === menuId) {
-        // Add action to target menu
-        return { ...m, actions: [...m.actions, actionRef] };
-      }
-      if (m.id === existingMenuId) {
-        // Remove action from its current menu
-        return {
-          ...m,
-          actions: m.actions.filter((action) => {
-            if ("type" in action) {
-              if (action.type === "purchase") {
-                return `purchase-${action.itemId}` !== actionKey;
-              }
-              return action.actionKey !== actionKey;
-            }
-            return true;
-          }),
-        };
-      }
-      return m;
-    });
-
-    menusVar(updatedMenus);
+    const currentMenus = menusVar();
+    menusVar(
+      currentMenus.map((m) =>
+        m.id === menuId ? { ...m, actions: [...m.actions, actionRef] } : m
+      ),
+    );
   }, [section]);
 
   const removeActionFromMenu = useCallback(
     (menuId: string, actionKey: string) => {
-      // Don't allow removing Back action
       if (actionKey === "back" || actionKey.startsWith("menu-back-")) return;
-
-      const menus = menusVar();
-      const menu = menus.find((m) => m.id === menuId);
-      if (!menu) return;
-
-      // Remove the action from the menu immediately
-      const updatedActions = menu.actions.filter((action) => {
-        if ("type" in action) {
-          if (action.type === "purchase") {
-            return `purchase-${action.itemId}` !== actionKey;
-          }
-          return action.actionKey !== actionKey;
-        }
-        return true; // Keep nested menus
-      });
-
-      const updatedMenu = {
-        ...menu,
-        actions: updatedActions,
-      };
-
-      menusVar(menus.map((m) => (m.id === menuId ? updatedMenu : m)));
+      removeActionFromMenuVar(menuId, actionKey);
     },
     [],
   );

@@ -8,6 +8,8 @@ import { shortcutSettingsVar } from "@/vars/shortcutSettings.ts";
 import {
   defaultBindings,
   getActionDisplayName,
+  getEffectiveDefault,
+  isAltKey,
   isDefaultBinding,
 } from "@/util/shortcutUtils.ts";
 import { styled } from "styled-components";
@@ -28,22 +30,26 @@ const filterNonDefaultBindings = (sections: typeof defaultBindings) => {
     const sectionMenus = allMenus.filter((m) => m.prefabs.includes(section));
 
     for (const [key, binding] of Object.entries(shortcuts)) {
+      // Alt bindings: persist if non-default
+      if (isAltKey(key)) {
+        if (!isDefaultBinding(section, key, binding, defaultBindings)) {
+          nonDefaultShortcuts[key] = binding;
+        }
+        continue;
+      }
+
       // Check if this is a menu binding key
       if (key.startsWith("menu-")) {
-        // Find the menu config for this key
-        // Menu binding keys are "menu-{menuId}" where menuId could be "shop" or "menu-1762044747868"
-        const menuId = key.substring(5); // Remove "menu-" prefix
+        const menuId = key.substring(5);
         const menu = sectionMenus.find((m) => m.id === menuId);
         if (menu) {
           const defaultMenuBinding = menu.binding ?? [];
-          // Only persist if binding differs from menu's default
           const isDefault = binding.length === defaultMenuBinding.length &&
             binding.every((k, i) => k === defaultMenuBinding[i]);
           if (!isDefault) {
             nonDefaultShortcuts[key] = binding;
           }
         }
-        // If menu doesn't exist, don't persist this binding at all
         continue;
       }
 
@@ -138,6 +144,11 @@ export const Shortcuts = () => {
     actionKey: string,
     binding: string[],
   ) => {
+    if (isAltKey(actionKey)) {
+      applySingleBinding(section, actionKey, binding);
+      return;
+    }
+
     const currentBinding = sections[section]?.[actionKey] ?? [];
     const otherSections = findOtherUnitsWithSameBinding(
       sections,
@@ -158,10 +169,19 @@ export const Shortcuts = () => {
     actionKey: string,
     binding: string[],
   ) => {
-    shortcutsVar({
-      ...sections,
-      [section]: { ...sections[section], [actionKey]: binding },
-    });
+    if (
+      isAltKey(actionKey) && binding.length === 0 &&
+      actionKey in (sections[section] ?? {}) &&
+      getEffectiveDefault(section, actionKey).length === 0
+    ) {
+      const { [actionKey]: _, ...rest } = sections[section];
+      shortcutsVar({ ...sections, [section]: rest });
+    } else {
+      shortcutsVar({
+        ...sections,
+        [section]: { ...sections[section], [actionKey]: binding },
+      });
+    }
   };
 
   const applyToAll = () => {

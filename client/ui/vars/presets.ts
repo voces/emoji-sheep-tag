@@ -1,6 +1,7 @@
 import type { Preset } from "./shortcutSettings.ts";
 import type { MenuActionRef, MenuConfig } from "./menus.ts";
 import { prefabs } from "@/shared/data.ts";
+import { actionToShortcutKey } from "../../util/actionToShortcutKey.ts";
 
 export type PresetOverrides = {
   bindings: Record<string, Record<string, string[]>>;
@@ -13,24 +14,41 @@ const sheepBuildActions: MenuActionRef[] = (prefabs.sheep?.actions ?? [])
   .filter((a) => a.type === "build")
   .map((a) => ({ type: "action", actionKey: `build-${a.unitType}` }));
 
+// WC3 remaps for common actions across all prefabs that have them
+const wc3CommonRemaps: Record<string, string[]> = {
+  move: ["KeyM"],
+  stop: ["KeyS"],
+  selfDestruct: ["KeyD"],
+};
+
+const wc3ActionOverrides: Record<string, Record<string, string[]>> = {};
+for (const [id, prefab] of Object.entries(prefabs)) {
+  if (!prefab.actions) continue;
+  for (const action of prefab.actions) {
+    const key = actionToShortcutKey(action);
+    const remap = wc3CommonRemaps[key];
+    if (remap) {
+      (wc3ActionOverrides[id] ??= {})[key] = remap;
+    }
+  }
+}
+
 const wc3Overrides: PresetOverrides = {
   useSlotBindings: true,
   clearOrderOnRightClick: true,
   bindings: {
+    ...wc3ActionOverrides,
     misc: {
       applyZoom: ["Backquote"],
     },
     sheep: {
-      move: ["KeyM"],
-      stop: ["KeyS"],
-      selfDestruct: ["KeyD"],
+      ...wc3ActionOverrides.sheep,
+      "stop~1": ["KeyH"],
       "build-monolith": ["KeyX"],
       bite: ["KeyA"],
     },
     wolf: {
-      move: ["KeyM"],
-      stop: ["KeyS"],
-      selfDestruct: ["KeyD"],
+      ...wc3ActionOverrides.wolf,
       dodge: ["KeyE"],
       "menu-shop": ["KeyQ"],
       "shop.purchase-foxToken": ["KeyQ"],

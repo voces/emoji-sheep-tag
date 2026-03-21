@@ -1,13 +1,20 @@
 import "@/client-testing/setup.ts";
-import { afterEach, it } from "@std/testing/bdd";
+import { afterEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { fireEvent, render, renderHook } from "@testing-library/react";
 import { Wrapper } from "../../../Wrapper.tsx";
 import { SettingsSection } from "./SettingsSection.tsx";
-import { defaultBindings } from "@/util/shortcutUtils.ts";
+import {
+  defaultBindings,
+  getBaseKey,
+  isAltKey,
+  makeAltKey,
+} from "@/util/shortcutUtils.ts";
 import { type MenuConfig, menusVar } from "@/vars/menus.ts";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
 import { useMenuManagement } from "./useMenuManagement.ts";
+import { endDrag, getDragData, startDrag } from "./useDragState.ts";
+import { shortcutSettingsVar } from "@/vars/shortcutSettings.ts";
 
 afterEach(() => {
   // Reset all vars to their initial state
@@ -474,4 +481,204 @@ it("should not override custom binding when creating build menu", async () => {
 
   // Bite should stay at KeyD (user's custom binding), not be overridden to KeyA
   expect(shortcutsVar()["sheep"]?.["bite"]).toEqual(["KeyD"]);
+});
+
+describe("alt bindings", () => {
+  it("utility functions", () => {
+    expect(isAltKey("bite~1")).toBe(true);
+    expect(isAltKey("bite")).toBe(false);
+    expect(getBaseKey("bite~1")).toBe("bite");
+    expect(getBaseKey("bite")).toBe("bite");
+    expect(makeAltKey("bite", 1)).toBe("bite~1");
+    expect(makeAltKey("bite", 2)).toBe("bite~2");
+  });
+
+  it("should render add button for each shortcut row", () => {
+    const sheepShortcuts = defaultBindings["sheep"];
+
+    const { container } = render(
+      <SettingsSection
+        section="sheep"
+        shortcuts={sheepShortcuts}
+        defaultOpen
+        setBinding={() => {}}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const addButtons = container.querySelectorAll("button");
+    const plusButtons = Array.from(addButtons).filter((b) =>
+      b.textContent === "+"
+    );
+    expect(plusButtons.length).toBeGreaterThan(0);
+  });
+
+  it("should render alt binding rows", () => {
+    const sheepShortcuts = {
+      ...defaultBindings["sheep"],
+      "bite~1": ["Numpad0"],
+    };
+
+    const { container } = render(
+      <SettingsSection
+        section="sheep"
+        shortcuts={sheepShortcuts}
+        defaultOpen
+        setBinding={() => {}}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const inputs = container.querySelectorAll("input");
+    const matchingInputs = Array.from(inputs).filter((i) =>
+      (i as HTMLInputElement).value === "#0"
+    );
+    expect(matchingInputs.length).toBe(1);
+  });
+
+  it("should render empty alt bindings for assignment", () => {
+    const sheepShortcuts = {
+      ...defaultBindings["sheep"],
+      "bite~1": [] as string[],
+    };
+
+    const { container } = render(
+      <SettingsSection
+        section="sheep"
+        shortcuts={sheepShortcuts}
+        defaultOpen
+        setBinding={() => {}}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const trashButtons = Array.from(container.querySelectorAll("button"))
+      .filter((b) => b.textContent === "🗑");
+    expect(trashButtons.length).toBeGreaterThan(0);
+  });
+
+  it("should call setBinding with alt key when adding alt", () => {
+    const setBinding = (key: string, binding: string[]) => {
+      expect(isAltKey(key)).toBe(true);
+      expect(getBaseKey(key)).toBe("bite");
+      expect(binding).toEqual([]);
+    };
+
+    const sheepShortcuts = defaultBindings["sheep"];
+
+    const { container } = render(
+      <SettingsSection
+        section="sheep"
+        shortcuts={sheepShortcuts}
+        defaultOpen
+        setBinding={setBinding}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    // Find Bite row and its + button
+    const biteRow = Array.from(
+      container.querySelectorAll("[data-testid='shortcut-row']"),
+    )
+      .find((row) => row.textContent?.includes("Bite"));
+    expect(biteRow).toBeDefined();
+
+    const addButton = biteRow!.querySelector("button");
+    expect(addButton?.textContent).toBe("+");
+    fireEvent.click(addButton!);
+  });
+});
+
+it("should initialize currentDropTarget when starting drag from a menu", () => {
+  startDrag({
+    actionKey: "swap",
+    section: "wolf",
+    fromMenu: "shop",
+  });
+
+  const data = getDragData();
+  expect(data).toBeDefined();
+  expect(data!.fromMenu).toBe("shop");
+
+  endDrag();
+});
+
+describe("preset alt bindings", () => {
+  it("should not show modified indicator for preset alt binding", async () => {
+    const { shortcutsVar } = await import("@/vars/shortcuts.ts");
+
+    shortcutSettingsVar({ ...shortcutSettingsVar(), preset: "wc3" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const shortcuts = shortcutsVar();
+    expect(shortcuts.sheep?.["stop~1"]).toEqual(["KeyH"]);
+
+    const { container } = render(
+      <SettingsSection
+        section="sheep"
+        shortcuts={shortcuts.sheep}
+        defaultOpen
+        setBinding={() => {}}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const header = container.querySelector("h3");
+    expect(header?.textContent).not.toContain("*");
+  });
+
+  it("should show modified indicator when preset alt is deleted", async () => {
+    const { shortcutsVar } = await import("@/vars/shortcuts.ts");
+
+    shortcutSettingsVar({ ...shortcutSettingsVar(), preset: "wc3" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Delete the preset alt by setting it to empty
+    const shortcuts = shortcutsVar();
+    const sheepWithDeletedAlt = {
+      ...shortcuts.sheep,
+      "stop~1": [] as string[],
+    };
+
+    const { container } = render(
+      <SettingsSection
+        section="sheep"
+        shortcuts={sheepWithDeletedAlt}
+        defaultOpen
+        setBinding={() => {}}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const header = container.querySelector("h3");
+    expect(header?.textContent).toContain("*");
+  });
+
+  it("should not show modified when alt on different index matches preset value", async () => {
+    const { shortcutsVar } = await import("@/vars/shortcuts.ts");
+
+    shortcutSettingsVar({ ...shortcutSettingsVar(), preset: "wc3" });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Delete stop~1 but add stop~2 with same value
+    const shortcuts = shortcutsVar();
+    const sheepWithReindexedAlt = {
+      ...shortcuts.sheep,
+      "stop~1": [] as string[],
+      "stop~2": ["KeyH"],
+    };
+
+    const { container } = render(
+      <SettingsSection
+        section="sheep"
+        shortcuts={sheepWithReindexedAlt}
+        defaultOpen
+        setBinding={() => {}}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    const header = container.querySelector("h3");
+    expect(header?.textContent).not.toContain("*");
+  });
 });

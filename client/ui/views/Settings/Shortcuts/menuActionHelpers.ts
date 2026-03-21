@@ -54,6 +54,21 @@ export const getMenuActionInfo = (
   };
 };
 
+export const removeActionFromMenuVar = (
+  menuId: string,
+  actionKey: string,
+) => {
+  const menus = menusVar();
+  const menu = menus.find((m) => m.id === menuId);
+  if (!menu) return;
+  const updatedActions = menu.actions.filter((action) =>
+    !("type" in action) || menuActionRefToKey(action) !== actionKey
+  );
+  menusVar(
+    menus.map((m) => m.id === menuId ? { ...m, actions: updatedActions } : m),
+  );
+};
+
 /**
  * Builds a set of action keys that are currently in menus.
  * Used to filter them out from top-level shortcuts display.

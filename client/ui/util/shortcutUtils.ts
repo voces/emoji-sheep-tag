@@ -72,6 +72,23 @@ export const slotDefaults: [string, string[]][] = [
   ["slot-6", ["Numpad2"]],
 ];
 
+export const ALT_SEPARATOR = "~";
+
+export const getBaseKey = (key: string): string => {
+  const idx = key.indexOf(ALT_SEPARATOR);
+  return idx === -1 ? key : key.substring(0, idx);
+};
+
+export const isAltKey = (key: string): boolean => key.includes(ALT_SEPARATOR);
+
+export const getAltIndex = (key: string): number => {
+  const idx = key.indexOf(ALT_SEPARATOR);
+  return idx === -1 ? -1 : Number(key.substring(idx + 1));
+};
+
+export const makeAltKey = (baseKey: string, index: number): string =>
+  `${baseKey}${ALT_SEPARATOR}${index}`;
+
 export const bindingsEqual = (a: string[], b: string[]): boolean =>
   a.length === b.length && a.every((key, i) => key === b[i]);
 
@@ -102,6 +119,17 @@ export const isDefaultBinding = (
 
     const defaultMenuBinding = menu.binding ?? [];
     return bindingsEqual(shortcut, defaultMenuBinding);
+  }
+
+  // Alt bindings: check if value matches this key's default or any preset alt on the same base
+  if (isAltKey(fullKey)) {
+    const effective = getEffectiveDefault(section, fullKey);
+    if (bindingsEqual(shortcut, effective)) return true;
+    if (shortcut.length === 0) return effective.length === 0;
+    const base = getBaseKey(fullKey);
+    return getPresetAltDefaults(section, base).some((pa) =>
+      pa.binding.length > 0 && bindingsEqual(shortcut, pa.binding)
+    );
   }
 
   const defaultBinding = defaults[section]?.[fullKey];
@@ -200,6 +228,22 @@ export const getEffectiveDefault = (
   return base;
 };
 
+export const getPresetAltDefaults = (
+  section: string,
+  baseKey: string,
+): { key: string; binding: string[] }[] => {
+  const { preset } = shortcutSettingsVar();
+  const overrides = presetOverrides[preset].bindings[section];
+  if (!overrides) return [];
+  const results: { key: string; binding: string[] }[] = [];
+  for (const [key, binding] of Object.entries(overrides)) {
+    if (isAltKey(key) && getBaseKey(key) === baseKey && binding.length > 0) {
+      results.push({ key, binding });
+    }
+  }
+  return results;
+};
+
 export const createInitialShortcuts = (): Shortcuts => ({
   misc: { // Potential conflict with a `misc` unitType?
     openCommandPalette: pluckShortcut("misc.openCommandPalette") ?? ["Slash"],
@@ -296,6 +340,18 @@ export const createInitialShortcuts = (): Shortcuts => ({
                   ]),
                 ]
                 : []),
+              // Load alt bindings from localStorage
+              ...(() => {
+                const stored = pluck(
+                  localStorageShortcuts,
+                  u,
+                  z.record(z.string(), zShortcut),
+                );
+                if (!stored) return [];
+                return Object.entries(stored)
+                  .filter(([key]) => key.includes(ALT_SEPARATOR))
+                  .map(([key, binding]) => [key, binding]);
+              })(),
             ],
           ),
         ];

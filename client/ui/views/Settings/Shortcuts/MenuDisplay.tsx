@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { styled } from "styled-components";
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import { Button } from "@/components/forms/Button.tsx";
+import { IconButton } from "@/components/forms/IconButton.tsx";
 import { Dialog } from "@/components/layout/Dialog.tsx";
 import { defaultMenus, type MenuConfig } from "@/vars/menus.ts";
 import { bindingsEqual, type ConflictInfo } from "@/util/shortcutUtils.ts";
@@ -51,30 +52,12 @@ const IconOption = styled(Command)<{ $selected: boolean }>`
     $selected ? "brightness(100%)" : "brightness(80%)"};
 `;
 
-const MenuNameContainer = styled.span<{ $enableHover?: boolean }>`
+const MenuNameContainer = styled.span`
   flex: 1;
   display: flex;
   align-items: center;
   gap: 4px;
   cursor: pointer;
-
-  .edit-icon {
-    opacity: 0.3;
-    font-size: 16px;
-    transition: opacity 0.15s;
-  }
-
-  ${({ $enableHover }) =>
-    $enableHover &&
-    `
-    &.hover .edit-icon {
-      opacity: 0.7;
-    }
-
-    &.hover .menu-name {
-      filter: drop-shadow(0 0 2px #fffd);
-    }
-  `};
 `;
 
 const MenuNameDisplay = styled.span.attrs({ className: "menu-name" })`
@@ -98,28 +81,13 @@ const MenuHeaderRow = styled(HStack)<{ $enableHover?: boolean }>`
   ${({ $enableHover }) =>
     $enableHover &&
     `
-    &.hover .delete-button {
-      opacity: 1;
-    }
-
-    &.hover .delete-button.hover {
-      filter: drop-shadow(0 0 3px #fff);
+    &.hover .menu-name {
+      filter: drop-shadow(0 0 2px #fffd);
     }
   `};
 `;
 
-const DeleteButton = styled.button.attrs({ className: "delete-button" })`
-  background: none;
-  border: none;
-  padding: 2px;
-  cursor: pointer;
-  opacity: 0.3;
-  transition: opacity 0.15s, filter 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  filter: drop-shadow(0 0 2px #fff6);
+const DeleteButton = styled(IconButton).attrs({ className: "delete-button" })`
 `;
 
 type MenuManagement = {
@@ -278,11 +246,10 @@ export const MenuDisplay = memo(({
           )
           : (
             <MenuNameContainer
-              $enableHover={enableHover}
               onClick={() => setEditingName(true)}
             >
               <MenuNameDisplay>{menu.name}</MenuNameDisplay>
-              <span className="edit-icon">✎</span>
+              <IconButton as="span" style={{ fontSize: 16 }}>✎</IconButton>
             </MenuNameContainer>
           )}
 

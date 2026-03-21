@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { mouse, MouseButtonEvent } from "../../../../mouse.ts";
+import { removeActionFromMenuVar } from "./menuActionHelpers.ts";
 
 export type DragData = {
   actionKey: string;
@@ -23,6 +24,7 @@ const notifyListeners = () => listeners.forEach((l) => l());
 export const startDrag = (data: DragData) => {
   currentDrag = data;
   isDragging = false; // Will become true on first mousemove
+  currentDropTarget = data.fromMenu ? `menu-${data.fromMenu}` : null;
   notifyListeners();
 };
 
@@ -102,23 +104,15 @@ mouse.addEventListener("mouseMove", () => {
 
   // Trigger drop when entering a new target
   if (currentDropTarget !== newTarget) {
-    // If we left a menu and are now in any section (even a different one),
-    // we need to remove the action from its current menu
     const leftMenu = currentDropTarget?.startsWith("menu-");
-    const nowInSection = newTarget?.startsWith("section-");
 
-    if (leftMenu && nowInSection && currentDrag.fromMenu) {
-      // Find the section handler that matches the action's section
-      const actionSectionTarget = matches.find(
-        (m) => m.id === `section-${currentDrag!.section}`,
-      );
-      if (actionSectionTarget) {
-        actionSectionTarget.handler(currentDrag);
-      }
+    if (leftMenu && currentDrag.fromMenu) {
+      removeActionFromMenuVar(currentDrag.fromMenu, currentDrag.actionKey);
       currentDrag.fromMenu = null;
-    } else if (newTarget !== null && newTargetHandler) {
+    }
+
+    if (newTarget !== null && newTargetHandler) {
       newTargetHandler(currentDrag);
-      // Update fromMenu to reflect the new location
       if (newTarget.startsWith("menu-")) {
         currentDrag.fromMenu = newTarget.substring(5);
       } else if (newTarget.startsWith("section-")) {

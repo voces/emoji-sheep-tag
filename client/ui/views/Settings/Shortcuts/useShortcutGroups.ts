@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { items, prefabs } from "@/shared/data.ts";
 import type { MenuConfig } from "@/vars/menus.ts";
 import type { ConflictInfo } from "@/util/shortcutUtils.ts";
-import { detectMenuConflicts } from "@/util/shortcutUtils.ts";
+import { detectMenuConflicts, isAltKey } from "@/util/shortcutUtils.ts";
 import { actionToShortcutKey } from "../../../../util/actionToShortcutKey.ts";
 import {
   buildActionsInMenusSet,
@@ -61,7 +61,7 @@ export const useShortcutGroups = (
       } else if (key.startsWith("menu-")) {
         menuBindings[key] = binding;
       } else {
-        if (actionsInMenus.has(key) || hiddenKeys.has(key)) {
+        if (actionsInMenus.has(key) || hiddenKeys.has(key) || isAltKey(key)) {
           continue;
         }
         topLevelShortcuts[key] = binding;

@@ -2,7 +2,14 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { styled } from "styled-components";
 import { prefabs } from "@/shared/data.ts";
 import Collapse from "@/components/layout/Collapse.tsx";
-import { isDefaultBinding } from "@/util/shortcutUtils.ts";
+import {
+  bindingsEqual,
+  getBaseKey,
+  getEffectiveDefault,
+  getPresetAltDefaults,
+  isAltKey,
+  isDefaultBinding,
+} from "@/util/shortcutUtils.ts";
 import { HoverHighlight, HStack, VStack } from "@/components/layout/Layout.tsx";
 import { Button } from "@/components/forms/Button.tsx";
 import { isDefaultMenu, type MenuConfig, menusVar } from "@/vars/menus.ts";
@@ -71,10 +78,32 @@ export const SettingsSection = memo(({
       ),
     ),
   };
-  const hasBindingOverrides = Object.entries(visibleShortcuts).some(
-    ([key, binding]) =>
-      !isDefaultBinding(section, key, binding, defaultBindings),
+  // Check for missing preset alt bindings (satisfied if any alt has the same value)
+  const hasMissingPresetAlts = Object.keys(shortcuts).some((key) => {
+    if (isAltKey(key)) return false;
+    const presetAlts = getPresetAltDefaults(section, key);
+    if (presetAlts.length === 0) return false;
+    const altValues = Object.entries(shortcuts)
+      .filter(([k]) => isAltKey(k) && getBaseKey(k) === key)
+      .map(([, v]) => v);
+    return presetAlts.some((pa) => {
+      const existing = shortcuts[pa.key];
+      return !(existing && bindingsEqual(existing, pa.binding)) &&
+        !altValues.some((v) => bindingsEqual(v, pa.binding));
+    });
+  });
+  // Check if user-added alts exist (binding doesn't match any preset alt on same base)
+  const hasNonDefaultAlts = Object.entries(shortcuts).some(
+    ([key, binding]) => {
+      if (!isAltKey(key) || binding.length === 0) return false;
+      return !isDefaultBinding(section, key, binding, defaultBindings);
+    },
   );
+  const hasBindingOverrides = hasMissingPresetAlts || hasNonDefaultAlts ||
+    Object.entries(visibleShortcuts).some(
+      ([key, binding]) =>
+        !isDefaultBinding(section, key, binding, defaultBindings),
+    );
   const hasCustomMenus = sectionMenus.some((menu) =>
     !isDefaultMenu(menu) && !menu.bindingOverrides
   );
@@ -107,6 +136,28 @@ export const SettingsSection = memo(({
       },
     );
   }, [section, menuManagement.actions]);
+
+  const altBindingsMap = Object.entries(shortcuts)
+    .filter(([key, binding]) =>
+      isAltKey(key) &&
+      (binding.length > 0 || getEffectiveDefault(section, key).length === 0)
+    )
+    .reduce<Record<string, { key: string; binding: string[] }[]>>(
+      (acc, [key, binding]) => {
+        const base = getBaseKey(key);
+        (acc[base] ??= []).push({ key, binding });
+        return acc;
+      },
+      {},
+    );
+
+  const allAltKeysMap = Object.keys(shortcuts)
+    .filter((key) => isAltKey(key))
+    .reduce<Record<string, string[]>>((acc, key) => {
+      const base = getBaseKey(key);
+      (acc[base] ??= []).push(key);
+      return acc;
+    }, {});
 
   const renderTopLevelItems = () => {
     // Combine shortcuts and menus into a sortable list
@@ -146,8 +197,10 @@ export const SettingsSection = memo(({
             onSetBinding={handleSetBinding}
             conflict={topLevelConflicts.get(key)}
             isInMenu={findMenuForAction(key, sectionMenus)}
-            draggable
+            draggable={sectionMenus.length > 0}
             draggedActionKey={draggedAction}
+            altBindings={altBindingsMap[key]}
+            allAltKeys={allAltKeysMap[key]}
           />
         );
       } else {

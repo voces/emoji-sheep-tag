@@ -2,6 +2,9 @@ import { makeVar } from "@/hooks/useVar.tsx";
 import {
   createInitialShortcuts,
   defaultBindings,
+  getBaseKey,
+  getEffectiveDefault,
+  isAltKey,
   type Shortcuts,
 } from "@/util/shortcutUtils.ts";
 import { menusVar } from "./menus.ts";
@@ -80,11 +83,39 @@ const applyPresetOverrides = (shortcuts: Shortcuts): Shortcuts => {
     for (const [key, binding] of Object.entries(bindings)) {
       // Only apply if binding hasn't been manually customized from its EST default
       const estDefault = defaultBindings[section]?.[key];
-      if (estDefault && updated[key]?.join("+") === estDefault.join("+")) {
-        updated[key] = binding;
+      if (estDefault) {
+        if (updated[key]?.join("+") === estDefault.join("+")) {
+          updated[key] = binding;
+        }
+      } else if (isAltKey(key) && !(key in updated)) {
+        // Alt bindings: apply if base key exists and alt not already set
+        const base = getBaseKey(key);
+        if (defaultBindings[section]?.[base]) {
+          updated[key] = binding;
+        }
       }
     }
     result[section] = updated;
+  }
+  return result;
+};
+
+// Remove empty alt keys that aren't deletion markers for the current preset
+const cleanupEmptyAlts = (shortcuts: Shortcuts): Shortcuts => {
+  const result = { ...shortcuts };
+  for (const [section, bindings] of Object.entries(result)) {
+    let changed = false;
+    const cleaned = { ...bindings };
+    for (const [key, binding] of Object.entries(cleaned)) {
+      if (isAltKey(key) && binding.length === 0) {
+        const effective = getEffectiveDefault(section, key);
+        if (effective.length === 0) {
+          delete cleaned[key];
+          changed = true;
+        }
+      }
+    }
+    if (changed) result[section] = cleaned;
   }
   return result;
 };
@@ -94,7 +125,8 @@ const buildShortcuts = (allMenus: ReturnType<typeof menusVar>): Shortcuts => {
   const base = createInitialShortcuts();
   const withMenuBindings = loadMenuBindingsFromStorage(base, allMenus);
   const withPreset = applyPresetOverrides(withMenuBindings);
-  return applyMenuBindingOverrides(withPreset, allMenus);
+  const withMenuOverrides = applyMenuBindingOverrides(withPreset, allMenus);
+  return cleanupEmptyAlts(withMenuOverrides);
 };
 
 export const shortcutsVar = makeVar<Shortcuts>(buildShortcuts(menusVar()));
@@ -145,11 +177,18 @@ menusVar.subscribe(() => {
     if (!defaults) continue;
     for (const [key, binding] of Object.entries(shortcuts)) {
       if (key.startsWith("menu-")) continue;
-      const def = defaults[key];
-      if (!def || binding.join("+") === def.join("+")) continue;
       // Skip if this value came from a menu or preset override (not a user choice)
       const overrides = allOverrideValues.get(`${section}.${key}`);
       if (overrides?.has(binding.join("+"))) continue;
+      // Alt keys: preserve only if user-added (not from a preset)
+      if (isAltKey(key)) {
+        if (rebuilt[section]?.[key] === undefined && binding.length > 0) {
+          rebuilt[section] = { ...rebuilt[section], [key]: binding };
+        }
+        continue;
+      }
+      const def = defaults[key];
+      if (!def || binding.join("+") === def.join("+")) continue;
       if (rebuilt[section]?.[key]?.join("+") !== binding.join("+")) {
         rebuilt[section] = { ...rebuilt[section], [key]: binding };
       }

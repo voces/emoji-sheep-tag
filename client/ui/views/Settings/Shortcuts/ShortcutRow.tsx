@@ -2,12 +2,19 @@ import { memo, useCallback, useRef } from "react";
 import { styled } from "styled-components";
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import {
+  bindingsEqual,
   type ConflictInfo,
   defaultBindings,
   getActionDisplayName,
+  getAltIndex,
+  getBaseKey,
   getEffectiveDefault,
+  getPresetAltDefaults,
+  isAltKey,
   isDefaultBinding,
+  makeAltKey,
 } from "@/util/shortcutUtils.ts";
+import { IconButton } from "@/components/forms/IconButton.tsx";
 import { ShortcutInputField } from "./ShortcutInputField.tsx";
 import { ConflictWarning } from "./ConflictWarning.tsx";
 import { getDragData, startDrag } from "./useDragState.ts";
@@ -42,12 +49,22 @@ const ShortcutRowContainer = styled(HStack)<{
         : "drop-shadow(0 0 2px #fff6)"};
   }
 
+  &.hover .alt-button {
+    --icon-button-opacity: 0.5;
+  }
+
   ${({ $isDraggable, $enableHover }) =>
     $isDraggable &&
     $enableHover &&
     `
     &.hover .drag-handle {
+      opacity: 0.5;
+    }
+
+    &.hover .drag-handle.hover {
       opacity: 1;
+      color: #fff;
+      filter: drop-shadow(0 0 3px #fff);
     }
 
     &.hover .shortcut-label {
@@ -86,7 +103,14 @@ type ShortcutRowProps = {
   isInMenu?: string | null;
   draggable?: boolean;
   draggedActionKey?: string | null;
+  altBindings?: { key: string; binding: string[] }[];
+  allAltKeys?: string[];
 };
+
+const AltButton = styled(IconButton).attrs({ className: "alt-button" })`
+  --icon-button-opacity: 0;
+  font-size: 16px;
+`;
 
 export const ShortcutRow = memo(({
   actionKey,
@@ -99,14 +123,26 @@ export const ShortcutRow = memo(({
   isInMenu,
   draggable = false,
   draggedActionKey = null,
+  altBindings = [],
+  allAltKeys = [],
 }: ShortcutRowProps) => {
   const labelRef = useRef<HTMLSpanElement>(null);
-  const isDefault = isDefaultBinding(
+  const primaryIsDefault = isDefaultBinding(
     section,
     fullKey,
     shortcut,
     defaultBindings,
   );
+
+  // Check if any preset alt bindings are missing
+  const presetAlts = getPresetAltDefaults(section, fullKey);
+  const missingPresetAlts = presetAlts.filter(
+    (pa) =>
+      !altBindings.some((ab) =>
+        ab.key === pa.key || bindingsEqual(ab.binding, pa.binding)
+      ),
+  );
+  const isDefault = primaryIsDefault && missingPresetAlts.length === 0;
 
   const isBackAction = fullKey === "back" || fullKey.startsWith("menu-back-");
   const isDraggable = draggable && !isBackAction;
@@ -126,6 +162,27 @@ export const ShortcutRow = memo(({
   }, []);
 
   const icon = getActionIcon(fullKey, section);
+  const baseKey = getBaseKey(fullKey);
+  const canDeletePrimary = altBindings.length > 0;
+
+  const handleAddAlt = useCallback(() => {
+    const nextIndex = allAltKeys.length > 0
+      ? Math.max(
+        ...allAltKeys.map((k) => getAltIndex(k)),
+      ) + 1
+      : 1;
+    onSetBinding(makeAltKey(baseKey, nextIndex), []);
+  }, [baseKey, allAltKeys, onSetBinding]);
+
+  const handleRemoveBinding = useCallback((key: string) => {
+    if (isAltKey(key)) {
+      onSetBinding(key, []);
+    } else if (altBindings.length > 0) {
+      const firstAlt = altBindings[0];
+      onSetBinding(key, firstAlt.binding);
+      onSetBinding(firstAlt.key, []);
+    }
+  }, [altBindings, onSetBinding]);
 
   return (
     <VStack style={{ gap: "4px" }} data-testid="shortcut-row">
@@ -153,13 +210,56 @@ export const ShortcutRow = memo(({
           </ShortcutLabel>
           {isDraggable && <span className="drag-handle">⋮⋮</span>}
         </LabelContainer>
+        <AltButton type="button" onClick={handleAddAlt}>+</AltButton>
+        {canDeletePrimary && (
+          <AltButton
+            type="button"
+            onClick={() => handleRemoveBinding(fullKey)}
+          >
+            🗑
+          </AltButton>
+        )}
         <ShortcutInputField
           binding={shortcut}
           defaultBinding={getEffectiveDefault(section, fullKey)}
           isDefault={isDefault}
-          onSetBinding={(binding) => onSetBinding(fullKey, binding)}
+          onSetBinding={(binding) => {
+            if (!bindingsEqual(shortcut, binding)) {
+              onSetBinding(fullKey, binding);
+            }
+            for (const pa of missingPresetAlts) {
+              onSetBinding(pa.key, pa.binding);
+            }
+          }}
         />
       </ShortcutRowContainer>
+      {altBindings.map((alt) => {
+        const altDefault = getEffectiveDefault(section, alt.key);
+        const altIsDefault = isDefaultBinding(
+          section,
+          alt.key,
+          alt.binding,
+          defaultBindings,
+        );
+        return (
+          <ShortcutRowContainer key={alt.key} $isNested={isNested}>
+            <span style={{ flex: 1 }} />
+            <AltButton type="button" onClick={handleAddAlt}>+</AltButton>
+            <AltButton
+              type="button"
+              onClick={() => handleRemoveBinding(alt.key)}
+            >
+              🗑
+            </AltButton>
+            <ShortcutInputField
+              binding={alt.binding}
+              defaultBinding={altDefault}
+              isDefault={altIsDefault}
+              onSetBinding={(binding) => onSetBinding(alt.key, binding)}
+            />
+          </ShortcutRowContainer>
+        );
+      })}
       {conflict && <ConflictWarning conflict={conflict} section={section} />}
     </VStack>
   );

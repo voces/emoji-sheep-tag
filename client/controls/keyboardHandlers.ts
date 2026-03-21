@@ -1,5 +1,5 @@
 import { UnitDataAction } from "@/shared/types.ts";
-import { SLOT_COUNT } from "../ui/util/shortcutUtils.ts";
+import { ALT_SEPARATOR, SLOT_COUNT } from "../ui/util/shortcutUtils.ts";
 import { shortcutSettingsVar } from "../ui/vars/shortcutSettings.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { Entity } from "../ecs.ts";
@@ -73,6 +73,29 @@ export const checkShortcut = (
   return matches ? normalizedShortcut.length : 0;
 };
 
+const checkWithAlts = (
+  primary: readonly string[] | undefined,
+  actionKey: string,
+  prefabShortcuts: Record<string, string[]> | undefined,
+  currentKey: string,
+): number => {
+  if (primary) {
+    const q = checkShortcut(primary, currentKey);
+    if (q) return q;
+  }
+  if (!prefabShortcuts) return 0;
+  for (const key in prefabShortcuts) {
+    if (key.startsWith(actionKey + ALT_SEPARATOR)) {
+      const alt = prefabShortcuts[key];
+      if (alt.length > 0) {
+        const q = checkShortcut(alt, currentKey);
+        if (q) return q;
+      }
+    }
+  }
+  return 0;
+};
+
 export const findActionForShortcut = (
   e: KeyboardEvent,
   shortcuts: Record<string, Record<string, string[]>>,
@@ -112,6 +135,9 @@ export const findActionForShortcut = (
     for (const entity of selection) {
       // Check unit's base actions
       if (entity.actions) {
+        const prefabShortcuts = entity.prefab
+          ? shortcuts[entity.prefab]
+          : undefined;
         for (const a of entity.actions) {
           // Skip actions that are in menus
           const actionKey = actionToShortcutKey(a);
@@ -119,25 +145,26 @@ export const findActionForShortcut = (
             continue;
           }
 
-          if (a.binding) {
-            const matchQuality = checkShortcut(a.binding, e.code);
-            if (matchQuality) {
-              const localPlayer = getLocalPlayer();
-              if (
-                localPlayer && canPlayerExecuteAction(localPlayer.id, entity, a)
+          const matchQuality = checkWithAlts(
+            a.binding,
+            actionKey,
+            prefabShortcuts,
+            e.code,
+          );
+          if (matchQuality) {
+            const localPlayer = getLocalPlayer();
+            if (
+              localPlayer && canPlayerExecuteAction(localPlayer.id, entity, a)
+            ) {
+              if (matchQuality > bestMatchQuality) {
+                bestMatchQuality = matchQuality;
+                action = a;
+                units.length = 0;
+                units.push(entity);
+              } else if (
+                matchQuality === bestMatchQuality && isSameAction(action!, a)
               ) {
-                if (matchQuality > bestMatchQuality) {
-                  // Better match found, replace
-                  bestMatchQuality = matchQuality;
-                  action = a;
-                  units.length = 0;
-                  units.push(entity);
-                } else if (
-                  matchQuality === bestMatchQuality && isSameAction(action!, a)
-                ) {
-                  // Same quality and same action type
-                  units.push(entity);
-                }
+                units.push(entity);
               }
             }
           }
@@ -146,35 +173,36 @@ export const findActionForShortcut = (
 
       // Check item actions from inventory (skip when slot bindings are active)
       if (entity.inventory && !shortcutSettingsVar().useSlotBindings) {
+        const itemPrefabShortcuts = entity.prefab
+          ? shortcuts[entity.prefab]
+          : undefined;
         for (const item of entity.inventory) {
           if (
             item.actions && item.actions.length > 0 &&
             (!item.charges || item.charges > 0)
           ) {
             for (const itemAction of item.actions) {
-              const prefabShortcuts = entity.prefab
-                ? shortcuts[entity.prefab]
-                : undefined;
               const actionKey = actionToShortcutKey(itemAction);
-              const binding = prefabShortcuts?.[actionKey] ??
+              const binding = itemPrefabShortcuts?.[actionKey] ??
                 itemAction.binding;
 
-              if (binding) {
-                const matchQuality = checkShortcut(binding, e.code);
-                if (matchQuality) {
-                  if (matchQuality > bestMatchQuality) {
-                    // Better match found, replace
-                    bestMatchQuality = matchQuality;
-                    action = itemAction;
-                    units.length = 0;
-                    units.push(entity);
-                  } else if (
-                    matchQuality === bestMatchQuality &&
-                    isSameAction(action!, itemAction)
-                  ) {
-                    // Same quality and same action type
-                    units.push(entity);
-                  }
+              const matchQuality = checkWithAlts(
+                binding,
+                actionKey,
+                itemPrefabShortcuts,
+                e.code,
+              );
+              if (matchQuality) {
+                if (matchQuality > bestMatchQuality) {
+                  bestMatchQuality = matchQuality;
+                  action = itemAction;
+                  units.length = 0;
+                  units.push(entity);
+                } else if (
+                  matchQuality === bestMatchQuality &&
+                  isSameAction(action!, itemAction)
+                ) {
+                  units.push(entity);
                 }
               }
             }

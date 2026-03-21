@@ -40,8 +40,6 @@
 - Death animation (sheep)
 - Monolith needs new model
 - Custom control groups (4+)
-- Allow multiple hotkeys for the same action; example: on sheep, S or H to stop
-- Modifying a shortcut should swap instead of conflict
 
 # Bugs
 
