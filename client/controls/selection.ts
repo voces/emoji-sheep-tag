@@ -140,7 +140,7 @@ export const getEntitiesToSelect = (
 };
 
 export const addToSelection = () =>
-  checkShortcut(shortcutsVar().misc.addToSelectionModifier) > 0;
+  checkShortcut(shortcutsVar().misc, "addToSelectionModifier") > 0;
 
 // State setters
 export const setDragStart = (value: { x: number; y: number } | null) => {

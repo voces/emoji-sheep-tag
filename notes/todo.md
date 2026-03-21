@@ -36,7 +36,8 @@
 - Per-player handicap
 - Death animation (sheep)
 - Monolith needs new model
-- Custom control groups (4+)
+- Allow to leave lobby
+- Allow to return to main menu
 
 # Bugs
 

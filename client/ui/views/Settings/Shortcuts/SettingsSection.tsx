@@ -19,7 +19,7 @@ import { MenuDisplay } from "./MenuDisplay.tsx";
 import { useMenuManagement } from "./useMenuManagement.ts";
 import { useShortcutGroups } from "./useShortcutGroups.ts";
 import { findMenuForAction } from "./menuActionHelpers.ts";
-import { defaultBindings } from "@/util/shortcutUtils.ts";
+import { controlGroupTooltips, defaultBindings } from "@/util/shortcutUtils.ts";
 import { registerDropTarget, useSectionDragState } from "./useDragState.ts";
 
 const SectionHeader = styled.h3`
@@ -40,6 +40,7 @@ type SettingsSectionProps = {
   setBinding: (shortcut: string, binding: string[]) => void;
   defaultOpen?: boolean;
   useSlotBindings?: boolean;
+  externalBindings?: Record<string, { binding: string[]; section: string }>;
 };
 
 export const SettingsSection = memo(({
@@ -48,6 +49,7 @@ export const SettingsSection = memo(({
   setBinding,
   defaultOpen = false,
   useSlotBindings = false,
+  externalBindings,
 }: SettingsSectionProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const hasBeenOpened = useRef(defaultOpen);
@@ -67,7 +69,13 @@ export const SettingsSection = memo(({
     topLevelConflicts,
     menuConflicts,
     hasConflicts,
-  } = useShortcutGroups(shortcuts, sectionMenus, section, useSlotBindings);
+  } = useShortcutGroups(
+    shortcuts,
+    sectionMenus,
+    section,
+    useSlotBindings,
+    externalBindings,
+  );
 
   // Check visible shortcuts for non-default bindings
   const visibleShortcuts = {
@@ -176,12 +184,14 @@ export const SettingsSection = memo(({
       ...sectionMenus.map((menu): TopLevelItem => ({ type: "menu", menu })),
     ];
 
-    // Sort by name alphabetically
-    items.sort((a, b) => {
-      const aName = a.type === "shortcut" ? a.key : a.menu.name;
-      const bName = b.type === "shortcut" ? b.key : b.menu.name;
-      return aName.localeCompare(bName);
-    });
+    // Sort by name alphabetically (skip for controlGroups to preserve logical order)
+    if (section !== "controlGroups") {
+      items.sort((a, b) => {
+        const aName = a.type === "shortcut" ? a.key : a.menu.name;
+        const bName = b.type === "shortcut" ? b.key : b.menu.name;
+        return aName.localeCompare(bName);
+      });
+    }
 
     return items.map((item) => {
       if (item.type === "shortcut") {
@@ -201,6 +211,7 @@ export const SettingsSection = memo(({
             draggedActionKey={draggedAction}
             altBindings={altBindingsMap[key]}
             allAltKeys={allAltKeysMap[key]}
+            tooltip={controlGroupTooltips[key]}
           />
         );
       } else {
@@ -252,7 +263,11 @@ export const SettingsSection = memo(({
     return result;
   };
 
-  const header = section === "misc" ? "Misc" : prefabs[section].name ?? section;
+  const header = section === "controlGroups"
+    ? "Selection Groups"
+    : section === "misc"
+    ? "Misc"
+    : prefabs[section]?.name ?? section;
 
   return (
     <VStack data-testid={`section-${header}`}>
@@ -271,7 +286,7 @@ export const SettingsSection = memo(({
           <TopLevelDropZone ref={dropZoneRef}>
             {renderTopLevelItems()}
             {renderLegacyMenuShortcuts()}
-            {section !== "misc" && (
+            {section !== "misc" && section !== "controlGroups" && (
               <HStack>
                 <Button
                   type="button"

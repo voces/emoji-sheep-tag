@@ -10,6 +10,7 @@ import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { practiceVar } from "@/vars/practice.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
+import { checkShortcut } from "../../../controls/keyboardHandlers.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { vipVar } from "@/vars/vip.ts";
 import { editorVar } from "@/vars/editor.ts";
@@ -340,11 +341,9 @@ export const GameStatusPanel = () => {
   useListenToEntities(players, ["sheepTime", "team"]);
 
   useEffect(() => {
-    const binding = shortcuts.misc?.toggleScoreboard ?? ["Tab"];
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === "INPUT") return;
-      if (binding.includes(e.code)) {
+      if (checkShortcut(shortcuts.misc, "toggleScoreboard", e.code)) {
         e.preventDefault();
         scoreboardExpandedVar(!scoreboardExpandedVar());
       }

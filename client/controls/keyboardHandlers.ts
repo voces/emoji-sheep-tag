@@ -62,7 +62,7 @@ export const isSameAction = (a: UnitDataAction, b: UnitDataAction) => {
   }
 };
 
-export const checkShortcut = (
+const checkSingleBinding = (
   shortcut: readonly string[],
   currentKey?: string,
 ): number => {
@@ -73,6 +73,32 @@ export const checkShortcut = (
   return matches ? normalizedShortcut.length : 0;
 };
 
+/**
+ * Check a shortcut and all its alt bindings in a section.
+ * Returns match quality (number of keys) or 0 if no match.
+ */
+export const checkShortcut = (
+  sectionShortcuts: Record<string, string[]>,
+  actionKey: string,
+  currentKey?: string,
+): number => {
+  const primary = sectionShortcuts[actionKey];
+  if (primary) {
+    const q = checkSingleBinding(primary, currentKey);
+    if (q) return q;
+  }
+  for (const key in sectionShortcuts) {
+    if (key.startsWith(actionKey + ALT_SEPARATOR)) {
+      const alt = sectionShortcuts[key];
+      if (alt.length > 0) {
+        const q = checkSingleBinding(alt, currentKey);
+        if (q) return q;
+      }
+    }
+  }
+  return 0;
+};
+
 const checkWithAlts = (
   primary: readonly string[] | undefined,
   actionKey: string,
@@ -80,7 +106,7 @@ const checkWithAlts = (
   currentKey: string,
 ): number => {
   if (primary) {
-    const q = checkShortcut(primary, currentKey);
+    const q = checkSingleBinding(primary, currentKey);
     if (q) return q;
   }
   if (!prefabShortcuts) return 0;
@@ -88,7 +114,7 @@ const checkWithAlts = (
     if (key.startsWith(actionKey + ALT_SEPARATOR)) {
       const alt = prefabShortcuts[key];
       if (alt.length > 0) {
-        const q = checkShortcut(alt, currentKey);
+        const q = checkSingleBinding(alt, currentKey);
         if (q) return q;
       }
     }
@@ -111,7 +137,7 @@ export const findActionForShortcut = (
     // Check menu actions
     for (const a of currentMenu.action.actions) {
       if (!a.binding) continue;
-      const matchQuality = checkShortcut(a.binding, e.code);
+      const matchQuality = checkSingleBinding(a.binding, e.code);
       if (matchQuality) {
         if (matchQuality > bestMatchQuality) {
           // Better match found, replace
@@ -231,7 +257,7 @@ export const findActionForShortcut = (
           for (let i = 0; i < Math.min(usableActions.length, SLOT_COUNT); i++) {
             const slotBinding = prefabShortcuts[`slot-${i + 1}`];
             if (!slotBinding) continue;
-            const matchQuality = checkShortcut(slotBinding, e.code);
+            const matchQuality = checkSingleBinding(slotBinding, e.code);
             if (matchQuality && matchQuality > bestMatchQuality) {
               bestMatchQuality = matchQuality;
               action = usableActions[i];
@@ -266,7 +292,7 @@ export const findActionForShortcut = (
           }
 
           if (menuAction.binding) {
-            const matchQuality = checkShortcut(menuAction.binding, e.code);
+            const matchQuality = checkSingleBinding(menuAction.binding, e.code);
             if (matchQuality) {
               if (matchQuality > bestMatchQuality) {
                 bestMatchQuality = matchQuality;

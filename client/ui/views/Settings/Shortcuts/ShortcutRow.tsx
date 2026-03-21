@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef } from "react";
+import { memo, useCallback } from "react";
 import { styled } from "styled-components";
 import { HStack, VStack } from "@/components/layout/Layout.tsx";
 import {
@@ -14,6 +14,7 @@ import {
   isDefaultBinding,
   makeAltKey,
 } from "@/util/shortcutUtils.ts";
+import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { IconButton } from "@/components/forms/IconButton.tsx";
 import { ShortcutInputField } from "./ShortcutInputField.tsx";
 import { ConflictWarning } from "./ConflictWarning.tsx";
@@ -105,6 +106,7 @@ type ShortcutRowProps = {
   draggedActionKey?: string | null;
   altBindings?: { key: string; binding: string[] }[];
   allAltKeys?: string[];
+  tooltip?: string;
 };
 
 const AltButton = styled(IconButton).attrs({ className: "alt-button" })`
@@ -125,8 +127,11 @@ export const ShortcutRow = memo(({
   draggedActionKey = null,
   altBindings = [],
   allAltKeys = [],
+  tooltip,
 }: ShortcutRowProps) => {
-  const labelRef = useRef<HTMLSpanElement>(null);
+  const { tooltipContainerProps, tooltip: tooltipPortal } = useTooltip<
+    HTMLSpanElement
+  >(tooltip);
   const primaryIsDefault = isDefaultBinding(
     section,
     fullKey,
@@ -201,15 +206,16 @@ export const ShortcutRow = memo(({
           />
         )}
         <LabelContainer
-          ref={labelRef}
           $isDraggable={isDraggable}
           onClick={onClick}
+          {...tooltipContainerProps}
         >
           <ShortcutLabel>
             {getActionDisplayName(actionKey, section)}
           </ShortcutLabel>
           {isDraggable && <span className="drag-handle">⋮⋮</span>}
         </LabelContainer>
+        {tooltipPortal}
         <AltButton type="button" onClick={handleAddAlt}>+</AltButton>
         {canDeletePrimary && (
           <AltButton

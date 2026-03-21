@@ -24,12 +24,8 @@ import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { isSoftwareRenderer } from "./util/gpu.ts";
-import {
-  selectAllFoxes,
-  selectAllMirrors,
-  selectEntity,
-  selectPrimaryUnit,
-} from "./api/selection.ts";
+import { selectEntity, selectPrimaryUnit } from "./api/selection.ts";
+import { handleControlGroupKey } from "./api/controlGroups.ts";
 import { applyZoom, setZoom, showZoomMessage } from "./api/player.ts";
 import {
   closeAllMenus,
@@ -712,7 +708,7 @@ document.addEventListener("keydown", (e) => {
   const { units, action } = findActionForShortcut(e, shortcuts);
 
   // Handle ping shortcut
-  if (checkShortcut(shortcuts.misc.ping, e.code)) {
+  if (checkShortcut(shortcuts.misc, "ping", e.code)) {
     e.preventDefault();
     // Create ping blueprint at current mouse position
     createBlueprint("ping", mouse.world.x, mouse.world.y);
@@ -721,7 +717,7 @@ document.addEventListener("keydown", (e) => {
 
   if (!action) {
     // Handle cancel
-    if (checkShortcut(shortcuts.misc.cancel, e.code)) {
+    if (checkShortcut(shortcuts.misc, "cancel", e.code)) {
       // Cancel paste mode if active
       if (editorVar() && isPasting()) {
         cancelPaste();
@@ -750,7 +746,7 @@ const handleUIShortcuts = (
 
   // Command palette
   if (
-    checkShortcut(shortcuts.misc.openCommandPalette, e.code) &&
+    checkShortcut(shortcuts.misc, "openCommandPalette", e.code) &&
     showCommandPaletteVar() === "closed"
   ) {
     e.preventDefault();
@@ -760,7 +756,7 @@ const handleUIShortcuts = (
 
   // Chat
   if (
-    checkShortcut(shortcuts.misc.openChat, e.code) &&
+    checkShortcut(shortcuts.misc, "openChat", e.code) &&
     showChatBoxVar() !== "open" &&
     showCommandPaletteVar() === "closed" &&
     stateVar() === "playing"
@@ -770,39 +766,17 @@ const handleUIShortcuts = (
     return true;
   }
 
-  // Selection shortcuts
+  // Control groups
   if (
-    checkShortcut(shortcuts.misc.selectOwnUnit, e.code) &&
     showChatBoxVar() !== "open" &&
     showCommandPaletteVar() === "closed" &&
     stateVar() === "playing"
   ) {
-    e.preventDefault();
-    selectPrimaryUnit();
+    handleControlGroupKey(e);
   }
 
   if (
-    checkShortcut(shortcuts.misc.selectMirrors, e.code) &&
-    showChatBoxVar() !== "open" &&
-    showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
-  ) {
-    e.preventDefault();
-    selectAllMirrors();
-  }
-
-  if (
-    checkShortcut(shortcuts.misc.selectFoxes, e.code) &&
-    showChatBoxVar() !== "open" &&
-    showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
-  ) {
-    e.preventDefault();
-    selectAllFoxes();
-  }
-
-  if (
-    checkShortcut(shortcuts.misc.jumpToPing, e.code) &&
+    checkShortcut(shortcuts.misc, "jumpToPing", e.code) &&
     showChatBoxVar() !== "open" &&
     showCommandPaletteVar() === "closed" &&
     stateVar() === "playing"
@@ -811,7 +785,7 @@ const handleUIShortcuts = (
   }
 
   if (
-    checkShortcut(shortcuts.misc.applyZoom, e.code) &&
+    checkShortcut(shortcuts.misc, "applyZoom", e.code) &&
     showChatBoxVar() !== "open" &&
     showCommandPaletteVar() === "closed" &&
     stateVar() === "playing"
@@ -840,7 +814,7 @@ const shouldSkipGameShortcuts = (e: KeyboardEvent): boolean => {
 };
 
 const handleAction = (action: UnitDataAction, units: Entity[]) => {
-  const queue = checkShortcut(shortcutsVar().misc.queueModifier) > 0;
+  const queue = checkShortcut(shortcutsVar().misc, "queueModifier") > 0;
 
   if (!queue) cancelOrder();
   else queued.state = true;
@@ -1066,7 +1040,7 @@ document.addEventListener("keyup", (e) => {
   handleKeyUp(e.code);
   if (
     queued.state &&
-    !checkShortcut(shortcutsVar().misc.queueModifier)
+    !checkShortcut(shortcutsVar().misc, "queueModifier")
   ) cancelOrder();
 });
 

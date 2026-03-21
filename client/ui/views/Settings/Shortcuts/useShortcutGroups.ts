@@ -26,6 +26,7 @@ export const useShortcutGroups = (
   sectionMenus: MenuConfig[],
   section: string,
   useSlotBindings = false,
+  externalBindings?: Record<string, { binding: string[]; section: string }>,
 ): ShortcutGroups => {
   return useMemo(() => {
     // Build a set of actions that are in menus to filter them out from top-level
@@ -77,13 +78,34 @@ export const useShortcutGroups = (
 
     // Detect conflicts within top-level shortcuts (including menu bindings)
     // Skip conflict detection for misc section
-    const allTopLevel = { ...topLevelShortcuts, ...menuBindings };
-    const topLevelConflicts = section === "misc"
+    const allTopLevel: Record<string, string[]> = {
+      ...topLevelShortcuts,
+      ...menuBindings,
+    };
+    if (externalBindings) {
+      for (const [key, { binding }] of Object.entries(externalBindings)) {
+        allTopLevel[key] = binding;
+      }
+    }
+    // For controlGroups, exclude assignModifier from conflict detection
+    if (section === "controlGroups") delete allTopLevel["assignModifier"];
+    const skipConflicts = section === "misc";
+    const topLevelConflicts = skipConflicts
       ? new Map<string, ConflictInfo>()
       : detectMenuConflicts(allTopLevel);
 
+    // Tag external conflicts with their source section
+    if (externalBindings) {
+      for (const [, conflict] of topLevelConflicts) {
+        for (const c of conflict.conflictsWith) {
+          const ext = externalBindings[c.actionKey];
+          if (ext) c.section = ext.section;
+        }
+      }
+    }
+
     const menuConflicts: Record<string, Map<string, ConflictInfo>> = {};
-    if (section !== "misc") {
+    if (!skipConflicts) {
       // Check legacy menu shortcuts (backwards compatibility)
       for (const [menuName, menuBindings] of Object.entries(menuShortcuts)) {
         menuConflicts[menuName] = detectMenuConflicts(menuBindings);
@@ -116,6 +138,13 @@ export const useShortcutGroups = (
       }
     }
 
+    // Remove conflicts that only involve external bindings (not this section's own)
+    if (externalBindings) {
+      for (const [key] of topLevelConflicts) {
+        if (key in externalBindings) topLevelConflicts.delete(key);
+      }
+    }
+
     // Check if there are any conflicts (top-level or menu-level)
     const hasConflicts = topLevelConflicts.size > 0 ||
       Object.values(menuConflicts).some((menuConflict) =>
@@ -129,5 +158,5 @@ export const useShortcutGroups = (
       menuConflicts,
       hasConflicts,
     };
-  }, [shortcuts, sectionMenus, section, useSlotBindings]);
+  }, [shortcuts, sectionMenus, section, useSlotBindings, externalBindings]);
 };

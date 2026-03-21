@@ -49,21 +49,25 @@ describe("keyboard handlers", () => {
     });
 
     it("should return match quality (number) for basic shortcut checks", () => {
-      const result = checkShortcut(["KeyA"], "KeyA");
+      const section = { test: ["KeyA"] };
+      const result = checkShortcut(section, "test", "KeyA");
       expect(typeof result).toBe("number");
     });
 
     it("should return 0 for non-matching shortcuts", () => {
-      const result = checkShortcut(["KeyA"], "KeyB");
+      const section = { test: ["KeyA"] };
+      const result = checkShortcut(section, "test", "KeyB");
       expect(result).toBe(0);
     });
 
     it("should return shortcut length for matching shortcuts", () => {
       handleKeyDown("KeyA");
-      expect(checkShortcut(["KeyA"], "KeyA")).toBe(1);
+      expect(checkShortcut({ test: ["KeyA"] }, "test", "KeyA")).toBe(1);
 
       handleKeyDown("ControlLeft");
-      expect(checkShortcut(["ControlLeft", "KeyA"], "KeyA")).toBe(2);
+      expect(
+        checkShortcut({ test: ["ControlLeft", "KeyA"] }, "test", "KeyA"),
+      ).toBe(2);
 
       clearKeyboard();
     });
@@ -72,14 +76,24 @@ describe("keyboard handlers", () => {
       handleKeyDown("ControlLeft");
       handleKeyDown("KeyB");
 
-      // Both shortcuts match, but Ctrl+B (2 keys) should have higher quality than B (1 key)
-      const shortMatch = checkShortcut(["KeyB"], "KeyB");
-      const longMatch = checkShortcut(["ControlLeft", "KeyB"], "KeyB");
+      const shortMatch = checkShortcut({ test: ["KeyB"] }, "test", "KeyB");
+      const longMatch = checkShortcut(
+        { test: ["ControlLeft", "KeyB"] },
+        "test",
+        "KeyB",
+      );
 
       expect(shortMatch).toBe(1);
       expect(longMatch).toBe(2);
       expect(longMatch).toBeGreaterThan(shortMatch);
 
+      clearKeyboard();
+    });
+
+    it("should match alt bindings", () => {
+      handleKeyDown("KeyX");
+      const section = { test: ["KeyA"], "test~1": ["KeyX"] };
+      expect(checkShortcut(section, "test", "KeyX")).toBe(1);
       clearKeyboard();
     });
   });

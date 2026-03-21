@@ -6,6 +6,7 @@ import { expect } from "@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
 import { getAllTexts } from "@/client-testing/utils.tsx";
 import { Command } from "./Command.tsx";
+import { formatShortcut } from "@/util/formatShortcut.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 
 describe("Command", () => {
@@ -67,7 +68,8 @@ describe("Command", () => {
       wrapper: Wrapper,
     });
 
-    expect(screen.getByText("⌃ + S")).toBeTruthy();
+    expect(screen.getByText(formatShortcut(["ControlLeft", "KeyS"])))
+      .toBeTruthy();
   });
 
   it("should dispatch keyboard events when clicked", () => {

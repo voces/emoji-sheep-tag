@@ -69,39 +69,46 @@ export const selectEntity = (
   }
 };
 
-export const selectAllFoxes = () => {
+export const selectAllFoxes = (clear = true) => {
   if (!foxes.size) return;
 
-  if (foxes.every((f) => f.selected) && foxes.size === selection.size) {
+  if (
+    clear && foxes.every((f) => f.selected) && foxes.size === selection.size
+  ) {
     return focusGroup(foxes);
   }
 
-  clearSelection();
+  if (clear) clearSelection();
   for (const fox of foxes) fox.selected = true;
 };
 
-export const selectAllMirrors = () => {
+export const selectAllMirrors = (clear = true) => {
   if (!mirrors.size) return;
 
-  if (mirrors.every((e) => e.selected) && mirrors.size === selection.size) {
+  if (
+    clear && mirrors.every((e) => e.selected) && mirrors.size === selection.size
+  ) {
     return focusGroup(mirrors);
   }
 
-  clearSelection();
+  if (clear) clearSelection();
   for (const entity of mirrors) entity.selected = true;
 };
 
 /**
  * Select the primary unit (sheep, wolf, or spirit) owned by the local player
  */
-export const selectPrimaryUnit = () => {
+export const selectPrimaryUnit = (clear = true) => {
   const primaryUnit = primaryUnitVar();
   if (primaryUnit) {
-    if (primaryUnit.selected && primaryUnit.position && selection.size === 1) {
+    if (
+      clear && primaryUnit.selected && primaryUnit.position &&
+      selection.size === 1
+    ) {
       camera.position.x = primaryUnit.position.x;
       camera.position.y = primaryUnit.position.y;
     }
-    selectEntity(primaryUnit);
+    selectEntity(primaryUnit, clear);
   }
 };
 

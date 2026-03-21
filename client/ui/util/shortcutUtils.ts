@@ -51,15 +51,34 @@ export const miscNames = {
   openCommandPalette: "Open command palette",
   openChat: "Open chat",
   cancel: "Cancel",
-  selectOwnUnit: "Select primary unit",
-  selectMirrors: "Select mirror images",
-  selectFoxes: "Select foxes",
   queueModifier: "Queue actions modifier",
   addToSelectionModifier: "Add to selection modifier",
   ping: "Ping location",
   jumpToPing: "Jump to ping",
   applyZoom: "Apply zoom",
   toggleScoreboard: "Toggle scoreboard",
+};
+
+export const controlGroupNames: Record<string, string> = {
+  group1: "Group 1 — Primary unit",
+  group2: "Group 2 — Mirrors",
+  group3: "Group 3 — Foxes",
+  group4: "Group 4",
+  group5: "Group 5",
+  group6: "Group 6",
+  group7: "Group 7",
+  group8: "Group 8",
+  group9: "Group 9",
+  group0: "Group 10",
+  assignModifier: "Assign group modifier",
+};
+
+export const controlGroupTooltips: Record<string, string> = {
+  group1: "Always selects your primary unit (sheep, wolf, or spirit).",
+  group2:
+    "Selects mirror images for wolves. Custom group for sheep (assign with modifier + key).",
+  group3:
+    "Selects foxes for wolves. Custom group for sheep (assign with modifier + key).",
 };
 
 export const SLOT_COUNT = 6;
@@ -143,15 +162,25 @@ export const defaultBindings: Shortcuts = {
     openCommandPalette: ["Slash"],
     openChat: ["Enter"],
     cancel: ["Backquote"],
-    selectOwnUnit: ["Digit1"],
-    selectMirrors: ["Digit2"],
-    selectFoxes: ["Digit3"],
     queueModifier: ["ShiftLeft"],
     addToSelectionModifier: ["ShiftLeft"],
     ping: ["AltLeft", "KeyG"],
     jumpToPing: ["Space"],
     applyZoom: ["Backquote"],
     toggleScoreboard: ["Tab"],
+  },
+  controlGroups: {
+    group1: ["Digit1"],
+    group2: ["Digit2"],
+    group3: ["Digit3"],
+    group4: ["Digit4"],
+    group5: ["Digit5"],
+    group6: ["Digit6"],
+    group7: ["Digit7"],
+    group8: ["Digit8"],
+    group9: ["Digit9"],
+    group0: ["Digit0"],
+    assignModifier: ["ControlLeft"],
   },
   ...Object.fromEntries(
     Object.entries(prefabs).filter(([, d]) => d.actions?.length).map((
@@ -245,13 +274,10 @@ export const getPresetAltDefaults = (
 };
 
 export const createInitialShortcuts = (): Shortcuts => ({
-  misc: { // Potential conflict with a `misc` unitType?
+  misc: {
     openCommandPalette: pluckShortcut("misc.openCommandPalette") ?? ["Slash"],
     openChat: pluckShortcut("misc.openChat") ?? ["Enter"],
     cancel: pluckShortcut("misc.cancel") ?? ["Backquote"],
-    selectOwnUnit: pluckShortcut("misc.selectOwnUnit") ?? ["Digit1"],
-    selectMirrors: pluckShortcut("misc.selectMirrors") ?? ["Digit2"],
-    selectFoxes: pluckShortcut("misc.selectFoxes") ?? ["Digit3"],
     queueModifier: pluckShortcut("misc.queueModifier") ?? ["ShiftLeft"],
     addToSelectionModifier: pluckShortcut("misc.addToSelectionModifier") ??
       ["ShiftLeft"],
@@ -259,6 +285,20 @@ export const createInitialShortcuts = (): Shortcuts => ({
     jumpToPing: pluckShortcut("misc.jumpToPing") ?? ["Space"],
     applyZoom: pluckShortcut("misc.applyZoom") ?? ["Backquote"],
     toggleScoreboard: pluckShortcut("misc.toggleScoreboard") ?? ["Tab"],
+  },
+  controlGroups: {
+    group1: pluckShortcut("controlGroups.group1") ?? ["Digit1"],
+    group2: pluckShortcut("controlGroups.group2") ?? ["Digit2"],
+    group3: pluckShortcut("controlGroups.group3") ?? ["Digit3"],
+    group4: pluckShortcut("controlGroups.group4") ?? ["Digit4"],
+    group5: pluckShortcut("controlGroups.group5") ?? ["Digit5"],
+    group6: pluckShortcut("controlGroups.group6") ?? ["Digit6"],
+    group7: pluckShortcut("controlGroups.group7") ?? ["Digit7"],
+    group8: pluckShortcut("controlGroups.group8") ?? ["Digit8"],
+    group9: pluckShortcut("controlGroups.group9") ?? ["Digit9"],
+    group0: pluckShortcut("controlGroups.group0") ?? ["Digit0"],
+    assignModifier: pluckShortcut("controlGroups.assignModifier") ??
+      ["ControlLeft"],
   },
   ...Object.fromEntries(
     Object.entries(prefabs).filter(([, d]) => d.actions?.length)
@@ -363,7 +403,15 @@ export const getActionDisplayName = (
   key: string,
   section: string,
 ): string => {
-  if (section === "misc") {
+  if (section === "controlGroups") {
+    if (controlGroupNames[key]) return controlGroupNames[key];
+    // Cross-section conflict: search all prefabs for the action name
+    for (const [, prefab] of Object.entries(prefabs)) {
+      const found = prefab.actions?.find((a) => actionToShortcutKey(a) === key);
+      if (found) return found.name;
+    }
+    return key;
+  } else if (section === "misc") {
     return miscNames[key as keyof typeof miscNames] || key;
   } else if (key.startsWith("slot-")) {
     return `Item slot ${key.substring(5)}`;
@@ -438,13 +486,21 @@ export const getActionDisplayName = (
       }
     }
 
-    return key;
+    // Search all prefabs for the action name (for cross-section conflicts)
+    for (const [, prefab] of Object.entries(prefabs)) {
+      const found = prefab.actions?.find((a) => actionToShortcutKey(a) === key);
+      if (found) return found.name;
+    }
+
+    return controlGroupNames[key] || key;
   }
 };
 
 export type ConflictInfo = {
   actionKey: string;
-  conflictsWith: Array<{ actionKey: string; fullKey: string }>;
+  conflictsWith: Array<
+    { actionKey: string; fullKey: string; section?: string }
+  >;
 };
 
 export const detectConflicts = (

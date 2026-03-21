@@ -172,7 +172,7 @@ menusVar.subscribe(() => {
     }
   }
   for (const [section, shortcuts] of Object.entries(current)) {
-    if (section === "misc") continue;
+    if (section === "misc" || section === "controlGroups") continue;
     const defaults = defaultBindings[section];
     if (!defaults) continue;
     for (const [key, binding] of Object.entries(shortcuts)) {

@@ -77,7 +77,10 @@ const findOtherUnitsWithSameBinding = (
   const otherSections: string[] = [];
 
   for (const [section, shortcuts] of Object.entries(sections)) {
-    if (section === currentSection || section === "misc") continue;
+    if (
+      section === currentSection || section === "misc" ||
+      section === "controlGroups"
+    ) continue;
     const otherBinding = shortcuts[actionKey];
     if (!otherBinding) continue;
     // Only include if the binding matches the current section's binding
@@ -214,6 +217,40 @@ export const Shortcuts = () => {
   };
 
   const sectionEntries = Object.entries(sections);
+
+  type ExternalBindings = Record<
+    string,
+    { binding: string[]; section: string }
+  >;
+
+  // Control group bindings (minus assignModifier) for cross-section conflict detection
+  const controlGroupBindings: ExternalBindings = {};
+  if (sections.controlGroups) {
+    for (const [key, binding] of Object.entries(sections.controlGroups)) {
+      if (key !== "assignModifier" && binding.length > 0) {
+        controlGroupBindings[key] = { binding, section: "controlGroups" };
+      }
+    }
+  }
+
+  // All prefab bindings for controlGroups section conflict detection
+  const allPrefabBindings: ExternalBindings = {};
+  const allMenus = menusVar();
+  for (const [section, shortcuts] of sectionEntries) {
+    if (section === "misc" || section === "controlGroups") continue;
+    for (const [key, binding] of Object.entries(shortcuts)) {
+      if (binding.length > 0) allPrefabBindings[key] ??= { binding, section };
+    }
+    // Include menu bindings from menu configs (may not be in shortcuts)
+    for (const menu of allMenus) {
+      if (!menu.prefabs.includes(section)) continue;
+      const menuKey = `menu-${menu.id}`;
+      if (!allPrefabBindings[menuKey] && menu.binding?.length) {
+        allPrefabBindings[menuKey] = { binding: menu.binding, section };
+      }
+    }
+  }
+
   const { useSlotBindings } = useReactiveVar(shortcutSettingsVar);
   const handleSlotBindingsChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -246,6 +283,11 @@ export const Shortcuts = () => {
             setBinding={(shortcut, binding) =>
               handleSetBinding(section, shortcut, binding)}
             useSlotBindings={useSlotBindings}
+            externalBindings={section === "controlGroups"
+              ? allPrefabBindings
+              : section !== "misc"
+              ? controlGroupBindings
+              : undefined}
           />
         ))}
       </SettingsPanelContainer>
