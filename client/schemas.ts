@@ -554,6 +554,11 @@ const zHubState = z.object({
   lobbies: z.array(zLobby).readonly(),
 });
 
+const zNameChanged = z.object({
+  type: z.literal("nameChanged"),
+  name: z.string(),
+});
+
 const zMapUpdate = z.object({
   type: z.literal("mapUpdate"),
   terrain: z.string(),
@@ -601,6 +606,7 @@ export const zMessage = z.discriminatedUnion("type", [
   zLobbySettingsMessage,
   zCaptainsDraftMessage,
   zHubState,
+  zNameChanged,
   zMapUpdate,
   zUploadCustomMap,
   zConnectToShard,

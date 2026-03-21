@@ -38,6 +38,8 @@ import {
 } from "./actions/editor.ts";
 import { joinLobby, zJoinLobby } from "./actions/joinLobby.ts";
 import { createLobby, zCreateLobby } from "./actions/createLobby.ts";
+import { leaveLobby, zLeaveLobby } from "./actions/leaveLobby.ts";
+import { changeName, zChangeName } from "./actions/changeName.ts";
 import { joinHub, leaveHub, serializeLobbyList } from "./hub.ts";
 import { fetchClientGeoAndBroadcast } from "./shardRegistry.ts";
 import { upgrade, zUpgrade } from "./actions/upgrade.ts";
@@ -176,6 +178,8 @@ const zClientToServerMessage = z.discriminatedUnion("type", [
   zEditorAdjustBounds,
   zJoinLobby,
   zCreateLobby,
+  zLeaveLobby,
+  zChangeName,
   zUpdateSelection,
   zStartCaptains,
   zSelectCaptain,
@@ -210,6 +214,8 @@ const actions = {
   editorAdjustBounds,
   joinLobby,
   createLobby,
+  leaveLobby,
+  changeName,
   updateSelection,
   startCaptains,
   selectCaptain,
@@ -240,6 +246,7 @@ export const handleSocket = (socket: Socket, url?: URL, ip?: string) => {
   socket.addEventListener(
     "open",
     wrapWithContext(client, () => {
+      client.send({ type: "nameChanged", name: client.name });
       if (client.lobby) {
         // Auto-rejoin lobby - send full state
         lobbyContext.with(client.lobby, () => sendJoinMessage(client));

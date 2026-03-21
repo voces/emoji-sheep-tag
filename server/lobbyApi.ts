@@ -279,7 +279,12 @@ export const leave = (client?: Client) => {
   const humanPlayers = Array.from(lobby.players).filter(
     (p) => !isComputerPlayer(p),
   ) as Client[];
-  if (humanPlayers.length === 0) return deleteLobby(lobby);
+  if (humanPlayers.length === 0) {
+    client.lobby = undefined;
+    joinHub(client);
+    deleteLobby(lobby);
+    return;
+  }
 
   // Elevate new host (only human players can be host)
   if (lobby.host === client) {

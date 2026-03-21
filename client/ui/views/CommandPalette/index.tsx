@@ -27,6 +27,10 @@ import { openEditor } from "@/util/openEditor.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
 import { mouse, MouseButtonEvent } from "../../../mouse.ts";
 import { practiceVar } from "@/vars/practice.ts";
+import { disconnect, isMultiplayer } from "../../../connection.ts";
+import { unloadEcs } from "../../../ecs.ts";
+import { connectionStatusVar } from "@/vars/state.ts";
+import { generateDoodads } from "@/shared/map.ts";
 
 const PaletteContainer = styled(Card)<{ $state: string }>`
   position: absolute;
@@ -162,9 +166,29 @@ export const CommandPalette = () => {
     {
       name: `${lobbySettings.view ? "Enable" : "Disable"} fog`,
       description: `${lobbySettings.view ? "Enable" : "Disable"} fog of war`,
-      valid: () => practice && isLocalPlayerHost(),
+      valid: () => practice && isLocalPlayerHost() && !isEditor,
       callback: () =>
         send({ type: "lobbySettings", view: !lobbySettings.view }),
+    },
+    {
+      name: "Leave lobby",
+      description: "Return to the lobby browser",
+      valid: () =>
+        (stateVar() === "lobby" || stateVar() === "playing") && !isEditor &&
+        isMultiplayer(),
+      callback: () => send({ type: "leaveLobby" }),
+    },
+    {
+      name: "Exit to main menu",
+      description: "Disconnect and return to the main menu",
+      valid: () => stateVar() !== "menu" && !isEditor,
+      callback: () => {
+        disconnect();
+        stateVar("menu");
+        unloadEcs({ includePlayers: true });
+        generateDoodads(["dynamic"]);
+        connectionStatusVar("notConnected");
+      },
     },
     ...(!isEditor
       ? [{

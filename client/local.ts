@@ -54,6 +54,7 @@ export class LocalWebSocket {
   // deno-lint-ignore ban-types
   private eventListeners: { [key: string]: Function[] } = {};
   private port: MessagePort | undefined;
+  private portListener: ((e: MessageEvent) => void) | undefined;
   private id: number;
   private openTimeout: number | undefined;
   private initTimeout: number | undefined;
@@ -81,8 +82,8 @@ export class LocalWebSocket {
 
   private initializePort() {
     this.port = worker!.port;
-    this.port.addEventListener("message", (e) => this.onMessage(e));
-    this.port.addEventListener("messageerror", console.error);
+    this.portListener = (e: MessageEvent) => this.onMessage(e);
+    this.port.addEventListener("message", this.portListener);
     this.port.postMessage({ type: "connect", id: this.id, name: this.name });
 
     this.openTimeout = setTimeout(() => {
@@ -128,7 +129,10 @@ export class LocalWebSocket {
     this.readyState = 3; // CLOSED
     if (this.port) {
       this.port.postMessage({ type: "close", id: this.id });
-      this.port.close();
+      if (this.portListener) {
+        this.port.removeEventListener("message", this.portListener);
+        this.portListener = undefined;
+      }
     }
     this.dispatchEvent("close", {});
   }

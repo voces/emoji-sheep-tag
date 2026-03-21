@@ -71,7 +71,6 @@ self.onconnect = (e) => {
 };
 
 const createSocket = (id: number, port: MessagePort) => {
-  let readyState: number = WebSocket.OPEN;
   // deno-lint-ignore ban-types
   const eventListeners: { [key: string]: Function[] } = {};
 
@@ -82,13 +81,14 @@ const createSocket = (id: number, port: MessagePort) => {
   };
 
   const socket: Socket = {
-    readyState,
+    readyState: WebSocket.OPEN,
     send: (data: string) => {
+      if (socket.readyState !== WebSocket.OPEN) return;
       port.postMessage({ type: "message", id, data });
     },
     close: () => {
-      if (readyState === WebSocket.CLOSED) return;
-      readyState = WebSocket.CLOSED;
+      if (socket.readyState === WebSocket.CLOSED) return;
+      socket.readyState = WebSocket.CLOSED;
       port.postMessage({ type: "close", id });
       dispatchEvent("close", {});
     },

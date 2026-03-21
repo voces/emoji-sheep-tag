@@ -26,7 +26,8 @@ const delay = (fn: () => void) => {
   delayTimeouts.add(timeoutId);
 };
 
-let server = location?.host || "localhost:8080";
+const defaultServer = location?.host || "localhost:8080";
+let server = defaultServer;
 export const setServer = (value: string) => server = value;
 
 export const connect = () => {
@@ -87,6 +88,15 @@ export const connect = () => {
 
 export const getWebSocket = () =>
   ws as { readyState: number; send: (data: string) => void } | undefined;
+
+export const isMultiplayer = () => !(ws instanceof LocalWebSocket);
+
+export const disconnect = () => {
+  stopReconnecting();
+  ws?.close();
+  ws = undefined;
+  server = defaultServer;
+};
 
 export const stopReconnecting = () => {
   userStoppedReconnecting = true;

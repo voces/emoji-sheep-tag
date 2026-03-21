@@ -21,7 +21,6 @@
 - Matchmaking
   - 2v4 - 15 rounds
   - 5v5 - 2 rounds
-- Settings not discoverable in game
 - Birds & Bees
   - Should redirect target if occupied/avoid crowding
 - Buff stack id & max stack
@@ -35,8 +34,7 @@
 - Per-player handicap
 - Death animation (sheep)
 - Monolith needs new model
-- Allow to leave lobby
-- Allow to return to main menu
+- Settings not discoverable in game
 
 # Bugs
 

@@ -24,6 +24,7 @@ import { getWebSocket } from "./connection.ts";
 import { LocalWebSocket } from "./local.ts";
 import { connectToShard, disconnectFromShard } from "./shardConnection.ts";
 import { lobbiesVar } from "@/vars/lobbies.ts";
+import { playerNameVar } from "@/vars/playerName.ts";
 import { applyZoom } from "./api/player.ts";
 import { loadClientMap } from "./maps.ts";
 import { vipVar } from "@/vars/vip.ts";
@@ -161,6 +162,22 @@ export const ensureMapLoaded = async (map: string) => {
 export const handlers = {
   join: (data: Extract<ServerToClientMessage, { type: "join" }>) => {
     if (data.localPlayer) localPlayerIdVar(data.localPlayer);
+
+    // When the local player is joining a new lobby, remove stale players
+    // from a previous lobby that aren't in the incoming state
+    if (
+      data.localPlayer && data.updates.some((u) => u.id === data.localPlayer)
+    ) {
+      const incomingIds = new Set(
+        data.updates.filter((u) => u.isPlayer).map((u) => u.id),
+      );
+      for (const p of getPlayers()) {
+        if (!incomingIds.has(p.id)) {
+          app.removeEntity(p);
+          delete map[p.id];
+        }
+      }
+    }
 
     const prevPlayers = getPlayers();
     const players = data.updates.filter((p) =>
@@ -336,9 +353,16 @@ export const handlers = {
       return;
     }
 
-    // Otherwise, switch to hub view
+    // Switch to hub view and clean up game state from previous lobby
     stateVar("hub");
+    unloadEcs({ includePlayers: true });
+    generateDoodads(["dynamic"]);
     lobbiesVar(lobbies);
+  },
+  nameChanged: (
+    { name }: Extract<ServerToClientMessage, { type: "nameChanged" }>,
+  ) => {
+    playerNameVar(name);
   },
   uploadCustomMap: async (
     { mapId, mapData }: Extract<

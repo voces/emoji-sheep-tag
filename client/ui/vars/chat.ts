@@ -1,6 +1,7 @@
 import { makeVar } from "@/hooks/useVar.tsx";
 import { colorName, playerEntities } from "@/shared/api/player.ts";
 import { localPlayerIdVar } from "./localPlayerId.ts";
+import { stateVar } from "./state.ts";
 import { onInit } from "@/shared/context.ts";
 
 export type ChatChannel = "all" | "allies";
@@ -35,6 +36,8 @@ export const chatValueVar = makeVar<string>("");
 
 onInit(() =>
   playerEntities().addEventListener("delete", (p) => {
+    const state = stateVar();
+    if (state !== "lobby" && state !== "playing") return;
     if (p.id === localPlayerIdVar() || p.id === "practice-enemy") return;
     addChatMessage(`${colorName(p)} has left the game!`);
   })

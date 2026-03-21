@@ -54,10 +54,12 @@ export const createMinimapRenderer = (
   };
 
   let minimapFogPass = createMinimapFogPass();
+  let fogDisabled = false;
 
   const unsubscribeFog = onMapChange(() => {
     minimapFogPass.dispose();
     minimapFogPass = createMinimapFogPass();
+    minimapFogPass.setDisableFogOfWar(fogDisabled);
   });
 
   const blitScene = new Scene();
@@ -121,6 +123,8 @@ export const createMinimapRenderer = (
     delta: number,
     mainCamera: PerspectiveCamera,
   ) => {
+    // Sync fog texture in case visibilityGrid was recreated
+    minimapFogPass.setFogTexture(visibilityGrid.fogTexture);
     minimapFogPass.updateCamera(camera);
 
     const aspect = mainCamera.aspect;
@@ -164,6 +168,7 @@ export const createMinimapRenderer = (
     renderScene,
     renderFogAndOverlay,
     setDisableFogOfWar: (disable: boolean) => {
+      fogDisabled = disable;
       minimapFogPass.setDisableFogOfWar(disable);
     },
     dispose: () => {

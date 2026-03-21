@@ -351,6 +351,11 @@ export class FogPass {
     this.material.uniforms.viewInv.value.copy(camera.matrixWorld);
   }
 
+  setFogTexture(texture: DataTexture) {
+    this.material.uniforms.fogTex.value = texture;
+    this.smoothMaterial.uniforms.fogTex.value = texture;
+  }
+
   setDisableFogOfWar(disable: boolean) {
     this.material.uniforms.disableFogOfWar.value = disable;
   }

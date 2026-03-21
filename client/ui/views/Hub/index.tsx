@@ -1,10 +1,13 @@
 import { styled } from "styled-components";
+import { useRef, useState } from "react";
 import { HStack, Positional } from "@/components/layout/Layout.tsx";
 import { Card } from "@/components/layout/Card.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { lobbiesVar } from "@/vars/lobbies.ts";
+import { playerNameVar } from "@/vars/playerName.ts";
 import { Button } from "@/components/forms/Button.tsx";
 import { send } from "../../../messaging.ts";
+import { setStoredPlayerName } from "../../../util/playerPrefs.ts";
 import { colors } from "@/shared/data.ts";
 
 const HubMain = styled(Positional)`
@@ -30,11 +33,83 @@ const Hint = styled.span`
   color: #bbb;
 `;
 
+const NameBox = styled.label`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: ${({ theme }) => `${theme.spacing.sm} ${theme.spacing.md}`};
+  cursor: text;
+
+  &.hover {
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  &:focus-within {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.12);
+  }
+`;
+
+const NameLabel = styled.span`
+  font-size: ${({ theme }) => theme.fontSize.sm};
+  opacity: 0.5;
+  white-space: nowrap;
+`;
+
+const NameField = styled.input`
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  outline: none;
+  min-width: 0;
+
+  &&:focus {
+    background: transparent;
+    box-shadow: none;
+  }
+`;
+
 export const Hub = () => {
   const lobbies = useReactiveVar(lobbiesVar);
+  const playerName = useReactiveVar(playerNameVar);
+  const [draft, setDraft] = useState(playerName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const submit = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== playerName) {
+      send({ type: "changeName", name: trimmed });
+      setStoredPlayerName(trimmed);
+    } else {
+      setDraft(playerName);
+    }
+    inputRef.current?.blur();
+  };
 
   return (
     <HubMain>
+      <NameBox>
+        <NameLabel>Display name:</NameLabel>
+        <NameField
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={submit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit();
+            if (e.key === "Escape") {
+              setDraft(playerName);
+              inputRef.current?.blur();
+            }
+          }}
+          maxLength={16}
+        />
+      </NameBox>
       <NewLobby onClick={() => send({ type: "createLobby" })}>
         New lobby
       </NewLobby>
