@@ -39,7 +39,6 @@
 # Bugs
 
 - Sheep count keeps getting reset?
-- Two units with autocast next to each other both cast at the same time
 - Switch broken - won without timer expiring
 
 # Code quality

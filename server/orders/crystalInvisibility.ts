@@ -41,16 +41,20 @@ export const crystalInvisibilityOrder = {
       ? action.buffName
       : "Invisiibiltiy";
 
-    target.buffs = [
-      ...(target.buffs ?? []),
-      {
-        name,
-        description: "Invisible to enemies",
-        remainingDuration: buffDuration,
-        totalDuration: buffDuration,
-        invisible: true,
-        icon: "eye",
-      },
-    ];
+    const newBuff = {
+      name,
+      description: "Invisible to enemies",
+      remainingDuration: buffDuration,
+      totalDuration: buffDuration,
+      invisible: true,
+      icon: "eye",
+    };
+
+    const existing = target.buffs?.findIndex((b) => b.name === name) ?? -1;
+    if (existing >= 0) {
+      target.buffs = target.buffs!.map((b, i) => i === existing ? newBuff : b);
+    } else {
+      target.buffs = [...(target.buffs ?? []), newBuff];
+    }
   },
 } satisfies OrderDefinition;

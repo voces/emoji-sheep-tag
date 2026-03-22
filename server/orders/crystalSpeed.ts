@@ -42,20 +42,23 @@ export const crystalSpeedOrder = {
         1.25;
     const name = action && "buffName" in action ? action.buffName : "Gemstride";
 
-    // Add speed buff to target
-    target.buffs = [
-      ...(target.buffs ?? []),
-      {
-        name,
-        description: `+${
-          Math.round((movementSpeedMultiplier - 1) * 100)
-        }% movement speed`,
-        remainingDuration: buffDuration,
-        totalDuration: buffDuration,
-        movementSpeedMultiplier,
-        model: "sparkle2",
-        modelOffset: { x: -0.23, y: 0.4 },
-      },
-    ];
+    const newBuff = {
+      name,
+      description: `+${
+        Math.round((movementSpeedMultiplier - 1) * 100)
+      }% movement speed`,
+      remainingDuration: buffDuration,
+      totalDuration: buffDuration,
+      movementSpeedMultiplier,
+      model: "sparkle2",
+      modelOffset: { x: -0.23, y: 0.4 },
+    };
+
+    const existing = target.buffs?.findIndex((b) => b.name === name) ?? -1;
+    if (existing >= 0) {
+      target.buffs = target.buffs!.map((b, i) => i === existing ? newBuff : b);
+    } else {
+      target.buffs = [...(target.buffs ?? []), newBuff];
+    }
   },
 } satisfies OrderDefinition;
