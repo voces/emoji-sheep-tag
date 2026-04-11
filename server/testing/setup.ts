@@ -91,6 +91,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     view: false,
     teamGold,
     shardAutoSelect: true,
+    speedMultiplier: 1,
   };
   lobbyContext.current = lobby;
 

@@ -77,6 +77,7 @@ export const zServerToShardMessage = z.discriminatedUnion("type", [
       income: z.object({ sheep: z.number(), wolves: z.number() }),
       view: z.boolean(),
       teamGold: z.boolean(),
+      speedMultiplier: z.number(),
     }),
     // Players who will connect, with their initial state
     players: z.array(z.object({

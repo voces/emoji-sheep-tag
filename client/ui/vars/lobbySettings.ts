@@ -16,4 +16,5 @@ export const lobbySettingsVar = makeVar<LobbySettings>({
   teamGold: true,
   shard: null,
   shards: [],
+  speedMultiplier: 1,
 });

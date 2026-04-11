@@ -5,7 +5,7 @@ import { InstancedSvg } from "../graphics/InstancedSvg.ts";
 import { AnimatedInstancedMesh } from "../graphics/AnimatedInstancedMesh.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { getPlayer } from "@/shared/api/player.ts";
-import { getFps } from "../graphics/three.ts";
+import { getFps, getSpeedMultiplier } from "../graphics/three.ts";
 import { computeUnitMovementSpeed, isAlly } from "@/shared/api/unit.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 import { collections } from "./models.ts";
@@ -108,7 +108,8 @@ const onPositionOrRotationChange = (
     if (prev) {
       const delta =
         ((prev.x - e.position.x) ** 2 + (prev.y - e.position.y) ** 2) ** 0.5;
-      const movement = computeUnitMovementSpeed(e) / getFps();
+      const movement = computeUnitMovementSpeed(e) * getSpeedMultiplier() /
+        getFps();
       const jerk = delta / movement;
 
       if (jerk > 1.05 && jerk < 15) {
@@ -146,7 +147,7 @@ const onPositionOrRotationChange = (
         pathStartPositions.set(e, { x: e.position.x, y: e.position.y });
       }
 
-      const dt = 1 / getFps();
+      const dt = getSpeedMultiplier() / getFps();
       const currentProgress = gaitProgress.get(e) ?? 0;
       const newProgress = (currentProgress + dt) % e.gait.duration;
       gaitProgress.set(e, newProgress);

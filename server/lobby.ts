@@ -46,6 +46,8 @@ type LobbySettings = {
   teamGold: boolean;
   /** Shard ID to run the game on, or undefined for primary server */
   shard?: string;
+  /** Speed multiplier for the game tick interval. 1 = real-time, <1 = slower, >1 = faster */
+  speedMultiplier: number;
   /** If true, shard is auto-selected based on player locations. Set to false when host explicitly chooses. */
   shardAutoSelect?: boolean;
 };
@@ -120,6 +122,7 @@ export const newLobby = (host?: Client, silent = false) => {
       view: false,
       teamGold: true,
       shardAutoSelect: true,
+      speedMultiplier: 1,
     },
     status: "lobby",
     rounds: [],

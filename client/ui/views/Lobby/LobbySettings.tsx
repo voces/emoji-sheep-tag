@@ -346,6 +346,22 @@ export const LobbySettings = () => {
             })}
           tooltip="Multiplier on passive income and kill bounties."
         />
+
+        {
+          /* <NumericSettingInput
+          id="speed-multiplier"
+          label="Game Speed"
+          value={lobbySettings.speedMultiplier ?? 1}
+          min={0.001}
+          max={100}
+          step={0.01}
+          defaultValue="1"
+          disabled={settingsDisabled}
+          onChange={(value) =>
+            send({ type: "lobbySettings", speedMultiplier: value })}
+          tooltip="Multiplier on tick rate. Values below 1 slow the game down."
+        /> */
+        }
       </GameSettingsContainer>
 
       <StartButtons

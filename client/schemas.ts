@@ -452,6 +452,7 @@ const zLobbySettings = z.object({
   teamGold: z.boolean(),
   shard: z.string().nullable(),
   shards: z.array(zShardInfo).readonly(),
+  speedMultiplier: z.number().optional(),
 });
 
 export type LobbySettings = z.input<typeof zLobbySettings>;

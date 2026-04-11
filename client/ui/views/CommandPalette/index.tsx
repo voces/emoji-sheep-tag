@@ -256,6 +256,21 @@ export const CommandPalette = () => {
         });
       },
     },
+    // {
+    //   name: "Set game speed",
+    //   description: "Change the game speed multiplier (1 = normal)",
+    //   valid: () => isLocalPlayerHost(),
+    //   callback: () => ({
+    //     type: "prompt",
+    //     placeholder: "Speed multiplier (e.g. 0.01, 1, 10)",
+    //     callback: (value: string) => {
+    //       const speed = parseFloat(value);
+    //       if (!Number.isFinite(speed) || speed < 0) return;
+    //       send({ type: "lobbySettings", speedMultiplier: speed });
+    //       addChatMessage(`Game speed set to ${speed}`);
+    //     },
+    //   }),
+    // },
     {
       name: "Set latency",
       description: "Artificially increase latency",

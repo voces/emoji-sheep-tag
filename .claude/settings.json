@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /home/verit/emoji-sheep-tag show ai3:server/systems/ai/index.ts)",
+      "Bash(git -C /home/verit/emoji-sheep-tag show ai3:server/systems/ai/sheep/index.ts)",
+      "Read(//home/verit/.claude/plans/**)"
+    ]
+  }
+}

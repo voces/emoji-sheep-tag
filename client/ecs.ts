@@ -1,5 +1,5 @@
 import { App, newApp, SystemEntity as ECSSystemEntity } from "@verit/ecs";
-import { onRender } from "./graphics/three.ts";
+import { getSpeedMultiplier, onRender } from "./graphics/three.ts";
 import { Entity as CommonEntity } from "@/shared/types.ts";
 import { appContext, initApp } from "@/shared/context.ts";
 import {
@@ -84,7 +84,7 @@ appContext.current = app;
 
 queueMicrotask(appContext.bind(initApp));
 
-onRender((delta, time) => app.update(delta, time));
+onRender((delta, time) => app.update(delta * getSpeedMultiplier(), time));
 
 export const map: Record<string, Entity> = {};
 

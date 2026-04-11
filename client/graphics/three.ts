@@ -265,3 +265,4 @@ const animate = () => {
 renderer?.setAnimationLoop(animate);
 
 export const getFps = () => fps;
+export const getSpeedMultiplier = () => lobbySettingsVar().speedMultiplier ?? 1;

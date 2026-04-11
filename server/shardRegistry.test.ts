@@ -116,6 +116,7 @@ describe("shardRegistry", () => {
           income: { sheep: 1, wolves: 1 },
           view: false,
           teamGold: true,
+          speedMultiplier: 1,
         },
         players: [{
           id: "player-1",

@@ -36,27 +36,43 @@ const realtimeInterval = (
   const ecsRef = new WeakRef(ecs);
   const client = tryGetClient();
   const clientRef = client ? new WeakRef(client) : undefined;
-  const i = setInterval(() => {
-    const lobby = lobbyRef.deref();
-    const ecs = ecsRef.deref();
-    const client = clientRef?.deref();
-    if (!lobby || !ecs || ecs !== lobby.round?.ecs) return clearInterval(i);
-    lobbyContext.with(lobby, () => {
-      appContext.with(ecs, () => {
-        if (client) {
-          clientContext.with(client, () => {
+  let active = true;
+  const schedule = () => {
+    if (!active) return;
+    const multiplier = lobby.settings.speedMultiplier;
+    const delay = multiplier > 0
+      ? (seconds * 1000) / multiplier
+      : seconds * 1000;
+    setTimeout(() => {
+      if (!active) return;
+      const lobby = lobbyRef.deref();
+      const ecs = ecsRef.deref();
+      const client = clientRef?.deref();
+      if (!lobby || !ecs || ecs !== lobby.round?.ecs) {
+        active = false;
+        return;
+      }
+      lobbyContext.with(lobby, () => {
+        appContext.with(ecs, () => {
+          if (client) {
+            clientContext.with(client, () => {
+              if (ecs.flushScheduled) cb();
+              else ecs.batch(cb);
+            });
+          } else {
             if (ecs.flushScheduled) cb();
             else ecs.batch(cb);
-          });
-        } else {
-          if (ecs.flushScheduled) cb();
-          else ecs.batch(cb);
-        }
+          }
+        });
+        flushUpdates();
       });
-      flushUpdates();
-    });
-  }, seconds * 1000);
-  return () => clearInterval(i);
+      schedule();
+    }, delay);
+  };
+  schedule();
+  return () => {
+    active = false;
+  };
 };
 
 type PlayerLike = {

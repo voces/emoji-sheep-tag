@@ -222,8 +222,8 @@ addSystem({
   props: ["model"],
   onAdd: updateAnimationState,
   onChange: updateAnimationState,
-  update: (delta, time) => {
-    updateAnimationTime(time);
+  update: (delta) => {
+    updateAnimationTime(delta);
     for (const col of blendingCollections) {
       if (!col.decayBlendWeights(delta)) blendingCollections.delete(col);
     }

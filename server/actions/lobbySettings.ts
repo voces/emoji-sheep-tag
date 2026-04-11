@@ -47,6 +47,7 @@ export const zLobbySettings = z.object({
   view: z.boolean().optional(),
   teamGold: z.boolean().optional(),
   shard: z.string().nullable().optional(),
+  speedMultiplier: z.number().min(0).optional(),
 });
 
 // S->C
@@ -84,6 +85,7 @@ export const serializeLobbySettings = (
     host: lobby.host?.id ?? null,
     shard: lobby.settings.shard ?? null,
     shards: getShardInfoList(lobby),
+    speedMultiplier: lobby.settings.speedMultiplier,
   };
 };
 
@@ -100,6 +102,7 @@ export const lobbySettings = (
     view,
     teamGold,
     shard,
+    speedMultiplier,
   }: z.TypeOf<typeof zLobbySettings>,
 ) => {
   const lobby = client.lobby;
@@ -124,6 +127,9 @@ export const lobbySettings = (
     lobby.settings.shard = shard ?? undefined;
     // Host explicitly chose a server, disable auto-select
     lobby.settings.shardAutoSelect = false;
+  }
+  if (speedMultiplier !== undefined) {
+    lobby.settings.speedMultiplier = speedMultiplier;
   }
 
   // Send updated settings to all players in the lobby

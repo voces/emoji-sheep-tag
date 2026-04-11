@@ -16,8 +16,8 @@ import {
 
 let animationTime = 0;
 
-export const updateAnimationTime = (time: number) => {
-  animationTime = time;
+export const updateAnimationTime = (delta: number) => {
+  animationTime += delta;
 };
 
 export const getAnimationTime = () => animationTime;

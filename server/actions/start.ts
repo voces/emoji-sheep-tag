@@ -174,6 +174,7 @@ const startOnShard = (
       income: lobby.settings.income,
       view: lobby.settings.view,
       teamGold: lobby.settings.teamGold,
+      speedMultiplier: lobby.settings.speedMultiplier,
     },
     players: Array.from(lobby.players).map((p) => ({
       id: p.id,

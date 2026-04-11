@@ -71,6 +71,7 @@ describe("lobbySettings action", () => {
       teamGold: true,
       host: "host-client",
       shard: null,
+      speedMultiplier: 1,
     });
   });
 
@@ -145,6 +146,7 @@ describe("lobbySettings action", () => {
       teamGold: true,
       host: "host-client",
       shard: null,
+      speedMultiplier: 1,
     });
   });
 
@@ -188,6 +190,7 @@ describe("lobbySettings action", () => {
       teamGold: true,
       host: "host-client",
       shard: null,
+      speedMultiplier: 1,
     });
   });
 
@@ -259,6 +262,7 @@ describe("lobbySettings action", () => {
         teamGold: true,
         host: "host-client",
         shard: null,
+        speedMultiplier: 1,
       });
     });
   });
@@ -301,6 +305,7 @@ describe("lobbySettings action", () => {
       teamGold: true,
       host: "host-client",
       shard: null,
+      speedMultiplier: 1,
     });
   });
 

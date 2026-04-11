@@ -5,7 +5,7 @@ import { Entity } from "./ecs.ts";
 import { addSystem } from "@/shared/context.ts";
 import { selection } from "./systems/selection.ts";
 import { jumpToNextPing } from "./systems/indicators.ts";
-import { camera, terrain } from "./graphics/three.ts";
+import { camera, getSpeedMultiplier, terrain } from "./graphics/three.ts";
 import { getEffectivePlayerGold, getLocalPlayer } from "./api/player.ts";
 import { UnitDataAction, UnitDataActionTarget } from "@/shared/types.ts";
 import { formatTargeting } from "@/shared/util/formatTargeting.ts";
@@ -1100,10 +1100,12 @@ globalThis.addEventListener("wheel", (e) => {
 let startPan: number | undefined;
 
 addSystem({
-  update: (delta, time) => {
+  update: (scaledDelta, time) => {
     if (showSettingsVar() || document.activeElement !== document.body) {
       return false;
     }
+    // Undo speed multiplier scaling so camera moves at wall-clock speed
+    const delta = scaledDelta / (getSpeedMultiplier() || 1);
     const map = getMap();
 
     const skipKeyboard = showCommandPaletteVar() === "open";
