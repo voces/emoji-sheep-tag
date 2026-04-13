@@ -160,6 +160,17 @@ export const resizeMap = (
   const newWidth = newTiles[0]?.length ?? 0;
   const newHeight = newTiles.length;
 
+  newBounds.min.x = Math.max(0, Math.min(newBounds.min.x, newWidth));
+  newBounds.max.x = Math.max(
+    newBounds.min.x,
+    Math.min(newBounds.max.x, newWidth),
+  );
+  newBounds.min.y = Math.max(0, Math.min(newBounds.min.y, newHeight));
+  newBounds.max.y = Math.max(
+    newBounds.min.y,
+    Math.min(newBounds.max.y, newHeight),
+  );
+
   // Rebuild terrain pathing and layers (these will be recalculated)
   const rawPathing = getPathingMaskFromTerrainMasks(
     newTiles,

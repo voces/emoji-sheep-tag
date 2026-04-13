@@ -7,7 +7,7 @@ import { send } from "../../../../messaging.ts";
 import { Entity } from "@/shared/types.ts";
 import { SystemEntity } from "../../../../ecs.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
-import { Panel } from "./common.ts";
+import { CollapsiblePanel } from "./CollapsiblePanel.tsx";
 import { deg2rad, rad2deg } from "@/shared/util/math.ts";
 
 const change = (patch: Partial<Entity>) => {
@@ -74,10 +74,13 @@ export const PropertiesPanel = () => {
 
   const key = Array.from(selection, (e) => e.id).join("-");
 
+  const title = `Properties: ${
+    names.size === 1 ? names.first() ?? "" : "Mixed"
+  }`;
+
   return (
-    <Panel key={key}>
-      {names.size && <h4>{names.size === 1 ? names.first() : "Mixed"}</h4>}
-      <VStack>
+    <CollapsiblePanel title={title}>
+      <VStack key={key}>
         <InputField
           label="Vertex color"
           defaultValue={vertexColor.size === 1 ? vertexColor.first() ?? "" : ""}
@@ -143,6 +146,6 @@ export const PropertiesPanel = () => {
             e.currentTarget.value = `${y.size === 1 ? y.first() ?? "" : ""}`}
         />
       </VStack>
-    </Panel>
+    </CollapsiblePanel>
   );
 };

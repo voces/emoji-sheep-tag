@@ -28,8 +28,8 @@ export const createMinimapRenderer = (
   minimapPlayerEntities: Set<Entity>,
   pixelRatio: number,
 ) => {
-  const renderWidth = 262 * pixelRatio;
-  const renderHeight = 262 * pixelRatio;
+  const renderWidth = 277 * pixelRatio;
+  const renderHeight = 277 * pixelRatio;
 
   const sceneRenderTarget = new WebGLRenderTarget(renderWidth, renderHeight, {
     depthBuffer: true,

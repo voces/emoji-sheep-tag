@@ -5,6 +5,11 @@ import { DoodadsPanel } from "./DoodadsPanel.tsx";
 import { PropertiesPanel } from "./PropertiesPanel.tsx";
 import { TerrainPanel } from "./TerrainPanel.tsx";
 import { AreaPanel } from "./AreaPanel.tsx";
+import { styled } from "styled-components";
+
+const Container = styled(VStack)`
+  max-height: calc(100vh - ${({ theme }) => theme.spacing.md} * 2);
+`;
 
 export const Editor = () => {
   const editor = useReactiveVar(editorVar);
@@ -12,11 +17,11 @@ export const Editor = () => {
   if (!editor) return null;
 
   return (
-    <VStack>
+    <Container>
       <AreaPanel />
       <TerrainPanel />
       <DoodadsPanel />
       <PropertiesPanel />
-    </VStack>
+    </Container>
   );
 };

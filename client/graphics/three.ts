@@ -18,6 +18,7 @@ import { healthbarScene } from "../systems/healthbars.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { isNight } from "@/shared/dayNight.ts";
 import { ambientBirdsSound } from "../api/sound.ts";
+import { editorVar } from "@/vars/editor.ts";
 
 const terrainTilePalette = [
   ...tileDefs.map((t) => ({
@@ -159,6 +160,7 @@ onMapChange((map) => {
   if (map.id === currentTerrainMapId) return;
   currentTerrainMapId = map.id;
   terrain.load(createTerrainMasks(map), terrainTilePalette);
+  if (editorVar() && map.id.includes("-resized-")) return;
   camera.position.x = map.center.x;
   camera.position.y = map.center.y;
 });

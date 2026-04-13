@@ -3,6 +3,10 @@ import { styled } from "styled-components";
 
 export const Panel = styled(Card)`
   pointer-events: auto;
+  overflow-y: auto;
+  scrollbar-gutter: stable both-edges;
+  padding: ${({ theme }) => theme.spacing.lg} ${({ theme }) =>
+    theme.spacing.sm};
 `;
 
 export const Grid = styled.div`

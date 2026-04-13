@@ -2,7 +2,8 @@ import { prefabs } from "@/shared/data.ts";
 import { Command } from "@/components/game/Command.tsx";
 import { createBlueprint } from "../../../../controls/blueprintHandlers.ts";
 import { mouse } from "../../../../mouse.ts";
-import { Grid, Panel } from "./common.ts";
+import { Grid } from "./common.ts";
+import { CollapsiblePanel } from "./CollapsiblePanel.tsx";
 
 export const pickDoodad = (prefab: string) => {
   const blueprint = createBlueprint(prefab, mouse.world.x, mouse.world.y);
@@ -41,8 +42,7 @@ export const pickDoodad = (prefab: string) => {
 };
 
 export const DoodadsPanel = () => (
-  <Panel>
-    <h4>Doodads</h4>
+  <CollapsiblePanel title="Doodads">
     <Grid>
       {Object.entries(prefabs).filter(([prefab, v]) =>
         v.isDoodad && prefab !== "tile"
@@ -55,5 +55,5 @@ export const DoodadsPanel = () => (
         />
       ))}
     </Grid>
-  </Panel>
+  </CollapsiblePanel>
 );

@@ -5,13 +5,15 @@ import { getPlayer } from "@/shared/api/player.ts";
 import { computeBlueprintColor } from "../util/colorHelpers.ts";
 import { prefabs } from "@/shared/data.ts";
 
+const baseVertexColors = new WeakMap<Entity, number | null | undefined>();
+
 const applyModifiers = (e: Entity) => {
   if (e.isFloatingText) return;
   const p = getLocalPlayer();
 
   const baseAlpha = e.prefab ? prefabs[e.prefab]?.alpha ?? 1 : 1;
   let alpha = baseAlpha;
-  let vertexColor = 0xffffff;
+  let vertexColor: number | undefined;
 
   if (e.isMirror && p && isAlly(e, p.id)) {
     const playerColor = getPlayer(e.owner)?.playerColor ?? p.playerColor;
@@ -29,17 +31,28 @@ const applyModifiers = (e: Entity) => {
     1,
   ) ?? 1;
   if (reducedSpeed < 1) {
-    const r = Math.round((vertexColor & 0xff0000) / 65536 * reducedSpeed) *
-      65536;
-    const g = Math.round((vertexColor & 0xff00) / 256 * reducedSpeed) * 256;
-    const b = vertexColor & 0xff;
+    const base = vertexColor ??
+      (baseVertexColors.has(e) ? baseVertexColors.get(e) : e.vertexColor) ??
+      0xffffff;
+    const r = Math.round((base & 0xff0000) / 65536 * reducedSpeed) * 65536;
+    const g = Math.round((base & 0xff00) / 256 * reducedSpeed) * 256;
+    const b = base & 0xff;
     vertexColor = r + g + b;
   }
 
   e.alpha = alpha;
 
-  if (vertexColor === 0xffffff) delete e.vertexColor;
-  else e.vertexColor = vertexColor;
+  if (vertexColor === undefined) {
+    if (baseVertexColors.has(e)) {
+      const original = baseVertexColors.get(e);
+      if (original === undefined || original === null) delete e.vertexColor;
+      else e.vertexColor = original;
+      baseVertexColors.delete(e);
+    }
+  } else {
+    if (!baseVertexColors.has(e)) baseVertexColors.set(e, e.vertexColor);
+    e.vertexColor = vertexColor;
+  }
 };
 
 app.addSystem({

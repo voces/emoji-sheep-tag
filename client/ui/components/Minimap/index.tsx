@@ -35,8 +35,8 @@ addSystem({
 
 const MinimapCanvas = styled.canvas`
   position: static;
-  width: 262px;
-  height: 262px;
+  width: 277px;
+  height: 277px;
   cursor: pointer;
 `;
 

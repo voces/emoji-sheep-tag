@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { send } from "../../../../messaging.ts";
 import { styled } from "styled-components";
 import { onMapChange } from "@/shared/map.ts";
+import { theme } from "../../../theme.ts";
 
 const MinimapContainer = styled.div`
   position: relative;
@@ -113,7 +114,7 @@ export const AreaPanel = () => {
   };
 
   return (
-    <Panel>
+    <Panel style={{ overflow: "visible", padding: theme.spacing.lg }}>
       <MinimapContainer>
         <Minimap />
         {/* Top terrain arrows */}

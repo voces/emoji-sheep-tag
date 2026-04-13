@@ -1,12 +1,12 @@
 import { Command } from "@/components/game/Command.tsx";
-import { Grid, Panel } from "./common.ts";
+import { Grid } from "./common.ts";
+import { CollapsiblePanel } from "./CollapsiblePanel.tsx";
 import { createBlueprint } from "../../../../controls/blueprintHandlers.ts";
 import { mouse } from "../../../../mouse.ts";
 import { tileDefs } from "@/shared/data.ts";
 
 export const TerrainPanel = () => (
-  <Panel>
-    <h4>Terrain</h4>
+  <CollapsiblePanel title="Terrain" defaultOpen>
     <Grid>
       {tileDefs.map(({ name, color, pathing }) => (
         <Command
@@ -78,5 +78,5 @@ export const TerrainPanel = () => (
         }}
       />
     </Grid>
-  </Panel>
+  </CollapsiblePanel>
 );
