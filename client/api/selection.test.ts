@@ -423,6 +423,27 @@ describe("selectPrimaryUnit", () => {
     expect(camera.position.y).toBe(25);
   });
 
+  it("should select real wolf, not mirror image", () => {
+    app.addEntity({
+      id: "wolf-1",
+      prefab: "wolf",
+      owner: "player-1",
+      position: { x: 15, y: 25 },
+    });
+    app.addEntity({
+      id: "mirror-1",
+      prefab: "wolf",
+      owner: "player-1",
+      position: { x: 20, y: 30 },
+      isMirror: true,
+    });
+
+    clearSelection();
+    selectPrimaryUnit();
+
+    expect(Array.from(selection, (e) => e.id)).toEqual(["wolf-1"]);
+  });
+
   it("should select spirit primary unit and move camera", () => {
     // Create spirit primary unit
     app.addEntity({

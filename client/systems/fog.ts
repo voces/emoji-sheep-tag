@@ -329,11 +329,16 @@ class VisibilityGrid {
     const newCells = new Set<Cell>();
     const newCellKeys = new Set<number>();
 
-    // Get entity's height level (terrainLayers is 2x resolution)
+    // terrainLayers is 2x resolution; fog grid is 4x
     const terrainScale = FOG_RESOLUTION_MULTIPLIER / 2;
-    const entityTileX = Math.floor(cx / terrainScale);
-    const entityTileY = Math.floor(cy / terrainScale);
-    const entityHeight = terrainLayerData[entityTileY]?.[entityTileX] ?? 0;
+
+    // Get entity's height level - use max across tilemap so buildings on cliff
+    // edges can see from their highest point (matches canSeeTarget behavior)
+    const entityHeight = getMaxEntityHeight(
+      entity.position,
+      entity.tilemap,
+      terrainLayerData,
+    );
 
     // Build a grid of blocker coverage within sight radius
     // Use Map<number, Set<number>> for faster lookups (avoid string concat)

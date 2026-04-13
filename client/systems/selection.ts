@@ -169,7 +169,7 @@ addSystem({
           camera.position.y = e.position.y;
         }
       }
-      if (!practiceVar()) primaryUnitVar(e);
+      if (!practiceVar() && !e.isMirror) primaryUnitVar(e);
     }
 
     if (e.prefab === "wolf" && e.isMirror) mirrors.add(e);
