@@ -70,6 +70,7 @@ export const getPathingMaskFromTerrainMasks = (
 ) => {
   const parsedTiles = double(tileMask);
   const cliffMap = getCliffMapFromCliffMask(cliffMask);
+  // console.log(cliffMask, cliffMap);
 
   return parsedTiles.map((tileRow, y) =>
     tileRow.map((tileIndex, x) => {

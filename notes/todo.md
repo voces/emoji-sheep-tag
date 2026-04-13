@@ -40,6 +40,8 @@
 
 - Sheep count keeps getting reset?
 - Switch broken - won without timer expiring
+- Mirror image breaks control key for wolf
+- Stack left/down does not grant visibility
 
 # Code quality
 
