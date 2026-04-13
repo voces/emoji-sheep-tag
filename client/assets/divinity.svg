@@ -2,74 +2,99 @@
   <path
     fill="#ecc19c"
     d="M4 26h8v22H4V26Zm44 0h8v22h-8V26Z"
-  /><path
+  />
+  <path
     fill="#dfb28b"
     d="M54 42h-6v6h8v-6h-2Zm-42 0H4v6h8v-6Z"
-  /><path
+  />
+  <path
     fill="#f0d0b4"
     d="M40 44h4v4h4v-4h4v4h4v-4h4v16H0V44h4v4h4v-4h4v4h4v-4h24Z"
-  /><path fill="#ecc19c" d="M18 60h24V44H18v16Z" /><path
+  />
+  <path fill="#ecc19c" d="M18 60h24V44H18v16Z" />
+  <path
     fill="#f5e0cd"
     d="M20 40h20v20H20V40Z"
-  /><path
+  />
+  <path
     fill="#808080"
     d="M36 60V48h-3v-1c0-2.309-2.5-3.753-4.5-2.598A2.998 2.998 0 0 0 27 47v1h-3v12h12Zm8-8h4v4h-4v-4Zm8 0h4v4h-4v-4Z"
     data-player="true"
-  /><path fill="#737577" d="M22 18h16v12H22V18Z" /><path
+  />
+  <path fill="#737577" d="M22 18h16v12H22V18Z" />
+  <path
     fill="#ccd1d9"
     d="M38 27.081A11.936 11.936 0 0 0 30 24a11.936 11.936 0 0 0-8 3.081V30h16v-2.919Z"
-  /><path
+  />
+  <path
     fill="#808080"
     d="M26 22h8v5h-8v-5Z"
     data-player="true"
-  /><path
+  />
+  <path
     fill="#808080"
     d="M30 24a11.83 11.83 0 0 0-4 .703V27h8v-2.297A11.839 11.839 0 0 0 30 24Z"
     data-player="true"
-  /><path
+  />
+  <path
     fill="#808080"
     d="M12 52h4v4h-4v-4ZM4 52h4v4H4v-4Z"
     data-player="true"
-  /><path
+  />
+  <path
     fill="#e6e9ed"
     d="M20 40v-4c0-5.523 4.477-10 10-10s10 4.477 10 10v4H20Z"
-  /><path
+  />
+  <path
     fill="#ccd1d9"
     d="M20 18h20l2-4V6H18v8l2 4Zm4-18h12v6H24V0Z"
-  /><path
+  />
+  <path
     fill="#aab2bd"
     d="M24 4h12v2H24V4Zm-4 14h20l2-4H18l2 4Z"
-  /><path
+  />
+  <path
     fill="#969faa"
     d="M21 6h2v8h-2V6Zm4 0h2v8h-2V6Zm8 0h2v8h-2V6Zm4 0h2v8h-2V6Zm-8 0h2v8h-2V6Z"
-  /><path fill="#ccd1d9" d="M20 36h20v4H20v-4Z" /><path
+  />
+  <path fill="#ccd1d9" d="M20 36h20v4H20v-4Z" />
+  <path
     fill="#f0d0b4"
     d="M14 26H2l-2-6h16l-2 6Z"
-  /><path
+  />
+  <path
     fill="#e6e9ed"
     d="M3 20v-5c0-3.849 4.166-6.255 7.5-4.33A5 5 0 0 1 13 15v5H3Z"
-  /><path
+  />
+  <path
     fill="#808080"
     d="M7 29h2v4H7v-4Zm0 6h2v4H7v-4Z"
     data-player="true"
-  /><path
+  />
+  <path
     fill="#ccd1d9"
     d="M8 10a5 5 0 0 0-5 5v1h10v-1a5 5 0 0 0-5-5Z"
-  /><path
+  />
+  <path
     fill="#f0d0b4"
     d="M58 26H46l-2-6h16l-2 6Z"
-  /><path
+  />
+  <path
     fill="#e6e9ed"
     d="M47 20v-5c0-3.849 4.166-6.255 7.5-4.33A5 5 0 0 1 57 15v5H47Z"
-  /><path
+  />
+  <path
     fill="#ccd1d9"
     d="M52 10a5 5 0 0 0-5 5v1h10v-1a5 5 0 0 0-5-5Z"
-  /><path
+  />
+  <path
     fill="#808080"
     d="M51 29h2v4h-2v-4Zm0 6h2v4h-2v-4Z"
     data-player="true"
-  /><path
+  />
+  <path
     fill="#dfb28b"
     d="M4 26h8v2H4v-2Zm44 0h8v2h-8v-2Z"
-  /><path fill="#ccd1d9" d="M22 18h16v2H22v-2Z" />
+  />
+  <path fill="#ccd1d9" d="M22 18h16v2H22v-2Z" />
 </svg>
