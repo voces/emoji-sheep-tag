@@ -316,10 +316,14 @@ export const handlers = {
     const cliffs = unpackMap2D(data.cliffs).map((row) =>
       row.map((value) => (value === 0 ? "r" : value - 1))
     ) as (number | "r")[][];
+    const water = data.water
+      ? unpackMap2D(data.water)
+      : tiles.map((row) => row.map(() => 0));
 
     const rawPathing = getPathingMaskFromTerrainMasks(
       tiles,
       cliffs,
+      water,
       data.bounds,
     );
     const terrainPathingMap = rawPathing.toReversed();
@@ -332,6 +336,7 @@ export const handlers = {
       id: `${currentMap.id}-resized-${Date.now()}`,
       tiles,
       cliffs,
+      water,
       width: data.width,
       height: data.height,
       bounds: data.bounds,

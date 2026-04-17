@@ -1,7 +1,7 @@
 import { app } from "../ecs.ts";
 import { terrain } from "../graphics/three.ts";
 import { tileDefs } from "@/shared/data.ts";
-import { packMap2D } from "@/shared/util/2dPacking.ts";
+import { packMap2D, packMap2DAuto } from "@/shared/util/2dPacking.ts";
 import { packEntities } from "@/shared/util/entityPacking.ts";
 import { getMapBounds, getMapCenter, type PackedMap } from "@/shared/map.ts";
 import { editorCurrentMapVar } from "@/vars/editor.ts";
@@ -30,6 +30,7 @@ export const buildPackedMapFromEditor = (): PackedMap => {
       tileDefs.length,
     ),
     cliffs: packMap2D(cliffs, maxCliff + 1),
+    water: packMap2DAuto(terrain.masks.water.toReversed()),
     entities: packEntities(
       Array.from(app.entities)
         .filter((e) =>

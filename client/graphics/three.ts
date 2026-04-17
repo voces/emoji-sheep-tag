@@ -18,7 +18,7 @@ import { healthbarScene } from "../systems/healthbars.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { isNight } from "@/shared/dayNight.ts";
 import { ambientBirdsSound } from "../api/sound.ts";
-import { editorVar } from "@/vars/editor.ts";
+import { editorVar, editorWaterViewVar } from "@/vars/editor.ts";
 
 const terrainTilePalette = [
   ...tileDefs.map((t) => ({
@@ -34,6 +34,7 @@ const createTerrainMasks = (map: LoadedMap = getMap()) => ({
     { length: map.height },
     () => Array(map.width).fill(tileDefs.length),
   ),
+  water: map.water.toReversed(),
 });
 
 const canvas = document.querySelector("canvas") ?? undefined;
@@ -164,6 +165,18 @@ onMapChange((map) => {
   camera.position.x = map.center.x;
   camera.position.y = map.center.y;
 });
+const waterViewModeId: Record<
+  ReturnType<typeof editorWaterViewVar>,
+  0 | 1 | 2
+> = { hide: 0, normal: 1, level: 2 };
+const applyWaterViewMode = () => {
+  const mode = editorVar() ? waterViewModeId[editorWaterViewVar()] : 1;
+  terrain.setWaterViewMode(mode);
+};
+applyWaterViewMode();
+editorWaterViewVar.subscribe(applyWaterViewMode);
+editorVar.subscribe(applyWaterViewMode);
+
 // deno-lint-ignore no-explicit-any
 (globalThis as any).terrain = terrain;
 
@@ -228,6 +241,8 @@ const animate = () => {
   for (let i = 0; i < renderListeners.length; i++) {
     renderListeners[i](delta, time);
   }
+
+  terrain.setTime(time);
 
   if (!renderer || !fogPass || !renderTarget) return;
 

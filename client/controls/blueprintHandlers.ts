@@ -129,6 +129,7 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
     model: prefabs[prefab]?.model,
     modelScale: prefabs[prefab]?.modelScale,
     isDoodad: true,
+    isEffect: true,
     ...(owner &&
       {
         vertexColor: playerColor

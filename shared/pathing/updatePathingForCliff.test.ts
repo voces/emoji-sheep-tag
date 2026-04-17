@@ -50,8 +50,10 @@ describe("updatePathingForCliff", () => {
     // Map y=5 corresponds to world y=4 (10 - 1 - 5 = 4)
     cliffs[5][5] = 3;
 
+    const water: number[][] = tiles.map((r) => r.map(() => 0));
+
     // Update pathing (expects world coordinates)
-    updatePathingForCliff(pm, tiles, cliffs, 5, 4);
+    updatePathingForCliff(pm, tiles, cliffs, water, 5, 4);
 
     // Verify that pathing was updated in the affected area
     // Grid tiles at the cliff edge should be blocked (11 = 8 | 3)
@@ -101,8 +103,10 @@ describe("updatePathingForCliff", () => {
     // Map y=10 corresponds to world y=9 (20 - 1 - 10 = 9)
     cliffs[10][10] = 2;
 
+    const water: number[][] = tiles.map((r) => r.map(() => 0));
+
     // Update pathing (expects world coordinates)
-    updatePathingForCliff(pm, tiles, cliffs, 10, 9);
+    updatePathingForCliff(pm, tiles, cliffs, water, 10, 9);
 
     // Check that tiles in a reasonable area were updated
     // The 5x5 tile area (8-12, 8-12) times 4 grid cells per tile = grid area (32-51, 32-51)

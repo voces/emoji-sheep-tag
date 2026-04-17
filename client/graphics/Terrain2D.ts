@@ -12,9 +12,26 @@ import {
   Vector2,
 } from "three";
 import { getCliffHeight } from "@/shared/pathing/terrainHelpers.ts";
+import { WATER_LEVEL_SCALE } from "@/shared/constants.ts";
+import {
+  WATER_SHADER_CAUSTICS,
+  WATER_SHADER_CONSTANTS,
+  WATER_SHADER_MOTION,
+  WATER_SHADER_NOISE,
+  WATER_SHADER_RIPPLES,
+} from "./waterShader.ts";
+import { waterRippleUniforms } from "./waterRipples.ts";
 
 export type Cliff = number | "r";
 export type CliffMask = Cliff[][];
+export type WaterMask = number[][];
+
+type TerrainMasks = {
+  cliff: CliffMask;
+  groundTile: number[][];
+  cliffTile: number[][];
+  water: WaterMask;
+};
 
 const buildHeightTexture = (cliffMask: CliffMask): DataTexture => {
   const h = cliffMask.length * 2;
@@ -23,6 +40,27 @@ const buildHeightTexture = (cliffMask: CliffMask): DataTexture => {
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       data[y * w + x] = getCliffHeight(x, y, cliffMask);
+    }
+  }
+  const tex = new DataTexture(data, w, h, RedFormat, FloatType);
+  tex.needsUpdate = true;
+  return tex;
+};
+
+/**
+ * Water texture stores water level in cliff units at 2x cliff mask resolution.
+ * 0 = no water. Sampled with linear filtering in the shader for soft shores.
+ */
+const buildWaterTexture = (waterMask: WaterMask): DataTexture => {
+  const h = waterMask.length * 2;
+  const w = waterMask[0].length * 2;
+  const data = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const my = Math.min(Math.floor(y / 2), waterMask.length - 1);
+      const row = waterMask[my];
+      const mx = Math.min(Math.floor(x / 2), row.length - 1);
+      data[y * w + x] = (row[mx] ?? 0) / WATER_LEVEL_SCALE;
     }
   }
   const tex = new DataTexture(data, w, h, RedFormat, FloatType);
@@ -323,25 +361,25 @@ const fragmentShader = `
   uniform sampler2D heightMap;
   uniform sampler2D cliffMap;
   uniform sampler2D tileColorMap;
+  uniform sampler2D waterMap;
   uniform vec2 texelSize;
+  /** 0 = hide water, 1 = normal, 2 = show water mask as indicator over dry cells */
+  uniform int waterViewMode;
+  uniform float time;
 
   varying vec2 vUv;
   varying vec2 vWorldPos;
 
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
+  ${WATER_SHADER_CONSTANTS}
+  ${WATER_SHADER_NOISE}
+  ${WATER_SHADER_MOTION}
+  ${WATER_SHADER_CAUSTICS}
+  ${WATER_SHADER_RIPPLES}
 
-  float vnoise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
-      mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x),
-      f.y
-    );
-  }
+  // Aliases so the existing non-water uses of the noise field below still
+  // read naturally. Both refer to the shared waterHash/waterNoise impl.
+  float hash(vec2 p) { return waterHash(p); }
+  float vnoise(vec2 p) { return waterNoise(p); }
 
   // Bilinear-interpolated height (smooth across texel boundaries)
   float heightSmooth(vec2 uv) {
@@ -354,6 +392,21 @@ const fragmentShader = `
           texture2D(heightMap, base + vec2(texelSize.x, 0.0)).r, fr.x),
       mix(texture2D(heightMap, base + vec2(0.0, texelSize.y)).r,
           texture2D(heightMap, base + texelSize).r, fr.x),
+      fr.y
+    );
+  }
+
+  // Bilinear-interpolated water level (0 = no water)
+  float waterSmooth(vec2 uv) {
+    vec2 tc = uv / texelSize - 0.5;
+    vec2 tf = floor(tc);
+    vec2 fr = tc - tf;
+    vec2 base = (tf + 0.5) * texelSize;
+    return mix(
+      mix(texture2D(waterMap, base).r,
+          texture2D(waterMap, base + vec2(texelSize.x, 0.0)).r, fr.x),
+      mix(texture2D(waterMap, base + vec2(0.0, texelSize.y)).r,
+          texture2D(waterMap, base + texelSize).r, fr.x),
       fr.y
     );
   }
@@ -396,6 +449,183 @@ const fragmentShader = `
     rockColor *= 0.70 + smoothH * 0.12;
     vec3 color = mix(groundColor, rockColor, cliffAmount);
 
+    // Water overlay: anywhere smoothWater > waterGroundH, tint toward deep water.
+    if (waterViewMode != 0) {
+      // In cliff zones the bilinear smoothH gives a gentle ramp that lets
+      // water creep halfway up the cliff face. Warp the decimal portion of
+      // the height with a pow(d, 1/1.5) curve so the effective ground rises
+      // quickly toward the next integer step — water at 1.25 on a 1→2 cliff
+      // terminates near 12.5% up the wall instead of 25%. Blended in with
+      // cliffDist so the transition at the ring edge is smooth.
+      float integerH = floor(smoothH);
+      float decimalH = smoothH - integerH;
+      float steepenedH = integerH + pow(decimalH, 1.0 / 2.0);
+      float cliffWeight = 1.0 - smoothstep(0.30, 0.40, cliffDist);
+      float waterGroundH = mix(smoothH, steepenedH, cliffWeight);
+      float rawWater = waterSmooth(vUv);
+
+      // Compute ripple once here and reuse for both the height wash and
+      // the caustic blend below — avoids looping the ring array twice.
+      float ripple = waterRippleSignal(vWorldPos);
+
+      // Tide (long-period) and wave (short-period ripples) come from the
+      // shared water-motion module, so the terrain and any entities standing
+      // in the water oscillate in lockstep.
+      float tide = waterTideOffset(time);
+      float waveSum = waterWaveOffset(vWorldPos, time);
+      float waterPresence = smoothstep(0.001, 0.05, rawWater);
+      // Body depth uses tide only — it drives color and alpha, so waves
+      // shouldn't cause visible bands sweeping across the water surface.
+      // Shore depth includes the waves so the shoreline still laps.
+      float bodyWater = rawWater + tide * waterPresence;
+      float smoothWater = bodyWater + waveSum * waterPresence;
+      float depth = smoothWater - waterGroundH;
+
+      // Ripple shore wash: the crest pushes the waterline onto the
+      // beach, but ONLY in the narrow band around the existing shore.
+      // Gated so it can't create phantom water on dry ramps/cliffs
+      // (the old rawWater approach did that). Fades to zero both far
+      // onto dry land (can't reach) and in deep water (not needed).
+      float washGate =
+        smoothstep(-0.2, 0.0, depth) * (1.0 - smoothstep(0.0, 0.1, depth));
+      depth += ripple * 0.24 * washGate;
+
+      float bodyDepth = bodyWater - waterGroundH;
+
+      // Smooth shore: fade water alpha across a screen-space-sized band
+      // around depth=0. Using fwidth makes the fade exactly as wide as
+      // one pixel's worth of depth variation, so the waterline is
+      // anti-aliased both spatially (no jaggies) and temporally (no
+      // flicker as waves oscillate the shore across pixels).
+      float edgeWidth = max(fwidth(depth), 0.002);
+      float waterEdge = smoothstep(0.0, edgeWidth, depth);
+      float depthT = clamp(bodyDepth / 0.75, 0.0, 1.0);
+      vec3 waterCol = mix(WATER_SHALLOW, WATER_DEEP, depthT);
+      // Shore line starts visible (~0.35) and approaches opaque in deep water.
+      float waterAlpha = clamp(0.35 + depthT * 0.55, 0.0, 0.92) * waterEdge;
+      color = mix(color, waterCol, waterAlpha);
+
+      // Unified surface disturbance: one noise field models both open
+      // water "caustics" and the shoreline "foam" as different levels
+      // of surface agitation. Open water has only the baseline noise;
+      // near the shore we add a big boost so the noise signal pushes
+      // past a high "heavy disturbance" threshold, which renders as
+      // white foam. Wave crests hitting the shore push the signal
+      // even higher, temporarily widening/thickening the foam.
+      // crestFactor is normalized against the peak amplitude of the
+      // shared waterWaveOffset (0.04 + 0.025 = 0.065).
+      // Unit-emitted ripple signal is screen-blended with the caustic
+      // noise — visible in calm water, saturating gently in bright
+      // spots rather than linearly spiking past the foam threshold.
+      float crestFactor = max(waveSum / 0.065, 0.0);
+      float causticsN = blendRipple(
+        waterCaustics(vWorldPos, time),
+        ripple);
+
+      // Shoreline boost: depth range is scaled by local cliff
+      // steepness so 2+ level cliffs keep a visible foam band despite
+      // their fast-rising depth. We use the true 2D gradient
+      // magnitude (length of dFdx/dFdy in world units) rather than
+      // fwidth, because fwidth is L1 (|ddx|+|ddy|) which doubles at
+      // cliff corners and jumps discontinuously at texel boundaries —
+      // that's what makes the foam abruptly thicker around corners.
+      // The L2 length gives a continuous gradient magnitude that
+      // grows only ~1.4x at corners, and we cap the scale so corners
+      // don't blow up the band.
+      float gradX = dFdx(smoothH) / max(abs(dFdx(vWorldPos.x)), 0.0001);
+      float gradY = dFdy(smoothH) / max(abs(dFdy(vWorldPos.y)), 0.0001);
+      float heightPerWorld = length(vec2(gradX, gradY));
+      float gradScale = clamp(heightPerWorld, 1.0, 2.2);
+      float shoreRange = (0.05 + 0.04 * crestFactor) * gradScale;
+      float shoreProx = 1.0 - smoothstep(0.0, shoreRange, depth);
+
+      // Disturbance = noise + shore boost + crest-at-shore boost. In
+      // open water it equals causticsN (0..1 range); at the shoreline
+      // it can reach ~1.85, pushing past the foam threshold.
+      float disturbance =
+        causticsN + shoreProx * 0.65 + crestFactor * shoreProx * 0.2;
+      float distFw = max(fwidth(disturbance), 0.005);
+
+      // Four concentric thresholds. Outer + inner + peak fire on
+      // raw noise peaks (causticsN, unaffected by the shore boost),
+      // so the caustic rings stay localized to actual blob peaks and
+      // don't turn into cliff-shaped bands where shoreProx is high.
+      // The foam threshold fires on the boosted disturbance signal —
+      // it only triggers near the shore where the boost pushes past
+      // the max noise value.
+      float causticsFw = max(fwidth(causticsN), 0.005);
+      float outerBand =
+        smoothstep(0.60 - causticsFw, 0.60 + causticsFw, causticsN);
+      float innerBand =
+        smoothstep(0.78 - causticsFw, 0.78 + causticsFw, causticsN);
+      float peakBand =
+        smoothstep(0.92 - causticsFw, 0.92 + causticsFw, causticsN);
+      // Wider AA floor for the foam threshold — where disturbance is
+      // locally smooth its gradient is small, and the default floor
+      // gives a ~1 px AA edge that aliases along noise contours.
+      float foamThreshFw = max(distFw, 0.015);
+      float noiseFoam =
+        smoothstep(1.05 - foamThreshFw, 1.05 + foamThreshFw, disturbance);
+      // Always-on solid foam slice right at the shore, so there's a
+      // continuous minimum foam band regardless of whether the local
+      // noise happens to peak. Width widens with the wave crest, and
+      // scales with cliff steepness to keep a visible band on 2+
+      // level cliffs.
+      float minFoamDepth = (0.015 + 0.015 * crestFactor) * gradScale;
+      float minFoamFarEdge = max(fwidth(depth), 0.002);
+      float minFoam = 1.0 -
+        smoothstep(
+          minFoamDepth - minFoamFarEdge,
+          minFoamDepth + minFoamFarEdge,
+          depth);
+      // Union: the textured noiseFoam extends further when the wave
+      // pushes disturbance up; the minFoam layer guarantees a solid
+      // band underneath. (Unit ripples already feed into causticsN
+      // above, so they reach foam through the noiseFoam path.)
+      float foamBand = max(minFoam, noiseFoam);
+      float caustics =
+        outerBand * 0.12 + innerBand * 0.20 + peakBand * 0.30;
+
+      color = mix(color, WATER_CAUSTICS, caustics * waterEdge * 0.40);
+      color = mix(color, WATER_FOAM, foamBand * waterEdge * 0.75);
+
+      // Dry-side effects apply where water isn't covering. dryMask is the
+      // inverse of waterEdge so wet sand and stripes blend smoothly
+      // through the shore instead of snapping on at the threshold.
+      float dryMask = 1.0 - waterEdge;
+      if (waterViewMode == 2 && rawWater > 0.001) {
+        float stripe =
+          step(0.5, fract((gl_FragCoord.x + gl_FragCoord.y) * 0.08));
+        vec3 indicator = vec3(0.25, 0.45, 0.60);
+        color = mix(color, indicator, 0.35 * stripe * dryMask);
+      }
+      // Wet sand: land recently touched by a wave stays visibly damp for
+      // a long time before fully drying. Use an exponential decay of
+      // "time since the wave last peaked here" so the darkening persists
+      // across multiple wave cycles instead of flipping on/off every 2s.
+      if (rawWater > 0.001) {
+        // Max depth this pixel could reach at a wave crest.
+        float peakWaveBonus = 0.04 + 0.025;
+        float peakDepth = (rawWater + tide + peakWaveBonus) - waterGroundH;
+        float inReach = smoothstep(0.0, 0.02, peakDepth);
+        // Wider "wet zone" extends further from the waterline than before.
+        float closeToShore = 1.0 - smoothstep(0.0, 0.15, -depth);
+        // Time since wave peaked here (cyclic 0..1 per wave period). Must
+        // mirror the primary wave phase used in waterWaveOffset.
+        const float PI2 = 6.2831853;
+        float wavePhase =
+          time * (PI2 / 4.0) + vWorldPos.x * 0.6 + vWorldPos.y * 0.4;
+        float sincePeak =
+          fract((wavePhase - 1.5708) * (1.0 / 6.2831));
+        // Very slow decay: exp(-sincePeak * 0.35) stays in [0.70, 1.0]
+        // across the full cycle, so darkening is essentially always on
+        // with just a gentle pulse at each wave arrival.
+        float damp = exp(-sincePeak * 0.35);
+        float wetSand = inReach * closeToShore * damp * dryMask;
+        color *= 1.0 - 0.28 * wetSand;
+      }
+    }
+
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -425,18 +655,11 @@ const rampAllowed = (cliffMask: CliffMask, x: number, y: number) => {
 };
 
 export class Terrain2D extends Mesh {
-  masks: {
-    cliff: CliffMask;
-    groundTile: number[][];
-    cliffTile: number[][];
-  };
+  masks: TerrainMasks;
   tiles: { color: string }[];
   declare material: ShaderMaterial;
 
-  constructor(
-    masks: { cliff: CliffMask; groundTile: number[][]; cliffTile: number[][] },
-    tiles: { color: string }[],
-  ) {
+  constructor(masks: TerrainMasks, tiles: { color: string }[]) {
     const w = masks.cliff[0].length * 2;
     const h = masks.cliff.length * 2;
     const geometry = new PlaneGeometry(w, h);
@@ -445,13 +668,19 @@ export class Terrain2D extends Mesh {
     const heightTex = buildHeightTexture(masks.cliff);
     const cliffTex = buildCliffTexture(masks.cliff);
     const tileColorTex = buildTileColorTexture(masks.groundTile, tiles);
+    const waterTex = buildWaterTexture(masks.water);
 
     const material = new ShaderMaterial({
       uniforms: {
         heightMap: { value: heightTex },
         cliffMap: { value: cliffTex },
         tileColorMap: { value: tileColorTex },
+        waterMap: { value: waterTex },
         texelSize: { value: new Vector2(1 / w, 1 / h) },
+        waterViewMode: { value: 1 },
+        time: { value: 0 },
+        waterRippleCount: waterRippleUniforms.waterRippleCount,
+        waterRipples: waterRippleUniforms.waterRipples,
       },
       vertexShader,
       fragmentShader,
@@ -470,6 +699,7 @@ export class Terrain2D extends Mesh {
     uniforms.heightMap.value.dispose();
     uniforms.cliffMap.value.dispose();
     uniforms.tileColorMap.value.dispose();
+    uniforms.waterMap.value.dispose();
 
     uniforms.heightMap.value = buildHeightTexture(this.masks.cliff);
     uniforms.cliffMap.value = buildCliffTexture(this.masks.cliff);
@@ -477,6 +707,7 @@ export class Terrain2D extends Mesh {
       this.masks.groundTile,
       this.tiles,
     );
+    uniforms.waterMap.value = buildWaterTexture(this.masks.water);
 
     const w = this.masks.cliff[0].length * 2;
     const h = this.masks.cliff.length * 2;
@@ -485,6 +716,35 @@ export class Terrain2D extends Mesh {
 
   getCliff(x: number, y: number) {
     return Math.floor(getCliffHeight(x * 2, y * 2, this.masks.cliff));
+  }
+
+  /** Returns the raw water-mask value (integer * WATER_LEVEL_SCALE). 0 = no water. */
+  getWater(x: number, y: number) {
+    return this.masks.water[y]?.[x] ?? 0;
+  }
+
+  /** Sets the water mask cell (raw integer value, 0 = no water). */
+  setWater(x: number, y: number, value: number) {
+    if (this.masks.water[y]?.[x] === undefined) return;
+    this.masks.water[y][x] = Math.max(0, Math.round(value));
+    this.rebuildTextures();
+  }
+
+  /** Overwrites the entire water mask in one pass (for bulk operations). */
+  fillWater(value: number) {
+    const v = Math.max(0, Math.round(value));
+    for (const row of this.masks.water) {
+      for (let x = 0; x < row.length; x++) row[x] = v;
+    }
+    this.rebuildTextures();
+  }
+
+  setWaterViewMode(mode: 0 | 1 | 2) {
+    this.material.uniforms.waterViewMode.value = mode;
+  }
+
+  setTime(time: number) {
+    this.material.uniforms.time.value = time;
   }
 
   setCliff(x: number, y: number, value: number | "r") {
@@ -520,7 +780,7 @@ export class Terrain2D extends Mesh {
   }
 
   load(
-    masks: { cliff: CliffMask; groundTile: number[][]; cliffTile: number[][] },
+    masks: TerrainMasks,
     tiles: { color: string }[],
   ) {
     this.masks = masks;

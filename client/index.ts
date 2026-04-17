@@ -1,9 +1,11 @@
+import "./suppressReactDevtools.ts";
 import { startPing } from "./messaging.ts";
 import "./ui/root.tsx";
 import "./controls.ts";
 import "./systems/lookup.ts";
 import "./systems/selection.ts";
 import "./systems/three.ts";
+import "./systems/waterRipples.ts";
 import "./systems/animation.ts";
 import "./systems/action.ts";
 import "./systems/sounds.ts";

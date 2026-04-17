@@ -3,15 +3,24 @@ import { zUpdate } from "../../client/schemas.ts";
 import { lookup } from "../systems/lookup.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { pathingMap } from "../systems/pathing.ts";
-import { getCliffs, getMap, getTiles, setCurrentMap } from "@/shared/map.ts";
+import {
+  getCliffs,
+  getMap,
+  getTiles,
+  getWater,
+  setCurrentMap,
+} from "@/shared/map.ts";
 import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
 import { getEntityShiftForResize, resizeMap } from "@/shared/map/resizeMap.ts";
 import { appContext } from "@/shared/context.ts";
-import { packMap2D } from "@/shared/util/2dPacking.ts";
+import { packMap2D, packMap2DAuto } from "@/shared/util/2dPacking.ts";
 import { tileDefs } from "@/shared/data.ts";
 import { send } from "../lobbyApi.ts";
 import { flushUpdates } from "../updates.ts";
-import { getPathingMaskFromTerrainMasks } from "@/shared/pathing/terrainHelpers.ts";
+import {
+  getCliffHeight,
+  getPathingMaskFromTerrainMasks,
+} from "@/shared/pathing/terrainHelpers.ts";
 
 export const zEditorCreateEntity = z.object({
   type: z.literal("editorCreateEntity"),
@@ -78,12 +87,27 @@ export const zEditorSetCliff = z.object({
   cliff: z.union([z.number(), z.literal("r")]),
 });
 
+export const zEditorSetWater = z.object({
+  type: z.literal("editorSetWater"),
+  x: z.number(),
+  y: z.number(),
+  /** Raw water value (integer * WATER_LEVEL_SCALE). 0 = no water. */
+  water: z.number().int().nonnegative(),
+});
+
+export const zEditorReplaceWater = z.object({
+  type: z.literal("editorReplaceWater"),
+  /** Full water mask (rows top-to-bottom in map coordinates). */
+  water: z.array(z.array(z.number().int().nonnegative())),
+});
+
 export const editorSetCliff = (
   _: unknown,
   { x, y, cliff }: z.output<typeof zEditorSetCliff>,
 ) => {
   const cliffs = getCliffs();
   const tiles = getTiles();
+  const water = getWater();
   const { bounds } = getMap();
 
   // Convert from world coordinates (y=0 is bottom) to map coordinates (map[0] = top)
@@ -93,7 +117,80 @@ export const editorSetCliff = (
   if (cliffs[mapY]?.[x] !== undefined) cliffs[mapY][x] = cliff;
 
   // Update pathing map for the changed cliff (updatePathingForCliff expects world coordinates)
-  updatePathingForCliff(pathingMap(), tiles, cliffs, x, y, bounds);
+  updatePathingForCliff(pathingMap(), tiles, cliffs, water, x, y, bounds);
+};
+
+export const editorSetWater = (
+  _: unknown,
+  { x, y, water: value }: z.output<typeof zEditorSetWater>,
+) => {
+  const cliffs = getCliffs();
+  const tiles = getTiles();
+  const water = getWater();
+  const { bounds } = getMap();
+
+  // Convert from world coordinates (y=0 is bottom) to map coordinates (map[0] = top)
+  const mapY = water.length - 1 - y;
+
+  if (water[mapY]?.[x] === undefined) return;
+  water[mapY][x] = value;
+
+  updatePathingForCliff(pathingMap(), tiles, cliffs, water, x, y, bounds);
+};
+
+export const editorReplaceWater = (
+  _: unknown,
+  { water: newWater }: z.output<typeof zEditorReplaceWater>,
+) => {
+  const water = getWater();
+  if (
+    water.length !== newWater.length || water[0]?.length !== newWater[0]?.length
+  ) {
+    return;
+  }
+  for (let y = 0; y < water.length; y++) {
+    for (let x = 0; x < water[y].length; x++) water[y][x] = newWater[y][x];
+  }
+  rebuildFullPathing();
+};
+
+/** Rebuild the pathing map for every cell after a bulk terrain change. */
+const rebuildFullPathing = () => {
+  const pm = pathingMap();
+  const cliffs = getCliffs();
+  const tiles = getTiles();
+  const water = getWater();
+  const { bounds } = getMap();
+  const newPathing = getPathingMaskFromTerrainMasks(
+    tiles,
+    cliffs,
+    water,
+    bounds,
+  );
+  const tilesPerPathingCell = pm.resolution / pm.tileResolution;
+  for (let pathingY = 0; pathingY < newPathing.length; pathingY++) {
+    const mapY = newPathing.length - 1 - pathingY;
+    for (let pathingX = 0; pathingX < newPathing[pathingY].length; pathingX++) {
+      const pathing = newPathing[mapY][pathingX];
+      if (pm.layers) {
+        pm.layers[pathingY][pathingX] = Math.floor(
+          getCliffHeight(pathingX, pathingY, cliffs),
+        );
+      }
+      const gridX = pathingX * tilesPerPathingCell;
+      const gridY = pathingY * tilesPerPathingCell;
+      for (let gy = gridY; gy < gridY + tilesPerPathingCell; gy++) {
+        for (let gx = gridX; gx < gridX + tilesPerPathingCell; gx++) {
+          // @ts-ignore - getTile is private but we need direct access
+          const tile = pm.getTile(gx, gy);
+          if (tile) {
+            tile.originalPathing = pathing;
+            tile.recalculatePathing();
+          }
+        }
+      }
+    }
+  }
 };
 
 export const zEditorResizeMap = z.object({
@@ -174,11 +271,13 @@ export const editorResizeMap = (
 
   const packedTerrain = packMap2D(newMap.tiles, tileDefs.length);
   const packedCliffs = packMap2D(cliffsForPacking, maxCliff + 1);
+  const packedWater = packMap2DAuto(newMap.water);
 
   send({
     type: "mapUpdate",
     terrain: packedTerrain,
     cliffs: packedCliffs,
+    water: packedWater,
     width: newMap.width,
     height: newMap.height,
     bounds: newMap.bounds,
@@ -220,6 +319,7 @@ export const editorAdjustBounds = (
   const rawPathing = getPathingMaskFromTerrainMasks(
     currentMap.tiles,
     currentMap.cliffs,
+    currentMap.water,
     newBounds,
   );
   const terrainPathingMap = rawPathing.toReversed();
@@ -258,6 +358,7 @@ export const editorAdjustBounds = (
         return maxCliff + 1;
       })(),
     ),
+    water: packMap2DAuto(currentMap.water),
     width: currentMap.width,
     height: currentMap.height,
     bounds: newBounds,

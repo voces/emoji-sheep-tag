@@ -48,6 +48,23 @@ const interpolateCliffColumn = (
   return cliffs.map((row) => row[columnIndex] ?? "r");
 };
 
+const interpolateWaterRow = (
+  water: number[][],
+  edge: "top" | "bottom",
+): number[] => {
+  const row = edge === "top" ? water[0] : water[water.length - 1];
+  if (!row) return [];
+  return [...row];
+};
+
+const interpolateWaterColumn = (
+  water: number[][],
+  side: "left" | "right",
+): number[] => {
+  const columnIndex = side === "left" ? 0 : water[0].length - 1;
+  return water.map((row) => row[columnIndex] ?? 0);
+};
+
 export const resizeMap = (
   map: LoadedMap,
   { direction, amount }: ResizeParams,
@@ -59,6 +76,7 @@ export const resizeMap = (
 
   let newTiles = map.tiles.map((row) => [...row]);
   let newCliffs = map.cliffs.map((row) => [...row]);
+  let newWater = map.water.map((row) => [...row]);
 
   // Update bounds
   // When resizing terrain, bounds should only shift (not resize)
@@ -82,16 +100,20 @@ export const resizeMap = (
         // Expand top: add rows at the beginning (array index 0 = high Y = top)
         const tilesToAdd: number[][] = [];
         const cliffsToAdd: Cliff[][] = [];
+        const waterToAdd: number[][] = [];
         for (let i = 0; i < absAmount; i++) {
           tilesToAdd.push(interpolateTileRow(newTiles, "top"));
           cliffsToAdd.push(interpolateCliffRow(newCliffs, "top"));
+          waterToAdd.push(interpolateWaterRow(newWater, "top"));
         }
         newTiles = [...tilesToAdd, ...newTiles];
         newCliffs = [...cliffsToAdd, ...newCliffs];
+        newWater = [...waterToAdd, ...newWater];
       } else {
         // Shrink top: remove rows from the beginning
         newTiles = newTiles.slice(absAmount);
         newCliffs = newCliffs.slice(absAmount);
+        newWater = newWater.slice(absAmount);
       }
       break;
 
@@ -102,6 +124,7 @@ export const resizeMap = (
         for (let i = 0; i < absAmount; i++) {
           newTiles.push(interpolateTileRow(newTiles, "bottom"));
           newCliffs.push(interpolateCliffRow(newCliffs, "bottom"));
+          newWater.push(interpolateWaterRow(newWater, "bottom"));
         }
         newBounds.min.y += absAmount;
         newBounds.max.y += absAmount;
@@ -109,6 +132,7 @@ export const resizeMap = (
         // Shrink bottom: remove rows from the end
         newTiles = newTiles.slice(0, -absAmount);
         newCliffs = newCliffs.slice(0, -absAmount);
+        newWater = newWater.slice(0, -absAmount);
         newBounds.min.y -= absAmount;
         newBounds.max.y -= absAmount;
       }
@@ -119,17 +143,23 @@ export const resizeMap = (
         // Expand right: add columns at the end
         const columnToAdd = interpolateTileColumn(newTiles, "right");
         const cliffColumnToAdd = interpolateCliffColumn(newCliffs, "right");
+        const waterColumnToAdd = interpolateWaterColumn(newWater, "right");
         for (let i = 0; i < absAmount; i++) {
           newTiles = newTiles.map((row, idx) => [...row, columnToAdd[idx]]);
           newCliffs = newCliffs.map((
             row,
             idx,
           ) => [...row, cliffColumnToAdd[idx]]);
+          newWater = newWater.map((
+            row,
+            idx,
+          ) => [...row, waterColumnToAdd[idx]]);
         }
       } else {
         // Shrink right: remove columns from the end
         newTiles = newTiles.map((row) => row.slice(0, -absAmount));
         newCliffs = newCliffs.map((row) => row.slice(0, -absAmount));
+        newWater = newWater.map((row) => row.slice(0, -absAmount));
       }
       break;
 
@@ -138,12 +168,17 @@ export const resizeMap = (
         // Expand left: add columns at the beginning
         const columnToAdd = interpolateTileColumn(newTiles, "left");
         const cliffColumnToAdd = interpolateCliffColumn(newCliffs, "left");
+        const waterColumnToAdd = interpolateWaterColumn(newWater, "left");
         for (let i = 0; i < absAmount; i++) {
           newTiles = newTiles.map((row, idx) => [columnToAdd[idx], ...row]);
           newCliffs = newCliffs.map((
             row,
             idx,
           ) => [cliffColumnToAdd[idx], ...row]);
+          newWater = newWater.map((
+            row,
+            idx,
+          ) => [waterColumnToAdd[idx], ...row]);
         }
         newBounds.min.x += absAmount;
         newBounds.max.x += absAmount;
@@ -151,6 +186,7 @@ export const resizeMap = (
         // Shrink left: remove columns from the beginning
         newTiles = newTiles.map((row) => row.slice(absAmount));
         newCliffs = newCliffs.map((row) => row.slice(absAmount));
+        newWater = newWater.map((row) => row.slice(absAmount));
         newBounds.min.x -= absAmount;
         newBounds.max.x -= absAmount;
       }
@@ -175,6 +211,7 @@ export const resizeMap = (
   const rawPathing = getPathingMaskFromTerrainMasks(
     newTiles,
     newCliffs,
+    newWater,
     newBounds,
   );
   const terrainPathingMap = rawPathing.toReversed();
@@ -186,6 +223,7 @@ export const resizeMap = (
     ...map,
     tiles: newTiles,
     cliffs: newCliffs,
+    water: newWater,
     width: newWidth,
     height: newHeight,
     bounds: newBounds,

@@ -564,6 +564,7 @@ const zMapUpdate = z.object({
   type: z.literal("mapUpdate"),
   terrain: z.string(),
   cliffs: z.string(),
+  water: z.string().optional(),
   width: z.number(),
   height: z.number(),
   bounds: z.object({

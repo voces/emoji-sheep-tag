@@ -12,18 +12,40 @@ import { SVGLoader } from "three/SVGLoader";
 import { InstancedSvg } from "./InstancedSvg.ts";
 import { scene } from "./three.ts";
 import { svgs } from "../systems/models.ts";
+import { getAnimationTime } from "./AnimatedMeshMaterial.ts";
+import {
+  WATER_SHADER_CAUSTICS,
+  WATER_SHADER_CONSTANTS,
+  WATER_SHADER_ENTITY_TINT,
+  WATER_SHADER_ENTITY_VARYINGS,
+  WATER_SHADER_ENTITY_VERTEX,
+  WATER_SHADER_MOTION,
+  WATER_SHADER_NOISE,
+  WATER_SHADER_RIPPLES,
+} from "./waterShader.ts";
+import { waterRippleUniforms } from "./waterRipples.ts";
+
+const instancedSvgShaders = new Set<WebGLProgramParametersWithUniforms>();
 
 const loader = new SVGLoader();
 
 const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
+  instancedSvgShaders.add(shader);
+  shader.uniforms.uTime = { value: 0 };
+  shader.uniforms.waterRippleCount = waterRippleUniforms.waterRippleCount;
+  shader.uniforms.waterRipples = waterRippleUniforms.waterRipples;
+
   // 1) Declare our attributes & varyings
   // instanceAlpha encodes alpha + progressive mode: values > 1.0 = progressive mode (subtract 1 to get alpha)
   // vertexOpacity encodes opacity + playerMask: values > 1.0 = player vertex (subtract 1 to get opacity)
-  // shapeInfo is vec2: .x = shapeIndex (0-1), .y = shapeStep (1/shapeCount)
-  shader.vertexShader = "attribute float instanceAlpha;\n" +
+  // shapeInfo is vec3: .x = shapeIndex (0-1), .y = shapeStep (1/shapeCount), .z = normalized sprite Y
+  shader.vertexShader = WATER_SHADER_MOTION +
+    WATER_SHADER_ENTITY_VARYINGS +
+    "uniform float uTime;\n" +
+    "attribute float instanceAlpha;\n" +
     "attribute float instanceMinimapMask;\n" +
     "attribute float vertexOpacity;\n" +
-    "attribute vec2 shapeInfo;\n" +
+    "attribute vec3 shapeInfo;\n" +
     "attribute vec3 instancePlayerColor;\n" +
     "varying float vInstanceAlpha;\n" +
     "varying float vInstanceMinimapMask;\n" +
@@ -43,12 +65,17 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     "void main() {\n" +
       "  vProgressiveMode = instanceAlpha > 1.0 ? 1.0 : 0.0;\n" +
       "  vInstanceAlpha = instanceAlpha > 1.0 ? instanceAlpha - 2.0 : instanceAlpha;\n" +
-      "  vInstanceMinimapMask = instanceMinimapMask;\n" +
+      // instanceMinimapMask packs the minimap flag as a +4 offset on top of
+      // submergence (stored as a float in [0, 4), not a quantized 0..1).
+      "  vInstanceMinimapMask = instanceMinimapMask >= 4.0 ? 1.0 : 0.0;\n" +
+      "  float submergence = instanceMinimapMask - vInstanceMinimapMask * 4.0;\n" +
       "  vPlayerMask = vertexOpacity > 1.0 ? 1.0 : 0.0;\n" +
       "  vVertexOpacity = vertexOpacity > 1.0 ? vertexOpacity - 2.0 : vertexOpacity;\n" +
       "  vShapeIndex = shapeInfo.x;\n" +
       "  vShapeStep = shapeInfo.y;\n" +
-      "  vPlayerColor = instancePlayerColor;",
+      "  vPlayerColor = instancePlayerColor;\n" +
+      WATER_SHADER_ENTITY_VERTEX +
+      "  vWaterline = shapeInfo.z - submergence - waterWaveOffset_;",
   );
 
   // Apply colors: base vertex color, then either instanceColor or playerColor luminosity blend
@@ -87,7 +114,13 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     #endif`,
   );
 
-  shader.fragmentShader = "varying float vInstanceAlpha;\n" +
+  shader.fragmentShader = WATER_SHADER_CONSTANTS +
+    WATER_SHADER_NOISE +
+    WATER_SHADER_CAUSTICS +
+    WATER_SHADER_RIPPLES +
+    WATER_SHADER_ENTITY_VARYINGS +
+    "uniform float uTime;\n" +
+    "varying float vInstanceAlpha;\n" +
     "varying float vInstanceMinimapMask;\n" +
     "varying float vVertexOpacity;\n" +
     "varying float vShapeIndex;\n" +
@@ -118,7 +151,8 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     /#include <color_fragment>/,
     `#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
       diffuseColor *= vInstanceMinimapMask > 0.5 ? vec4(vPlayerColor, 1.0) : vColor;
-    #endif`,
+    #endif
+    ${WATER_SHADER_ENTITY_TINT}`,
   );
 };
 
@@ -132,6 +166,12 @@ const createMaterial = () => {
   });
   material.customProgramCacheKey = () => "instanceAlpha";
   material.onBeforeCompile = addInstanceAlpha;
+  material.onBeforeRender = () => {
+    const now = getAnimationTime();
+    for (const shader of instancedSvgShaders) {
+      shader.uniforms.uTime.value = now;
+    }
+  };
   return material;
 };
 
@@ -219,22 +259,28 @@ export const loadSvg = (
     geo.translate(offset.x, offset.y, 0);
   }
 
-  // Now that we know total shape count, add shapeInfo (vec2: shapeIndex, shapeStep)
+  // Pack shapeIndex, shapeStep, and sprite-local normalized Y (0=bottom, 1=top)
+  // into a single vec3 attribute to stay under the 16-attribute GL limit.
+  const spriteMinY = box.min.y + offset.y;
+  const spriteMaxY = box.max.y + offset.y;
+  const spriteYRange = spriteMaxY - spriteMinY;
+  const invSpriteYRange = spriteYRange > 0 ? 1 / spriteYRange : 0;
   const shapeCount = geometries.length;
   const shapeStep = shapeCount > 0 ? 1 / shapeCount : 1;
   for (const geo of geometries) {
+    const positions = geo.attributes.position.array;
     const vertexCount = geo.attributes.position.count;
     const shapeIdx = geo.userData?.shapeIdx ?? 0;
-    // Normalize shapeIndex to 0-1 range (start of this shape's window)
     const normalizedIndex = shapeIdx / shapeCount;
 
-    // Pack shapeIndex and shapeStep into vec2
-    const shapeInfoData = new Float32Array(vertexCount * 2);
+    const shapeInfoData = new Float32Array(vertexCount * 3);
     for (let i = 0; i < vertexCount; i++) {
-      shapeInfoData[i * 2] = normalizedIndex;
-      shapeInfoData[i * 2 + 1] = shapeStep;
+      shapeInfoData[i * 3] = normalizedIndex;
+      shapeInfoData[i * 3 + 1] = shapeStep;
+      shapeInfoData[i * 3 + 2] = (positions[i * 3 + 1] - spriteMinY) *
+        invSpriteYRange;
     }
-    geo.setAttribute("shapeInfo", new BufferAttribute(shapeInfoData, 2));
+    geo.setAttribute("shapeInfo", new BufferAttribute(shapeInfoData, 3));
   }
 
   // Create instanced mesh from merged geometries

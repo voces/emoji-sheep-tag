@@ -1240,6 +1240,7 @@ export const prefabs: Record<string, DataEntity> = {
 export const tileDefs = [
   { name: "Grass", pathing: PATHING_NONE, color: 0x6caa00 },
   { name: "Pen", pathing: PATHING_BUILDABLE | PATHING_BLIGHT, color: 0x4b3061 },
+  /** @deprecated Prefer the water mask (LoadedMap.water) for new maps. */
   { name: "Water", pathing: PATHING_BUILDABLE, color: 0x385670 },
 ];
 

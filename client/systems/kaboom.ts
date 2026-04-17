@@ -16,6 +16,7 @@ app.addSystem({
       isKaboom: true,
       progress: 1,
       isDoodad: true,
+      isEffect: true,
     });
   },
 });

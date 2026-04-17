@@ -610,16 +610,26 @@ const buildGeometry = (
     new BufferAttribute(new Float32Array(allColors), 3),
   );
   geometry.setAttribute(
-    "partID",
-    new BufferAttribute(new Float32Array(allPartIDs), 1),
-  );
-  geometry.setAttribute(
     "playerMask",
     new BufferAttribute(new Float32Array(allPlayerMasks), 1),
   );
 
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
+
+  // Pack partID and sprite-local normalized Y (0=bottom, 1=top) into a single
+  // vec2 attribute to stay under the 16-attribute GL limit.
+  const bbox = geometry.boundingBox;
+  const minY = bbox ? bbox.min.y : 0;
+  const range = bbox ? bbox.max.y - minY : 0;
+  const inv = range > 0 ? 1 / range : 0;
+  const vertexCount = allPositions.length / 3;
+  const partInfoData = new Float32Array(vertexCount * 2);
+  for (let i = 0; i < vertexCount; i++) {
+    partInfoData[i * 2] = allPartIDs[i];
+    partInfoData[i * 2 + 1] = (allPositions[i * 3 + 1] - minY) * inv;
+  }
+  geometry.setAttribute("partInfo", new BufferAttribute(partInfoData, 2));
 
   return geometry;
 };

@@ -12,12 +12,18 @@ export const updatePathingForCliff = (
   pathingMap: PathingMap,
   tiles: number[][],
   cliffs: (number | "r")[][],
+  water: number[][],
   worldX: number,
   worldY: number,
   bounds?: { min: { x: number; y: number }; max: { x: number; y: number } },
 ) => {
   // Recompute pathing from terrain (with bounds to mark out-of-bounds as impassable)
-  const newPathing = getPathingMaskFromTerrainMasks(tiles, cliffs, bounds);
+  const newPathing = getPathingMaskFromTerrainMasks(
+    tiles,
+    cliffs,
+    water,
+    bounds,
+  );
 
   // Recompute cliff heights if layers are being used
   const newLayers = pathingMap.layers

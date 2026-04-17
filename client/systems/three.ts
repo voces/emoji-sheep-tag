@@ -10,6 +10,30 @@ import { computeUnitMovementSpeed, isAlly } from "@/shared/api/unit.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 import { collections } from "./models.ts";
 import { getCurrentAnimation, updateAnimationState } from "./animation.ts";
+import { getMap } from "@/shared/map.ts";
+import { getWaterDepthAtWorld } from "@/shared/pathing/terrainHelpers.ts";
+
+const updateSubmergence = (
+  e: SystemEntity<"position">,
+  collection: InstancedSvg | AnimatedInstancedMesh | undefined,
+) => {
+  if (!collection) return;
+  if (e.isEffect) return collection.setSubmergenceAt(e.id, 0);
+  const map = getMap();
+  const depth = getWaterDepthAtWorld(
+    e.position.x,
+    e.position.y,
+    map.cliffs,
+    map.water,
+  );
+  const radius = e.radius ?? 0.25;
+  // Allow submergence past 1 so deeper water keeps its wave-motion headroom
+  // (the waterline can still dip the expected ±0.19 without lifting the
+  // entity's tip above the surface) and so the shader can pick a darker
+  // water color from the saturated value.
+  const submergence = depth > 0 ? Math.min(3, depth / (radius * 2)) : 0;
+  collection.setSubmergenceAt(e.id, submergence);
+};
 
 const isVisibleToLocalPlayer = (e: Entity) => {
   if (e.hiddenByFog) return false;
@@ -198,6 +222,7 @@ const onPositionOrRotationChange = (
     e.facing,
     e.zIndex,
   );
+  updateSubmergence(e, collection);
 };
 
 const handleFog = (e: Entity) =>
@@ -322,13 +347,15 @@ addSystem({
       );
     }
 
-    collections[model]?.setPositionAt(
+    const collection = collections[model];
+    collection?.setPositionAt(
       e.id,
       e.position.x,
       e.position.y,
       e.facing,
       e.zIndex,
     );
+    updateSubmergence(e, collection);
   },
   onChange: onPositionOrRotationChange,
   onRemove: (e) => collections[e.model ?? e.prefab!]?.delete(e.id),

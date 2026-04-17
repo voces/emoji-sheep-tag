@@ -3,7 +3,7 @@ import { addSystem } from "@/shared/context.ts";
 import { app, Entity } from "../ecs.ts";
 import { playSoundAt } from "../api/sound.ts";
 import { PositionalAudio } from "three";
-import { SmokeEmitter } from "../graphics/SmokeEmitter.ts";
+import { ParticleEmitter } from "../graphics/ParticleEmitter.ts";
 import { camera } from "../graphics/three.ts";
 
 type FireState = {
@@ -16,7 +16,7 @@ type FireState = {
 
 const fires = new WeakMap<Entity, FireState[]>();
 const fireOffsetsMap = new WeakMap<Entity, { x: number; y: number }[]>();
-const smokeEmitter = new SmokeEmitter();
+const smokeEmitter = new ParticleEmitter();
 const fireSoundPool: PositionalAudio[] = [];
 
 const getFires = (entity: Entity) => {
@@ -204,6 +204,7 @@ addSystem({
               ),
             ),
           );
+          const g = grey / 255;
 
           smokeEmitter.emit({
             time,
@@ -214,7 +215,7 @@ addSystem({
             startScale,
             endScale: startScale * 2.5,
             lifetime: 1.5 + Math.random() * 1.0,
-            grey,
+            color: [g, g, g],
             alpha: 0.5,
           });
         }

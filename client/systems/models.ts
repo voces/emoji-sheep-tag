@@ -40,6 +40,7 @@ import atom from "../assets/atom.svg" with { type: "text" };
 import ramp from "../assets/ramp.svg" with { type: "text" };
 import raise from "../assets/raise.svg" with { type: "text" };
 import lower from "../assets/lower.svg" with { type: "text" };
+import waterDrop from "../assets/waterDrop.svg" with { type: "text" };
 import left from "../assets/left.svg" with { type: "text" };
 import right from "../assets/right.svg" with { type: "text" };
 import up from "../assets/up.svg" with { type: "text" };
@@ -196,6 +197,7 @@ export const svgs: Record<string, string> = {
   ramp,
   raise,
   lower,
+  waterDrop,
   left,
   right,
   up,

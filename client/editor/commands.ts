@@ -2,7 +2,11 @@ import { send } from "../messaging.ts";
 import { terrain } from "../graphics/three.ts";
 import { pathingMap } from "../systems/pathing.ts";
 import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
-import { getCliffs, getMapBounds, getTiles } from "@/shared/map.ts";
+import {
+  getCliffHeight,
+  getPathingMaskFromTerrainMasks,
+} from "@/shared/pathing/terrainHelpers.ts";
+import { getCliffs, getMapBounds, getTiles, getWater } from "@/shared/map.ts";
 import { id as generateId } from "@/shared/util/id.ts";
 
 // Command interface - all editor commands must implement execute and undo
@@ -12,6 +16,8 @@ export type EditorCommand =
   | MoveEntitiesCommand
   | SetPathingCommand
   | SetCliffCommand
+  | SetWaterCommand
+  | FillWaterCommand
   | KeyboardMoveCommand
   | BatchCommand;
 
@@ -61,6 +67,21 @@ export type SetCliffCommand = {
   newCliff: number | "r";
 };
 
+export type SetWaterCommand = {
+  type: "setWater";
+  x: number;
+  y: number;
+  oldWater: number;
+  newWater: number;
+};
+
+export type FillWaterCommand = {
+  type: "fillWater";
+  /** Full pre-fill mask snapshot for undo (rows top-to-bottom map coords). */
+  oldMask: number[][];
+  newValue: number;
+};
+
 export type KeyboardMoveCommand = {
   type: "keyboardMove";
   entityId: string;
@@ -100,8 +121,61 @@ export const getRedoCount = () => redoStack.length;
 const updateClientPathingForCliff = (x: number, y: number) => {
   const tiles = getTiles();
   const cliffs = getCliffs();
+  const water = getWater();
   const bounds = getMapBounds();
-  updatePathingForCliff(pathingMap, tiles, cliffs, x, y, bounds);
+  updatePathingForCliff(pathingMap, tiles, cliffs, water, x, y, bounds);
+};
+
+/** Recompute and apply pathing for every cell after a bulk water change. */
+const rebuildFullClientPathing = () => {
+  const tiles = getTiles();
+  const cliffs = getCliffs();
+  const water = getWater();
+  const bounds = getMapBounds();
+  const newPathing = getPathingMaskFromTerrainMasks(
+    tiles,
+    cliffs,
+    water,
+    bounds,
+  );
+  const tilesPerPathingCell = pathingMap.resolution / pathingMap.tileResolution;
+  for (let pathingY = 0; pathingY < newPathing.length; pathingY++) {
+    const mapY = newPathing.length - 1 - pathingY;
+    for (let pathingX = 0; pathingX < newPathing[pathingY].length; pathingX++) {
+      const pathing = newPathing[mapY][pathingX];
+      if (pathingMap.layers) {
+        pathingMap.layers[pathingY][pathingX] = Math.floor(
+          getCliffHeight(pathingX, pathingY, cliffs),
+        );
+      }
+      const gridX = pathingX * tilesPerPathingCell;
+      const gridY = pathingY * tilesPerPathingCell;
+      for (let gy = gridY; gy < gridY + tilesPerPathingCell; gy++) {
+        for (let gx = gridX; gx < gridX + tilesPerPathingCell; gx++) {
+          // @ts-ignore - getTile is private but we need direct access
+          const tile = pathingMap.getTile(gx, gy);
+          if (tile) {
+            tile.originalPathing = pathing;
+            tile.recalculatePathing();
+          }
+        }
+      }
+    }
+  }
+};
+
+/** Overwrite the in-memory water mask with a snapshot, in-place. */
+const replaceWaterMask = (mask: number[][]) => {
+  const water = getWater();
+  for (let y = 0; y < water.length && y < mask.length; y++) {
+    for (let x = 0; x < water[y].length && x < mask[y].length; x++) {
+      water[y][x] = mask[y][x];
+    }
+  }
+  terrain.load(
+    { ...terrain.masks, water: water.toReversed() },
+    terrain.tiles,
+  );
 };
 
 // Execute a command and push it to undo stack
@@ -170,6 +244,26 @@ const doExecute = (command: EditorCommand) => {
         x: command.x,
         y: command.y,
         cliff: command.newCliff,
+      });
+      break;
+
+    case "setWater":
+      terrain.setWater(command.x, command.y, command.newWater);
+      updateClientPathingForCliff(command.x, command.y);
+      send({
+        type: "editorSetWater",
+        x: command.x,
+        y: command.y,
+        water: command.newWater,
+      });
+      break;
+
+    case "fillWater":
+      terrain.fillWater(command.newValue);
+      rebuildFullClientPathing();
+      send({
+        type: "editorReplaceWater",
+        water: terrain.masks.water.toReversed(),
       });
       break;
 
@@ -243,6 +337,26 @@ const doUndo = (command: EditorCommand) => {
         x: command.x,
         y: command.y,
         cliff: command.oldCliff,
+      });
+      break;
+
+    case "setWater":
+      terrain.setWater(command.x, command.y, command.oldWater);
+      updateClientPathingForCliff(command.x, command.y);
+      send({
+        type: "editorSetWater",
+        x: command.x,
+        y: command.y,
+        water: command.oldWater,
+      });
+      break;
+
+    case "fillWater":
+      replaceWaterMask(command.oldMask);
+      rebuildFullClientPathing();
+      send({
+        type: "editorReplaceWater",
+        water: terrain.masks.water.toReversed(),
       });
       break;
 
@@ -343,6 +457,25 @@ export const setCliffCommand = (
   y,
   oldCliff,
   newCliff,
+});
+
+export const setWaterCommand = (
+  x: number,
+  y: number,
+  oldWater: number,
+  newWater: number,
+): SetWaterCommand => ({
+  type: "setWater",
+  x,
+  y,
+  oldWater,
+  newWater,
+});
+
+export const fillWaterCommand = (newValue: number): FillWaterCommand => ({
+  type: "fillWater",
+  oldMask: getWater().map((row) => [...row]),
+  newValue,
 });
 
 export const deleteEntityCommand = (

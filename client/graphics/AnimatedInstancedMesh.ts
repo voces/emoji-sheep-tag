@@ -586,13 +586,30 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     instanceAlphaAttr.needsUpdate = true;
   }
 
+  // instanceMinimapMask packs the minimap flag with submergence in a single
+  // float: mask is encoded as a +4 offset, submergence is stored directly as
+  // a float in [0, 4) beneath it. Float storage keeps submergence precise
+  // and lets it range past 1.0 to represent deep water (used by the shader
+  // to pick a darker water color and to keep wave motion from lifting
+  // fully-submerged entities above the surface).
+  setSubmergenceAt(index: number | string, submergence: number) {
+    if (typeof index === "string") index = this.getIndex(index);
+    const attr = this.geometry.getAttribute("instanceMinimapMask");
+    const current = attr.getX(index);
+    const maskBits = current >= 4 ? 4 : 0;
+    const subValue = Math.max(0, Math.min(3.9, submergence));
+    attr.setX(index, maskBits + subValue);
+    attr.needsUpdate = true;
+  }
+
   setMinimapMaskAt(index: number | string, maskValue: number) {
     if (typeof index === "string") index = this.getIndex(index);
-    const instanceMinimapMaskAttr = this.geometry.getAttribute(
-      "instanceMinimapMask",
-    );
-    instanceMinimapMaskAttr.setX(index, maskValue);
-    instanceMinimapMaskAttr.needsUpdate = true;
+    const attr = this.geometry.getAttribute("instanceMinimapMask");
+    const current = attr.getX(index);
+    const subValue = current >= 4 ? current - 4 : current;
+    const maskBits = maskValue > 0.5 ? 4 : 0;
+    attr.setX(index, maskBits + subValue);
+    attr.needsUpdate = true;
   }
 
   /**

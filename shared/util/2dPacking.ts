@@ -91,6 +91,15 @@ export function packMap2D(tiles: number[][], maxIndex: number): string {
   return toBase64(bw.finish());
 }
 
+/** Pack a number[][] computing maxIndex automatically. */
+export function packMap2DAuto(tiles: number[][]): string {
+  let max = 0;
+  for (const row of tiles) {
+    for (const v of row) if (v > max) max = v;
+  }
+  return packMap2D(tiles, max);
+}
+
 export function unpackMap2D(b64: string): number[][] {
   const buf = fromBase64(b64);
   const br = new BitReader(buf);

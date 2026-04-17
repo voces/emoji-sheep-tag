@@ -13,6 +13,17 @@ import {
   MeshBasicMaterial,
   WebGLProgramParametersWithUniforms,
 } from "three";
+import {
+  WATER_SHADER_CAUSTICS,
+  WATER_SHADER_CONSTANTS,
+  WATER_SHADER_ENTITY_TINT,
+  WATER_SHADER_ENTITY_VARYINGS,
+  WATER_SHADER_ENTITY_VERTEX,
+  WATER_SHADER_MOTION,
+  WATER_SHADER_NOISE,
+  WATER_SHADER_RIPPLES,
+} from "./waterShader.ts";
+import { waterRippleUniforms } from "./waterRipples.ts";
 
 let animationTime = 0;
 
@@ -43,7 +54,7 @@ export const onShaderReady = (material: Material, callback: () => void) => {
 const PART_Z_OFFSET = 0.0001;
 
 const VERTEX_ATTRIBUTES = `
-  attribute float partID;
+  attribute vec2 partInfo;
   attribute float playerMask;
   attribute float instanceAlpha;
   attribute float instanceMinimapMask;
@@ -94,6 +105,11 @@ const addAnimationUniforms = (shader: WebGLProgramParametersWithUniforms) => {
   shader.uniforms.uClipCount = { value: 1 };
 };
 
+const addWaterRippleUniforms = (shader: WebGLProgramParametersWithUniforms) => {
+  shader.uniforms.waterRippleCount = waterRippleUniforms.waterRippleCount;
+  shader.uniforms.waterRipples = waterRippleUniforms.waterRipples;
+};
+
 export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
   const material = new MeshBasicMaterial({
     vertexColors: true,
@@ -119,9 +135,12 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
       }
     } else if (!existing.includes(shader)) existing.push(shader);
     addAnimationUniforms(shader);
+    addWaterRippleUniforms(shader);
 
     shader.vertexShader = `
       ${VERTEX_ATTRIBUTES}
+      ${WATER_SHADER_MOTION}
+      ${WATER_SHADER_ENTITY_VARYINGS}
       varying float vInstanceAlpha;
       varying float vInstanceMinimapMask;
       varying float vPlayerMask;
@@ -135,11 +154,17 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
       `
       ${ANIMATION_FUNCTIONS}
       void main() {
+        float partID = partInfo.x;
         vInstanceAlpha = instanceAlpha;
-        vInstanceMinimapMask = instanceMinimapMask;
+        // instanceMinimapMask packs the minimap flag as a +4 offset on top of
+        // submergence (stored as a float in [0, 4), not a quantized 0..1).
+        vInstanceMinimapMask = instanceMinimapMask >= 4.0 ? 1.0 : 0.0;
+        float submergence = instanceMinimapMask - vInstanceMinimapMask * 4.0;
         vPlayerMask = playerMask;
         vPlayerColor = instancePlayerColor;
         vTint = instanceTint;
+        ${WATER_SHADER_ENTITY_VERTEX}
+        vWaterline = partInfo.y - submergence - waterWaveOffset_;
 
         vec4 animA = sampleAnimation(partID, instanceAnim.x, instanceAnim.y, instanceAnim.z);
         float opacityA = sampleOpacity(partID, instanceAnim.x, instanceAnim.y, instanceAnim.z);
@@ -224,6 +249,12 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
     );
 
     shader.fragmentShader = `
+      ${WATER_SHADER_CONSTANTS}
+      ${WATER_SHADER_NOISE}
+      ${WATER_SHADER_CAUSTICS}
+      ${WATER_SHADER_RIPPLES}
+      ${WATER_SHADER_ENTITY_VARYINGS}
+      uniform float uTime;
       varying float vInstanceAlpha;
       varying float vInstanceMinimapMask;
       varying float vPlayerMask;
@@ -246,6 +277,7 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
       #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
         diffuseColor *= vInstanceMinimapMask > 0.5 ? vec4(vPlayerColor, 1.0) : vColor;
       #endif
+      ${WATER_SHADER_ENTITY_TINT}
       `,
     );
   };
@@ -295,6 +327,7 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
       `
       ${ANIMATION_FUNCTIONS}
       void main() {
+        float partID = partInfo.x;
         vec4 animA = sampleAnimation(partID, instanceAnim.x, instanceAnim.y, instanceAnim.z);
         float opacityA = sampleOpacity(partID, instanceAnim.x, instanceAnim.y, instanceAnim.z);
         float wB = instanceAnimB.w;

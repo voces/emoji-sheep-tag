@@ -78,11 +78,15 @@ export class InstancedSvg extends InstancedMesh {
     instanceAlphaAttr.array.fill(1);
     mergedGeometry.setAttribute("instanceAlpha", instanceAlphaAttr);
 
+    // instanceMinimapMask encodes both the minimap flag and submergence:
+    //   combined = mask * 256 + round(submergence * 255)
+    // so one attribute slot carries both signals (shader decodes below).
     const instanceMinimapMaskAttr = new InstancedBufferAttribute(
       new Float32Array(count),
       1,
     );
     instanceMinimapMaskAttr.array.fill(0);
+    instanceMinimapMaskAttr.setUsage(DynamicDrawUsage);
     mergedGeometry.setAttribute("instanceMinimapMask", instanceMinimapMaskAttr);
 
     // Player color - only applies to player-masked vertices
@@ -514,13 +518,29 @@ export class InstancedSvg extends InstancedMesh {
     instanceAlphaAttr.needsUpdate = true;
   }
 
+  // instanceMinimapMask packs the minimap flag with submergence in a single
+  // float: mask is encoded as a +4 offset, submergence is stored directly as
+  // a float in [0, 4) beneath it. Using float storage (instead of the old
+  // 8-bit quantization) keeps submergence precise and lets it range past
+  // 1.0 to represent entities sitting in water deeper than their radius.
+  setSubmergenceAt(index: number | string, submergence: number) {
+    if (typeof index === "string") index = this.getIndex(index);
+    const attr = this.geometry.getAttribute("instanceMinimapMask");
+    const current = attr.getX(index);
+    const maskBits = current >= 4 ? 4 : 0;
+    const subValue = Math.max(0, Math.min(3.9, submergence));
+    attr.setX(index, maskBits + subValue);
+    attr.needsUpdate = true;
+  }
+
   setMinimapMaskAt(index: number | string, maskValue: number) {
     if (typeof index === "string") index = this.getIndex(index);
-    const instanceMinimapMaskAttr = this.geometry.getAttribute(
-      "instanceMinimapMask",
-    );
-    instanceMinimapMaskAttr.setX(index, maskValue);
-    instanceMinimapMaskAttr.needsUpdate = true;
+    const attr = this.geometry.getAttribute("instanceMinimapMask");
+    const current = attr.getX(index);
+    const subValue = current >= 4 ? current - 4 : current;
+    const maskBits = maskValue > 0.5 ? 4 : 0;
+    attr.setX(index, maskBits + subValue);
+    attr.needsUpdate = true;
   }
 
   saveInstanceColors(index: number | string): Color | null {

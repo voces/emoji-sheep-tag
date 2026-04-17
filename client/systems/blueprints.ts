@@ -50,6 +50,7 @@ const entitiesFromQueue = (e: Entity) => {
           : 0x0000ff,
         alpha: 0.75,
         isDoodad: true,
+        isEffect: true,
       });
     }
     if ("target" in o && o.target) {

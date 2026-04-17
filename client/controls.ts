@@ -75,11 +75,16 @@ import {
   setPendingEntityClick,
   updateSelectionRectangle,
 } from "./controls/selection.ts";
-import { getCliffs, getMap, getTiles } from "@/shared/map.ts";
+import { getCliffs, getMap, getTiles, getWater } from "@/shared/map.ts";
 import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
-import { editorVar } from "@/vars/editor.ts";
+import {
+  editorTileModeVar,
+  editorVar,
+  editorWaterLevelVar,
+} from "@/vars/editor.ts";
+import { WATER_LEVEL_SCALE } from "@/shared/constants.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
 import { tileDefs } from "@/shared/data.ts";
 import { pathingMap } from "./systems/pathing.ts";
@@ -95,6 +100,7 @@ import {
   redo,
   setCliffCommand,
   setPathingCommand,
+  setWaterCommand,
   undo,
 } from "./editor/commands.ts";
 import {
@@ -343,6 +349,16 @@ const applyEditorTileChange = (
   if (editorTileDrag?.visited.has(key)) return null;
   editorTileDrag?.visited.add(key);
 
+  if (editorTileModeVar() === "paintWater") {
+    const level = editorWaterLevelVar();
+    const newWater = Math.max(0, Math.round(level * WATER_LEVEL_SCALE));
+    const oldWater = terrain.getWater(x, y);
+    if (oldWater === newWater) return null;
+    const command = setWaterCommand(x, y, oldWater, newWater);
+    doExecuteCommand(command);
+    return command;
+  }
+
   if (blueprint.vertexColor === 0xff01ff) {
     // Raise cliff
     const oldHeight = terrain.getCliff(x, y);
@@ -416,6 +432,7 @@ const doExecuteCommand = (command: EditorCommand) => {
         pathingMap,
         getTiles(),
         getCliffs(),
+        getWater(),
         command.x,
         command.y,
         getMap().bounds,
@@ -425,6 +442,24 @@ const doExecuteCommand = (command: EditorCommand) => {
         x: command.x,
         y: command.y,
         cliff: command.newCliff,
+      });
+      break;
+    case "setWater":
+      terrain.setWater(command.x, command.y, command.newWater);
+      updatePathingForCliff(
+        pathingMap,
+        getTiles(),
+        getCliffs(),
+        getWater(),
+        command.x,
+        command.y,
+        getMap().bounds,
+      );
+      send({
+        type: "editorSetWater",
+        x: command.x,
+        y: command.y,
+        water: command.newWater,
       });
       break;
   }

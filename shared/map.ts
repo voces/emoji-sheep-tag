@@ -14,8 +14,10 @@ import {
 import { appContext } from "./context.ts";
 import { getMapMeta } from "./maps/manifest.ts";
 
-export type PackedMap = Omit<typeof defaultPackedMap, "name"> & {
+export type PackedMap = Omit<typeof defaultPackedMap, "name" | "water"> & {
   name?: string;
+  /** Packed water mask (same dims as cliffs). Cells store water height * WATER_LEVEL_SCALE (0 = no water). */
+  water?: string;
 };
 
 export type LoadedMap = {
@@ -25,6 +27,8 @@ export type LoadedMap = {
   center: NonNullable<PackedMap["center"]>;
   tiles: number[][];
   cliffs: (number | "r")[][];
+  /** Per-cell water height stored as integer * WATER_LEVEL_SCALE (0 = no water). */
+  water: number[][];
   terrainPathingMap: number[][];
   terrainLayers: number[][];
   width: number;
@@ -109,6 +113,9 @@ export const buildLoadedMap = (
   const cliffs = unpackMap2D(packed.cliffs).map((row) =>
     row.map((value) => (value === 0 ? "r" : value - 1))
   );
+  const water = packed.water
+    ? unpackMap2D(packed.water)
+    : tiles.map((row) => row.map(() => 0));
 
   const bounds = packed.bounds
     ? {
@@ -122,7 +129,12 @@ export const buildLoadedMap = (
 
   const center = { x: packed.center.x, y: packed.center.y };
 
-  const rawPathing = getPathingMaskFromTerrainMasks(tiles, cliffs, bounds);
+  const rawPathing = getPathingMaskFromTerrainMasks(
+    tiles,
+    cliffs,
+    water,
+    bounds,
+  );
   const terrainPathingMap = rawPathing.toReversed();
   const terrainLayers = rawPathing.map((row, y) =>
     row.map((_, x) => Math.floor(getCliffHeight(x, y, cliffs)))
@@ -137,6 +149,7 @@ export const buildLoadedMap = (
     center,
     tiles,
     cliffs,
+    water,
     terrainPathingMap,
     terrainLayers,
     height: tiles.length,
@@ -202,6 +215,7 @@ export const getMapCenter = () => getMap().center;
 export const getMapBounds = () => getMap().bounds;
 export const getTiles = () => getMap().tiles;
 export const getCliffs = () => getMap().cliffs;
+export const getWater = () => getMap().water;
 export const getTerrainPathingMap = () => getMap().terrainPathingMap;
 export const getTerrainLayers = () => getMap().terrainLayers;
 export const getMapWidth = () => getMap().width;

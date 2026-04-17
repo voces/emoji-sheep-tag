@@ -27,3 +27,8 @@ export const PATHING_BLIGHT = 4;
 // export const PATHING_UNUSED = 8;
 export const PATHING_RESERVED = 16; // pathing is required for collision; this layer should only be used for this
 export const PATHING_SOLID = 32; // used for "ghost" entities like the dodge illusion; very similar to buildable
+
+/** Number of water-level steps per cliff level. Stored values divided by this yield cliff-unit heights. */
+export const WATER_LEVEL_SCALE = 16;
+/** Depth (in cliff units) at which water becomes unwalkable. */
+export const WATER_DEEP_DEPTH = 0.75;

@@ -65,10 +65,14 @@ export const NumericSettingInput = ({
       setLocalValue(defaultValue);
       onChange(parseValue(defaultValue));
     } else {
-      const parsed = parseValue(e.currentTarget.value) ||
-        parseValue(defaultValue);
-      const clamped = Math.max(min, Math.min(max, parsed));
-      const rounded = step === 1 ? clamped : Math.round(clamped * 100) / 100;
+      const parsed = parseValue(e.currentTarget.value);
+      const usable = Number.isFinite(parsed)
+        ? parsed
+        : parseValue(defaultValue);
+      const clamped = Math.max(min, Math.min(max, usable));
+      // Round to a multiple of `step` so 1/16 increments (etc.) are preserved
+      // instead of being truncated to 2 decimals.
+      const rounded = step === 1 ? clamped : Math.round(clamped / step) * step;
       setLocalValue(rounded.toString());
       onChange(rounded);
     }

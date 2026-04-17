@@ -40,6 +40,7 @@
 
 - Sheep count keeps getting reset?
 - Switch broken - won without timer expiring
+- Tree regrowth is hacked onto a health decay, which renders a healthbar
 
 # Code quality
 
