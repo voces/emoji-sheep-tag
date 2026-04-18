@@ -3,38 +3,8 @@ import { setServer } from "./connection.ts";
 
 let worker: SharedWorker | undefined;
 
-let channel: BroadcastChannel | undefined;
-let sharedBlobURL: string | undefined;
-const zLocalBlobMessage = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("blobUrl"),
-    url: z.string(),
-  }),
-  z.object({ type: z.literal("request") }),
-]);
-
-const initChannel = () => {
-  if (!channel) {
-    channel = new BroadcastChannel("local-blob");
-    channel.addEventListener("message", (e) => {
-      const message = zLocalBlobMessage.parse(e.data);
-      if (message.type === "blobUrl") {
-        sharedBlobURL = message.url;
-        if (!worker) {
-          worker = new SharedWorker(sharedBlobURL, {
-            name: "emoji-sheep-tag",
-            type: "module",
-          });
-        }
-      } else if (message.type === "request") {
-        if (sharedBlobURL) {
-          channel!.postMessage({ type: "blobUrl", url: sharedBlobURL });
-        }
-      }
-    });
-    channel.postMessage({ type: "request" });
-  }
-};
+const localJs = (globalThis as unknown as { __LOCAL_JS?: string }).__LOCAL_JS ??
+  "local.js";
 
 // LocalWebSocket.ts
 type SocketEventMap = {
@@ -57,27 +27,14 @@ export class LocalWebSocket {
   private portListener: ((e: MessageEvent) => void) | undefined;
   private id: number;
   private openTimeout: number | undefined;
-  private initTimeout: number | undefined;
   private name: string | undefined;
 
   constructor(name?: string) {
     this.name = name;
-    initChannel();
     this.id = Math.random();
 
-    // Check if worker exists immediately (from previous tab)
-    if (worker) {
-      this.initializePort();
-    } else {
-      // Wait for broadcast channel response or loadLocal to create worker
-      if (!worker) loadLocal();
-      this.initTimeout = setTimeout(async () => {
-        this.initTimeout = undefined;
-        // Wait for worker promise if it exists
-        if (workerPromise && !worker) worker = await workerPromise;
-        if (worker) this.initializePort();
-      }, 100); // Wait a bit longer than loadLocal's timeout
-    }
+    if (!worker) loadLocal();
+    if (worker) this.initializePort();
   }
 
   private initializePort() {
@@ -116,14 +73,9 @@ export class LocalWebSocket {
   close() {
     if (this.readyState === 3) return;
 
-    // Clear any pending timeouts
     if (this.openTimeout) {
       clearTimeout(this.openTimeout);
       this.openTimeout = undefined;
-    }
-    if (this.initTimeout) {
-      clearTimeout(this.initTimeout);
-      this.initTimeout = undefined;
     }
 
     this.readyState = 3; // CLOSED
@@ -176,54 +128,21 @@ export class LocalWebSocket {
   }
 }
 
-let started = false;
-let workerPromise: Promise<SharedWorker> | undefined;
-
-const createWorker = async (): Promise<SharedWorker> => {
-  const workerScript = await fetch("local.js").then((r) => r.text());
-  const blob = new Blob([workerScript], { type: "application/javascript" });
-  sharedBlobURL = URL.createObjectURL(blob);
-  channel?.postMessage({ type: "blobUrl", url: sharedBlobURL });
-  return new SharedWorker(sharedBlobURL, {
-    name: "emoji-sheep-tag",
-    type: "module",
-  });
-};
+const createWorker = (): SharedWorker =>
+  new SharedWorker(localJs, { name: "emoji-sheep-tag", type: "module" });
 
 export const loadLocal = () => {
-  initChannel();
-
-  // Wait briefly for broadcast channel response before creating new worker
-  setTimeout(async () => {
-    if (!worker && !workerPromise) {
-      workerPromise = createWorker();
-      worker = await workerPromise;
-    } else if (workerPromise && !worker) {
-      worker = await workerPromise;
-    }
-    if (!started && worker) {
-      worker.port.start();
-      started = true;
-    }
-  }, 50);
+  if (!worker) {
+    worker = createWorker();
+    worker.port.start();
+  }
 
   setServer("local");
 };
 
-// Test utility to clean up local resources
 export const __testing_cleanup_local = () => {
   if (worker) {
     worker.port.close();
     worker = undefined;
-  }
-  workerPromise = undefined;
-  started = false;
-  if (sharedBlobURL) {
-    URL.revokeObjectURL(sharedBlobURL);
-    sharedBlobURL = undefined;
-  }
-  if (channel) {
-    channel.close();
-    channel = undefined;
   }
 };

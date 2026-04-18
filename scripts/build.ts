@@ -34,17 +34,30 @@ const copyMaps = async () => {
   }
 };
 
+const cleanOldBundles = async () => {
+  try {
+    for await (const entry of Deno.readDir("dist")) {
+      if (
+        entry.isFile &&
+        /^(index|local)-.*\.js(\.map)?$/.test(entry.name)
+      ) await Deno.remove(`dist/${entry.name}`);
+    }
+  } catch { /* dist doesn't exist yet */ }
+};
+
 const buildJs = async (env: "dev" | "prod") => {
   await ensureDir("dist");
+  await cleanOldBundles();
 
-  await esbuild.build({
+  const result = await esbuild.build({
     bundle: true,
     target: "chrome123",
     format: "esm",
     entryPoints: ["client/index.ts", "server/local.ts"],
     outdir: "dist",
-    entryNames: "[name]",
+    entryNames: "[name]-[hash]",
     sourcemap: true,
+    metafile: true,
     plugins: [
       assetInlinePlugin,
       // Type-incompatible after upgrade, but still functions
@@ -63,24 +76,45 @@ const buildJs = async (env: "dev" | "prod") => {
     },
     minify: env !== "dev",
   });
+
+  const filenames = { index: "index.js", local: "local.js" };
+  for (const output of Object.keys(result.metafile!.outputs)) {
+    const basename = output.replace("dist/", "");
+    if (basename.startsWith("index-") && basename.endsWith(".js")) {
+      filenames.index = basename;
+    } else if (basename.startsWith("local-") && basename.endsWith(".js")) {
+      filenames.local = basename;
+    }
+  }
+
+  return filenames;
 };
 
-const copyHtml = async () => {
+const copyHtml = async (filenames: { index: string; local: string }) => {
   await ensureDir("dist");
 
-  await Deno.copyFile("client/index.html", "dist/index.html");
+  const html = await Deno.readTextFile("client/index.html");
+  await Deno.writeTextFile(
+    "dist/index.html",
+    html
+      .replace('src="index.js"', `src="${filenames.index}"`)
+      .replace(
+        "</head>",
+        `  <script>window.__LOCAL_JS="${filenames.local}"</script>\n  </head>`,
+      ),
+  );
 };
 
 export const build = async (env: "dev" | "prod") => {
   const start = performance.now();
 
   try {
-    await Promise.all([
+    const [filenames] = await Promise.all([
       buildJs(env),
-      copyHtml(),
       processSoundAssets(),
       copyMaps(),
     ]);
+    await copyHtml(filenames);
 
     console.log(
       "[Build] Built in",

@@ -42,6 +42,11 @@
 - Switch broken - won without timer expiring
 - Tree regrowth is hacked onto a health decay, which renders a healthbar
 
+# Infra
+
+- Shard image and primary server can get out of sync (both use shared/ code but
+  are deployed independently via separate GitHub Actions / fly deploy)
+
 # Code quality
 
 - Update the order system so that actions are more generic, based around their

@@ -50,7 +50,19 @@ Deno.serve({
     (await Deno.lstat(filepath).catch(() => undefined) &&
       filepath.startsWith(dist))
   ) {
-    return serveFile(req, url.pathname === "/" ? "dist/index.html" : filepath);
+    const response = await serveFile(
+      req,
+      url.pathname === "/" ? "dist/index.html" : filepath,
+    );
+    if (url.pathname === "/" || url.pathname === "/index.html") {
+      response.headers.set("cache-control", "no-cache");
+    } else if (/-[A-Z0-9]{8}\./.test(url.pathname)) {
+      response.headers.set(
+        "cache-control",
+        "public, max-age=31536000, immutable",
+      );
+    }
+    return response;
   }
 
   return new Response(undefined, { status: 404 });
