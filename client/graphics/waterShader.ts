@@ -200,6 +200,7 @@ export const WATER_SHADER_ENTITY_VARYINGS = /* glsl */ `
   varying float vWaterline;
   varying float vWaterDepthT;
   varying vec2 vWaterWorldXY;
+  flat varying float vSubmergence;
 `;
 
 /**
@@ -225,6 +226,7 @@ export const WATER_SHADER_ENTITY_VERTEX = /* glsl */ `
   // small entity in ~0.67 worth of water) read as "fully deep", roughly
   // matching the terrain's bodyDepth/0.75 depthT.
   vWaterDepthT = clamp(submergence * 0.75, 0.0, 1.0);
+  vSubmergence = submergence;
 `;
 
 /**
@@ -237,7 +239,7 @@ export const WATER_SHADER_ENTITY_VERTEX = /* glsl */ `
  * Terrain2D so entity shorelines read as part of the same water surface.
  */
 export const WATER_SHADER_ENTITY_TINT = /* glsl */ `
-  if (vInstanceMinimapMask < 0.5 && vWaterline < 0.0) {
+  if (vInstanceMinimapMask < 0.5 && vSubmergence > 0.0 && vWaterline < 0.0) {
     vec3 waterCol_ = mix(WATER_SHALLOW, WATER_DEEP, vWaterDepthT);
     diffuseColor.rgb = mix(diffuseColor.rgb, waterCol_, 0.6);
     float waterDepth_ = -vWaterline;

@@ -466,7 +466,8 @@ const fragmentShader = `
 
       // Compute ripple once here and reuse for both the height wash and
       // the caustic blend below — avoids looping the ring array twice.
-      float ripple = waterRippleSignal(vWorldPos);
+      // Gated on rawWater so dry-land pixels skip the 64-ring loop.
+      float ripple = rawWater > 0.001 ? waterRippleSignal(vWorldPos) : 0.0;
 
       // Tide (long-period) and wave (short-period ripples) come from the
       // shared water-motion module, so the terrain and any entities standing
