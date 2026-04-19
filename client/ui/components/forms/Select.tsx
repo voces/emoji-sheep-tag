@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { styled } from "styled-components";
-import { Card } from "@/components/layout/Card.tsx";
-import { Button } from "@/components/forms/Button.tsx";
+import { ChevronDown } from "lucide-react";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { mouse } from "../../../mouse.ts";
 
 type SelectOption = {
   value: string;
@@ -25,25 +25,55 @@ const SelectWrapper = styled.div`
   text-align: left;
 `;
 
-const SelectButton = styled(Button)`
+const Trigger = styled.button`
   width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  background: ${({ theme }) => theme.surface[2]};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: 7px 10px;
+  color: ${({ theme }) => theme.ink.hi};
+  font-size: ${({ theme }) => theme.text.sm};
+  min-height: 30px;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    background ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut};
+
+  &.hover {
+    border-color: ${({ theme }) => theme.border.hi};
+  }
+
+  &[aria-expanded="true"] {
+    border-color: ${({ theme }) => theme.accent.DEFAULT};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.accent.bg};
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
 `;
 
-const Chevron = styled.span`
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 5px solid ${({ theme }) => theme.colors.border};
-  pointer-events: none;
+const ChevronIcon = styled(ChevronDown)<{ $open: boolean }>`
+  width: 14px;
+  height: 14px;
+  color: ${({ theme }) => theme.ink.lo};
+  flex-shrink: 0;
+  transition: transform ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
+  transform: ${({ $open }) => $open ? "rotate(180deg)" : "none"};
 `;
 
-const SelectMenu = styled(Card)`
+const Dropdown = styled.div`
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + ${({ theme }) => theme.space[1]});
   left: 0;
   width: 100%;
   max-height: 220px;
@@ -51,27 +81,26 @@ const SelectMenu = styled(Card)`
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-  padding: ${({ theme }) => theme.spacing.sm};
-  background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 10));
+  gap: 2px;
+  padding: ${({ theme }) => theme.space[1]};
+  background: ${({ theme }) => theme.surface[1]};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  box-shadow: ${({ theme }) => theme.shadow.md};
 `;
 
-// TODO: Add styling for aria-selected, maybe a checkbox?
-const Option = styled.option`
-  width: 100%;
-  flex-shrink: 0;
-  text-align: left;
-  border: none;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.border};
-  text-shadow: none;
-  padding: ${({ theme }) => `${theme.spacing.xs} ${theme.spacing.sm}`};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+const OptionItem = styled.div<{ $selected: boolean }>`
+  padding: 6px ${({ theme }) => theme.space[2]};
+  border-radius: ${({ theme }) => theme.radius.xs};
+  font-size: ${({ theme }) => theme.text.sm};
+  color: ${({ theme }) => theme.ink.hi};
+  cursor: pointer;
+  background: ${({ $selected, theme }) =>
+    $selected ? theme.accent.bg : "transparent"};
 
   &.hover {
-    color: ${({ theme }) => theme.colors.body};
-    background: ${({ theme }) => theme.colors.background};
-    outline: none;
+    background: ${({ $selected, theme }) =>
+      $selected ? theme.accent.bg : theme.surface[2]};
   }
 `;
 
@@ -81,7 +110,7 @@ export const Select = ({
   options,
   onChange,
   disabled,
-  placeholder = "Select…",
+  placeholder = "Select\u2026",
   className,
 }: SelectProps) => {
   const [open, setOpen] = useState(false);
@@ -107,16 +136,16 @@ export const Select = ({
   );
 
   useEffect(() => {
-    const handleClick = (e: PointerEvent) => {
+    if (!open) return;
+    const handleClick = (e: { element: Element | null }) => {
       if (
-        e.isTrusted || !wrapperRef.current || !open ||
-        !(e.target instanceof HTMLElement) ||
-        wrapperRef.current.contains(e.target)
+        !wrapperRef.current || !e.element ||
+        wrapperRef.current.contains(e.element)
       ) return;
       setOpen(false);
     };
-    globalThis.addEventListener("click", handleClick);
-    return () => globalThis.removeEventListener("click", handleClick);
+    mouse.addEventListener("mouseButtonDown", handleClick);
+    return () => mouse.removeEventListener("mouseButtonDown", handleClick);
   }, [open]);
 
   const handleSelect = (newValue: string) => {
@@ -127,30 +156,31 @@ export const Select = ({
 
   return (
     <SelectWrapper ref={wrapperRef} className={className}>
-      <SelectButton
+      <Trigger
         id={id}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen((v) => !v)}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
         <span>{label}</span>
-        <Chevron />
-      </SelectButton>
+        <ChevronIcon $open={open} />
+      </Trigger>
       {open && !disabled && (
-        <SelectMenu role="listbox" aria-activedescendant={value}>
+        <Dropdown role="listbox" aria-activedescendant={value}>
           {options.map((option) => (
-            <Option
+            <OptionItem
               key={option.value}
               role="option"
               aria-selected={option.value === value}
+              $selected={option.value === value}
               onClick={() => handleSelect(option.value)}
             >
               {option.label}
-            </Option>
+            </OptionItem>
           ))}
-        </SelectMenu>
+        </Dropdown>
       )}
     </SelectWrapper>
   );

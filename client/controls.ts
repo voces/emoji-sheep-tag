@@ -3,6 +3,7 @@ import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { send } from "./messaging.ts";
 import { Entity } from "./ecs.ts";
 import { addSystem } from "@/shared/context.ts";
+import i18next from "i18next";
 import { selection } from "./systems/selection.ts";
 import { jumpToNextPing } from "./systems/indicators.ts";
 import { camera, getSpeedMultiplier, terrain } from "./graphics/three.ts";
@@ -190,6 +191,13 @@ let editorTileDrag: {
 // Middle-click camera panning state
 let panGrabPixels: { x: number; y: number } | null = null;
 
+// Simulated :active state
+const actives: Element[] = [];
+const clearActives = () => {
+  for (const el of actives) el.classList.remove("active");
+  actives.length = 0;
+};
+
 // Mouse event handlers
 mouse.addEventListener("mouseButtonDown", (e) => {
   // Handle focus/blur for UI elements
@@ -203,25 +211,26 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   ) {
     const passThrough = isGameElement(e.element);
     if (!passThrough) e.element.focus();
-    if (e.button === "right") {
-      e.element.dispatchEvent(
-        new MouseEvent("contextmenu", {
-          view: window,
-          bubbles: true,
-          cancelable: true,
-          button: 2,
-        }),
-      );
-    } else if ("click" in e.element) e.element.click();
-    else {
-      e.element.dispatchEvent(
-        new MouseEvent("click", {
-          view: window,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
+
+    // Simulate :active on the element and its ancestors
+    clearActives();
+    for (
+      let el: Element | null = e.element;
+      el;
+      el = el.parentElement
+    ) {
+      el.classList.add("active");
+      actives.push(el);
     }
+
+    e.element.dispatchEvent(
+      new MouseEvent("mousedown", {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        button: e.button === "left" ? 0 : e.button === "middle" ? 1 : 2,
+      }),
+    );
     if (!passThrough) return;
   }
 
@@ -528,7 +537,7 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
 
   if (!canBuild(unit, prefab, x, y)) {
     playSound("ui", pick("error1"), { volume: 0.3 });
-    showFeedback("Cannot build here");
+    showFeedback(i18next.t("hud.cannotBuildThere"));
     return;
   }
 
@@ -551,6 +560,42 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
 };
 
 mouse.addEventListener("mouseButtonUp", (e) => {
+  clearActives();
+
+  // Emit mouseup and click/contextmenu to UI elements
+  if (
+    (e.element instanceof HTMLElement || e.element instanceof SVGElement) &&
+    !isGameElement(e.element)
+  ) {
+    e.element.dispatchEvent(
+      new MouseEvent("mouseup", {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        button: e.button === "left" ? 0 : e.button === "middle" ? 1 : 2,
+      }),
+    );
+    if (e.button === "right") {
+      e.element.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+          button: 2,
+        }),
+      );
+    } else if ("click" in e.element) e.element.click();
+    else {
+      e.element.dispatchEvent(
+        new MouseEvent("click", {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }
+  }
+
   if (e.button === "middle") panGrabPixels = null;
   else if (e.button === "left" && editorTileDrag) {
     // Finish editor tile/cliff drag - record all commands in undo stack (already executed)
@@ -899,7 +944,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   });
   if (!units.length) {
     playSound("ui", pick("error1"), { volume: 0.3 });
-    showFeedback("Unit is busy");
+    showFeedback(i18next.t("hud.unitIsBusy"));
     return;
   }
 
@@ -907,7 +952,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
   units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
   if (!units.length) {
     playSound("ui", pick("error1"), { volume: 0.3 });
-    showFeedback("Not enough mana");
+    showFeedback(i18next.t("hud.notEnoughMana"));
     return;
   }
 
@@ -915,7 +960,7 @@ const handleAction = (action: UnitDataAction, units: Entity[]) => {
     const playerGold = getEffectivePlayerGold(units[0].owner);
     if (playerGold < action.goldCost) {
       playSound("ui", pick("error1"), { volume: 0.3 });
-      showFeedback("Not enough gold");
+      showFeedback(i18next.t("hud.notEnoughGold"));
       return;
     }
   }
@@ -1072,7 +1117,7 @@ const handleAutoAction = (
     );
     if (!target) {
       playSound("ui", pick("error1"), { volume: 0.3 });
-      showFeedback("No valid targets in range");
+      showFeedback(i18next.t("hud.noValidTargets"));
       return;
     }
 

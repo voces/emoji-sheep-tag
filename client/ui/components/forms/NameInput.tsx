@@ -8,30 +8,35 @@ const InputWrapper = styled.div`
 `;
 
 const NameDisplay = styled.span<{ $readonly?: boolean }>`
-  /* text-decoration: ${({ $readonly }) => $readonly ? "none" : "underline"}; */
   display: inline-block;
   border: 1px solid transparent;
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  border-radius: ${({ theme }) => theme.radius.xs};
   padding: 0;
   margin: 0;
   line-height: normal;
   filter: ${(
-    { $readonly },
-  ) => ($readonly ? undefined : `drop-shadow(0 0 2px #fff6)`)};
+    { $readonly, theme },
+  ) =>
+    $readonly
+      ? undefined
+      : `drop-shadow(0 0 2px color-mix(in oklab, ${theme.ink.hi} 40%, transparent))`};
 
   &.hover {
     filter: ${(
-      { $readonly },
-    ) => ($readonly ? undefined : `drop-shadow(0 0 2px #fffd)`)};
+      { $readonly, theme },
+    ) =>
+      $readonly
+        ? undefined
+        : `drop-shadow(0 0 2px color-mix(in oklab, ${theme.ink.hi} 85%, transparent))`};
   }
 `;
 
 const NameInputField = styled.input`
   width: 100%;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.body};
-  color: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  background: ${({ theme }) => theme.surface[2]};
+  color: ${({ theme }) => theme.ink.hi};
+  border-radius: ${({ theme }) => theme.radius.xs};
   padding: 0;
   margin: 0;
   line-height: normal;

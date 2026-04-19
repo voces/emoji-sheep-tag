@@ -122,6 +122,8 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
       mesh.decayBlendWeights(delta, 0.15 / 0.2);
 
       const glCanvas = renderer.domElement;
+      const dpr = renderer.getPixelRatio();
+      const pxSize = PORTRAIT_SIZE * dpr;
 
       // Save renderer state
       renderer.getViewport(tmpViewport);
@@ -146,9 +148,9 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
       ctx.drawImage(
         glCanvas,
         0,
-        glCanvas.height - PORTRAIT_SIZE,
-        PORTRAIT_SIZE,
-        PORTRAIT_SIZE,
+        glCanvas.height - pxSize,
+        pxSize,
+        pxSize,
         0,
         0,
         PORTRAIT_SIZE,

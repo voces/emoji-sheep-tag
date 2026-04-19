@@ -1,5 +1,6 @@
 import { ThemeProvider } from "styled-components";
 import { theme } from "./theme.ts";
+import { GlobalStyle } from "./GlobalStyle.ts";
 import { Fragment, StrictMode } from "react";
 
 export const Wrapper = ({ children }: { children: React.ReactNode }) => {
@@ -10,7 +11,10 @@ export const Wrapper = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <MaybeStrictMode>
-      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+      <ThemeProvider theme={theme}>
+        <GlobalStyle />
+        {children}
+      </ThemeProvider>
     </MaybeStrictMode>
   );
 };

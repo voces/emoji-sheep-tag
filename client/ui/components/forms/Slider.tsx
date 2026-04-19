@@ -5,12 +5,12 @@ import { mouse, MouseButtonEvent, MouseMoveEvent } from "../../../mouse.ts";
 const SliderContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space[1]};
 `;
 
 const SliderLabel = styled.label`
-  font-size: ${({ theme }) => theme.fontSize.md};
-  color: ${({ theme }) => theme.colors.body};
+  font-size: ${({ theme }) => theme.text.sm};
+  color: ${({ theme }) => theme.ink.mid};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -28,8 +28,8 @@ const SliderTrack = styled.div`
 const SliderRail = styled.div`
   width: 100%;
   height: 4px;
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  background: ${({ theme }) => theme.colors.border};
+  border-radius: 2px;
+  background: ${({ theme }) => theme.surface[3]};
 `;
 
 const SliderThumb = styled.div<{ $position: number; $hover: boolean }>`
@@ -38,17 +38,19 @@ const SliderThumb = styled.div<{ $position: number; $hover: boolean }>`
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.colors.primary};
-  border: 2px solid ${({ theme }) => theme.colors.body};
+  background: ${({ theme }) => theme.accent.DEFAULT};
+  border: 2px solid ${({ theme }) => theme.surface[1]};
+  box-shadow: ${({ theme }) => theme.shadow.sm};
   cursor: pointer;
   user-select: none;
-  transition: transform 0.1s ease;
-  transform: ${({ $hover }) => $hover ? "scale(1.1)" : "scale(1)"};
+  transition: transform ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
+  transform: ${({ $hover }) => $hover ? "scale(1.15)" : "scale(1)"};
 `;
 
 const SliderValue = styled.span`
-  font-size: ${({ theme }) => theme.fontSize.sm};
-  color: ${({ theme }) => theme.colors.body};
+  font-size: ${({ theme }) => theme.text.sm};
+  color: ${({ theme }) => theme.ink.hi};
   min-width: 3ch;
   text-align: right;
 `;

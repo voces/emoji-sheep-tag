@@ -35,12 +35,19 @@
 - Death animation (sheep)
 - Monolith needs new model
 - Settings not discoverable in game
+- Mobile: observe+chat friendly
 
 # Bugs
 
 - Sheep count keeps getting reset?
 - Switch broken - won without timer expiring
 - Tree regrowth is hacked onto a health decay, which renders a healthbar
+- Day/night cycle doesn't properly reset between rounds
+- Pings should be less transparent on minimaps
+- If a captain leaves, captains mode should be automatically canceled
+- Cannot target wolf with frost castle's attack action. EDIT: looks like can't,
+  but it does. But doesn't focus the entity. Also attack ground doesn't show is
+  the active action?
 
 # Infra
 

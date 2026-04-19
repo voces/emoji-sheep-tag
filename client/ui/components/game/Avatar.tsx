@@ -27,17 +27,26 @@ import { playSound } from "../../../api/sound.ts";
 import { pick } from "../../../util/pick.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 
-const MiniIconWrapper = styled.div<{ $rows: number }>`
+const MiniIconWrapper = styled.div<{ $rows: number; $size: number }>`
   display: grid;
   grid-auto-flow: column;
   grid-template-rows: repeat(${({ $rows }) => $rows}, 1fr);
   justify-content: start;
-  height: ${({ $rows }) => `${$rows * 32}px`};
+  height: ${({ $rows, $size }) => `${$rows * $size + ($rows - 1) * 2}px`};
   gap: 2px;
   & > div {
-    width: 32px;
-    height: 32px;
-    border-width: 2px;
+    width: ${({ $size }) => $size}px;
+    height: ${({ $size }) => $size}px;
+    border-width: 1px;
+  }
+  & span[class] {
+    font-size: ${({ $size }) => Math.max(7, $size * 0.4)}px;
+    line-height: ${({ $size }) => Math.max(10, $size * 0.55)}px;
+    height: ${({ $size }) => Math.max(10, $size * 0.55)}px;
+    padding: 0 2px;
+    bottom: 1px;
+    left: 1px;
+    right: auto;
   }
   &:empty {
     display: none;
@@ -45,7 +54,11 @@ const MiniIconWrapper = styled.div<{ $rows: number }>`
 `;
 
 export const Inventory = (
-  { entity, rows = 1 }: { entity: Entity; rows?: number },
+  { entity, rows = 1, size = 28 }: {
+    entity: Entity;
+    rows?: number;
+    size?: number;
+  },
 ) => {
   const items = useListenToEntityProp(entity, "inventory");
   const ownerColor = getPlayer(entity.owner)?.playerColor ?? undefined;
@@ -60,7 +73,7 @@ export const Inventory = (
   if (!grouped.length) return null;
 
   return (
-    <MiniIconWrapper $rows={rows}>
+    <MiniIconWrapper $rows={rows} $size={size}>
       {grouped.map((g, i) => (
         <Command
           key={i}
@@ -81,9 +94,10 @@ const getFlashDuration = (remainingDuration?: number): number => {
 };
 
 export const Buffs = (
-  { entity, rows = 1 }: {
+  { entity, rows = 1, size = 28 }: {
     entity: Entity;
     rows?: number;
+    size?: number;
   },
 ) => {
   const buffs = useListenToEntityProp(entity, "buffs");
@@ -106,7 +120,7 @@ export const Buffs = (
   if (!grouped.length) return null;
 
   return (
-    <MiniIconWrapper $rows={rows}>
+    <MiniIconWrapper $rows={rows} $size={size}>
       {grouped.map((g, i) => (
         <Command
           key={i}
@@ -153,10 +167,13 @@ export const Avatar = (
   const startedFollowingRef = useRef(false);
 
   // Get expiring buffs for timers
-  const expiringBuffs =
-    entity.buffs?.filter((buff) =>
-      buff.expiration && typeof buff.remainingDuration === "number"
-    ) ?? [];
+  const expiringBuffs = useMemo(
+    () =>
+      entity.buffs?.filter((buff) =>
+        buff.expiration && typeof buff.remainingDuration === "number"
+      ) ?? [],
+    [entity.buffs],
+  );
 
   const handleClick = () => {
     const activeOrder = getActiveOrder();
@@ -192,7 +209,7 @@ export const Avatar = (
   }, []);
 
   return (
-    <HStack $gap="sm">
+    <HStack $gap={1}>
       <Command
         role="button"
         name={entity.name ?? entity.id}
@@ -201,42 +218,42 @@ export const Avatar = (
         hideTooltip
         count={count}
         pressed={focused}
-        onClick={handleClick}
+        onMouseDown={handleClick}
         accentColor={ownerColor}
       />
-      <HStack $gap="xs">
+      <HStack $gap={1}>
         {expiringBuffs.map((buff, i) => (
           <VerticalBar
             key={i}
             value={buff.remainingDuration!}
             max={buff.totalDuration ?? buff.remainingDuration!}
-            color={theme.colors.gold}
+            color={theme.game.gold}
           />
         ))}
         {hasProgress && (
           <VerticalBar
             value={entity.progress!}
             max={1}
-            color={theme.colors.green}
+            color={theme.game.green}
           />
         )}
         {hasHealth && (
           <VerticalBar
             value={entity.health!}
             max={entity.maxHealth!}
-            color="#ff4444"
+            color={theme.danger.DEFAULT}
           />
         )}
         {hasMana && (
           <VerticalBar
             value={entity.mana!}
             max={entity.maxMana!}
-            color={theme.colors.mana}
+            color={theme.game.mana}
           />
         )}
       </HStack>
-      <Inventory key="inventory" entity={entity} />
-      <Buffs key="buffs" entity={entity} />
+      <Inventory key="inventory" entity={entity} rows={2} size={20} />
+      <Buffs key="buffs" entity={entity} rows={2} size={20} />
     </HStack>
   );
 };

@@ -1,102 +1,200 @@
 import { styled } from "styled-components";
-import { Card } from "@/components/layout/Card.tsx";
+import { Panel } from "@/components/Panel.tsx";
 
-export const DraftContainer = styled(Card)`
+export const DraftPanel = styled(Panel)`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
-  flex: 1;
-  overflow: auto;
+  overflow: hidden;
+  min-height: 0;
+  padding: ${({ theme }) => theme.space[4]};
+  gap: ${({ theme }) => theme.space[4]};
 `;
 
 export const DraftHeader = styled.div`
-  font-size: 1.1em;
-  font-weight: bold;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: ${({ theme }) => theme.space[3]};
+  border-bottom: 1px solid ${({ theme }) => theme.border.soft};
 `;
 
-export const DraftContent = styled.div`
+export const DraftTitle = styled.h2`
+  margin: 0;
+  font-size: ${({ theme }) => theme.text.lg};
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: ${({ theme }) => theme.ink.hi};
+`;
+
+export const PhaseTag = styled.span`
+  font-size: ${({ theme }) => theme.text.xs};
+  color: ${({ theme }) => theme.ink.lo};
+`;
+
+export const CaptainSlots = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${({ theme }) => theme.space[3]};
+`;
+
+export const CaptainSlot = styled.div<{ $filled: boolean }>`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.lg};
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: 10px ${({ theme }) => theme.space[3]};
+  border-radius: ${({ theme }) => theme.radius.md};
+  border: 1px dashed ${({ $filled, theme }) =>
+    $filled ? theme.accent.DEFAULT : theme.border.DEFAULT};
+  background: ${({ $filled, theme }) =>
+    $filled ? theme.accent.bg : theme.surface[0]};
+  min-height: 48px;
+  transition:
+    border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    background ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut};
+`;
+
+export const SlotLabel = styled.span`
+  font-size: ${({ theme }) => theme.text.xs};
+  color: ${({ theme }) => theme.ink.lo};
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+`;
+
+export const SlotName = styled.span`
+  font-size: ${({ theme }) => theme.text.md};
+  font-weight: 500;
+  color: ${({ theme }) => theme.ink.hi};
   flex: 1;
+`;
+
+export const PlayerPool = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
   min-height: 0;
-`;
-
-export const TeamColumn = styled.div`
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.md};
-  border-radius: ${({ theme }) => theme.borderRadius};
-  transition: background 200ms ease;
 `;
 
-export const TeamHeader = styled.div`
-  font-weight: bold;
-  text-align: center;
-  padding-bottom: ${({ theme }) => theme.spacing.sm};
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-`;
-
-export const PoolColumn = styled.div`
-  flex: 1.5;
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
-`;
-
-export const PoolHeader = styled.div`
-  font-weight: bold;
-  text-align: center;
-`;
-
-export const PlayerList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.xs};
-  flex: 1;
-  overflow: auto;
-`;
-
-export const PlayerCard = styled.div<{
+export const PoolPlayer = styled.button<{
+  $clickable: boolean;
   $selected?: boolean;
-  $clickable?: boolean;
 }>`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) =>
-    theme.spacing.md};
-  opacity: ${({ $selected, $clickable }) =>
-    $selected ? 1 : $clickable ? 0.8 : 0.7};
-  transition: opacity 100ms ease;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: 8px ${({ theme }) => theme.space[3]};
+  border-radius: ${({ theme }) => theme.radius.md};
+  border: 1px solid ${({ $selected, theme }) =>
+    $selected ? theme.accent.DEFAULT : "transparent"};
+  background: ${({ $selected, theme }) =>
+    $selected ? theme.accent.bg : theme.surface[2]};
+  color: ${({ theme }) => theme.ink.hi};
+  font: inherit;
+  font-size: ${({ theme }) => theme.text.md};
+  text-align: left;
+  cursor: ${({ $clickable }) => ($clickable ? "pointer" : "default")};
+  transition:
+    background ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut};
 
   &.hover {
-    opacity: ${({ $selected, $clickable }) =>
-      $selected || $clickable ? 1 : 0.7};
+    background: ${({ $clickable, theme }) =>
+      $clickable ? theme.surface[3] : theme.surface[2]};
+    border-color: ${({ $clickable, $selected, theme }) =>
+      $selected
+        ? theme.accent.DEFAULT
+        : $clickable
+        ? theme.border.DEFAULT
+        : "transparent"};
   }
+`;
+
+export const PlayerIcon = styled.div`
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
 `;
 
 export const PlayerName = styled.span`
   flex: 1;
-  text-align: left;
-`;
-
-export const IconWrapper = styled.div`
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
+  font-weight: 500;
 `;
 
 export const ButtonRow = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.md};
-  justify-content: center;
+  gap: ${({ theme }) => theme.space[2]};
 `;
 
-export const PhaseIndicator = styled.div`
-  text-align: center;
-  font-style: italic;
-  opacity: 0.8;
+export const DraftColumns = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: ${({ theme }) => theme.space[3]};
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+`;
+
+export const TeamColumn = styled.div<{ $active?: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: ${({ theme }) => theme.space[3]};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.surface[0]};
+  border: 1px solid ${({ $active, theme }) =>
+    $active ? theme.accent.DEFAULT : theme.border.soft};
+  overflow-y: auto;
+  min-height: 0;
+  transition: border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
+`;
+
+export const TeamHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding-bottom: ${({ theme }) => theme.space[2]};
+  margin-bottom: ${({ theme }) => theme.space[2]};
+  border-bottom: 1px solid ${({ theme }) => theme.border.soft};
+`;
+
+export const TeamLabel = styled.span`
+  font-size: ${({ theme }) => theme.text.sm};
+  font-weight: 600;
+  color: ${({ theme }) => theme.ink.hi};
+  flex: 1;
+`;
+
+export const PoolSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space[2]};
+`;
+
+export const PoolLabel = styled.div`
+  font-size: ${({ theme }) => theme.text.sm};
+  font-weight: 600;
+  color: ${({ theme }) => theme.ink.mid};
+`;
+
+export const TurnBanner = styled.div<{ $isYou: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ $isYou, theme }) =>
+    $isYou ? theme.accent.bg : theme.surface[2]};
+  border: 1px solid ${({ $isYou, theme }) =>
+    $isYou ? theme.accent.DEFAULT : theme.border.soft};
+  font-size: ${({ theme }) => theme.text.sm};
+  font-weight: 500;
+  color: ${({ $isYou, theme }) => $isYou ? theme.accent.hi : theme.ink.mid};
 `;

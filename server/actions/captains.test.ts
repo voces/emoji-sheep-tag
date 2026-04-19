@@ -58,8 +58,8 @@ describe("startCaptains", () => {
     clientContext.current = undefined;
   });
 
-  it("should start captains draft with 3+ players", () => {
-    const { lobby, host } = setupLobby(3);
+  it("should start captains draft with 4+ players", () => {
+    const { lobby, host } = setupLobby(4);
 
     startCaptains(host);
 
@@ -69,8 +69,8 @@ describe("startCaptains", () => {
     expect(lobby.captainsDraft?.picks).toEqual([[], []]);
   });
 
-  it("should not start with fewer than 3 players", () => {
-    const { lobby, host } = setupLobby(2);
+  it("should not start with fewer than 4 players", () => {
+    const { lobby, host } = setupLobby(3);
 
     startCaptains(host);
 
@@ -79,7 +79,7 @@ describe("startCaptains", () => {
   });
 
   it("should not start if not host", () => {
-    const { lobby, players } = setupLobby(3);
+    const { lobby, players } = setupLobby(4);
     const nonHost = players[1];
 
     startCaptains(nonHost);
@@ -89,13 +89,13 @@ describe("startCaptains", () => {
   });
 
   it("should not count observers toward player count", () => {
-    const { lobby, host, players } = setupLobby(4);
+    const { lobby, host, players } = setupLobby(5);
     players[1].team = "observer";
     players[2].team = "observer";
 
     startCaptains(host);
 
-    // Only 2 non-observers (host + player-3), so should not start
+    // Only 3 non-observers (host + player-3 + player-4), so should not start
     expect(lobby.status).toBe("lobby");
     expect(lobby.captainsDraft).toBeUndefined();
   });
@@ -159,18 +159,17 @@ describe("selectCaptain", () => {
     expect(lobby.captainsDraft?.captains).toEqual([]);
   });
 
-  it("should auto-draft when only 1 player remains after selecting captains (3 players)", () => {
-    const { lobby, host, players } = setupLobby(3);
+  it("should auto-draft when only 2 players remain after selecting captains (4 players)", () => {
+    const { lobby, host, players } = setupLobby(4);
     startCaptains(host);
 
     selectCaptain(host, { type: "selectCaptain", playerId: players[0].id });
     selectCaptain(host, { type: "selectCaptain", playerId: players[1].id });
 
-    // With 3 players and 2 captains, only 1 remains - should auto-draft
-    expect(lobby.captainsDraft?.phase).toBe("drafted");
-    expect(lobby.status).toBe("lobby");
-    // Captain 0 (sheep) should have the remaining player
-    expect(players[2].team).toBe("sheep");
+    // With 4 players and 2 captains, 2 remain - first captain picks 1, then auto-drafts last
+    expect(lobby.captainsDraft?.phase).toBe("drafting");
+    expect(lobby.captainsDraft?.currentPicker).toBe(0);
+    expect(lobby.captainsDraft?.picksThisTurn).toBe(1);
   });
 });
 

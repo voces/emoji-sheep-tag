@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { send } from "../../../messaging.ts";
@@ -13,9 +14,10 @@ import { showChatBoxVar } from "@/vars/showChatBox.ts";
 
 const ChatContainer = styled.div`
   position: absolute;
-  bottom: 195px;
-  left: 20px;
+  bottom: 220px;
+  left: ${({ theme }) => theme.space[4]};
   pointer-events: none;
+  font-size: ${({ theme }) => theme.text.lg};
 `;
 
 const ChatMessage = styled.div<{
@@ -23,6 +25,10 @@ const ChatMessage = styled.div<{
   $messageAge: number;
   $isNew: boolean;
 }>`
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  line-height: 1.4;
+  padding: 1px 0;
+
   ${({ $showChat, $messageAge, $isNew }) => {
     const isOpen = $showChat === "open" || $showChat === "dismissed";
     const ageInSeconds = $messageAge / 1000;
@@ -66,54 +72,68 @@ const ChatMessage = styled.div<{
 const InputWrapper = styled.div<{ $state: string }>`
   display: flex;
   align-items: center;
-  opacity: ${({ $state }) => ($state === "closed" ? 0 : 1)};
-  transition: all 100ms ease-in-out;
   width: 300px;
-
-  ${({ $state, theme }) =>
-    $state === "open" && `
-    background-color: color-mix(
-      in oklab,
-      ${theme.colors.background} 70%,
-      transparent
-    );
-    box-shadow: color-mix(in oklab, ${theme.colors.shadow} 70%, transparent)
-      1px 1px 4px 1px;
-  `} ${({ $state, theme }) =>
-    $state === "dismissed" && `
-    opacity: 0.5;
-    background-color: color-mix(
-      in oklab,
-      ${theme.colors.background} 20%,
-      transparent
-    );
-    box-shadow: color-mix(in oklab, ${theme.colors.shadow} 20%, transparent)
-      1px 1px 4px 1px;
-  `};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  margin-top: ${({ theme }) => theme.space[1]};
+  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};
+  border: 1px solid transparent;
+  pointer-events: ${({ $state }) => ($state === "closed" ? "none" : "auto")};
+  opacity: ${({ $state }) =>
+    $state === "closed" ? 0 : $state === "dismissed" ? 0.5 : 1};
+  background: ${({ $state, theme }) =>
+    $state === "open"
+      ? `color-mix(in oklab, ${theme.surface[1]} 85%, transparent)`
+      : $state === "dismissed"
+      ? `color-mix(in oklab, ${theme.surface[1]} 40%, transparent)`
+      : "transparent"};
+  backdrop-filter: ${({ $state }) =>
+    $state === "open"
+      ? "blur(8px)"
+      : $state === "dismissed"
+      ? "blur(4px)"
+      : "none"};
+  border-color: ${({ $state, theme }) =>
+    $state === "open" ? theme.border.soft : "transparent"};
+  box-shadow: ${({ $state, theme }) =>
+    $state === "open" ? theme.shadow.sm : "none"};
+  transition:
+    opacity ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    background ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut};
 `;
 
 const ChannelButton = styled.button<{ $state: string }>`
   background: none;
   border: none;
-  color: inherit;
-  font-size: inherit;
-  padding: 0 0.25em 0 4px;
+  color: ${({ theme }) => theme.ink.lo};
+  font-family: ${({ theme }) => theme.font.mono};
+  font-size: ${({ theme }) => theme.text.xs};
+  padding: 0 ${({ theme }) => theme.space[1]};
   white-space: nowrap;
-  pointer-events: ${({ $state }) => ($state === "open" ? "auto" : "none")};
-  opacity: 0.6;
+  cursor: pointer;
+  transition: color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
 
   &.hover {
-    opacity: 1;
+    color: ${({ theme }) => theme.ink.mid};
+  }
+
+  &.active {
+    color: ${({ theme }) => theme.ink.hi};
   }
 `;
 
 const ChatInput = styled.input`
   background: transparent;
-  color: inherit;
-  text-shadow: 0 0 2px ${({ theme }) => theme.colors.border};
-  transition: all 100ms ease-in-out;
+  color: ${({ theme }) => theme.ink.hi};
+  font-size: ${({ theme }) => theme.text.sm};
+  transition: all ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
   outline: none;
-  padding: 0 ${({ theme }) => theme.spacing.sm};
+  padding: 0 ${({ theme }) => theme.space[1]};
   border: 0;
   flex: 1;
 
@@ -124,6 +144,7 @@ const ChatInput = styled.input`
 `;
 
 export const Chat = () => {
+  const { t } = useTranslation();
   const chatLog = useReactiveVar(chatLogVar);
   const showChatBox = useReactiveVar(showChatBoxVar);
   const chatValue = useReactiveVar(chatValueVar);
@@ -201,14 +222,15 @@ export const Chat = () => {
       <InputWrapper $state={showChatBox}>
         <ChannelButton
           $state={showChatBox}
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
             toggleChatChannel();
             showChatBoxVar("open");
             inputRef.current?.focus();
           }}
-          title="Tab to switch"
+          title={t("hud.chatTabToSwitch")}
         >
-          [{chatChannel === "all" ? "All" : "Allies"}]
+          [{chatChannel === "all" ? t("hud.chatAll") : t("hud.chatAllies")}]
         </ChannelButton>
         <ChatInput
           autoFocus
@@ -225,7 +247,11 @@ export const Chat = () => {
             if (e.code !== "Enter") return;
             showChatBoxVar("sent");
           }}
-          onBlur={() => showChatBoxVar("dismissed")}
+          onBlur={() =>
+            setTimeout(() => {
+              if (showChatBoxVar() === "open") return;
+              showChatBoxVar("dismissed");
+            })}
         />
       </InputWrapper>
     </ChatContainer>

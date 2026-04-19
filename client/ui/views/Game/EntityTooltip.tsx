@@ -12,13 +12,17 @@ const HOVER_DELAY_MS = 500;
 
 const Tooltip = styled.div`
   position: fixed;
-  background-color: ${({ theme }) => theme.colors.background};
-  box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
-  padding: 0 ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => theme.surface.scrim};
+  backdrop-filter: blur(12px);
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  box-shadow: ${({ theme }) => theme.shadow.md};
+  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};
+  font-size: ${({ theme }) => theme.text.sm};
   white-space: nowrap;
   pointer-events: none;
   z-index: 9999;
-  transform: translate(-50%, calc(-100% - 24px));
+  transform: translate(-50%, calc(-100% - ${({ theme }) => theme.space[6]}));
 `;
 
 const OwnerName = styled.span<{ $color: string }>`
@@ -26,7 +30,7 @@ const OwnerName = styled.span<{ $color: string }>`
 `;
 
 const TrueOwner = styled.span`
-  opacity: 0.7;
+  color: ${({ theme }) => theme.ink.lo};
 `;
 
 const getOwnerDisplay = (entity: Entity) => {
@@ -56,7 +60,9 @@ const worldToScreen = (entity: Entity): { x: number; y: number } | null => {
 
 export const EntityTooltip = () => {
   const [visibleEntity, setVisibleEntity] = useState<Entity | null>(null);
-  const [, forceUpdate] = useState(0);
+  const [screenPos, setScreenPos] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const hoverTimerRef = useRef<number | null>(null);
   const currentEntityRef = useRef<Entity | null>(null);
 
@@ -82,6 +88,7 @@ export const EntityTooltip = () => {
       if (targetEntity !== currentEntityRef.current) {
         currentEntityRef.current = targetEntity;
         setVisibleEntity(null);
+        setScreenPos(null);
 
         if (hoverTimerRef.current) {
           clearTimeout(hoverTimerRef.current);
@@ -102,9 +109,21 @@ export const EntityTooltip = () => {
     mouse.addEventListener("intersectsChange", updateTooltipState);
 
     // Periodic update for position and suppression state changes
+    let lastX = 0;
+    let lastY = 0;
     const interval = setInterval(() => {
       updateTooltipState();
-      forceUpdate((n) => n + 1);
+      const entity = currentEntityRef.current;
+      if (entity) {
+        const pos = worldToScreen(entity);
+        if (
+          pos && (Math.abs(pos.x - lastX) > 1 || Math.abs(pos.y - lastY) > 1)
+        ) {
+          lastX = pos.x;
+          lastY = pos.y;
+          setScreenPos(pos);
+        }
+      }
     }, 200);
 
     return () => {
@@ -114,24 +133,22 @@ export const EntityTooltip = () => {
     };
   }, []);
 
-  if (!visibleEntity) return null;
+  if (!visibleEntity || !screenPos) return null;
 
   const ownerInfo = getOwnerDisplay(visibleEntity);
   if (!ownerInfo) return null;
 
   const { owner, trueOwner } = ownerInfo;
-  const screenPos = worldToScreen(visibleEntity);
-  if (!screenPos) return null;
 
   return (
     <Tooltip style={{ left: screenPos.x, top: screenPos.y }}>
-      <OwnerName $color={owner.playerColor ?? "#FFFFFF"}>
+      <OwnerName $color={owner.playerColor ?? "inherit"}>
         {owner.name}
       </OwnerName>
       {trueOwner && (
         <TrueOwner>
           {" "}
-          (<OwnerName $color={trueOwner.playerColor ?? "#FFFFFF"}>
+          (<OwnerName $color={trueOwner.playerColor ?? "inherit"}>
             {trueOwner.name}
           </OwnerName>)
         </TrueOwner>

@@ -22,25 +22,25 @@ const FlashingCommandButton = styled(CommandButton)`
 `;
 
 const ShortcutStyle = styled.span`
-  color: ${({ theme }) => theme.colors.gold};
+  color: ${({ theme }) => theme.game.gold};
 `;
 
 const GoldContainer = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space[1]};
   align-items: center;
-  color: ${({ theme }) => theme.colors.gold};
+  color: ${({ theme }) => theme.game.gold};
 `;
 
 const ManaContainer = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space[1]};
   align-items: center;
-  color: ${({ theme }) => theme.colors.mana};
+  color: ${({ theme }) => theme.game.mana};
 `;
 
 const Hr = styled.hr`
-  margin: 4px 0;
+  margin: ${({ theme }) => theme.space[1]} 0;
   opacity: 0.5;
 `;
 
@@ -49,27 +49,38 @@ const Description = styled.div`
 `;
 
 const AutocastHint = styled.div`
-  margin-top: 8px;
+  margin-top: ${({ theme }) => theme.space[2]};
   opacity: 0.6;
   line-height: 1.25;
 `;
 
 const IconContainer = styled.span`
-  width: 24px;
-  height: 24px;
+  width: 14px;
+  height: 14px;
   display: inline-block;
 `;
 
-const CooldownOverlay = styled.div<{ $progress: number }>`
+const CooldownOverlay = styled.div.attrs<{ $progress: number }>((props) => ({
+  style: {
+    "--cd": `${props.$progress * 360}deg`,
+  } as React.CSSProperties,
+}))`
+  @property --cd {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+  }
+
   position: absolute;
   inset: 0;
   pointer-events: none;
+  border-radius: inherit;
   background: conic-gradient(
     from 0deg,
-    transparent ${({ $progress }) => $progress * 360}deg,
-    rgba(0, 0, 0, 0.7) ${({ $progress }) => $progress * 360}deg
+    transparent var(--cd),
+    rgba(0, 0, 0, 0.7) var(--cd)
   );
-  border-radius: inherit;
+  transition: --cd 80ms linear;
 `;
 
 export const Command = ({

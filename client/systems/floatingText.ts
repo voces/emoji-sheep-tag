@@ -18,7 +18,7 @@ const createTextTexture = (text: string, color: string) => {
   context.clearRect(0, 0, canvas.width, canvas.height);
 
   // Configure text
-  context.font = `bold 32px ${theme.fontFamily.sans}`;
+  context.font = `bold 32px ${theme.font.sans}`;
   context.fillStyle = color;
   context.textAlign = "center";
   context.textBaseline = "middle";

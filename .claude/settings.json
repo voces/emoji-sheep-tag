@@ -3,7 +3,18 @@
     "allow": [
       "Bash(git -C /home/verit/emoji-sheep-tag show ai3:server/systems/ai/index.ts)",
       "Bash(git -C /home/verit/emoji-sheep-tag show ai3:server/systems/ai/sheep/index.ts)",
-      "Read(//home/verit/.claude/plans/**)"
+      "Read(//home/verit/.claude/plans/**)",
+      "WebFetch(domain:d8fd9157-319f-4b40-88c5-0a12294bae66.claudeusercontent.com)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Read(//mnt/c/Users/verit/Downloads/**)",
+      "Bash(tar xzf:*)",
+      "Bash(cp \"/mnt/c/Users/verit/Downloads/est-handoff.tar.gz\" /tmp/)",
+      "Bash(tar -tzf /tmp/est-handoff.tar.gz)",
+      "Bash(tar -xzf /tmp/est-handoff.tar.gz -C /tmp/)",
+      "Read(//home/verit/.local/share/**)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
     ]
   }
 }

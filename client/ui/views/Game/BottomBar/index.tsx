@@ -1,27 +1,30 @@
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { editorVar } from "@/vars/editor.ts";
-import { CommandButton } from "@/components/Command.tsx";
 import { Minimap } from "@/components/Minimap/index.tsx";
 import { ActionBar } from "./ActionBar.tsx";
 import { SlotBar } from "./SlotBar.tsx";
 import { PrimaryPortrait } from "./PrimaryPortrait.tsx";
-import { Card } from "@/components/layout/Card.tsx";
 import { SelectionPreview } from "./SelectionPreview.tsx";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { useSlotBarVisible } from "./useSlotBarVisible.ts";
 
-const Wrapper = styled(Card)<
-  { $preferredActionsPerRow: number; $slotOffset: number }
->`
+// Minimap panel: 180 + 2*4pad + 2*1border = 190
+// Selected panel: 92portrait + 134stats + 8gap + 2*8pad + 2*1border = 252
+// Action panel overhead: 2*4pad + 2*1border = 10
+// Action cell: 44px, gap: 3px → action grid = 44*N + 3*(N-1) = 47N - 3
+// Panel gaps: 8px each
+// Slot panel: 44*2 + 3 + 10 = 101
+const FIXED_WIDTH = 190 + 8 + 252 + 8 + 10 + 8; // everything except action cells and slots
+
+const Wrapper = styled.div<{
+  $preferredActionsPerRow: number;
+  $slotOffset: number;
+}>`
   position: absolute;
-  bottom: 0;
+  bottom: ${({ theme }) => theme.space[2]};
   --preferredWidth: ${({ $preferredActionsPerRow, $slotOffset }) =>
-    `calc((506px + ${
-      $preferredActionsPerRow ? 8 : 0
-    }px + 64px * ${$preferredActionsPerRow} + 4px * ${
-      Math.max($preferredActionsPerRow - 1, 0)
-    } + ${$slotOffset}px))`};
+    `${FIXED_WIDTH + 47 * $preferredActionsPerRow - 3 + $slotOffset}px`};
   left: calc(50% - var(--preferredWidth) / 2);
   transform: translateX(
     min(
@@ -32,19 +35,30 @@ const Wrapper = styled(Card)<
       )
     )
   );
-  padding: 12px 12px 8px;
-
   display: flex;
-  gap: 8px;
+  gap: ${({ theme }) => theme.space[2]};
+  align-items: flex-end;
+  pointer-events: none;
 
   &:empty {
     display: none;
   }
 `;
 
-const MinimapContainer = styled(CommandButton)`
-  width: 200px;
-  height: 200px;
+const HudPanel = styled.div`
+  background: ${({ theme }) => theme.surface.scrim};
+  backdrop-filter: blur(12px);
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: ${({ theme }) => theme.space[1]};
+  box-shadow: ${({ theme }) => theme.shadow.md};
+  pointer-events: auto;
+`;
+
+const SelectedPanel = styled(HudPanel)`
+  display: flex;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: ${({ theme }) => theme.space[2]};
 `;
 
 export const BottomBar = () => {
@@ -55,21 +69,28 @@ export const BottomBar = () => {
   return (
     <Wrapper
       $preferredActionsPerRow={preferredActionsPerRow}
-      $slotOffset={slotBarVisible ? 140 : 0}
+      $slotOffset={slotBarVisible ? 101 + 8 : 0}
     >
       {!editor && (
-        <MinimapContainer role="button">
-          <Minimap style={{ width: 192, height: 192 }} />
-        </MinimapContainer>
+        <HudPanel>
+          <Minimap style={{ width: 180, height: 180 }} />
+        </HudPanel>
       )}
 
-      <PrimaryPortrait />
+      <SelectedPanel>
+        <PrimaryPortrait />
+        <SelectionPreview />
+      </SelectedPanel>
 
-      <SelectionPreview />
+      <HudPanel>
+        <ActionBar />
+      </HudPanel>
 
-      <ActionBar />
-
-      <SlotBar />
+      {slotBarVisible && (
+        <HudPanel>
+          <SlotBar />
+        </HudPanel>
+      )}
     </Wrapper>
   );
 };

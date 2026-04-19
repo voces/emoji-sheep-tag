@@ -4,20 +4,20 @@ import { useTooltip } from "@/hooks/useTooltip.tsx";
 
 const StyledButton = styled.button`
   border: 0;
-  background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 10));
-  color: ${({ theme }) => theme.colors.border};
-  padding: 0 ${({ theme }) => theme.spacing.md};
+  background: ${({ theme }) => theme.surface[2]};
+  color: ${({ theme }) => theme.ink.hi};
+  padding: 0 ${({ theme }) => theme.space[2]};
   cursor: pointer;
   outline: none;
 
   &.hover:not([disabled]) {
-    background: ${({ theme }) => theme.colors.body};
-    box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
+    background: ${({ theme }) => theme.surface[3]};
+    box-shadow: ${({ theme }) => theme.shadow.sm};
   }
 
   &:disabled {
-    background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 30));
-    color: hsl(from ${({ theme }) => theme.colors.border} h s calc(l + 30));
+    background: ${({ theme }) => theme.surface[1]};
+    color: ${({ theme }) => theme.ink.mute};
     cursor: not-allowed;
   }
 `;

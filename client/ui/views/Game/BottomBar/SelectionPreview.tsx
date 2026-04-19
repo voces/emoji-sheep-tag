@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { selectionFocusVar } from "@/vars/selectionFocus.ts";
 import { useSet } from "@/hooks/useSet.ts";
@@ -20,17 +21,18 @@ import { useTooltip } from "@/hooks/useTooltip.tsx";
 
 const StatsContainer = styled(VStack)`
   min-width: 134px;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space[1]};
 `;
 
 const AttackSpeedStat = ({ attackSpeed }: { attackSpeed: number }) => {
+  const { t } = useTranslation();
   const { tooltipContainerProps, tooltip } = useTooltip(
-    "Cooldown between attacks (seconds)",
+    t("hud.attackCooldownTooltip"),
   );
 
   return (
-    <HStack $align="center" $gap="sm" {...tooltipContainerProps}>
-      <span style={{ width: 29, height: 29 }}>
+    <HStack $align="center" $gap={1} {...tooltipContainerProps}>
+      <span style={{ width: 26, height: 26 }}>
         <SvgIcon icon="claw" />
       </span>
       <span>{attackSpeed}</span>
@@ -83,8 +85,8 @@ const UnitStats = () => {
       </div>
 
       {typeof attackDamage === "number" && (
-        <HStack $align="center" $gap="sm">
-          <span style={{ width: 29, height: 29 }}>
+        <HStack $align="center" $gap={1}>
+          <span style={{ width: 26, height: 26 }}>
             <SvgIcon icon="sword" />
           </span>
           <span>{attackDamage}</span>
@@ -94,8 +96,8 @@ const UnitStats = () => {
         <AttackSpeedStat attackSpeed={attackSpeed} />
       )}
       {typeof movementSpeed === "number" && (
-        <HStack $align="center" $gap="sm">
-          <span style={{ width: 29, height: 29 }}>
+        <HStack $align="center" $gap={1}>
+          <span style={{ width: 26, height: 26 }}>
             <SvgIcon icon="runningShoes" />
           </span>
           <span>{movementSpeed}</span>

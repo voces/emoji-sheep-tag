@@ -7,29 +7,32 @@ const marchingAnts = keyframes`
 
 export const CommandButton = styled.div`
   position: relative;
-  width: 64px;
-  height: 64px;
-  border: 4px outset ${({ theme }) => theme.colors.body};
-  background-color: ${({ theme }) => theme.colors.shadow};
-  filter: brightness(80%);
-  transition: filter 100ms ease-in 100ms;
+  width: 44px;
+  height: 44px;
+  background: ${({ theme }) => theme.surface[2]};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  overflow: hidden;
+  transition: all ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
 
   &[aria-pressed="true"] {
-    filter: brightness(100%);
-    transition: filter 100ms ease-out 0ms;
+    background: ${({ theme }) => theme.surface[3]};
+    border-color: ${({ theme }) => theme.accent.DEFAULT};
   }
 
   &[aria-disabled="true"] {
-    border-color: #bbb;
-    filter: saturate(0.3) brightness(0.7);
+    opacity: 0.4;
   }
 
   &.hover[role="button"]:not([aria-disabled="true"]):not([data-autocast]) {
-    border-style: inset;
+    background: ${({ theme }) => theme.surface[3]};
+    border-color: ${({ theme }) => theme.accent.DEFAULT};
+    transform: translateY(-1px);
   }
 
   &[data-autocast] {
-    border: 4px dashed gold;
+    border: 1px dashed ${({ theme }) => theme.game.gold};
   }
 
   &[data-autocast="enabled"] {
@@ -38,32 +41,44 @@ export const CommandButton = styled.div`
   &[data-autocast="enabled"]::before {
     content: "";
     position: absolute;
-    inset: -4px;
+    inset: -2px;
     background:
-      repeating-linear-gradient(90deg, gold 0 8px, transparent 8px 12px),
-      repeating-linear-gradient(180deg, gold 0 8px, transparent 8px 12px),
-      repeating-linear-gradient(90deg, gold 0 8px, transparent 8px 12px),
-      repeating-linear-gradient(180deg, gold 0 8px, transparent 8px 12px);
-    background-size: 100% 4px, 4px 100%, 100% 4px, 4px 100%;
+      repeating-linear-gradient(90deg, gold 0 6px, transparent 6px 10px),
+      repeating-linear-gradient(180deg, gold 0 6px, transparent 6px 10px),
+      repeating-linear-gradient(90deg, gold 0 6px, transparent 6px 10px),
+      repeating-linear-gradient(180deg, gold 0 6px, transparent 6px 10px);
+    background-size: 100% 2px, 2px 100%, 100% 2px, 2px 100%;
     background-position: 0 0, 100% 0, 100% 100%, 0 100%;
     background-repeat: no-repeat;
     animation: ${marchingAnts} 0.4s linear infinite;
     pointer-events: none;
+    border-radius: inherit;
   }
 `;
 
-export const CommandShortcut = styled.kbd`
+const CommandBadge = styled.span`
   position: absolute;
-  top: 0;
-  right: 2px;
-  line-height: 1;
-  font-size: 80%;
+  bottom: 2px;
+  font-family: ${({ theme }) => theme.font.mono};
+  font-size: 9px;
+  background: ${({ theme }) => theme.surface[0]};
+  border-radius: 2px;
+  padding: 0 3px;
+  line-height: 14px;
+  height: 14px;
+  letter-spacing: 0.02em;
 `;
 
-export const CommandCount = styled.span`
-  position: absolute;
-  bottom: 0;
+export const CommandShortcut = styled(CommandBadge).attrs({ as: "kbd" })`
   right: 2px;
-  line-height: 1;
-  font-size: 80%;
+  color: ${({ theme }) => theme.ink.mid};
+
+  [aria-disabled="true"] > & {
+    color: ${({ theme }) => theme.ink.mute};
+  }
+`;
+
+export const CommandCount = styled(CommandBadge)`
+  left: 2px;
+  color: ${({ theme }) => theme.ink.hi};
 `;

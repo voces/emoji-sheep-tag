@@ -20,6 +20,8 @@ export const UPGRADE_REFUND_RATE = 0.85;
 
 export const BUILD_REFUND_RATE = 0.8;
 
+export const DEFAULT_VIP_HANDICAP = 0.8;
+
 export const PATHING_NONE = 0;
 export const PATHING_WALKABLE = 1;
 export const PATHING_BUILDABLE = 2;

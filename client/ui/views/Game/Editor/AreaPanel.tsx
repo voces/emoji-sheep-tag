@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { send } from "../../../../messaging.ts";
 import { styled } from "styled-components";
 import { onMapChange } from "@/shared/map.ts";
-import { theme } from "../../../theme.ts";
 
 const MinimapContainer = styled.div`
   position: relative;
@@ -14,14 +13,14 @@ const ArrowButton = styled.button<{ $position: string }>`
   position: absolute;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 16px;
+  color: ${({ theme }) => theme.ink.mid};
+  font-size: ${({ theme }) => theme.text.lg};
   cursor: pointer;
   padding: 4px;
   line-height: 1;
 
   &.hover {
-    color: rgba(255, 255, 255, 1);
+    color: ${({ theme }) => theme.ink.hi};
   }
 
   ${(props) => {
@@ -65,9 +64,9 @@ const ArrowButton = styled.button<{ $position: string }>`
 `;
 
 const InfoDisplay = styled.div`
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  padding: 8px 8px 0 8px;
+  font-size: ${({ theme }) => theme.text.xs};
+  color: ${({ theme }) => theme.ink.lo};
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[2]} 0;
   text-align: center;
 `;
 
@@ -114,7 +113,7 @@ export const AreaPanel = () => {
   };
 
   return (
-    <Panel style={{ overflow: "visible", padding: theme.spacing.lg }}>
+    <Panel style={{ overflow: "visible" }}>
       <MinimapContainer>
         <Minimap />
         {/* Top terrain arrows */}

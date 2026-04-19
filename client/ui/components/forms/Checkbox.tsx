@@ -23,19 +23,19 @@ const CheckboxIconContainer = styled.div<
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  color: ${({ theme }) => theme.colors.body};
+  transition: all ${({ theme }) => theme.motion.med} ${({ theme }) =>
+    theme.motion.easeOut};
+  color: ${({ theme }) => theme.ink.hi};
   width: ${({ $size }) => `${$size}px`};
   height: ${({ $size }) => `${$size}px`};
 
   svg .box {
-    fill: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 12));
+    fill: ${({ theme }) => theme.surface[2]};
   }
 
   &.hover {
     svg .box {
-      fill: ${({ theme, $disabled }) =>
-        $disabled ? "" : `hsl(from ${theme.colors.body} h s calc(l - 5))`};
+      fill: ${({ theme, $disabled }) => $disabled ? "" : theme.surface[3]};
     }
   }
 `;

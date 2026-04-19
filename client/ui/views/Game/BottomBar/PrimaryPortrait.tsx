@@ -26,12 +26,12 @@ import { collections } from "../../../../systems/models.ts";
 import { PortraitCanvas } from "@/components/game/PortraitCanvas.tsx";
 
 const PrimaryPortraitContainer = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space[1]};
 `;
 
 const StyledCommand = styled(Command)`
-  width: calc(64px * 2 + 4px);
-  height: calc(64px * 2 + 4px);
+  width: 92px;
+  height: 92px;
 `;
 
 const Bars = () => {
@@ -63,7 +63,7 @@ const Bars = () => {
       key: "progress",
       value: (selection.progress ?? 1) * (selection.completionTime ?? 1),
       max: 1 * (selection.completionTime ?? 1),
-      color: theme.colors.green,
+      color: theme.game.green,
       displayValues: true,
     });
   }
@@ -74,39 +74,40 @@ const Bars = () => {
       key: `buff-${i}`,
       value: buff.remainingDuration!,
       max: buff.totalDuration ?? buff.remainingDuration!,
-      color: theme.colors.gold,
+      color: theme.game.gold,
       displayValues: true,
     });
   });
 
-  // Add health bar if entity has health OR we'd only have ≤1 bar total (including potential mana bar)
-  const showHealth = hasHealth || (bars.length + (hasMana ? 1 : 0) <= 1);
-  if (showHealth) {
+  if (hasHealth) {
     bars.push({
       key: "health",
       value: selection.health ?? 1,
       max: selection.maxHealth ?? selection.health ?? 1,
-      color: "#ff4444",
+      color: theme.danger.DEFAULT,
       displayValues: !!selection.maxHealth && !!selection.health,
     });
   }
 
-  // Add mana bar if entity has mana OR we would only have 1 bar otherwise
-  const showMana = hasMana || bars.length <= 1;
-  if (showMana) {
+  if (hasMana) {
     bars.push({
       key: "mana",
       value: selection.mana ?? 0,
       max: selection.maxMana ?? selection.mana ?? 0,
-      color: theme.colors.mana,
+      color: theme.game.mana,
       displayValues: !!selection.maxMana && !!selection.mana,
     });
   }
 
-  const height = (64 - (bars.length - 1) * 4) / bars.length;
+  if (bars.length === 0) return null;
+
+  const height = Math.min(
+    20,
+    Math.floor((44 - (bars.length - 1) * 4) / bars.length),
+  );
 
   return (
-    <VStack $gap="sm" key={selection.id}>
+    <VStack $gap={1} key={selection.id}>
       {bars.map((bar) => (
         <HorizontalBar
           key={bar.key}
@@ -181,7 +182,7 @@ export const PrimaryPortrait = () => {
         iconProps={iconProps}
         name={selection?.name ?? selection?.id ?? ""}
         hideTooltip
-        onClick={handleClick}
+        onMouseDown={handleClick}
       >
         {hasPortraitCamera && selection
           ? <PortraitCanvas entity={selection} />

@@ -1,5 +1,7 @@
 import { styled } from "styled-components";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Download, Trash2, Upload } from "lucide-react";
 import {
   deleteLocalMap,
   exportLocalMapToFile,
@@ -10,8 +12,6 @@ import {
   saveLocalMap,
 } from "../../../storage/localMaps.ts";
 import { Button } from "@/components/forms/Button.tsx";
-import { HStack } from "@/components/layout/Layout.tsx";
-import { Dialog } from "@/components/layout/Dialog.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
 import {
   formatValidationError,
@@ -19,43 +19,119 @@ import {
 } from "@/shared/map/validation.ts";
 import { SettingsPanelContainer, SettingsPanelTitle } from "./commonStyles.tsx";
 
-const MapsList = styled.div`
+const MapsHeader = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.sm};
+  align-items: center;
+  justify-content: space-between;
 `;
 
-const MapItem = styled.div`
+const ImportButton = styled(Button)`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: 10px 14px;
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.md};
+  font-size: ${({ theme }) => theme.text.md};
+  font-weight: 500;
+  &.hover:not([disabled]) {
+    border-color: ${({ theme }) => theme.border.hi};
+  }
+`;
+
+const MapList = styled.div`
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  border-radius: ${({ theme }) => theme.radius.md};
+  overflow: hidden;
+`;
+
+const MapRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-radius: 2px;
+  padding: 10px 14px;
+  border-bottom: 1px solid ${({ theme }) => theme.border.soft};
+  font-size: ${({ theme }) => theme.text.sm};
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.hover {
+    background: ${({ theme }) => theme.surface[2]};
+  }
 `;
 
 const MapInfo = styled.div`
   display: flex;
   flex-direction: column;
+  gap: 2px;
 `;
 
 const MapName = styled.span`
-  font-size: 15px;
+  color: ${({ theme }) => theme.ink.hi};
 `;
 
 const MapMeta = styled.span`
-  font-size: 12px;
-  opacity: 0.6;
+  font-size: ${({ theme }) => theme.text.xs};
+  color: ${({ theme }) => theme.ink.lo};
 `;
 
 const MapActions = styled.div`
   display: flex;
-  gap: ${({ theme }) => theme.spacing.sm};
+  gap: ${({ theme }) => theme.space[1]};
+`;
+
+const ActionButton = styled(Button)`
+  padding: 4px 10px;
+  min-height: 28px;
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  font-size: ${({ theme }) => theme.text.sm};
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &.hover:not([disabled]) {
+    border-color: ${({ theme }) => theme.border.hi};
+  }
+`;
+
+const DangerButton = styled(ActionButton)`
+  color: ${({ theme }) => theme.danger.DEFAULT};
+
+  &.hover:not([disabled]) {
+    background: ${({ theme }) => theme.danger.bg};
+  }
+`;
+
+const ConfirmRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[3]};
+  padding: 10px 14px;
+  min-height: 56px;
+  background: ${({ theme }) => theme.danger.bg};
+  border-bottom: 1px solid ${({ theme }) => theme.border.soft};
+  font-size: ${({ theme }) => theme.text.sm};
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const ConfirmLabel = styled.span`
+  flex: 1;
+  color: ${({ theme }) => theme.danger.DEFAULT};
+  font-weight: 500;
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: ${({ theme }) => theme.spacing.lg};
-  opacity: 0.6;
-  font-size: 14px;
+  padding: ${({ theme }) => theme.space[6]};
+  color: ${({ theme }) => theme.ink.lo};
+  font-size: ${({ theme }) => theme.text.sm};
+  line-height: 1.55;
 `;
 
 const formatTimestamp = (timestamp: number): string => {
@@ -64,6 +140,7 @@ const formatTimestamp = (timestamp: number): string => {
 };
 
 export const Maps = () => {
+  const { t } = useTranslation();
   const [localMaps, setLocalMaps] = useState<LocalMapMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [mapToDelete, setMapToDelete] = useState<
@@ -165,60 +242,64 @@ export const Maps = () => {
 
   return (
     <SettingsPanelContainer>
-      <SettingsPanelTitle>Custom Maps</SettingsPanelTitle>
-
-      <Button onClick={handleImport}>
-        Import Map from File
-      </Button>
+      <MapsHeader>
+        <SettingsPanelTitle>{t("settings.mapsTitle")}</SettingsPanelTitle>
+        <ImportButton onClick={handleImport}>
+          <Upload size={14} />
+          {t("settings.importMap")}
+        </ImportButton>
+      </MapsHeader>
 
       {loading
-        ? <EmptyState>Loading maps...</EmptyState>
+        ? <EmptyState>{t("settings.loadingMaps")}</EmptyState>
         : localMaps.length === 0
-        ? (
-          <EmptyState>
-            No custom maps saved. Use the editor to create and save maps.
-          </EmptyState>
-        )
+        ? <EmptyState>{t("settings.noMaps")}</EmptyState>
         : (
-          <MapsList>
-            {localMaps.map((map) => (
-              <MapItem key={map.id}>
-                <MapInfo>
-                  <MapName>{map.name}</MapName>
-                  <MapMeta>
-                    By {map.author} • {formatTimestamp(map.timestamp)}
-                  </MapMeta>
-                </MapInfo>
-                <MapActions>
-                  <Button onClick={() => handleExport(map.id, map.name)}>
-                    Export
-                  </Button>
-                  <Button onClick={() => handleDelete(map.id, map.name)}>
-                    Delete
-                  </Button>
-                </MapActions>
-              </MapItem>
-            ))}
-          </MapsList>
+          <MapList>
+            {localMaps.map((map) =>
+              mapToDelete?.id === map.id
+                ? (
+                  <ConfirmRow key={map.id}>
+                    <ConfirmLabel>
+                      {t("settings.confirmDelete", { name: map.name })}
+                    </ConfirmLabel>
+                    <MapActions>
+                      <DangerButton onClick={confirmDelete}>
+                        {t("settings.deleteMap")}
+                      </DangerButton>
+                      <ActionButton onClick={cancelDelete}>
+                        {t("settings.cancel")}
+                      </ActionButton>
+                    </MapActions>
+                  </ConfirmRow>
+                )
+                : (
+                  <MapRow key={map.id}>
+                    <MapInfo>
+                      <MapName>{map.name}</MapName>
+                      <MapMeta>
+                        {map.author} · {formatTimestamp(map.timestamp)}
+                      </MapMeta>
+                    </MapInfo>
+                    <MapActions>
+                      <ActionButton
+                        onClick={() => handleExport(map.id, map.name)}
+                      >
+                        <Download size={12} />
+                        {t("settings.downloadMap")}
+                      </ActionButton>
+                      <DangerButton
+                        onClick={() => handleDelete(map.id, map.name)}
+                      >
+                        <Trash2 size={12} />
+                        {t("settings.deleteMap")}
+                      </DangerButton>
+                    </MapActions>
+                  </MapRow>
+                )
+            )}
+          </MapList>
         )}
-
-      {mapToDelete && (
-        <Dialog>
-          <SettingsPanelContainer>
-            <div>
-              Delete "{mapToDelete.name}"? This cannot be undone.
-            </div>
-            <HStack $justifyContent="flex-end">
-              <Button onClick={confirmDelete}>
-                Delete
-              </Button>
-              <Button onClick={cancelDelete}>
-                Cancel
-              </Button>
-            </HStack>
-          </SettingsPanelContainer>
-        </Dialog>
-      )}
     </SettingsPanelContainer>
   );
 };

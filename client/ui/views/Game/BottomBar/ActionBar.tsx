@@ -30,7 +30,7 @@ import { shortcutSettingsVar } from "@/vars/shortcutSettings.ts";
 const Row = styled(HStack)<{ $preferredActionsPerRow: number }>`
   flex: 1;
   min-width: ${({ $preferredActionsPerRow }) =>
-    `calc(64px * ${$preferredActionsPerRow} + 4px * ${
+    `calc(44px * ${$preferredActionsPerRow} + 3px * ${
       Math.max($preferredActionsPerRow - 1, 0)
     })`};
 `;
@@ -370,14 +370,17 @@ export const ActionBar = () => {
     )
     : [];
 
-  const rows = actionsToRows(executableActions, preferredActionsPerRow);
+  const rows = useMemo(
+    () => actionsToRows(executableActions, preferredActionsPerRow),
+    [executableActions, preferredActionsPerRow],
+  );
 
   return (
-    <VStack role="toolbar" $gap="sm">
+    <VStack role="toolbar" $gap={1}>
       {rows.map((r, y) => (
         <Row
           key={y}
-          $gap="sm"
+          $gap={1}
           $preferredActionsPerRow={preferredActionsPerRow}
         >
           {r.map((action, x) =>

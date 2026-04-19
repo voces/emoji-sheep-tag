@@ -1,24 +1,49 @@
 import { styled } from "styled-components";
-import { HStack, VStack } from "@/components/layout/Layout.tsx";
-import { Input } from "@/components/forms/Input.tsx";
-import { Checkbox } from "@/components/forms/Checkbox.tsx";
 import { useEffect, useState } from "react";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
+import { MonoInput } from "@/components/forms/TextInput.tsx";
+import { RotateCcw } from "lucide-react";
 
-const SettingsRow = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.xs};
+const Field = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 `;
 
-const SettingsLabel = styled.label`
-  font-size: 12px;
-  font-weight: bold;
+const FieldLabel = styled.label`
+  display: block;
+  font-size: ${({ theme }) => theme.text.xs};
+  color: ${({ theme }) => theme.ink.lo};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
 `;
 
-const SettingsInput = styled(Input)`
-  &:disabled {
-    background-color: #f5f5f5;
-    color: #666;
-    cursor: not-allowed;
+const InputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+const ResetButton = styled.button`
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: ${({ theme }) => theme.radius.xs};
+  border: none;
+  background: ${({ theme }) => theme.surface[3]};
+  color: ${({ theme }) => theme.ink.lo};
+  cursor: pointer;
+  padding: 0;
+  transition: color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
+
+  &.hover {
+    color: ${({ theme }) => theme.ink.hi};
   }
 `;
 
@@ -32,8 +57,8 @@ type NumericSettingInputProps = {
   defaultValue: string;
   disabled: boolean;
   onChange: (value: number) => void;
-  autoChecked?: boolean;
-  onAutoChange?: (checked: boolean) => void;
+  isAuto?: boolean;
+  onResetToAuto?: () => void;
   tooltip?: React.ReactNode;
 };
 
@@ -47,8 +72,8 @@ export const NumericSettingInput = ({
   defaultValue,
   disabled,
   onChange,
-  autoChecked,
-  onAutoChange,
+  isAuto,
+  onResetToAuto,
   tooltip: tooltipContent,
 }: NumericSettingInputProps) => {
   const [localValue, setLocalValue] = useState(value.toString());
@@ -63,56 +88,55 @@ export const NumericSettingInput = ({
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     if (e.currentTarget.value === "") {
       setLocalValue(defaultValue);
-      onChange(parseValue(defaultValue));
+      if (parseValue(defaultValue) !== value) {
+        onChange(parseValue(defaultValue));
+      }
     } else {
       const parsed = parseValue(e.currentTarget.value);
       const usable = Number.isFinite(parsed)
         ? parsed
         : parseValue(defaultValue);
       const clamped = Math.max(min, Math.min(max, usable));
-      // Round to a multiple of `step` so 1/16 increments (etc.) are preserved
-      // instead of being truncated to 2 decimals.
       const rounded = step === 1 ? clamped : Math.round(clamped / step) * step;
       setLocalValue(rounded.toString());
-      onChange(rounded);
+      if (rounded !== value) onChange(rounded);
     }
   };
 
-  const input = (
-    <SettingsInput
-      id={id}
-      type="number"
-      min={min}
-      max={max}
-      step={step}
-      value={localValue}
-      onChange={(e) => setLocalValue(e.currentTarget.value)}
-      onBlur={handleBlur}
-      disabled={disabled || autoChecked}
-      style={autoChecked !== undefined ? { flex: 1 } : undefined}
-    />
-  );
+  const showReset = isAuto === false && onResetToAuto;
 
   return (
-    <SettingsRow>
-      <SettingsLabel htmlFor={id} {...tooltipContainerProps}>
+    <Field>
+      <FieldLabel htmlFor={id} {...tooltipContainerProps}>
         {label}
         {tooltip}
-      </SettingsLabel>
-      {autoChecked !== undefined
-        ? (
-          <HStack $align="center">
-            {input}
-            <SettingsLabel htmlFor={`${id}-auto`}>Auto</SettingsLabel>
-            <Checkbox
-              id={`${id}-auto`}
-              checked={autoChecked}
-              onChange={(e) => onAutoChange?.(e.currentTarget.checked)}
-              disabled={disabled}
-            />
-          </HStack>
-        )
-        : input}
-    </SettingsRow>
+      </FieldLabel>
+      <InputWrapper>
+        <MonoInput
+          id={id}
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={localValue}
+          onChange={(e) => setLocalValue(e.currentTarget.value)}
+          onBlur={handleBlur}
+          disabled={disabled}
+          style={{
+            ...(showReset ? { paddingRight: 28 } : {}),
+            ...(isAuto ? { opacity: 0.5 } : {}),
+          }}
+        />
+        {showReset && (
+          <ResetButton
+            type="button"
+            onClick={onResetToAuto}
+            title="Reset to auto"
+          >
+            <RotateCcw size={12} />
+          </ResetButton>
+        )}
+      </InputWrapper>
+    </Field>
   );
 };

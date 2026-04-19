@@ -42,9 +42,9 @@ export const SlotBar = () => {
     : undefined;
 
   return (
-    <VStack $gap="sm">
+    <VStack $gap={1}>
       {slotRows.map((row, y) => (
-        <SlotRow key={y} $gap="sm">
+        <SlotRow key={y} $gap={1}>
           {row.map((slotIdx) => {
             const action = itemActions[slotIdx];
             const slotBinding = prefabShortcuts?.[`slot-${slotIdx + 1}`];

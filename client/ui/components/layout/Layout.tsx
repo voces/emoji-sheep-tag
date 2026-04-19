@@ -1,30 +1,32 @@
 import { styled } from "styled-components";
-import { DefaultTheme } from "styled-components";
+import { type AppTheme } from "../../theme.ts";
 
-export const VStack = styled.div<{ $gap?: keyof DefaultTheme["spacing"] }>`
+type SpaceKey = keyof AppTheme["space"];
+
+export const VStack = styled.div<{ $gap?: SpaceKey }>`
   display: flex;
   flex-direction: column;
-  gap: ${({ theme, $gap }) => theme.spacing[$gap ?? "md"]};
+  gap: ${({ theme, $gap }) => theme.space[$gap ?? (2 as SpaceKey)]};
 `;
 
 export const HStack = styled.div<
   {
-    $gap?: keyof DefaultTheme["spacing"];
+    $gap?: SpaceKey;
     $align?: "center";
     $justifyContent?: "space-between" | "flex-end";
   }
 >`
   display: flex;
-  gap: ${({ theme, $gap }) => theme.spacing[$gap ?? "md"]};
+  gap: ${({ theme, $gap }) => theme.space[$gap ?? (2 as SpaceKey)]};
   align-items: ${({ $align }) => $align};
   justify-content: ${({ $justifyContent }) => $justifyContent};
 `;
 
 export const HoverHighlight = styled.div`
-  color: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 10));
+  color: ${({ theme }) => theme.ink.mid};
 
   &.hover {
-    color: ${({ theme }) => theme.colors.body};
+    color: ${({ theme }) => theme.ink.hi};
   }
 `;
 
@@ -38,11 +40,7 @@ export const AbsCenter = styled.div`
 export const Overlay = styled.div`
   position: absolute;
   inset: 0;
-  background-color: color-mix(
-    in oklab,
-    ${({ theme }) => theme.colors.border} 40%,
-    transparent
-  );
+  background-color: ${({ theme }) => theme.surface.scrim};
   pointer-events: auto;
 `;
 

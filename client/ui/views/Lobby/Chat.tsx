@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import {
@@ -15,73 +16,81 @@ import {
 } from "@/vars/chat.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";
 import { send } from "../../../messaging.ts";
-import { Card } from "@/components/layout/Card.tsx";
 
-const ChatCard = styled(Card)`
-  height: 200px;
-  padding-top: 0;
-  max-height: calc(100vh - 300px);
-  min-height: 85px;
+const ChatContainer = styled.div`
+  margin: 0 calc(-1 * ${({ theme }) => theme.space[4]});
+  padding: ${({ theme }) => theme.space[3]} ${({ theme }) => theme.space[4]} ${(
+    { theme },
+  ) => theme.space[4]};
+  background: ${({ theme }) => theme.surface[0]};
+  border-top: 1px solid ${({ theme }) => theme.border.soft};
   display: flex;
   flex-direction: column;
+  gap: ${({ theme }) => theme.space[2]};
+  min-height: 0;
+  max-height: 160px;
+  flex-shrink: 0;
 `;
 
-const ChatMessagesContainer = styled.div`
-  overflow: auto;
+const ChatLog = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 4px;
   margin-top: auto;
-  margin-right: -16px;
-  padding-right: 16px;
 `;
 
-const InputWrapper = styled.div`
+const ChatLine = styled.div`
+  font-size: ${({ theme }) => theme.text.sm};
+  color: ${({ theme }) => theme.ink.mid};
+  line-height: 1.4;
+`;
+
+const ChatInputRow = styled.form`
   display: flex;
   align-items: center;
-  background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 12));
-  color: ${({ theme }) => theme.colors.border};
-
-  &:has(.hover:not([disabled])) {
-    background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 5));
-  }
-
-  &:has(:focus:not([disabled])) {
-    background-color: white;
-    box-shadow: #222 1px 1px 4px 1px;
-  }
-
-  &:has(:disabled) {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  gap: ${({ theme }) => theme.space[2]};
 `;
 
-const ChannelButton = styled.button`
-  background: none;
-  border: none;
-  font-size: inherit;
-  padding: 4px 0.25em 4px 8px;
-  white-space: nowrap;
-  color: inherit;
-  opacity: 0.6;
+const ChatPrefix = styled.span`
+  font-family: ${({ theme }) => theme.font.mono};
+  font-size: ${({ theme }) => theme.text.xs};
+  color: ${({ theme }) => theme.ink.lo};
+  padding: 0 2px;
+  cursor: pointer;
 
   &.hover {
-    opacity: 1;
+    color: ${({ theme }) => theme.ink.mid};
   }
 `;
 
 const ChatInput = styled.input`
   flex: 1;
-  background: transparent;
-  border: none;
+  background: ${({ theme }) => theme.surface[2]};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: 7px 10px;
+  color: ${({ theme }) => theme.ink.hi};
+  font-size: ${({ theme }) => theme.text.sm};
   outline: none;
-  color: inherit;
-  padding: 4px 8px 4px 0;
+  transition: border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
 
-  &:focus:not([disabled]) {
+  &.hover {
+    border-color: ${({ theme }) => theme.border.hi};
+  }
+
+  &:focus {
+    border-color: ${({ theme }) => theme.accent.DEFAULT};
+    background: ${({ theme }) => theme.surface[1]};
     box-shadow: none;
   }
 `;
 
 export const Chat = () => {
+  const { t } = useTranslation();
   const chatLog = useReactiveVar(chatLogVar);
   const chatValue = useReactiveVar(chatValueVar);
   const chatChannel = useReactiveVar(chatChannelVar);
@@ -112,36 +121,44 @@ export const Chat = () => {
     if (!disabled) inputRef.current?.focus();
   }, [disabled]);
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatValue.trim()) return;
+    send({ type: "chat", message: chatValue, channel: chatChannel });
+    chatValueVar("");
+  };
+
   return (
-    <ChatCard>
-      <ChatMessagesContainer
-        ref={chatLogRef}
-        onScroll={handleScroll}
-      >
+    <ChatContainer>
+      <ChatLog ref={chatLogRef} onScroll={handleScroll}>
         {chatLog.map((log) => (
-          <div key={log.id}>
+          <ChatLine key={log.id}>
             <ColorMarkdown text={log.message} />
-          </div>
+          </ChatLine>
         ))}
-      </ChatMessagesContainer>
-      <InputWrapper>
-        <ChannelButton
+      </ChatLog>
+      <ChatInputRow onSubmit={handleSubmit}>
+        <ChatPrefix
           onClick={() => {
             toggleChatChannel();
             inputRef.current?.focus();
           }}
-          title="Tab to switch"
+          title={t("hud.chatTabToSwitch")}
         >
-          [{chatChannel === "all" ? "All" : "Allies"}]
-        </ChannelButton>
+          [{chatChannel === "all" ? t("lobby.chatAll") : t("lobby.chatAllies")}]
+        </ChatPrefix>
         <ChatInput
           ref={inputRef}
           maxLength={150}
           value={chatValue}
           disabled={disabled}
+          placeholder={t("lobby.chatPlaceholder")}
           onInput={(e) => chatValueVar(e.currentTarget.value)}
           onKeyDown={(e) => {
-            if (e.key === "Tab") return toggleChatChannel();
+            if (e.key === "Tab") {
+              e.preventDefault();
+              return toggleChatChannel();
+            }
             if (!e.code.includes("Enter") || !e.currentTarget.value) return;
             send({
               type: "chat",
@@ -151,7 +168,7 @@ export const Chat = () => {
             chatValueVar("");
           }}
         />
-      </InputWrapper>
-    </ChatCard>
+      </ChatInputRow>
+    </ChatContainer>
   );
 };

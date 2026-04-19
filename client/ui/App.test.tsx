@@ -46,7 +46,7 @@ it("can move an action into a menu", async () => {
   }
 
   render(<App />);
-  await userEvent.click(screen.getByText("Multiplayer"));
+  await userEvent.click(await screen.findByText("Play"));
   await sendMessageFromServer({
     type: "join",
     lobby: "Strong Spirit",
@@ -113,11 +113,15 @@ it("can move an action into a menu", async () => {
   // Mirror Image not in top-level actions
   await waitFor(() =>
     expect(
-      screen.getAllByRole("button")
+      Array.from(
+        screen.getAllByRole("toolbar")[0].querySelectorAll("[aria-label]"),
+      )
         .filter((b) => b.getAttribute("aria-label"))
-        .map((b) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
+        .map((b) => [
+          b.getAttribute("aria-label"),
+          b.querySelector("kbd")?.textContent,
+        ]),
     ).toEqual([
-      ["Wolf", undefined],
       ["Place Sentry", "W"],
       ["Give to Enemy", "U"],
       ["Attack", "A"],
@@ -140,11 +144,15 @@ it("can move an action into a menu", async () => {
   await userEvent.click(screen.getByLabelText("Shop"));
   await waitFor(() =>
     expect(
-      screen.getAllByRole("button")
+      Array.from(
+        screen.getAllByRole("toolbar")[0].querySelectorAll("[aria-label]"),
+      )
         .filter((b) => b.getAttribute("aria-label"))
-        .map((b) => [b.ariaLabel, b.querySelector("kbd")?.textContent]),
+        .map((b) => [
+          b.getAttribute("aria-label"),
+          b.querySelector("kbd")?.textContent,
+        ]),
     ).toEqual([
-      ["Wolf", undefined],
       ["Purchase Beam", "Q"],
       ["Purchase Swift Claws +15%", "W"],
       ["Purchase Bomber", "E"],

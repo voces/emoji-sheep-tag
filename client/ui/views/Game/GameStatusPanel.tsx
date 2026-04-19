@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
 import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
 import { app, Entity } from "../../../ecs.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
 import { VStack } from "@/components/layout/Layout.tsx";
-import { Card } from "@/components/layout/Card.tsx";
 import { useLocalPlayer, usePlayers } from "@/hooks/usePlayers.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
@@ -18,7 +18,7 @@ import { Player } from "@/shared/api/player.ts";
 import { isStructure } from "@/shared/api/unit.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 
-const timersVar = makeVar<Entity[]>([]);
+export const timersVar = makeVar<Entity[]>([]);
 const spiritsVar = makeVar<Entity[]>([]);
 const structuresByOwner: Record<string, Set<Entity>> = {};
 const structuresByOwnerVar = makeVar(structuresByOwner);
@@ -67,29 +67,38 @@ app.addSystem({
 });
 
 const Container = styled(VStack)`
+  gap: 2px;
   &:empty {
     display: none;
   }
 `;
 
-const Header = styled(Card)<{ $clickable: boolean }>`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) =>
-    theme.spacing.md};
-  background-color: rgb(from ${({ theme }) =>
-    theme.colors.background} r g b / 0.5);
+const ScrimPanel = styled.div`
+  background: ${({ theme }) => theme.surface.scrim};
+  backdrop-filter: blur(10px);
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};
+  box-shadow: ${({ theme }) => theme.shadow.md};
+`;
+
+const Header = styled(ScrimPanel)<{ $clickable: boolean }>`
   display: flex;
   align-items: center;
-  gap: ${({ theme }) => theme.spacing.lg};
+  height: 30px;
+  gap: ${({ theme }) => theme.space[4]};
   justify-content: space-between;
   pointer-events: all;
+  font-size: ${({ theme }) => theme.text.sm};
+  padding: 0 ${({ theme }) => theme.space[2]};
 
   &.hover > span:nth-of-type(2) {
-    opacity: 0.85;
+    color: ${({ theme }) => theme.ink.mid};
   }
 `;
 
 const ExpandIndicator = styled.span<{ $expanded: boolean }>`
-  opacity: 0.5;
+  color: ${({ theme }) => theme.ink.mute};
   font-size: 0.8em;
   display: flex;
   align-items: center;
@@ -98,35 +107,32 @@ const ExpandIndicator = styled.span<{ $expanded: boolean }>`
   }
 `;
 
-const Body = styled(Card)`
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) =>
-    theme.spacing.md};
-  background-color: rgb(from ${({ theme }) =>
-    theme.colors.background} r g b / 0.5);
+const Body = styled(ScrimPanel)`
+  font-size: ${({ theme }) => theme.text.sm};
 `;
 
 const TeamSection = styled.div`
   &:not(:last-child) {
-    margin-bottom: ${({ theme }) => theme.spacing.sm};
+    margin-bottom: ${({ theme }) => theme.space[1]};
   }
 `;
 
 const TeamHeader = styled.div`
-  font-weight: bold;
-  opacity: 0.7;
-  font-size: ${({ theme }) => theme.fontSize.sm};
+  font-weight: 600;
+  color: ${({ theme }) => theme.ink.lo};
+  font-size: ${({ theme }) => theme.text.sm};
 `;
 
 const PlayerRow = styled.div`
   display: flex;
   justify-content: space-between;
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space[2]};
 `;
 
 const PlayerNameContainer = styled.span`
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: ${({ theme }) => theme.space[1]};
 `;
 
 const PlayerName = styled.span<{ $color: string }>`
@@ -141,12 +147,12 @@ const PlayerIndicator = styled.span`
 `;
 
 const CaptainStar = styled.span`
-  font-size: 12px;
+  font-size: ${({ theme }) => theme.text.sm};
   line-height: 1;
 `;
 
 const PlayerValue = styled.span`
-  opacity: 0.7;
+  color: ${({ theme }) => theme.ink.lo};
 `;
 
 type TimerInfo = {
@@ -190,6 +196,7 @@ type PlayerNameWithIndicatorProps = {
 const PlayerNameWithIndicator = (
   { player, captains, vipId, isCaptainsMode }: PlayerNameWithIndicatorProps,
 ) => {
+  const { t } = useTranslation();
   const isCaptain = captains?.includes(player.id);
   const isVip = player.id === vipId;
 
@@ -201,8 +208,8 @@ const PlayerNameWithIndicator = (
           <SvgIcon icon="vip" accentColor={player.playerColor ?? undefined} />
         </PlayerIndicator>
       )}
-      <PlayerName $color={player.playerColor ?? "#FFFFFF"}>
-        {player.name ?? "Unknown"}
+      <PlayerName $color={player.playerColor ?? "inherit"}>
+        {player.name ?? t("hud.unknown")}
       </PlayerName>
     </PlayerNameContainer>
   );
@@ -217,6 +224,7 @@ type ScoreboardProps = {
 const Scoreboard = (
   { players, practice, lobbySettings }: ScoreboardProps,
 ) => {
+  const { t } = useTranslation();
   const spirits = useReactiveVar(spiritsVar);
   const structuresByOwner = useReactiveVar(structuresByOwnerVar);
   const captainsDraft = useReactiveVar(captainsDraftVar);
@@ -253,8 +261,8 @@ const Scoreboard = (
           const remaining = lobbySettings.time - (p.sheepTime ?? 0);
           return (
             <PlayerRow key={p.id}>
-              <PlayerName $color={p.playerColor ?? "#FFFFFF"}>
-                {p.name ?? "Unknown"}
+              <PlayerName $color={p.playerColor ?? "inherit"}>
+                {p.name ?? t("hud.unknown")}
               </PlayerName>
               <PlayerValue>
                 {formatDuration(remaining * 1000, remaining < 10)}
@@ -277,7 +285,7 @@ const Scoreboard = (
   return (
     <Body>
       <TeamSection>
-        <TeamHeader>Sheep</TeamHeader>
+        <TeamHeader>{t("hud.sheep")}</TeamHeader>
         {aliveSheep.map((p) => {
           const count = structuresByOwner[p.id]?.size ?? 0;
           return (
@@ -296,7 +304,7 @@ const Scoreboard = (
       </TeamSection>
       {deadSheep.length > 0 && (
         <TeamSection>
-          <TeamHeader>Spirits</TeamHeader>
+          <TeamHeader>{t("hud.spirits")}</TeamHeader>
           {deadSheep.map((p) => (
             <PlayerRow key={p.id}>
               <PlayerNameWithIndicator
@@ -310,7 +318,7 @@ const Scoreboard = (
         </TeamSection>
       )}
       <TeamSection>
-        <TeamHeader>Wolves</TeamHeader>
+        <TeamHeader>{t("hud.wolves")}</TeamHeader>
         {wolfPlayers.map((p) => (
           <PlayerRow key={p.id}>
             <PlayerNameWithIndicator
@@ -340,10 +348,15 @@ export const GameStatusPanel = () => {
 
   useListenToEntities(players, ["sheepTime", "team"]);
 
+  const shortcutsRef = useRef(shortcuts);
+  shortcutsRef.current = shortcuts;
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === "INPUT") return;
-      if (checkShortcut(shortcuts.misc, "toggleScoreboard", e.code)) {
+      if (
+        checkShortcut(shortcutsRef.current.misc, "toggleScoreboard", e.code)
+      ) {
         e.preventDefault();
         scoreboardExpandedVar(!scoreboardExpandedVar());
       }
@@ -351,7 +364,7 @@ export const GameStatusPanel = () => {
 
     globalThis.addEventListener("keydown", handleKeyDown);
     return () => globalThis.removeEventListener("keydown", handleKeyDown);
-  }, [shortcuts]);
+  }, []);
 
   if (isEditor) return null;
 

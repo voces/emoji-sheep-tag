@@ -12,24 +12,24 @@ export const SettingsCard = styled(Card)`
   justify-content: space-between;
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.lg};
+  gap: ${({ theme }) => theme.space[4]};
 `;
 
 export const GameSettingsContainer = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.md};
+  gap: ${({ theme }) => theme.space[2]};
 `;
 
 export const SettingsRow = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: 2px;
 `;
 
 export const SettingsHeader = styled.h3`
   margin: 0;
-  font-size: 14px;
-  font-weight: bold;
+  font-size: ${({ theme }) => theme.text.lg};
+  font-weight: 600;
 `;
 
 export const SettingsLabel = styled.label`
-  font-size: 12px;
-  font-weight: bold;
+  font-size: ${({ theme }) => theme.text.sm};
+  font-weight: 600;
 `;

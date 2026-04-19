@@ -98,7 +98,7 @@ it("should detect conflicts within menu actions", () => {
   const text = container.textContent || "";
 
   // Should show conflict warning in the section header
-  expect(text).toContain("⚠");
+  expect(text).toContain("conflicts");
 });
 
 it("should update UI when menu actions change", () => {
@@ -506,9 +506,8 @@ describe("alt bindings", () => {
       { wrapper: Wrapper },
     );
 
-    const addButtons = container.querySelectorAll("button");
-    const plusButtons = Array.from(addButtons).filter((b) =>
-      b.textContent === "+"
+    const plusButtons = container.querySelectorAll(
+      "button[aria-label='Add secondary binding']",
     );
     expect(plusButtons.length).toBeGreaterThan(0);
   });
@@ -553,7 +552,7 @@ describe("alt bindings", () => {
     );
 
     const trashButtons = Array.from(container.querySelectorAll("button"))
-      .filter((b) => b.textContent === "🗑");
+      .filter((b) => b.getAttribute("aria-label") === "Remove binding");
     expect(trashButtons.length).toBeGreaterThan(0);
   });
 
@@ -583,8 +582,10 @@ describe("alt bindings", () => {
       .find((row) => row.textContent?.includes("Bite"));
     expect(biteRow).toBeDefined();
 
-    const addButton = biteRow!.querySelector("button");
-    expect(addButton?.textContent).toBe("+");
+    const addButton = biteRow!.querySelector(
+      "button[aria-label='Add secondary binding']",
+    );
+    expect(addButton).toBeDefined();
     fireEvent.click(addButton!);
   });
 });
@@ -623,8 +624,7 @@ describe("preset alt bindings", () => {
       { wrapper: Wrapper },
     );
 
-    const header = container.querySelector("h3");
-    expect(header?.textContent).not.toContain("*");
+    expect(container.textContent).not.toContain("modified");
   });
 
   it("should show modified indicator when preset alt is deleted", async () => {
@@ -650,8 +650,7 @@ describe("preset alt bindings", () => {
       { wrapper: Wrapper },
     );
 
-    const header = container.querySelector("h3");
-    expect(header?.textContent).toContain("*");
+    expect(container.textContent).toContain("modified");
   });
 
   it("should not show modified when alt on different index matches preset value", async () => {
@@ -678,7 +677,6 @@ describe("preset alt bindings", () => {
       { wrapper: Wrapper },
     );
 
-    const header = container.querySelector("h3");
-    expect(header?.textContent).not.toContain("*");
+    expect(container.textContent).not.toContain("modified");
   });
 });

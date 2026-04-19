@@ -2,6 +2,7 @@ import "@/client-testing/setup.ts";
 import { beforeEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { render, screen } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
 import { Lobby } from "./index.tsx";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { TestWrapper } from "@/client-testing/utils.tsx";
@@ -9,12 +10,8 @@ import { addEntity } from "@/shared/api/entity.ts";
 import { createTestPlayer } from "@/client-testing/test-helpers.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 
-// We'll test the UI behavior, not the actual network sending
-// The send function calls are handled by the parent component/client
-
 describe("Lobby Settings UI", () => {
   beforeEach(() => {
-    // Set up initial lobby settings
     lobbySettingsVar({
       map: "revo",
       mode: "survival",
@@ -33,33 +30,34 @@ describe("Lobby Settings UI", () => {
     });
   });
 
-  it("should display lobby settings to all players", () => {
-    // Set up non-host player
+  const openHostControls = async () => {
+    const toggle = screen.getByText("Host controls");
+    await userEvent.click(toggle);
+  };
+
+  it("should display lobby settings to all players", async () => {
     addEntity(createTestPlayer({ id: "player-1" }));
     localPlayerIdVar("player-1");
 
-    const { getByDisplayValue, getByText } = render(<Lobby />, {
+    const { getByDisplayValue } = render(<Lobby />, {
       wrapper: TestWrapper,
     });
 
-    // Settings should be visible
-    expect(getByText("Game Settings")).toBeTruthy();
-    expect(getByText("Starting Gold - Sheep")).toBeTruthy();
-    expect(getByText("Starting Gold - Wolves")).toBeTruthy();
+    await openHostControls();
 
-    // Values should be displayed
     expect(getByDisplayValue("100")).toBeTruthy();
     expect(getByDisplayValue("150")).toBeTruthy();
   });
 
-  it("should enable inputs for host player", () => {
+  it("should enable inputs for host player", async () => {
     addEntity(createTestPlayer());
     localPlayerIdVar("player-0");
 
     render(<Lobby />, { wrapper: TestWrapper });
+    await openHostControls();
 
-    const sheepInput = screen.getByLabelText("Starting Gold - Sheep");
-    const wolvesInput = screen.getByLabelText("Starting Gold - Wolves");
+    const sheepInput = screen.getByLabelText("Start gold · Sheep");
+    const wolvesInput = screen.getByLabelText("Start gold · Wolf");
 
     expect(sheepInput).toBeTruthy();
     expect(wolvesInput).toBeTruthy();
@@ -67,15 +65,15 @@ describe("Lobby Settings UI", () => {
     expect((wolvesInput as HTMLInputElement).disabled).toBe(false);
   });
 
-  it("should disable inputs for non-host players", () => {
-    // Set up non-host player
+  it("should disable inputs for non-host players", async () => {
     addEntity(createTestPlayer({ id: "player-1" }));
     localPlayerIdVar("player-1");
 
     render(<Lobby />, { wrapper: TestWrapper });
+    await openHostControls();
 
-    const sheepInput = screen.getByLabelText("Starting Gold - Sheep");
-    const wolvesInput = screen.getByLabelText("Starting Gold - Wolves");
+    const sheepInput = screen.getByLabelText("Start gold · Sheep");
+    const wolvesInput = screen.getByLabelText("Start gold · Wolf");
 
     expect(sheepInput).toBeTruthy();
     expect(wolvesInput).toBeTruthy();
@@ -83,18 +81,18 @@ describe("Lobby Settings UI", () => {
     expect((wolvesInput as HTMLInputElement).disabled).toBe(true);
   });
 
-  it("should update display when lobby settings change", () => {
-    // Set up host player
+  it("should update display when lobby settings change", async () => {
     addEntity(createTestPlayer());
     localPlayerIdVar("player-0");
 
-    const { container, rerender } = render(<Lobby />, { wrapper: TestWrapper });
+    const { container, rerender } = render(<Lobby />, {
+      wrapper: TestWrapper,
+    });
+    await openHostControls();
 
-    // Verify initial values
     expect(container.querySelector('input[value="100"]')).toBeTruthy();
     expect(container.querySelector('input[value="150"]')).toBeTruthy();
 
-    // Update lobby settings (simulating server message)
     lobbySettingsVar({
       map: "revo",
       mode: "survival",
@@ -114,7 +112,6 @@ describe("Lobby Settings UI", () => {
 
     rerender(<Lobby />);
 
-    // Should display new values
     expect(container.querySelector('input[value="500"]')).toBeTruthy();
     expect(container.querySelector('input[value="750"]')).toBeTruthy();
   });

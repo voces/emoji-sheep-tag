@@ -546,6 +546,8 @@ const zLobby = z.object({
     z.literal("playing"),
   ]),
   isOpen: z.boolean(),
+  shard: z.string().optional(),
+  host: z.string().optional(),
 });
 
 export type Lobby = z.infer<typeof zLobby>;

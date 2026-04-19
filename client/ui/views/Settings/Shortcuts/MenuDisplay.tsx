@@ -1,11 +1,16 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { styled } from "styled-components";
-import { HStack, VStack } from "@/components/layout/Layout.tsx";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/forms/Button.tsx";
 import { IconButton } from "@/components/forms/IconButton.tsx";
-import { Dialog } from "@/components/layout/Dialog.tsx";
-import { defaultMenus, type MenuConfig } from "@/vars/menus.ts";
-import { bindingsEqual, type ConflictInfo } from "@/util/shortcutUtils.ts";
+import { defaultMenus, isDefaultMenu, type MenuConfig } from "@/vars/menus.ts";
+import {
+  bindingsEqual,
+  type ConflictInfo,
+  getBaseKey,
+  getEffectiveDefault,
+  isAltKey,
+} from "@/util/shortcutUtils.ts";
 import { ShortcutRow } from "./ShortcutRow.tsx";
 import { getMenuActionInfo } from "./menuActionHelpers.ts";
 import { ShortcutInputField } from "./ShortcutInputField.tsx";
@@ -15,79 +20,170 @@ import { Command } from "@/components/game/Command.tsx";
 import { colors } from "@/shared/data.ts";
 import { svgs } from "../../../../systems/models.ts";
 
-const MenuActionsContainer = styled(VStack)`
-  padding-left: 16px;
+const MenuActionsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 4px;
   min-height: 24px;
+  border-left: 1px solid ${({ theme }) => theme.border.soft};
+  margin-left: 14px;
 `;
 
 const SmallCommand = styled(Command)`
-  width: 28.8px;
-  height: 28.8px;
-  min-width: 28.8px;
-  min-height: 28.8px;
-  border-width: 2px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  border-width: 1.5px;
   flex-shrink: 0;
   cursor: pointer;
 `;
 
-const IconGrid = styled.div`
+const IconPickerPanel = styled.div`
+  background: ${({ theme }) => theme.surface[1]};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.md};
+  box-shadow: ${({ theme }) => theme.shadow.lg};
   display: grid;
   grid-template-columns: repeat(9, 1fr);
-  gap: 4px;
-  padding: 8px;
+  gap: 6px;
+  padding: ${({ theme }) => theme.space[3]};
   max-height: 300px;
   overflow-y: auto;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 4px;
-  background: ${({ theme }) => theme.colors.background};
+  margin-left: 36px;
 `;
 
 const IconOption = styled(Command)<{ $selected: boolean }>`
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  border-width: 3px;
-  filter: ${({ $selected }) =>
-    $selected ? "brightness(100%)" : "brightness(80%)"};
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-width: 2px;
+  border-color: ${({ $selected, theme }) =>
+    $selected ? theme.accent.DEFAULT : "transparent"};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  cursor: pointer;
+  transition: transform ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
+
+  &.hover {
+    transform: scale(1.1);
+    border-color: ${({ theme }) => theme.border.hi};
+  }
+`;
+
+const MenuHeaderRow = styled.div<{ $suppressHover?: boolean }>`
+  display: grid;
+  grid-template-columns: 26px 1fr auto auto;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[3]};
+  padding: 6px 10px;
+  border-radius: ${({ theme }) => theme.radius.sm};
+
+  ${({ $suppressHover, theme }) =>
+    !$suppressHover &&
+    `
+    &.hover {
+      background: ${theme.surface[2]};
+    }
+  `};
+`;
+
+const MenuWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const ActionGroup = styled.span`
+  display: flex;
+  gap: ${({ theme }) => theme.space[1]};
+`;
+
+const MenuModifiedTag = styled.span`
+  padding: 0 5px;
+  border-radius: ${({ theme }) => theme.radius.pill};
+  font-size: ${({ theme }) => theme.text.xs};
+  font-weight: 500;
+  color: ${({ theme }) => theme.accent.hi};
+  background: ${({ theme }) => theme.accent.bg};
+  line-height: 1.6;
 `;
 
 const MenuNameContainer = styled.span`
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: ${({ theme }) => theme.space[2]};
   cursor: pointer;
-`;
-
-const MenuNameDisplay = styled.span.attrs({ className: "menu-name" })`
-  filter: drop-shadow(0 0 2px #fff6);
+  font-size: ${({ theme }) => theme.text.sm};
+  color: ${({ theme }) => theme.ink.hi};
 `;
 
 const MenuNameInput = styled.input`
   flex: 1;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.body};
-  color: ${({ theme }) => theme.colors.background};
-  border-radius: ${({ theme }) => theme.borderRadius.sm};
-  padding: 0 4px;
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  background: ${({ theme }) => theme.surface[2]};
+  color: ${({ theme }) => theme.ink.hi};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: 4px 8px;
   margin: 0;
+  font-size: ${({ theme }) => theme.text.sm};
   line-height: normal;
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.accent.DEFAULT};
+    background: ${({ theme }) => theme.surface[1]};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.accent.bg};
+  }
 `;
 
-const MenuHeaderRow = styled(HStack)<{ $enableHover?: boolean }>`
+const ActionButton = styled(IconButton)`
+  --icon-button-opacity: 0.35;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 4px;
+`;
+
+const ConfirmRow = styled.div`
+  display: flex;
   align-items: center;
-
-  ${({ $enableHover }) =>
-    $enableHover &&
-    `
-    &.hover .menu-name {
-      filter: drop-shadow(0 0 2px #fffd);
-    }
-  `};
+  gap: ${({ theme }) => theme.space[3]};
+  padding: 8px 10px;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: ${({ theme }) => theme.danger.bg};
+  font-size: ${({ theme }) => theme.text.sm};
+  color: ${({ theme }) => theme.ink.hi};
 `;
 
-const DeleteButton = styled(IconButton).attrs({ className: "delete-button" })`
+const ConfirmLabel = styled.span`
+  flex: 1;
+  color: ${({ theme }) => theme.danger.DEFAULT};
+  font-weight: 500;
+`;
+
+const ConfirmButton = styled(Button)`
+  min-height: 24px;
+  padding: 2px 10px;
+  font-size: ${({ theme }) => theme.text.sm};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+
+  &.hover:not([disabled]) {
+    border-color: ${({ theme }) => theme.border.hi};
+  }
+`;
+
+const DangerConfirmButton = styled(ConfirmButton)`
+  color: ${({ theme }) => theme.danger.DEFAULT};
+  border-color: ${({ theme }) => theme.danger.DEFAULT};
+
+  &.hover:not([disabled]) {
+    background: ${({ theme }) => theme.danger.bg};
+    border-color: ${({ theme }) => theme.danger.DEFAULT};
+  }
 `;
 
 type MenuManagement = {
@@ -114,6 +210,7 @@ type MenuDisplayProps = {
   menuManagement: MenuManagement;
   onSetBinding: (key: string, binding: string[]) => void;
   draggedActionKey?: string | null;
+  matchingKeys?: Set<string> | null;
 };
 
 const menuActionsEqual = (a: MenuConfig["actions"], b: MenuConfig["actions"]) =>
@@ -156,6 +253,7 @@ export const MenuDisplay = memo(({
   menuManagement,
   onSetBinding,
   draggedActionKey = null,
+  matchingKeys,
 }: MenuDisplayProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -163,8 +261,6 @@ export const MenuDisplay = memo(({
   const [tempName, setTempName] = useState(menu.name);
 
   // Disable hover effects while dragging
-  const enableHover = !draggedActionKey;
-
   const handleNameSubmit = () => {
     if (tempName.trim() && tempName !== menu.name) {
       menuManagement.actions.updateName(menu.id, tempName);
@@ -220,59 +316,84 @@ export const MenuDisplay = memo(({
     }
   };
 
+  const isConfirmingDelete = menuManagement.deletion.menuToDelete === menu.id;
+
   return (
-    <VStack key={`menu-${menu.id}`}>
-      <MenuHeaderRow $enableHover={enableHover}>
-        <SmallCommand
-          name=""
-          icon={menu.icon ?? "shop"}
-          accentColor={colors[0]}
-          hideTooltip
-          role="button"
-          onClick={() => setShowIconPicker(!showIconPicker)}
-        />
-        {editingName
-          ? (
-            <MenuNameInput
-              value={tempName}
-              onChange={(e) => setTempName(e.target.value)}
-              onBlur={handleNameSubmit}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleNameSubmit();
-                if (e.key === "Escape") handleNameCancel();
-              }}
-              autoFocus
+    <MenuWrapper key={`menu-${menu.id}`}>
+      {isConfirmingDelete
+        ? (
+          <ConfirmRow>
+            <ConfirmLabel>Delete "{menu.name}"?</ConfirmLabel>
+            <ActionGroup>
+              <DangerConfirmButton onClick={menuManagement.deletion.confirm}>
+                Delete
+              </DangerConfirmButton>
+              <ConfirmButton onClick={menuManagement.deletion.cancel}>
+                Cancel
+              </ConfirmButton>
+            </ActionGroup>
+          </ConfirmRow>
+        )
+        : (
+          <MenuHeaderRow $suppressHover={!!draggedActionKey}>
+            <SmallCommand
+              name=""
+              icon={menu.icon ?? "shop"}
+              accentColor={colors[0]}
+              hideTooltip
+              role="button"
+              onClick={() => setShowIconPicker(!showIconPicker)}
             />
-          )
-          : (
-            <MenuNameContainer
-              onClick={() => setEditingName(true)}
-            >
-              <MenuNameDisplay>{menu.name}</MenuNameDisplay>
-              <IconButton as="span" style={{ fontSize: 16 }}>✎</IconButton>
-            </MenuNameContainer>
-          )}
+            {editingName
+              ? (
+                <MenuNameInput
+                  value={tempName}
+                  onChange={(e) => setTempName(e.target.value)}
+                  onBlur={handleNameSubmit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleNameSubmit();
+                    if (e.key === "Escape") handleNameCancel();
+                  }}
+                  autoFocus
+                />
+              )
+              : (
+                <MenuNameContainer
+                  onClick={() => setEditingName(true)}
+                >
+                  {menu.name}
+                  <ActionButton as="span" title="Rename">
+                    <Pencil size={14} />
+                  </ActionButton>
+                  {!isDefaultMenu(menu) && (
+                    <MenuModifiedTag>modified</MenuModifiedTag>
+                  )}
+                </MenuNameContainer>
+              )}
 
-        <DeleteButton
-          onClick={() => menuManagement.deletion.deleteMenu(menu.id)}
-          title="Delete menu"
-        >
-          🗑
-        </DeleteButton>
+            <ActionGroup>
+              <ActionButton
+                onClick={() => menuManagement.deletion.deleteMenu(menu.id)}
+                title="Delete menu"
+              >
+                <Trash2 size={14} />
+              </ActionButton>
+            </ActionGroup>
 
-        <ShortcutInputField
-          binding={currentBinding}
-          defaultBinding={defaultBinding}
-          isDefault={isDefault}
-          onSetBinding={handleReset}
-          ariaLabel="Reset menu hotkey"
-        />
-      </MenuHeaderRow>
+            <ShortcutInputField
+              binding={currentBinding}
+              defaultBinding={defaultBinding}
+              isDefault={isDefault}
+              onSetBinding={handleReset}
+              ariaLabel="Reset menu hotkey"
+            />
+          </MenuHeaderRow>
+        )}
       {menuBindingConflict && (
         <ConflictWarning conflict={menuBindingConflict} section={section} />
       )}
       {showIconPicker && (
-        <IconGrid>
+        <IconPickerPanel>
           {Object.keys(svgs).map((key) => (
             <IconOption
               key={key}
@@ -287,7 +408,7 @@ export const MenuDisplay = memo(({
               hideTooltip
             />
           ))}
-        </IconGrid>
+        </IconPickerPanel>
       )}
 
       <MenuActionsContainer ref={containerRef}>
@@ -297,11 +418,29 @@ export const MenuDisplay = memo(({
             const bInfo = getMenuActionInfo(b, menu.id);
             return aInfo.displayName.localeCompare(bInfo.displayName);
           })
+          .filter((action) => {
+            if (!matchingKeys) return true;
+            const info = getMenuActionInfo(action, menu.id);
+            return matchingKeys.has(info.actionKey);
+          })
           .map((action) => {
             const actionInfo = getMenuActionInfo(action, menu.id);
             const binding = shortcuts[actionInfo.actionKey] ??
               actionInfo.defaultBinding;
             const conflict = menuConflicts.get(actionInfo.actionKey);
+
+            const altBindings = Object.entries(shortcuts)
+              .filter(([key, b]) =>
+                isAltKey(key) &&
+                getBaseKey(key) === actionInfo.actionKey &&
+                (b.length > 0 ||
+                  getEffectiveDefault(section, key).length === 0)
+              )
+              .map(([key, b]) => ({ key, binding: b }));
+            const allAltKeys = Object.keys(shortcuts)
+              .filter((key) =>
+                isAltKey(key) && getBaseKey(key) === actionInfo.actionKey
+              );
 
             return (
               <ShortcutRow
@@ -316,27 +455,13 @@ export const MenuDisplay = memo(({
                 isInMenu={menu.id}
                 draggable
                 draggedActionKey={draggedActionKey}
+                altBindings={altBindings}
+                allAltKeys={allAltKeys}
               />
             );
           })}
       </MenuActionsContainer>
-
-      {menuManagement.deletion.menuToDelete === menu.id && (
-        <Dialog>
-          <VStack>
-            <div>Delete this menu?</div>
-            <HStack>
-              <Button onClick={menuManagement.deletion.confirm}>
-                Delete
-              </Button>
-              <Button onClick={menuManagement.deletion.cancel}>
-                Cancel
-              </Button>
-            </HStack>
-          </VStack>
-        </Dialog>
-      )}
-    </VStack>
+    </MenuWrapper>
   );
 }, propsAreEqual);
 

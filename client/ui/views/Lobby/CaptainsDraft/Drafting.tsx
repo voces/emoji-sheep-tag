@@ -1,28 +1,31 @@
+import { useTranslation } from "react-i18next";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { usePlayers } from "@/hooks/usePlayers.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
-import { Button } from "@/components/forms/Button.tsx";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
+import { GoldTag } from "@/components/Tag.tsx";
+import { SmallGhostButton } from "@/components/forms/ActionButton.tsx";
 import { send } from "../../../../messaging.ts";
 import { nonNull } from "@/shared/types.ts";
 import {
   ButtonRow,
-  DraftContent,
-  IconWrapper,
-  PhaseIndicator,
-  PlayerCard,
-  PlayerList,
+  DraftColumns,
+  PlayerIcon,
   PlayerName,
-  PoolColumn,
-  PoolHeader,
+  PoolLabel,
+  PoolPlayer,
+  PoolSection,
   TeamColumn,
   TeamHeader,
+  TeamLabel,
+  TurnBanner,
 } from "./styles.tsx";
 
 export const Drafting = () => {
+  const { t } = useTranslation();
   const draft = useReactiveVar(captainsDraftVar);
   const { host } = useReactiveVar(lobbySettingsVar);
   const localPlayerId = useReactiveVar(localPlayerIdVar);
@@ -52,114 +55,107 @@ export const Drafting = () => {
 
   const currentCaptainId = draft.captains[draft.currentPicker];
   const isMyTurn = localPlayerId === currentCaptainId;
-
-  const handlePick = (playerId: string) => {
-    if (!isMyTurn) return;
-    send({ type: "captainPick", playerId });
-  };
-
-  const handleCancel = () => {
-    if (!isHost) return;
-    send({ type: "cancelCaptains" });
-  };
+  const currentCaptainName =
+    players.find((p) => p.id === currentCaptainId)?.name ?? "";
 
   return (
     <>
-      <PhaseIndicator>
+      <TurnBanner $isYou={isMyTurn}>
         {isMyTurn
-          ? `Your turn to pick (${draft.picksThisTurn} remaining)`
-          : `${
-            players.find((p) => p.id === currentCaptainId)?.name
-          }'s turn to pick`}
-      </PhaseIndicator>
-      <DraftContent>
-        <TeamColumn>
+          ? `${t("lobby.yourTurn")} \u2014 ${
+            t("lobby.picksRemaining", { count: draft.picksThisTurn })
+          }`
+          : t("lobby.pickingTurn", { name: currentCaptainName })}
+      </TurnBanner>
+
+      <DraftColumns>
+        <TeamColumn $active={draft.currentPicker === 0}>
           <TeamHeader>
-            <PlayerCard $selected>
-              <IconWrapper>
+            {captain0 && (
+              <PlayerIcon>
                 <SvgIcon
                   icon="sheep"
-                  accentColor={captain0?.playerColor ?? undefined}
+                  accentColor={captain0.playerColor ?? undefined}
                 />
-              </IconWrapper>
-              <PlayerName>{captain0?.name}</PlayerName>
-              <span>Captain</span>
-            </PlayerCard>
-            {/* {`${captain0?.name ?? "Captain 1"}'s team`} */}
-          </TeamHeader>
-          <PlayerList>
-            {team0Players.map((p) => (
-              <PlayerCard key={p.id}>
-                <IconWrapper>
-                  <SvgIcon
-                    icon="sheep"
-                    accentColor={p.playerColor ?? undefined}
-                  />
-                </IconWrapper>
-                <PlayerName>{p.name}</PlayerName>
-              </PlayerCard>
-            ))}
-          </PlayerList>
-        </TeamColumn>
-
-        <PoolColumn>
-          <PoolHeader>Available Players</PoolHeader>
-          <PlayerList>
-            {pool.map((p) => (
-              <PlayerCard
-                key={p.id}
-                $clickable={isMyTurn}
-                onClick={() => handlePick(p.id)}
-              >
-                <IconWrapper>
-                  <SvgIcon
-                    icon="sentry"
-                    accentColor={p.playerColor ?? undefined}
-                  />
-                </IconWrapper>
-                <PlayerName>{p.name}</PlayerName>
-                {isMyTurn && <Button>Select</Button>}
-              </PlayerCard>
-            ))}
-          </PlayerList>
-        </PoolColumn>
-
-        <TeamColumn>
-          <TeamHeader>
-            {`${captain1?.name ?? "Captain 2"}'s team`}
-          </TeamHeader>
-          <PlayerList>
-            {captain1 && (
-              <PlayerCard $selected>
-                <IconWrapper>
-                  <SvgIcon
-                    icon="wolf"
-                    accentColor={captain1.playerColor ?? undefined}
-                  />
-                </IconWrapper>
-                <PlayerName>{captain1.name}</PlayerName>
-                <span>Captain</span>
-              </PlayerCard>
+              </PlayerIcon>
             )}
-            {team1Players.map((p) => (
-              <PlayerCard key={p.id}>
-                <IconWrapper>
-                  <SvgIcon
-                    icon="wolf"
-                    accentColor={p.playerColor ?? undefined}
-                  />
-                </IconWrapper>
-                <PlayerName>{p.name}</PlayerName>
-              </PlayerCard>
-            ))}
-          </PlayerList>
+            <TeamLabel>
+              {t("lobby.teamOf", { name: captain0?.name })}
+            </TeamLabel>
+            <GoldTag>{t("lobby.captain")}</GoldTag>
+          </TeamHeader>
+          {team0Players.map((p) => (
+            <PoolPlayer key={p.id} $clickable={false}>
+              <PlayerIcon>
+                <SvgIcon
+                  icon="sheep"
+                  accentColor={p.playerColor ?? undefined}
+                />
+              </PlayerIcon>
+              <PlayerName>{p.name}</PlayerName>
+            </PoolPlayer>
+          ))}
         </TeamColumn>
-      </DraftContent>
+
+        <TeamColumn $active={draft.currentPicker === 1}>
+          <TeamHeader>
+            {captain1 && (
+              <PlayerIcon>
+                <SvgIcon
+                  icon="wolf"
+                  accentColor={captain1.playerColor ?? undefined}
+                />
+              </PlayerIcon>
+            )}
+            <TeamLabel>
+              {t("lobby.teamOf", { name: captain1?.name })}
+            </TeamLabel>
+            <GoldTag>{t("lobby.captain")}</GoldTag>
+          </TeamHeader>
+          {team1Players.map((p) => (
+            <PoolPlayer key={p.id} $clickable={false}>
+              <PlayerIcon>
+                <SvgIcon
+                  icon="wolf"
+                  accentColor={p.playerColor ?? undefined}
+                />
+              </PlayerIcon>
+              <PlayerName>{p.name}</PlayerName>
+            </PoolPlayer>
+          ))}
+        </TeamColumn>
+      </DraftColumns>
+
+      {pool.length > 0 && (
+        <PoolSection>
+          <PoolLabel>{t("lobby.availablePlayers")}</PoolLabel>
+          {pool.map((p) => (
+            <PoolPlayer
+              key={p.id}
+              $clickable={isMyTurn}
+              onClick={() =>
+                isMyTurn && send({ type: "captainPick", playerId: p.id })}
+            >
+              <PlayerIcon>
+                <SvgIcon
+                  icon="sentry"
+                  accentColor={p.playerColor ?? undefined}
+                />
+              </PlayerIcon>
+              <PlayerName>{p.name}</PlayerName>
+            </PoolPlayer>
+          ))}
+        </PoolSection>
+      )}
+
       {isHost && (
         <ButtonRow>
-          <Button onClick={handleCancel}>
-            Cancel Draft
-          </Button>
+          <SmallGhostButton
+            type="button"
+            onClick={() => send({ type: "cancelCaptains" })}
+          >
+            {t("lobby.cancelDraft")}
+          </SmallGhostButton>
         </ButtonRow>
       )}
     </>

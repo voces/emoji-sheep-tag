@@ -5,12 +5,11 @@ export const Panel = styled(Card)`
   pointer-events: auto;
   overflow-y: auto;
   scrollbar-gutter: stable both-edges;
-  padding: ${({ theme }) => theme.spacing.lg} ${({ theme }) =>
-    theme.spacing.sm};
+  padding: ${({ theme }) => theme.space[4]} ${({ theme }) => theme.space[1]};
 `;
 
 export const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: 2px;
 `;

@@ -29,8 +29,7 @@ const waterViewLabels: Record<EditorWaterView, string> = {
 
 const SegmentedButton = styled(Button)<{ $active: boolean }>`
   flex: 1;
-  padding: ${({ theme }) => theme.spacing.xs} ${({ theme }) =>
-    theme.spacing.sm};
+  padding: 2px ${({ theme }) => theme.space[1]};
   opacity: ${({ $active }) => ($active ? 1 : 0.6)};
   font-weight: ${({ $active }) => ($active ? "bold" : "normal")};
 `;
@@ -161,7 +160,7 @@ export const TerrainPanel = () => {
         >
           Fill all water
         </Button>
-        <HStack $gap="xs" role="radiogroup" aria-label="Water view">
+        <HStack $gap={1} role="radiogroup" aria-label="Water view">
           {(["hide", "normal", "level"] as const).map((mode) => (
             <SegmentedButton
               key={mode}

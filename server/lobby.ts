@@ -1,3 +1,4 @@
+import { DEFAULT_VIP_HANDICAP } from "@/shared/constants.ts";
 import { type Client } from "./client.ts";
 import { type ComputerPlayer } from "./computerPlayer.ts";
 import { broadcastLobbyList } from "./hub.ts";
@@ -114,7 +115,7 @@ export const newLobby = (host?: Client, silent = false) => {
     settings: {
       map: "revo",
       mode: "survival",
-      vipHandicap: 0.8,
+      vipHandicap: DEFAULT_VIP_HANDICAP,
       sheep: "auto",
       time: "auto",
       startingGold: { sheep: 0, wolves: 0 },

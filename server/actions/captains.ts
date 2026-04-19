@@ -60,7 +60,7 @@ export const startCaptains = (client: Client) => {
   if (lobby.captainsDraft) return;
 
   const nonObservers = getNonObserverPlayers(lobby);
-  if (nonObservers.length < 3) return;
+  if (nonObservers.length < 4) return;
 
   lobby.captainsDraft = {
     phase: "selecting-captains",
@@ -281,7 +281,7 @@ export const isActiveCaptainsDraft = (lobby: Lobby) =>
 export const cancelCaptains = (client: Client) => {
   const lobby = client.lobby;
   if (!lobby || lobby.host !== client) return;
-  if (!isActiveCaptainsDraft(lobby)) return;
+  if (!lobby.captainsDraft) return;
 
   lobby.captainsDraft = undefined;
 
@@ -308,7 +308,7 @@ export const handleCaptainsPlayerLeave = (lobby: Lobby, playerId: string) => {
     const remainingNonObservers = getNonObserverPlayers(lobby).length;
 
     // Cancel if not enough players remain
-    if (remainingNonObservers < 3) {
+    if (remainingNonObservers < 4) {
       lobby.captainsDraft = undefined;
       send({ type: "captainsDraft", phase: undefined });
     } else {

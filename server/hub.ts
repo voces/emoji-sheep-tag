@@ -2,6 +2,7 @@ import type { Client } from "./client.ts";
 import { ServerToClientMessage } from "../client/schemas.ts";
 import { lobbies } from "./lobby.ts";
 import { colors } from "@/shared/data.ts";
+import { getShard } from "./shardRegistry.ts";
 
 // Set of clients in hub (lobby browser, not in any lobby)
 export const hubClients = new Set<Client>();
@@ -16,12 +17,18 @@ export const sendToHub = (message: ServerToClientMessage) => {
 
 /** Get serialized lobby list */
 export const serializeLobbyList = () =>
-  Array.from(lobbies, (lobby) => ({
-    name: lobby.name!,
-    playerCount: lobby.players.size,
-    status: lobby.status,
-    isOpen: lobby.players.size < colors.length,
-  })).sort((a, b) => b.playerCount - a.playerCount);
+  Array.from(lobbies, (lobby) => {
+    const shardId = lobby.activeShard ?? lobby.settings.shard;
+    const shard = shardId ? getShard(shardId) : undefined;
+    return {
+      name: lobby.name!,
+      playerCount: lobby.players.size,
+      status: lobby.status,
+      isOpen: lobby.players.size < colors.length,
+      shard: shard?.region ?? shard?.name,
+      host: lobby.host?.name,
+    };
+  }).sort((a, b) => b.playerCount - a.playerCount);
 
 /** Send updated lobby list to all hub clients */
 export const broadcastLobbyList = () => {

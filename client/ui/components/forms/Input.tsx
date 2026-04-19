@@ -4,12 +4,12 @@ import { id } from "@/shared/util/id.ts";
 
 export const Input = styled.input`
   border: 0;
-  background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 12));
-  color: ${({ theme }) => theme.colors.border};
-  padding: 0 ${({ theme }) => theme.spacing.sm};
+  background: ${({ theme }) => theme.surface[2]};
+  color: ${({ theme }) => theme.ink.hi};
+  padding: 0 ${({ theme }) => theme.space[1]};
 
   &.hover:not([disabled]) {
-    background: hsl(from ${({ theme }) => theme.colors.body} h s calc(l - 5));
+    background: ${({ theme }) => theme.surface[3]};
   }
 
   &:disabled {
@@ -19,12 +19,12 @@ export const Input = styled.input`
 `;
 
 const FieldLabel = styled.label`
-  font-size: 12px;
-  font-weight: bold;
+  font-size: ${({ theme }) => theme.text.sm};
+  font-weight: 600;
 `;
 
 const FieldWrapper = styled(VStack)`
-  gap: ${({ theme }) => theme.spacing.xs};
+  gap: 2px;
 `;
 
 export const InputField = (

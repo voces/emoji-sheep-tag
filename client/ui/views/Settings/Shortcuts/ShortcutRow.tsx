@@ -1,6 +1,21 @@
 import { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
-import { HStack, VStack } from "@/components/layout/Layout.tsx";
+import {
+  ArrowRightLeft,
+  Ban,
+  Crosshair,
+  GripVertical,
+  Keyboard,
+  ListOrdered,
+  MapPin,
+  MessageSquare,
+  MousePointerClick,
+  Plus,
+  Search,
+  Trash2,
+  ZoomIn,
+} from "lucide-react";
 import {
   bindingsEqual,
   type ConflictInfo,
@@ -23,75 +38,182 @@ import { Command } from "@/components/game/Command.tsx";
 import { getActionIcon } from "./menuActionHelpers.ts";
 import { colors } from "@/shared/data.ts";
 
-const ShortcutRowContainer = styled(HStack)<{
+const BindRow = styled.div<{
   $isNested?: boolean;
   $isDraggable?: boolean;
   $enableHover?: boolean;
   $isBeingDragged?: boolean;
 }>`
-  padding-left: ${({ $isNested }) => $isNested ? "16px" : "0"};
-  align-items: start;
+  display: grid;
+  grid-template-columns: 26px 1fr auto auto;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[3]};
+  padding: 6px 10px;
+  padding-left: ${({ $isNested }) => $isNested ? "6px" : "10px"};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  transition: opacity ${({ theme }) => theme.motion.fast}, box-shadow ${(
+    { theme },
+  ) => theme.motion.fast};
 
   .drag-handle {
-    opacity: ${({ $isBeingDragged }) => $isBeingDragged ? 1 : 0};
-    font-size: 16px;
-    margin-left: 4px;
-    color: ${({ $isBeingDragged }) => $isBeingDragged ? "#fff" : "#888"};
-    filter: ${({ $isBeingDragged }) =>
-      $isBeingDragged ? "drop-shadow(0 0 3px #fff)" : "none"};
-    transition: opacity 0.15s, color 0.15s, filter 0.15s;
+    opacity: ${({ $isBeingDragged }) => $isBeingDragged ? 1 : 0.25};
+    color: ${({ $isBeingDragged, theme }) =>
+      $isBeingDragged ? theme.ink.hi : theme.ink.lo};
+    transition: opacity ${({ theme }) => theme.motion.fast}, color ${(
+      { theme },
+    ) => theme.motion.fast};
     user-select: none;
+    display: inline-flex;
+    align-items: center;
   }
 
-  .shortcut-label {
-    filter: ${({ $isBeingDragged }) =>
-      $isBeingDragged
-        ? "drop-shadow(0 0 2px #fffd)"
-        : "drop-shadow(0 0 2px #fff6)"};
-  }
-
-  &.hover .alt-button {
-    --icon-button-opacity: 0.5;
-  }
-
-  ${({ $isDraggable, $enableHover }) =>
-    $isDraggable &&
-    $enableHover &&
+  ${({ $isBeingDragged, theme }) =>
+    $isBeingDragged &&
     `
+    opacity: 0.6;
+    border: 1px solid ${theme.accent.DEFAULT};
+    box-shadow: ${theme.shadow.md};
+    background: ${theme.surface[2]};
+    z-index: 10;
+    position: relative;
+  `} ${({ $enableHover, theme }) =>
+    $enableHover !== false &&
+    `
+    &.hover {
+      background: ${theme.surface[2]};
+    }
+  `}
+    ${({ $isDraggable, $enableHover, theme }) =>
+      $isDraggable &&
+      $enableHover &&
+      `
     &.hover .drag-handle {
       opacity: 0.5;
     }
 
     &.hover .drag-handle.hover {
       opacity: 1;
-      color: #fff;
-      filter: drop-shadow(0 0 3px #fff);
-    }
-
-    &.hover .shortcut-label {
-      filter: drop-shadow(0 0 2px #fffd);
+      color: ${theme.ink.hi};
     }
   `};
 `;
 
 const SmallCommand = styled(Command)`
-  width: 28.8px;
-  height: 28.8px;
-  min-width: 28.8px;
-  min-height: 28.8px;
-  border-width: 2px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  border-width: 1.5px;
   flex-shrink: 0;
 `;
 
-const LabelContainer = styled.span<{ $isDraggable?: boolean }>`
-  flex: 1;
-  user-select: ${({ $isDraggable }) => $isDraggable ? "none" : "auto"};
-  cursor: ${({ $isDraggable }) => $isDraggable ? "grab" : "auto"};
+const IconCell = styled.span`
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  color: ${({ theme }) => theme.ink.lo};
 `;
 
-const ShortcutLabel = styled.span.attrs({ className: "shortcut-label" })`
-  filter: drop-shadow(0 0 2px #fff6);
+const LabelCell = styled.span<{ $isDraggable?: boolean }>`
+  font-size: ${({ theme }) => theme.text.sm};
+  color: ${({ theme }) => theme.ink.hi};
+  user-select: ${({ $isDraggable }) => $isDraggable ? "none" : "auto"};
+  cursor: ${({ $isDraggable }) => $isDraggable ? "grab" : "auto"};
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
 `;
+
+const AltBindRow = styled.div`
+  display: grid;
+  grid-template-columns: 26px 1fr auto auto;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[3]};
+  padding: 6px 10px;
+  border-radius: ${({ theme }) => theme.radius.sm};
+
+  &.hover {
+    background: ${({ theme }) => theme.surface[2]};
+  }
+`;
+
+const RowGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const ActionGroup = styled.span`
+  display: flex;
+  gap: ${({ theme }) => theme.space[1]};
+`;
+
+const ActionButton = styled(IconButton)`
+  --icon-button-opacity: 0.35;
+  min-width: 24px;
+  min-height: 24px;
+  padding: 4px;
+`;
+
+const ICON_SIZE = 16;
+
+const MISC_ICONS: Record<string, React.ReactNode> = {
+  openCommandPalette: <Search size={ICON_SIZE} />,
+  openChat: <MessageSquare size={ICON_SIZE} />,
+  cancel: <Ban size={ICON_SIZE} />,
+  queueModifier: <ListOrdered size={ICON_SIZE} />,
+  addToSelectionModifier: <MousePointerClick size={ICON_SIZE} />,
+  ping: <MapPin size={ICON_SIZE} />,
+  jumpToPing: <Crosshair size={ICON_SIZE} />,
+  applyZoom: <ZoomIn size={ICON_SIZE} />,
+  toggleScoreboard: <ArrowRightLeft size={ICON_SIZE} />,
+  cycleSelection: <ArrowRightLeft size={ICON_SIZE} />,
+};
+
+const GroupDigit = styled.span`
+  font-family: ${({ theme }) => theme.font.mono};
+  font-size: ${({ theme }) => theme.text.sm};
+  font-weight: 600;
+  color: ${({ theme }) => theme.ink.lo};
+`;
+
+const CONTROL_GROUP_ICONS: Record<string, React.ReactNode> = {
+  assignModifier: <Keyboard size={ICON_SIZE} />,
+  group1: <GroupDigit>1</GroupDigit>,
+  group2: <GroupDigit>2</GroupDigit>,
+  group3: <GroupDigit>3</GroupDigit>,
+  group4: <GroupDigit>4</GroupDigit>,
+  group5: <GroupDigit>5</GroupDigit>,
+  group6: <GroupDigit>6</GroupDigit>,
+  group7: <GroupDigit>7</GroupDigit>,
+  group8: <GroupDigit>8</GroupDigit>,
+  group9: <GroupDigit>9</GroupDigit>,
+  group0: <GroupDigit>0</GroupDigit>,
+};
+
+const AddBindingButton = (
+  { onClick, label }: { onClick: () => void; label: string },
+) => {
+  const { tooltipContainerProps, tooltip: tip } = useTooltip<HTMLButtonElement>(
+    label,
+  );
+  return (
+    <>
+      <ActionButton
+        type="button"
+        ref={tooltipContainerProps.ref}
+        onMouseEnter={tooltipContainerProps.onMouseEnter}
+        onMouseLeave={tooltipContainerProps.onMouseLeave}
+        onClick={onClick}
+        aria-label={label}
+      >
+        <Plus size={14} />
+      </ActionButton>
+      {tip}
+    </>
+  );
+};
 
 type ShortcutRowProps = {
   actionKey: string;
@@ -109,11 +231,6 @@ type ShortcutRowProps = {
   tooltip?: string;
 };
 
-const AltButton = styled(IconButton).attrs({ className: "alt-button" })`
-  --icon-button-opacity: 0;
-  font-size: 16px;
-`;
-
 export const ShortcutRow = memo(({
   actionKey,
   shortcut,
@@ -129,6 +246,7 @@ export const ShortcutRow = memo(({
   allAltKeys = [],
   tooltip,
 }: ShortcutRowProps) => {
+  const { t } = useTranslation();
   const { tooltipContainerProps, tooltip: tooltipPortal } = useTooltip<
     HTMLSpanElement
   >(tooltip);
@@ -189,42 +307,66 @@ export const ShortcutRow = memo(({
     }
   }, [altBindings, onSetBinding]);
 
+  const renderIcon = () => {
+    if (icon) {
+      return (
+        <SmallCommand
+          name=""
+          icon={icon}
+          accentColor={colors[0]}
+          hideTooltip
+        />
+      );
+    }
+    const lucideIcon = MISC_ICONS[actionKey] ?? CONTROL_GROUP_ICONS[actionKey];
+    if (lucideIcon) return <IconCell>{lucideIcon}</IconCell>;
+    if (actionKey.startsWith("slot-")) {
+      return (
+        <IconCell>
+          <GroupDigit>{actionKey.substring(5)}</GroupDigit>
+        </IconCell>
+      );
+    }
+    return <IconCell />;
+  };
+
   return (
-    <VStack style={{ gap: "4px" }} data-testid="shortcut-row">
-      <ShortcutRowContainer
+    <RowGroup data-testid="shortcut-row">
+      <BindRow
         $isNested={isNested}
         $isDraggable={isDraggable}
         $enableHover={enableHover}
         $isBeingDragged={isBeingDragged}
       >
-        {icon && (
-          <SmallCommand
-            name=""
-            icon={icon}
-            accentColor={colors[0]}
-            hideTooltip
-          />
-        )}
-        <LabelContainer
+        {renderIcon()}
+        <LabelCell
           $isDraggable={isDraggable}
-          onClick={onClick}
+          onMouseDown={isDraggable ? onClick : undefined}
           {...tooltipContainerProps}
         >
-          <ShortcutLabel>
-            {getActionDisplayName(actionKey, section)}
-          </ShortcutLabel>
-          {isDraggable && <span className="drag-handle">⋮⋮</span>}
-        </LabelContainer>
+          {getActionDisplayName(actionKey, section)}
+          {isDraggable && (
+            <span className="drag-handle">
+              <GripVertical size={14} />
+            </span>
+          )}
+        </LabelCell>
         {tooltipPortal}
-        <AltButton type="button" onClick={handleAddAlt}>+</AltButton>
-        {canDeletePrimary && (
-          <AltButton
-            type="button"
-            onClick={() => handleRemoveBinding(fullKey)}
-          >
-            🗑
-          </AltButton>
-        )}
+        <ActionGroup>
+          <AddBindingButton
+            onClick={handleAddAlt}
+            label={t("settings.addSecondaryBinding")}
+          />
+          {canDeletePrimary && (
+            <ActionButton
+              type="button"
+              onClick={() => handleRemoveBinding(fullKey)}
+              aria-label="Remove binding"
+            >
+              <Trash2 size={14} />
+            </ActionButton>
+          )}
+        </ActionGroup>
         <ShortcutInputField
           binding={shortcut}
           defaultBinding={getEffectiveDefault(section, fullKey)}
@@ -238,7 +380,7 @@ export const ShortcutRow = memo(({
             }
           }}
         />
-      </ShortcutRowContainer>
+      </BindRow>
       {altBindings.map((alt) => {
         const altDefault = getEffectiveDefault(section, alt.key);
         const altIsDefault = isDefaultBinding(
@@ -248,26 +390,37 @@ export const ShortcutRow = memo(({
           defaultBindings,
         );
         return (
-          <ShortcutRowContainer key={alt.key} $isNested={isNested}>
-            <span style={{ flex: 1 }} />
-            <AltButton type="button" onClick={handleAddAlt}>+</AltButton>
-            <AltButton
-              type="button"
-              onClick={() => handleRemoveBinding(alt.key)}
-            >
-              🗑
-            </AltButton>
+          <AltBindRow key={alt.key}>
+            <span />
+            <span />
+            <ActionGroup>
+              <ActionButton
+                type="button"
+                onClick={handleAddAlt}
+                aria-label="Add binding"
+                title="Add secondary binding"
+              >
+                <Plus size={14} />
+              </ActionButton>
+              <ActionButton
+                type="button"
+                onClick={() => handleRemoveBinding(alt.key)}
+                aria-label="Remove binding"
+              >
+                <Trash2 size={14} />
+              </ActionButton>
+            </ActionGroup>
             <ShortcutInputField
               binding={alt.binding}
               defaultBinding={altDefault}
               isDefault={altIsDefault}
               onSetBinding={(binding) => onSetBinding(alt.key, binding)}
             />
-          </ShortcutRowContainer>
+          </AltBindRow>
         );
       })}
       {conflict && <ConflictWarning conflict={conflict} section={section} />}
-    </VStack>
+    </RowGroup>
   );
 });
 

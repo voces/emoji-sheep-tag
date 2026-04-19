@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
 import { send } from "../../../messaging.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
@@ -8,8 +9,9 @@ import { useMemoWithPrevious } from "@/hooks/useMemoWithPrevious.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { stateVar } from "@/vars/state.ts";
 import { flags } from "../../../flags.ts";
-import { Card } from "@/components/layout/Card.tsx";
-import { Input } from "@/components/forms/Input.tsx";
+import { shortcutsVar } from "@/vars/shortcuts.ts";
+import { formatShortcut } from "@/util/formatShortcut.ts";
+import { Panel } from "@/components/Panel.tsx";
 import { isLocalPlayerHost } from "../../../api/player.ts";
 import {
   editorCurrentMapVar,
@@ -23,7 +25,6 @@ import { useSaveMapAs } from "./useSaveMapAs.ts";
 import { useQuickSaveMap } from "./useQuickSaveMap.ts";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
-import { openEditor } from "@/util/openEditor.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
 import { mouse, MouseButtonEvent } from "../../../mouse.ts";
 import { practiceVar } from "@/vars/practice.ts";
@@ -32,45 +33,127 @@ import { unloadEcs } from "../../../ecs.ts";
 import { connectionStatusVar } from "@/vars/state.ts";
 import { generateDoodads } from "@/shared/map.ts";
 
-const PaletteContainer = styled(Card)<{ $state: string }>`
+const PaletteContainer = styled(Panel)<{ $state: string }>`
   position: absolute;
   top: 20px;
-  width: 400px;
-  left: calc(50% - 200px);
+  width: min(600px, calc(100vw - 48px));
+  left: 50%;
+  transform: translateX(-50%);
+  max-height: 70vh;
   opacity: ${({ $state }) => $state === "open" ? 1 : 0};
-  transition: all 100ms ease-in-out;
+  transition: all ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeInOut};
   pointer-events: ${({ $state }) => $state === "open" ? "initial" : "none"};
   display: flex;
   flex-direction: column;
-  gap: ${({ theme }) => theme.spacing.md};
+  overflow: hidden;
+  padding: 0;
+  border-color: ${({ theme }) => theme.border.hi};
+  box-shadow: ${({ theme }) => theme.shadow.lg}, ${({ theme }) =>
+    theme.shadow.inset};
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: ${({ theme }) => theme.space[3]} 14px;
+  border-bottom: 1px solid ${({ theme }) => theme.border.soft};
+  background: ${({ theme }) => theme.surface[0]};
+`;
+
+const InputPrefix = styled.span`
+  font-family: ${({ theme }) => theme.font.mono};
+  color: ${({ theme }) => theme.ink.lo};
+  font-size: ${({ theme }) => theme.text.lg};
+  line-height: 1;
+`;
+
+const PaletteInput = styled.input`
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.ink.hi};
+  font-size: ${({ theme }) => theme.text.lg};
+  outline: none;
+  padding: 0;
+`;
+
+const CommandList = styled.div`
+  overflow-y: auto;
+  padding: ${({ theme }) => theme.space[1]};
+  flex: 1;
+  min-height: 0;
 `;
 
 const CommandOption = styled.div<{ $focused?: boolean }>`
-  background-color: ${({ $focused, theme }) =>
-    $focused ? theme.colors.shadow : "transparent"};
-  margin: ${({ $focused, theme }) => $focused ? `0 -${theme.spacing.lg}` : "0"};
-  padding: ${({ $focused, theme }) => $focused ? `0 ${theme.spacing.lg}` : "0"};
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
+  background: ${({ $focused, theme }) =>
+    $focused ? theme.accent.bg : "transparent"};
+  border: 1px solid ${({ $focused, theme }) =>
+    $focused
+      ? `color-mix(in oklab, ${theme.accent.DEFAULT} 35%, ${theme.border.DEFAULT})`
+      : "transparent"};
+  border-radius: ${({ theme }) => theme.radius.sm};
   cursor: pointer;
 
   &.hover {
-    background-color: ${({ theme }) => theme.colors.shadow};
-    margin: ${({ theme }) => `0 -${theme.spacing.lg}`};
-    padding: 0 ${({ theme }) => theme.spacing.lg};
+    background: ${({ theme }) => theme.accent.bg};
   }
 `;
 
-const CommandDescription = styled.div`
-  font-size: 70%;
-  color: color-mix(in oklab, ${({ theme }) =>
-    theme.colors.body} 70%, transparent);
+const CommandLabel = styled.span`
+  font-size: ${({ theme }) => theme.text.md};
+  font-weight: 500;
+  color: ${({ theme }) => theme.ink.hi};
+`;
+
+const CommandDescription = styled.span`
+  font-size: ${({ theme }) => theme.text.xs};
+  color: ${({ theme }) => theme.ink.lo};
+`;
+
+const GroupLabel = styled.div`
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]} ${(
+    { theme },
+  ) => theme.space[1]};
+  font-size: ${({ theme }) => theme.text.xs};
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: ${({ theme }) => theme.ink.lo};
+  font-weight: 500;
+`;
+
+const EmptyState = styled.div`
+  padding: ${({ theme }) => theme.space[10]};
+  text-align: center;
+  color: ${({ theme }) => theme.ink.lo};
+  font-size: ${({ theme }) => theme.text.sm};
+`;
+
+const Footer = styled.div`
+  display: flex;
+  gap: ${({ theme }) => theme.space[4]};
+  padding: 10px 14px;
+  border-top: 1px solid ${({ theme }) => theme.border.soft};
+  background: ${({ theme }) => theme.surface[0]};
+  font-size: ${({ theme }) => theme.text.xs};
+  color: ${({ theme }) => theme.ink.lo};
+
+  & > span {
+    display: inline-flex;
+    align-items: center;
+    gap: ${({ theme }) => theme.space[1]};
+  }
 `;
 
 const Highlight = styled.span`
-  color: color-mix(
-    in oklab,
-    ${({ theme }) => theme.colors.body} 30%,
-    ${({ theme }) => theme.colors.primary}
-  );
+  color: ${({ theme }) => theme.accent.DEFAULT};
 `;
 
 type CommandResult =
@@ -81,6 +164,8 @@ type CommandResult =
 type Command = {
   name: string;
   description?: string;
+  group?: string;
+  searchTerms?: string;
   valid?: () => boolean;
   callback: () => CommandResult | Promise<CommandResult>;
 };
@@ -91,6 +176,7 @@ type FilteredCommand =
     originalName: string;
     name: (string | React.JSX.Element)[] | string;
     description?: (string | React.JSX.Element)[] | string;
+    group?: string;
   };
 
 const highlightText = (text: string, query: string) => {
@@ -143,6 +229,7 @@ export const CommandPalette = () => {
     | null
   >(null);
 
+  const { t, i18n } = useTranslation();
   const copyMap = useCopyMap();
   const selectMap = useSelectMap();
   const saveMapAs = useSaveMapAs();
@@ -151,36 +238,70 @@ export const CommandPalette = () => {
   const practice = useReactiveVar(practiceVar);
 
   const commands = useMemo((): Command[] => [
+    ...(isEditor
+      ? [
+        ...((currentMap && !MAPS.find((m) => m.id === currentMap.id))
+          ? [quickSaveMap, saveMapAs, copyMap, selectMap]
+          : mapModified
+          ? [saveMapAs, copyMap, selectMap]
+          : [selectMap, copyMap]).map((c) => ({
+            ...c,
+            group: t("commands.groupEditor"),
+          })),
+        {
+          name: t(
+            lobbySettings.view ? "commands.enableFog" : "commands.disableFog",
+          ),
+          description: t("commands.fogDesc"),
+          group: t("commands.groupEditor"),
+          callback: () =>
+            send({ type: "lobbySettings", view: !lobbySettings.view }),
+        },
+        {
+          name: t(hideUI ? "commands.showUI" : "commands.hideUI"),
+          description: t("commands.uiDesc"),
+          group: t("commands.groupEditor"),
+          callback: () => editorHideUIVar(!hideUI),
+        },
+      ]
+      : []),
     {
-      name: "Cancel round",
-      description: "Cancels the current round",
+      name: t("commands.cancelRound"),
+      description: t("commands.cancelRoundDesc"),
+      group: t("commands.groupRound"),
       valid: () => stateVar() === "playing" && isLocalPlayerHost() && !isEditor,
       callback: () => send({ type: "cancel" }),
     },
     {
-      name: "Reset gold",
-      description: "Sets all players' gold to 0",
+      name: t("commands.resetGold"),
+      description: t("commands.resetGoldDesc"),
+      group: t("commands.groupRound"),
       valid: () => practice && isLocalPlayerHost(),
       callback: () => send({ type: "resetGold" }),
     },
     {
-      name: `${lobbySettings.view ? "Enable" : "Disable"} fog`,
-      description: `${lobbySettings.view ? "Enable" : "Disable"} fog of war`,
+      name: t(
+        lobbySettings.view ? "commands.enableFog" : "commands.disableFog",
+      ),
+      description: t("commands.fogDesc"),
+      group: t("commands.groupRound"),
       valid: () => practice && isLocalPlayerHost() && !isEditor,
       callback: () =>
         send({ type: "lobbySettings", view: !lobbySettings.view }),
     },
     {
-      name: "Leave lobby",
-      description: "Return to the lobby browser",
+      name: t("commands.leaveLobby"),
+      description: t("commands.leaveLobbyDesc"),
+      group: t("commands.groupNavigate"),
       valid: () =>
         (stateVar() === "lobby" || stateVar() === "playing") && !isEditor &&
         isMultiplayer(),
       callback: () => send({ type: "leaveLobby" }),
     },
     {
-      name: "Exit to main menu",
-      description: "Disconnect and return to the main menu",
+      name: t("commands.exitToMenu"),
+      description: t("commands.exitToMenuDesc"),
+      group: t("commands.groupNavigate"),
       valid: () => stateVar() !== "menu" && !isEditor,
       callback: () => {
         disconnect();
@@ -190,116 +311,66 @@ export const CommandPalette = () => {
         connectionStatusVar("notConnected");
       },
     },
-    ...(!isEditor
-      ? [{
-        name: "Open settings",
-        description: "Open setting menu",
-        callback: () => showSettingsVar(true),
-      }]
-      : []),
     {
-      name: "Open editor",
-      description: "Opens the map editor",
-      valid: () => !isEditor && stateVar() === "menu",
-      callback: openEditor,
-    },
-    ...((currentMap && !MAPS.find((m) => m.id === currentMap.id))
-      ? [quickSaveMap, saveMapAs, copyMap, selectMap]
-      : mapModified
-      ? [saveMapAs, copyMap, selectMap]
-      : [selectMap, copyMap]),
-    ...(isEditor
-      ? [
-        {
-          name: `${lobbySettings.view ? "Enable" : "Disable"} fog`,
-          description: `${
-            lobbySettings.view ? "Enable" : "Disable"
-          } fog of war in the editor`,
-          callback: () =>
-            send({ type: "lobbySettings", view: !lobbySettings.view }),
-        },
-        {
-          name: `${hideUI ? "Show" : "Hide"} UI`,
-          description: `${
-            hideUI ? "Show" : "Hide"
-          } game UI elements in the editor`,
-          callback: () => editorHideUIVar(!hideUI),
-        },
-        {
-          name: "Open settings",
-          description: "Open setting menu",
-          callback: () => showSettingsVar(true),
-        },
-      ]
-      : []),
-    {
-      name: `${uiSettings.showPing ? "Hide" : "Show"} ping`,
-      description: `${
-        uiSettings.showPing ? "Hide" : "Show"
-      } network latency indicator`,
-      callback: () => {
-        uiSettingsVar({
-          ...uiSettings,
-          showPing: !uiSettings.showPing,
-        });
-      },
+      name: t("commands.openSettings"),
+      description: t("commands.openSettingsDesc"),
+      group: t("commands.groupNavigate"),
+      callback: () => showSettingsVar(true),
     },
     {
-      name: `${uiSettings.showFps ? "Hide" : "Show"} FPS`,
-      description: `${
-        uiSettings.showFps ? "Hide" : "Show"
-      } frames per second counter`,
-      callback: () => {
-        uiSettingsVar({
-          ...uiSettings,
-          showFps: !uiSettings.showFps,
-        });
-      },
+      name: t(
+        uiSettings.showPing ? "commands.hidePing" : "commands.showPing",
+      ),
+      description: t("commands.pingDesc"),
+      group: t("commands.groupDisplay"),
+      callback: () =>
+        uiSettingsVar({ ...uiSettings, showPing: !uiSettings.showPing }),
     },
-    // {
-    //   name: "Set game speed",
-    //   description: "Change the game speed multiplier (1 = normal)",
-    //   valid: () => isLocalPlayerHost(),
-    //   callback: () => ({
-    //     type: "prompt",
-    //     placeholder: "Speed multiplier (e.g. 0.01, 1, 10)",
-    //     callback: (value: string) => {
-    //       const speed = parseFloat(value);
-    //       if (!Number.isFinite(speed) || speed < 0) return;
-    //       send({ type: "lobbySettings", speedMultiplier: speed });
-    //       addChatMessage(`Game speed set to ${speed}`);
-    //     },
-    //   }),
-    // },
     {
-      name: "Set latency",
-      description: "Artificially increase latency",
+      name: t(uiSettings.showFps ? "commands.hideFps" : "commands.showFps"),
+      description: t("commands.fpsDesc"),
+      group: t("commands.groupDisplay"),
+      callback: () =>
+        uiSettingsVar({ ...uiSettings, showFps: !uiSettings.showFps }),
+    },
+    {
+      name: t("commands.setLatency"),
+      description: t("commands.setLatencyDesc"),
+      group: t("commands.groupDebug"),
       valid: () => flags.debug,
       callback: () => ({
         type: "prompt",
         placeholder: "Latency (MS)",
-        callback: (latency: string) =>
-          addChatMessage(
-            `Latency set to ${globalThis.latency = parseFloat(latency)}ms.`,
-          ),
+        callback: (latency: string) => {
+          const value = parseFloat(latency) || 0;
+          globalThis.latency = value;
+          addChatMessage(`Latency set to ${value}ms.`);
+        },
       }),
     },
     {
-      name: "Set noise",
-      description: "Artificially increase noise on latency",
+      name: t("commands.setNoise"),
+      description: t("commands.setNoiseDesc"),
+      group: t("commands.groupDebug"),
       valid: () => flags.debug,
       callback: () => ({
         type: "prompt",
         placeholder: "Noise (MS)",
-        callback: (noise: string) =>
-          addChatMessage(
-            `Noise set to ${globalThis.noise = parseFloat(noise)}ms.`,
-          ),
+        callback: (noise: string) => {
+          const value = parseFloat(noise) || 0;
+          globalThis.noise = value;
+          addChatMessage(`Noise set to ${value}ms.`);
+        },
       }),
     },
     {
-      name: `${flags.debugPathing ? "Disable" : "Enable"} path debugging`,
-      description: `${flags.debugPathing ? "Hide" : "Show"} pathing traces`,
+      name: t(
+        flags.debugPathing
+          ? "commands.disablePathDebug"
+          : "commands.enablePathDebug",
+      ),
+      description: t("commands.pathDebugDesc"),
+      group: t("commands.groupDebug"),
       valid: () => flags.debug,
       callback: () => {
         flags.debugPathing = !flags.debugPathing;
@@ -307,7 +378,20 @@ export const CommandPalette = () => {
         else localStorage.removeItem("debug-pathing");
       },
     },
+    {
+      name: t(
+        i18n.language === "pseudo"
+          ? "commands.disablePseudo"
+          : "commands.enablePseudo",
+      ),
+      description: t("commands.pseudoDesc"),
+      group: t("commands.groupDebug"),
+      valid: () => flags.debug,
+      callback: () =>
+        i18n.changeLanguage(i18n.language === "pseudo" ? "en" : "pseudo"),
+    },
   ], [
+    t,
     copyMap,
     selectMap,
     saveMapAs,
@@ -319,6 +403,7 @@ export const CommandPalette = () => {
     lobbySettings.view,
     flags.debug,
     flags.debugPathing,
+    i18n.language,
     uiSettings.showPing,
     uiSettings.showFps,
     practice,
@@ -336,11 +421,12 @@ export const CommandPalette = () => {
 
     const regexp = new RegExp(input.toLowerCase().split("").join(".*"), "i");
     const matches: FilteredCommand[] = [];
-    for (let i = 0; i < sourceList.length && matches.length < 10; i++) {
+    for (let i = 0; i < sourceList.length; i++) {
       const command = sourceList[i];
       const nameMatches = command.name.match(regexp);
       const descriptionMatches = command.description?.match(regexp);
-      if (nameMatches || descriptionMatches) {
+      const searchMatches = command.searchTerms?.match(regexp);
+      if (nameMatches || descriptionMatches || searchMatches) {
         matches.push({
           ...command,
           originalName: command.name,
@@ -357,6 +443,17 @@ export const CommandPalette = () => {
     }
     return matches;
   }, [input, showCommandPalette, nestedCommands, prompt]);
+
+  const groupedCommands = useMemo(() => {
+    const groups: { group: string; items: FilteredCommand[] }[] = [];
+    for (const c of filteredCommands) {
+      const g = c.group ?? "";
+      const last = groups.at(-1);
+      if (last && last.group === g) last.items.push(c);
+      else groups.push({ group: g, items: [c] });
+    }
+    return groups;
+  }, [filteredCommands]);
 
   useEffect(() => {
     if (
@@ -430,59 +527,101 @@ export const CommandPalette = () => {
       if (e.element?.closest("[data-command-palette]")) return;
       showCommandPaletteVar((p) => p === "open" ? "dismissed" : p);
     };
-    mouse.addEventListener("mouseButtonDown", listener);
-    return () => mouse.removeEventListener("mouseButtonDown", listener);
+    mouse.addEventListener("mouseButtonUp", listener);
+    return () => mouse.removeEventListener("mouseButtonUp", listener);
   }, []);
+
+  const shortcuts = shortcutsVar();
+  const openKey = shortcuts.misc.openCommandPalette;
 
   return (
     <PaletteContainer
       $state={showCommandPalette}
       aria-hidden={showCommandPalette !== "open"}
       data-command-palette
+      data-overlay="true"
     >
-      <Input
-        placeholder={prompt}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        ref={inputRef}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.code === "Enter") return showCommandPaletteVar("sent");
-          // Don't allow navigation when showing a text prompt
-          if (promptCallback) return;
-          if (e.code === "ArrowUp" && filteredCommands.length) {
-            setFocused(
-              filteredCommands.at(
-                filteredCommands.findIndex((c) => c.originalName === focused) -
-                  1,
-              )?.originalName,
-            );
-          } else if (e.code === "ArrowDown" && filteredCommands.length) {
-            setFocused(
-              filteredCommands[
-                (filteredCommands.findIndex((c) => c.originalName === focused) +
-                  1) % filteredCommands.length
-              ]?.originalName,
-            );
-          }
-        }}
-      />
-      {!promptCallback &&
-        filteredCommands.map((c) => (
-          <CommandOption
-            key={c.originalName}
-            $focused={focused === c.originalName}
-            onClick={() => {
-              setFocused(c.originalName);
-              showCommandPaletteVar("sent");
-            }}
-          >
-            <div>{c.name}</div>
-            {c.description && (
-              <CommandDescription>{c.description}</CommandDescription>
-            )}
-          </CommandOption>
-        ))}
+      <InputRow>
+        <InputPrefix>›</InputPrefix>
+        <PaletteInput
+          placeholder={prompt || t("commands.searchPlaceholder")}
+          value={input}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setInput(e.target.value)}
+          ref={inputRef}
+          onKeyDown={(e: React.KeyboardEvent) => {
+            e.stopPropagation();
+            if (e.key === "Enter") return showCommandPaletteVar("sent");
+            if (promptCallback) return;
+            if (e.code === "ArrowUp" && filteredCommands.length) {
+              e.preventDefault();
+              setFocused(
+                filteredCommands.at(
+                  filteredCommands.findIndex((c) =>
+                    c.originalName === focused
+                  ) - 1,
+                )?.originalName,
+              );
+            } else if (e.code === "ArrowDown" && filteredCommands.length) {
+              e.preventDefault();
+              setFocused(
+                filteredCommands[
+                  (filteredCommands.findIndex((c) =>
+                    c.originalName === focused
+                  ) + 1) % filteredCommands.length
+                ]?.originalName,
+              );
+            }
+          }}
+        />
+      </InputRow>
+      <CommandList>
+        {!promptCallback &&
+          groupedCommands.map(({ group, items }, gi) => (
+            <div key={`${group}-${gi}`}>
+              {group && <GroupLabel>{group}</GroupLabel>}
+              {items.map((c) => (
+                <CommandOption
+                  key={c.originalName}
+                  $focused={focused === c.originalName}
+                  ref={focused === c.originalName
+                    ? (el: HTMLDivElement | null) =>
+                      el?.scrollIntoView({ block: "nearest" })
+                    : undefined}
+                  onMouseEnter={() => setFocused(c.originalName)}
+                  onClick={() => {
+                    setFocused(c.originalName);
+                    showCommandPaletteVar("sent");
+                  }}
+                >
+                  <CommandLabel>{c.name}</CommandLabel>
+                  {c.description && (
+                    <CommandDescription>{c.description}</CommandDescription>
+                  )}
+                </CommandOption>
+              ))}
+            </div>
+          ))}
+        {!promptCallback && filteredCommands.length === 0 && (
+          <EmptyState>
+            {t("commands.noResults", { query: input })}
+          </EmptyState>
+        )}
+      </CommandList>
+      <Footer>
+        <span>
+          <kbd>↑</kbd>
+          <kbd>↓</kbd> {t("commands.navigate")}
+        </span>
+        <span>
+          <kbd>↵</kbd> {t("commands.run")}
+        </span>
+        {openKey && (
+          <span>
+            <kbd>{formatShortcut(openKey)}</kbd> {t("commands.toOpen")}
+          </span>
+        )}
+      </Footer>
     </PaletteContainer>
   );
 };

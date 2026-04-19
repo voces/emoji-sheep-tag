@@ -1,10 +1,16 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { type AudioSettings, audioSettingsVar } from "@/vars/audioSettings.ts";
 import { Slider } from "@/components/forms/Slider.tsx";
-import { SettingsPanelContainer, SettingsPanelTitle } from "./commonStyles.tsx";
+import {
+  FieldGroup,
+  SettingsPanelContainer,
+  SettingsPanelTitle,
+} from "./commonStyles.tsx";
 
 export const Audio = () => {
+  const { t } = useTranslation();
   const audioSettings = useReactiveVar(audioSettingsVar) as AudioSettings;
 
   const handleMasterChange = useCallback((value: number) => {
@@ -30,31 +36,33 @@ export const Audio = () => {
 
   return (
     <SettingsPanelContainer>
-      <SettingsPanelTitle>Volume Settings</SettingsPanelTitle>
-      <Slider
-        label="Master Volume"
-        value={audioSettings.master}
-        onChange={handleMasterChange}
-        formatValue={formatPercent}
-      />
-      <Slider
-        label="Sound Effects"
-        value={audioSettings.sfx}
-        onChange={handleSfxChange}
-        formatValue={formatPercent}
-      />
-      <Slider
-        label="User Interface"
-        value={audioSettings.ui}
-        onChange={handleUiChange}
-        formatValue={formatPercent}
-      />
-      <Slider
-        label="Ambience"
-        value={audioSettings.ambience}
-        onChange={handleAmbienceChange}
-        formatValue={formatPercent}
-      />
+      <SettingsPanelTitle>{t("settings.audioTitle")}</SettingsPanelTitle>
+      <FieldGroup>
+        <Slider
+          label={t("settings.masterVolume")}
+          value={audioSettings.master}
+          onChange={handleMasterChange}
+          formatValue={formatPercent}
+        />
+        <Slider
+          label={t("settings.soundEffects")}
+          value={audioSettings.sfx}
+          onChange={handleSfxChange}
+          formatValue={formatPercent}
+        />
+        <Slider
+          label={t("settings.userInterface")}
+          value={audioSettings.ui}
+          onChange={handleUiChange}
+          formatValue={formatPercent}
+        />
+        <Slider
+          label={t("settings.ambience")}
+          value={audioSettings.ambience}
+          onChange={handleAmbienceChange}
+          formatValue={formatPercent}
+        />
+      </FieldGroup>
     </SettingsPanelContainer>
   );
 };

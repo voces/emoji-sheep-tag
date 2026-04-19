@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { styled } from "styled-components";
+import { AlertTriangle, X } from "lucide-react";
 import { renderer } from "../../graphics/three.ts";
 import { isSoftwareRenderer } from "../../util/gpu.ts";
 
@@ -31,29 +34,102 @@ const useGPUDetection = (): GPUInfo | null => {
         isSoftwareRenderer: softwareRenderer,
       });
 
-      if (softwareRenderer) console.warn("⚠️ Software rendering detected!");
+      if (softwareRenderer) console.warn("Software rendering detected!");
     }
   }, []);
 
   return gpuInfo;
 };
 
-export const PerformanceWarning: React.FC = () => {
+const Banner = styled.div`
+  position: fixed;
+  top: ${({ theme }) => theme.space[5]};
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 600px;
+  text-align: center;
+  z-index: 10000;
+  background: ${({ theme }) => theme.danger.DEFAULT};
+  color: white;
+  padding: ${({ theme }) => theme.space[4]} ${({ theme }) => theme.space[6]};
+  border-radius: ${({ theme }) => theme.radius.md};
+  box-shadow: ${({ theme }) => theme.shadow.lg};
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: ${({ theme }) => theme.space[2]};
+  right: ${({ theme }) => theme.space[2]};
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: ${({ theme }) => theme.space[1]};
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
+
+  &.hover {
+    opacity: 1;
+  }
+`;
+
+const IconContainer = styled.div`
+  margin-bottom: ${({ theme }) => theme.space[2]};
+`;
+
+const Title = styled.div`
+  font-weight: 700;
+  margin-bottom: ${({ theme }) => theme.space[2]};
+`;
+
+const Description = styled.div`
+  font-size: ${({ theme }) => theme.text.sm};
+  margin-bottom: ${({ theme }) => theme.space[3]};
+`;
+
+const Steps = styled.div`
+  font-size: ${({ theme }) => theme.text.xs};
+  margin-bottom: ${({ theme }) => theme.space[3]};
+  text-align: left;
+  line-height: 1.5;
+`;
+
+const InstructionsLink = styled.a`
+  display: inline-block;
+  background: white;
+  color: ${({ theme }) => theme.danger.DEFAULT};
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[4]};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  text-decoration: none;
+  font-weight: 700;
+  font-size: ${({ theme }) => theme.text.sm};
+
+  &.hover {
+    opacity: 0.9;
+  }
+`;
+
+const GPULabel = styled.div`
+  font-size: ${({ theme }) => theme.text.xs};
+  margin-top: ${({ theme }) => theme.space[2]};
+  opacity: 0.8;
+`;
+
+export const PerformanceWarning = () => {
+  const { t } = useTranslation();
   const gpuInfo = useGPUDetection();
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    // Clear dismissal if hardware rendering is now active
     if (gpuInfo && !gpuInfo.isSoftwareRenderer) {
       localStorage.removeItem(DISMISSED_KEY);
       return;
     }
 
-    // Check if previously dismissed
     const dismissed = localStorage.getItem(DISMISSED_KEY);
-    if (dismissed === "true") {
-      setIsDismissed(true);
-    }
+    if (dismissed === "true") setIsDismissed(true);
   }, [gpuInfo]);
 
   const handleDismiss = () => {
@@ -64,87 +140,32 @@ export const PerformanceWarning: React.FC = () => {
   if (!gpuInfo?.isSoftwareRenderer || isDismissed) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: "20px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        backgroundColor: "#ff6b6b",
-        color: "white",
-        padding: "16px 24px",
-        borderRadius: "8px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-        zIndex: 10000,
-        maxWidth: "600px",
-        textAlign: "center",
-        textShadow: "none",
-      }}
-    >
-      <button
-        type="button"
-        onClick={handleDismiss}
-        style={{
-          position: "absolute",
-          top: "8px",
-          right: "8px",
-          background: "none",
-          border: "none",
-          color: "white",
-          fontSize: "20px",
-          cursor: "pointer",
-          padding: "4px 8px",
-          lineHeight: "1",
-          opacity: 0.7,
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-        onMouseLeave={(e) => e.currentTarget.style.opacity = "0.7"}
-      >
-        ×
-      </button>
-      <div style={{ fontSize: "24px", marginBottom: "8px" }}>⚠️</div>
-      <div style={{ fontWeight: "bold", marginBottom: "8px" }}>
-        Software Rendering Detected
-      </div>
-      <div style={{ fontSize: "14px", marginBottom: "12px" }}>
-        Your browser is using software rendering, which causes poor performance.
-      </div>
-      <div
-        style={{
-          fontSize: "12px",
-          marginBottom: "12px",
-          textAlign: "left",
-          lineHeight: "1.5",
-        }}
-      >
-        <strong>How to fix:</strong>
+    <Banner>
+      <CloseButton type="button" onClick={handleDismiss}>
+        <X size={16} />
+      </CloseButton>
+      <IconContainer>
+        <AlertTriangle size={24} />
+      </IconContainer>
+      <Title>{t("gpu.title")}</Title>
+      <Description>{t("gpu.description")}</Description>
+      <Steps>
+        <strong>{t("gpu.howToFix")}</strong>
         <br />
-        1. Enable hardware acceleration in browser settings
+        1. {t("gpu.step1")}
         <br />
-        2. Update your graphics drivers
+        2. {t("gpu.step2")}
         <br />
-        3. Try Chrome or Firefox
-      </div>
-      <a
+        3. {t("gpu.step3")}
+      </Steps>
+      <InstructionsLink
         href="https://www.howtogeek.com/412738/how-to-turn-hardware-acceleration-on-and-off-in-chrome/"
         target="_blank"
         rel="noopener noreferrer"
-        style={{
-          display: "inline-block",
-          backgroundColor: "white",
-          color: "#ff6b6b",
-          padding: "8px 16px",
-          borderRadius: "4px",
-          textDecoration: "none",
-          fontWeight: "bold",
-          fontSize: "14px",
-        }}
       >
-        See Instructions
-      </a>
-      <div style={{ fontSize: "10px", marginTop: "8px", opacity: 0.8 }}>
-        GPU: {gpuInfo.renderer}
-      </div>
-    </div>
+        {t("gpu.seeInstructions")}
+      </InstructionsLink>
+      <GPULabel>{t("gpu.gpuLabel", { renderer: gpuInfo.renderer })}</GPULabel>
+    </Banner>
   );
 };

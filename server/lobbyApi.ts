@@ -104,10 +104,19 @@ export const sendRoundEndMessages = (
   send({ type: "stop", updates: Array.from(lobby.players), round });
 
   if (captainsPhaseChanged) {
-    send({
-      type: "captainsDraft",
-      phase: inSecondCaptainsRound ? undefined : "reversed",
-    });
+    if (inSecondCaptainsRound) {
+      send({ type: "captainsDraft", phase: undefined });
+    } else {
+      const draft = lobby.captainsDraft!;
+      send({
+        type: "captainsDraft",
+        phase: "reversed",
+        captains: draft.captains,
+        picks: draft.picks,
+        currentPicker: draft.currentPicker,
+        picksThisTurn: draft.picksThisTurn,
+      });
+    }
     send({ type: "lobbySettings", ...serializeLobbySettings(lobby) });
   }
 

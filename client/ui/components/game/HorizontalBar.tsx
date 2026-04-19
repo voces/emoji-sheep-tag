@@ -20,7 +20,9 @@ const HorizontalBarFill = styled.div.attrs<
   left: 0;
   height: 100%;
   background-color: ${({ color }) => color};
-  transition: width 0.2s ease-in-out;
+  border-radius: 2px;
+  transition: width ${({ theme }) => theme.motion.med} ${({ theme }) =>
+  theme.motion.easeOut};
 `;
 
 const DisplayedValue = styled.div<{ $height: number | undefined }>`
@@ -29,8 +31,12 @@ const DisplayedValue = styled.div<{ $height: number | undefined }>`
   left: 0;
   width: 100%;
   height: 100%;
-  text-align: center;
-  font-size: min(1em, ${({ $height }) => $height ? `${$height - 5}px` : "1em"});
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: ${({ $height }) =>
+    $height ? `${Math.min(14, $height - 4)}px` : "inherit"};
+  text-shadow: ${({ theme }) => theme.shadow.sm};
 `;
 
 export const HorizontalBar = ({

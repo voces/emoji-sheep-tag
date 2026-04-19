@@ -14,39 +14,57 @@ const Wrapper = styled.div`
   position: relative;
 
   &.hover {
-    box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) =>
-      theme.shadows.sm};
+    box-shadow: ${({ theme }) => theme.shadow.sm};
   }
 `;
 
 export const PickerCard = styled.div`
-  position: absolute;
-  background: ${({ theme }) => theme.colors.body};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  top: 28px;
-  box-shadow: ${({ theme }) => theme.colors.shadow} ${({ theme }) =>
-    theme.shadows.md};
+  background: ${({ theme }) => theme.surface[1]};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.md};
+  box-shadow: ${({ theme }) => theme.shadow.lg};
   display: grid;
-  grid-template-columns: repeat(6, 2cap);
-  grid-template-rows: repeat(4, 2cap);
-  gap: ${({ theme }) => theme.spacing.sm};
-  padding: ${({ theme }) => theme.spacing.sm};
-  z-index: 1;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: ${({ theme }) => theme.space[3]};
 `;
 
-const Color = styled.span<
-  { $color: string; $selected: boolean; $disabled: boolean }
->`
+const Swatch = styled.button<{
+  $color: string;
+  $selected: boolean;
+  $taken: boolean;
+}>`
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid ${({ $selected, theme }) =>
+    $selected
+      ? `color-mix(in oklab, ${theme.ink.hi} 90%, transparent)`
+      : "transparent"};
   background-color: ${({ $color }) => $color};
-  border: 1px solid ${({ $disabled, theme }) =>
-    $disabled ? "transparent" : theme.colors.border};
-  box-shadow: ${({ $selected, theme }) =>
-    $selected ? `${theme.colors.shadow} 1px 1px` : "none"};
+  cursor: ${({ $taken }) => ($taken ? "not-allowed" : "pointer")};
+  opacity: ${({ $taken }) => ($taken ? 0.25 : 1)};
+  transition:
+    transform ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut};
+  position: relative;
+  padding: 0;
+  outline: none;
+  box-shadow: ${({ $selected }) =>
+    $selected
+      ? `0 0 0 1px rgba(0, 0, 0, 0.4)`
+      : `inset 0 1px 2px rgba(0, 0, 0, 0.2)`};
 
-  &.hover {
-    box-shadow: ${({ theme, $disabled }) =>
-      $disabled ? "none" : `${theme.colors.border} 1px 1px`};
-  }
+  ${({ $taken, theme }) =>
+    !$taken &&
+    `
+    &.hover {
+      transform: scale(1.15);
+      border-color: color-mix(in oklab, ${theme.ink.hi} 50%, transparent);
+    }
+  `};
 `;
 
 export const ColorPickerPopup = (
@@ -65,11 +83,11 @@ export const ColorPickerPopup = (
       {colors.map((c) => {
         const isTaken = takenColors.has(c) && c !== value;
         return (
-          <Color
+          <Swatch
             key={c}
             $color={c}
             $selected={c === value}
-            $disabled={isTaken}
+            $taken={isTaken}
             onClick={() => {
               if (!isTaken) {
                 onChange(c);
@@ -99,11 +117,13 @@ export const ColorPicker = (
         onClick={() => !readonly && setVisible((v) => !v)}
       />
       {visible && (
-        <ColorPickerPopup
-          value={value}
-          onChange={onChange}
-          onClose={() => setVisible(false)}
-        />
+        <div style={{ position: "absolute", top: 28, zIndex: 1 }}>
+          <ColorPickerPopup
+            value={value}
+            onChange={onChange}
+            onClose={() => setVisible(false)}
+          />
+        </div>
       )}
     </div>
   );

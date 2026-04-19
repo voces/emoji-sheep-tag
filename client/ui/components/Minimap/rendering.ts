@@ -27,6 +27,7 @@ export const createMinimapRenderer = (
   minimapUnits: Set<Entity>,
   minimapPlayerEntities: Set<Entity>,
   pixelRatio: number,
+  showCameraBox = true,
 ) => {
   const renderWidth = 277 * pixelRatio;
   const renderHeight = 277 * pixelRatio;
@@ -145,8 +146,6 @@ export const createMinimapRenderer = (
       new Vector3(x - halfWidth, y - halfHeight, 0),
     ];
 
-    viewportIndicator.geometry.setFromPoints(points);
-
     minimapFogPass.render(
       renderer,
       fogOutputTarget,
@@ -154,17 +153,29 @@ export const createMinimapRenderer = (
       delta,
     );
 
-    renderer.setRenderTarget(fogOutputTarget);
-    renderer.autoClear = false;
-    renderer.render(viewportIndicatorScene, camera);
-    renderer.autoClear = true;
+    if (showCameraBox) {
+      viewportIndicator.geometry.setFromPoints(points);
+      renderer.setRenderTarget(fogOutputTarget);
+      renderer.autoClear = false;
+      renderer.render(viewportIndicatorScene, camera);
+      renderer.autoClear = true;
+    }
 
     blitMaterial.uniforms.tDiffuse.value = fogOutputTarget.texture;
     renderer.setRenderTarget(null);
     renderer.render(blitScene, blitCamera);
   };
 
+  const compileAsync = () =>
+    Promise.all([
+      renderer.compileAsync(scene, camera),
+      renderer.compileAsync(blitScene, blitCamera),
+      renderer.compileAsync(viewportIndicatorScene, camera),
+      minimapFogPass.compileAsync(renderer),
+    ]);
+
   return {
+    compileAsync,
     renderScene,
     renderFogAndOverlay,
     setDisableFogOfWar: (disable: boolean) => {

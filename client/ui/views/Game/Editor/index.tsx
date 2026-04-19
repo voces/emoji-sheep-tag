@@ -8,7 +8,7 @@ import { AreaPanel } from "./AreaPanel.tsx";
 import { styled } from "styled-components";
 
 const Container = styled(VStack)`
-  max-height: calc(100vh - ${({ theme }) => theme.spacing.md} * 2);
+  max-height: calc(100vh - ${({ theme }) => theme.space[2]} * 2);
 `;
 
 export const Editor = () => {

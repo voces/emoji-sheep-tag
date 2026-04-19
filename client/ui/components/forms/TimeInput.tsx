@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { styled } from "styled-components";
-import { Input } from "./Input.tsx";
-
-const StyledTimeInput = styled(Input)`
-  font-family: monospace;
-`;
+import { MonoInput } from "./TextInput.tsx";
 
 type TimeInputProps = {
-  value: number; // Value in seconds
+  value: number;
   onChange: (seconds: number) => void;
   min?: number;
   max?: number;
@@ -16,32 +11,22 @@ type TimeInputProps = {
 const formatTime = (totalSeconds: number): string => {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes.toString()}:${seconds.toString().padStart(2, "0")}`;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-const parseTime = (timeString: string): number | null => {
-  // Remove any non-digit characters except colon and decimal point
-  const cleaned = timeString.replace(/[^\d:.]/g, "");
+const parseTime = (input: string): number | null => {
+  const cleaned = input.replace(/[^0-9:]/g, "");
+  if (!cleaned) return null;
 
-  // Handle various formats
   if (cleaned.includes(":")) {
-    const [minutesPart, secondsPart] = cleaned.split(":");
-    let minutes = Math.round(parseFloat(minutesPart)) || 0;
-    let seconds = Math.round(parseFloat(secondsPart)) || 0;
-
-    // Validate seconds part (should be 0-59)
-    if (seconds >= 60) {
-      minutes += Math.floor(seconds / 60);
-      seconds = seconds % 60;
-    }
-
+    const parts = cleaned.split(":");
+    const minutes = parseInt(parts[0]) || 0;
+    const seconds = parseInt(parts[1]) || 0;
     return minutes * 60 + seconds;
-  } else {
-    // If no colon, treat as minutes and convert to seconds
-    const minutes = parseFloat(cleaned);
-    if (isNaN(minutes)) return null;
-    return Math.round(minutes * 60);
   }
+
+  const n = parseInt(cleaned);
+  return isNaN(n) ? null : n;
 };
 
 export const TimeInput = ({
@@ -50,55 +35,40 @@ export const TimeInput = ({
   min = 0,
   max = 9999,
   ...rest
-}: TimeInputProps & Omit<React.ComponentProps<typeof Input>, "onChange">) => {
-  const [displayValue, setDisplayValue] = useState(formatTime(value));
-  const [isEditing, setIsEditing] = useState(false);
+}:
+  & TimeInputProps
+  & Omit<React.ComponentProps<typeof MonoInput>, "onChange">) => {
+  const [display, setDisplay] = useState(formatTime(value));
+  const [editing, setEditing] = useState(false);
 
-  // Update display when external value changes (and not editing)
   useEffect(() => {
-    if (!isEditing) {
-      setDisplayValue(formatTime(value));
-    }
-  }, [value, isEditing]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value;
-    setDisplayValue(input);
-  };
+    if (!editing) setDisplay(formatTime(value));
+  }, [value, editing]);
 
   const handleBlur = () => {
-    setIsEditing(false);
-
-    const parsed = parseTime(displayValue);
+    setEditing(false);
+    const parsed = parseTime(display);
     if (parsed !== null) {
       const clamped = Math.max(min, Math.min(max, parsed));
-      onChange(clamped);
-      setDisplayValue(formatTime(clamped));
+      if (clamped !== value) onChange(clamped);
+      setDisplay(formatTime(clamped));
     } else {
-      // Reset to current value if parse failed
-      setDisplayValue(formatTime(value));
-    }
-  };
-
-  const handleFocus = () => {
-    setIsEditing(true);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.currentTarget.blur();
+      setDisplay(formatTime(value));
     }
   };
 
   return (
-    <StyledTimeInput
+    <MonoInput
       type="text"
-      value={displayValue}
-      onChange={handleChange}
+      value={display}
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+        setDisplay(e.target.value.replace(/[^0-9:]/g, ""))}
       onBlur={handleBlur}
-      onFocus={handleFocus}
-      onKeyDown={handleKeyDown}
-      placeholder="MM:SS"
+      onFocus={() => setEditing(true)}
+      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      placeholder="M:SS"
       {...rest}
     />
   );

@@ -40,7 +40,11 @@ const MinimapCanvas = styled.canvas`
   cursor: pointer;
 `;
 
-export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
+export const Minimap = (
+  { showCameraBox = true, interactive = true, disableFog = false, ...props }:
+    & React.ComponentProps<typeof MinimapCanvas>
+    & { showCameraBox?: boolean; interactive?: boolean; disableFog?: boolean },
+) => {
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -66,8 +70,10 @@ export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
     const unsubscribeMapChange = onMapChange(updateCamera);
     camera.layers.enableAll();
 
-    const cameraMovement = createCameraMovement(canvas, mainCamera);
-    const raycast = createMinimapRaycast(canvas, camera);
+    const cameraMovement = interactive
+      ? createCameraMovement(canvas, mainCamera)
+      : null;
+    const raycast = interactive ? createMinimapRaycast(canvas, camera) : null;
     const minimapRenderer = createMinimapRenderer(
       renderer,
       camera,
@@ -75,13 +81,15 @@ export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
       minimapUnits,
       minimapPlayerEntities,
       pixelRatio,
+      showCameraBox,
     );
 
-    // Sync fog disable setting with lobby settings
-    minimapRenderer.setDisableFogOfWar(lobbySettingsVar().view);
-    const unsubscribeLobbySettings = lobbySettingsVar.subscribe((settings) => {
-      minimapRenderer.setDisableFogOfWar(settings.view);
-    });
+    minimapRenderer.setDisableFogOfWar(disableFog || lobbySettingsVar().view);
+    const unsubscribeLobbySettings = disableFog
+      ? null
+      : lobbySettingsVar.subscribe((settings) => {
+        minimapRenderer.setDisableFogOfWar(settings.view);
+      });
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -92,38 +100,42 @@ export const Minimap = (props: React.ComponentProps<typeof MinimapCanvas>) => {
     });
     resizeObserver.observe(canvas);
 
-    const targetFPS = 15;
-    const frameTime = 1 / targetFPS; // Delta is in seconds, so frameTime should be too
-    let timeSinceLastSceneRender = 0;
-    let isFirstFrame = true;
+    // Eagerly compile minimap-specific shaders in parallel, then warm up
+    // the game scene materials with a single offscreen render
+    let disposed = false;
+    let disposeRender: (() => void) | undefined;
 
-    const disposeRender = onRender((delta) => {
-      cameraMovement.updateCameraSmooth(delta);
+    minimapRenderer.compileAsync().then(() => {
+      if (disposed) return;
 
-      // Render scene entities at throttled FPS
-      if (isFirstFrame) {
-        minimapRenderer.renderScene();
-        isFirstFrame = false;
-        timeSinceLastSceneRender = 0;
-      } else {
+      // Warm up game scene materials (triggers synchronous compilation once)
+      minimapRenderer.renderScene();
+
+      const targetFPS = 15;
+      const frameTime = 1 / targetFPS;
+      let timeSinceLastSceneRender = 0;
+
+      disposeRender = onRender((delta) => {
+        cameraMovement?.updateCameraSmooth(delta);
+
         timeSinceLastSceneRender += delta;
         if (timeSinceLastSceneRender >= frameTime) {
           minimapRenderer.renderScene();
           timeSinceLastSceneRender -= frameTime;
         }
-      }
 
-      // Render fog and overlay at full FPS
-      minimapRenderer.renderFogAndOverlay(delta, mainCamera);
+        minimapRenderer.renderFogAndOverlay(delta, mainCamera);
+      });
     });
 
     return () => {
+      disposed = true;
       resizeObserver.disconnect();
       unsubscribeMapChange();
-      unsubscribeLobbySettings();
-      disposeRender();
-      cameraMovement.dispose();
-      raycast.dispose();
+      unsubscribeLobbySettings?.();
+      disposeRender?.();
+      cameraMovement?.dispose();
+      raycast?.dispose();
       minimapRenderer.dispose();
       renderer.forceContextLoss();
       renderer.dispose();

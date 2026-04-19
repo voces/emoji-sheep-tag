@@ -11,7 +11,7 @@ const Header = styled.h4`
 const Icon = styled.span`
   display: inline-block;
   width: 1.5ch;
-  margin-right: ${({ theme }) => theme.spacing.sm};
+  margin-right: ${({ theme }) => theme.space[1]};
 `;
 
 export const CollapsiblePanel = (

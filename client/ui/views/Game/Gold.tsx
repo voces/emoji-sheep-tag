@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
@@ -14,22 +15,41 @@ import { getEffectivePlayerGold } from "../../../api/player.ts";
 import { selection } from "../../../systems/selection.ts";
 import { useSet } from "@/hooks/useSet.ts";
 
-const Container = styled.div(({ theme }) => ({
-  width: 100,
-  display: "flex",
-  gap: 4,
-  alignItems: "center",
-  color: theme.colors.gold,
-  pointerEvents: "auto",
-}));
+const Container = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  background: ${({ theme }) => theme.surface.scrim};
+  backdrop-filter: blur(10px);
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: 0 10px;
+  box-shadow: ${({ theme }) => theme.shadow.md};
+  pointer-events: auto;
+`;
 
-const TooltipContent = styled.div({
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-});
+const GoldValue = styled.span`
+  font-family: ${({ theme }) => theme.font.mono};
+  font-size: ${({ theme }) => theme.text.md};
+  font-weight: 600;
+  color: ${({ theme }) => theme.ink.hi};
+`;
+
+const GoldIcon = styled.span`
+  color: ${({ theme }) => theme.game.gold};
+  display: inline-grid;
+  place-items: center;
+`;
+
+const TooltipContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space[1]};
+`;
 
 const SheepTooltip = () => {
+  const { t } = useTranslation();
   const primaryUnit = useReactiveVar(primaryUnitVar);
   const multiplier = useListenToEntityProp(
     primaryUnit,
@@ -37,33 +57,26 @@ const SheepTooltip = () => {
     (p) => p ? getDistanceMultiplier(p.x, p.y).toFixed(2) : undefined,
   );
 
-  if (multiplier) {
-    return (
-      <TooltipContent>
-        <div>Gold is generated over time based on distance from the pen.</div>
-        <div>Current multiplier: {multiplier}x</div>
-      </TooltipContent>
-    );
-  }
-
   return (
     <TooltipContent>
-      <div>Gold is generated over time based on distance from the pen.</div>
+      <div>{t("hud.goldSheepTooltip")}</div>
+      {multiplier && <div>{t("hud.goldSheepMultiplier", { multiplier })}</div>}
+    </TooltipContent>
+  );
+};
+
+const WolfTooltip = () => {
+  const { t } = useTranslation();
+  return (
+    <TooltipContent>
+      <div>{t("hud.goldWolfTooltip")}</div>
     </TooltipContent>
   );
 };
 
 const useGoldTooltip = (team: string | undefined) => {
-  if (team === "wolf") {
-    return (
-      <TooltipContent>
-        <div>Gold is generated over time and from destroying structures.</div>
-      </TooltipContent>
-    );
-  }
-
+  if (team === "wolf") return <WolfTooltip />;
   if (team === "sheep") return <SheepTooltip />;
-
   return null;
 };
 
@@ -100,10 +113,12 @@ const InnerGold = (
 
   return (
     <Container {...tooltipContainerProps} data-game-ui>
-      <span style={{ width: 24, height: 24 }}>
-        <SvgIcon icon="gold" />
-      </span>
-      <span>{displayGold}</span>
+      <GoldIcon>
+        <span style={{ width: 16, height: 16 }}>
+          <SvgIcon icon="gold" />
+        </span>
+      </GoldIcon>
+      <GoldValue>{displayGold}</GoldValue>
       {tooltip}
     </Container>
   );

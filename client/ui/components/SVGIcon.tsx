@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { styled } from "styled-components";
 import { Color } from "three";
 import { svgs } from "../../systems/models.ts";
@@ -112,7 +112,7 @@ export const SvgIcon = ({
 } & React.HTMLAttributes<HTMLDivElement>) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!ref.current) return;
     const node = buildSvgNode(icon, accentColor);
     if (!node) return;

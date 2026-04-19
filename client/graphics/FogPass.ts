@@ -385,6 +385,13 @@ export class FogPass {
     renderer.setRenderTarget(oldTarget);
   }
 
+  compileAsync(renderer: WebGLRenderer) {
+    return Promise.all([
+      renderer.compileAsync(this.scene, this.camera),
+      renderer.compileAsync(this.smoothScene, this.camera),
+    ]);
+  }
+
   dispose() {
     this.material.dispose();
     this.quad.geometry.dispose();

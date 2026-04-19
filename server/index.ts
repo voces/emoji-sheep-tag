@@ -4,6 +4,7 @@ import { handleSocket } from "./client.ts";
 import { handleShardSocket } from "./shardRegistry.ts";
 import { startWatchdog } from "./watchdog.ts";
 import { ensureDir } from "@std/fs";
+import { createStatusStream, getPlayerCount } from "./statusStream.ts";
 
 const isDev = Deno.args.includes("--dev");
 
@@ -44,6 +45,8 @@ Deno.serve({
     return response;
   }
 
+  if (url.pathname === "/api/status") return createStatusStream();
+
   const filepath = resolve(dist, url.pathname.slice(1));
   if (
     url.pathname === "/" ||
@@ -56,6 +59,17 @@ Deno.serve({
     );
     if (url.pathname === "/" || url.pathname === "/index.html") {
       response.headers.set("cache-control", "no-cache");
+      if (response.status === 200) {
+        const html = await response.text();
+        const injected = html.replace(
+          "</head>",
+          `<meta name="player-count" content="${getPlayerCount()}">\n</head>`,
+        );
+        return new Response(injected, {
+          status: response.status,
+          headers: response.headers,
+        });
+      }
     } else if (/-[A-Z0-9]{8}\./.test(url.pathname)) {
       response.headers.set(
         "cache-control",

@@ -1,5 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
+import { ChevronDown, ChevronRight, Plus, RotateCcw } from "lucide-react";
 import { prefabs } from "@/shared/data.ts";
 import Collapse from "@/components/layout/Collapse.tsx";
 import {
@@ -10,8 +12,7 @@ import {
   isAltKey,
   isDefaultBinding,
 } from "@/util/shortcutUtils.ts";
-import { HoverHighlight, HStack, VStack } from "@/components/layout/Layout.tsx";
-import { Button } from "@/components/forms/Button.tsx";
+import { SmallButton } from "@/components/forms/ActionButton.tsx";
 import { isDefaultMenu, type MenuConfig, menusVar } from "@/vars/menus.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { ShortcutRow } from "./ShortcutRow.tsx";
@@ -19,19 +20,98 @@ import { MenuDisplay } from "./MenuDisplay.tsx";
 import { useMenuManagement } from "./useMenuManagement.ts";
 import { useShortcutGroups } from "./useShortcutGroups.ts";
 import { findMenuForAction } from "./menuActionHelpers.ts";
-import { controlGroupTooltips, defaultBindings } from "@/util/shortcutUtils.ts";
+import {
+  defaultBindings,
+  getControlGroupTooltip,
+} from "@/util/shortcutUtils.ts";
 import { registerDropTarget, useSectionDragState } from "./useDragState.ts";
 
-const SectionHeader = styled.h3`
+const SectionContainer = styled.div<{ $open: boolean }>`
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  border-radius: ${({ theme }) => theme.radius.md};
+  overflow: hidden;
+  background: ${({ $open, theme }) =>
+    $open ? theme.surface[1] : theme.surface[0]};
+`;
+
+const SectionHeader = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  color: ${({ theme }) => theme.ink.hi};
+  font-size: ${({ theme }) => theme.text.md};
+  text-align: left;
   cursor: pointer;
+
+  &.hover {
+    background: ${({ theme }) => theme.surface[2]};
+  }
 `;
 
-const HeaderIcon = styled.span`
-  display: inline-block;
-  width: 2ch;
+const HeaderChev = styled.span`
+  color: ${({ theme }) => theme.ink.lo};
+  display: inline-flex;
+  align-items: center;
 `;
 
-const TopLevelDropZone = styled(VStack)`
+const HeaderName = styled.span`
+  font-weight: 600;
+`;
+
+const WarningTag = styled.span`
+  padding: 1px 6px;
+  border-radius: ${({ theme }) => theme.radius.pill};
+  font-size: ${({ theme }) => theme.text.xs};
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  color: ${({ theme }) => theme.game.orange};
+  background: ${({ theme }) => theme.danger.bg};
+`;
+
+const ModifiedPill = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[1]};
+  padding: 1px 6px;
+  border-radius: ${({ theme }) => theme.radius.pill};
+  border: none;
+  font-size: ${({ theme }) => theme.text.xs};
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  color: ${({ theme }) => theme.accent.hi};
+  background: ${({ theme }) => theme.accent.bg};
+  cursor: pointer;
+  transition: background ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+    theme.motion.easeOut};
+
+  &.hover {
+    background: ${({ theme }) => theme.accent.lo};
+    color: ${({ theme }) => theme.accent.ink};
+  }
+`;
+
+const SectionBody = styled.div`
+  padding: ${({ theme }) => theme.space[1]};
+  border-top: 1px solid ${({ theme }) => theme.border.soft};
+`;
+
+const TopLevelDropZone = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const SectionActions = styled.div`
+  display: flex;
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
+  gap: ${({ theme }) => theme.space[2]};
+  flex-wrap: wrap;
 `;
 
 type SettingsSectionProps = {
@@ -41,6 +121,9 @@ type SettingsSectionProps = {
   defaultOpen?: boolean;
   useSlotBindings?: boolean;
   externalBindings?: Record<string, { binding: string[]; section: string }>;
+  matchingKeys?: Set<string> | null;
+  onReset?: () => void;
+  onConflictsChange?: (section: string, hasConflicts: boolean) => void;
 };
 
 export const SettingsSection = memo(({
@@ -50,8 +133,16 @@ export const SettingsSection = memo(({
   defaultOpen = false,
   useSlotBindings = false,
   externalBindings,
+  matchingKeys,
+  onReset,
+  onConflictsChange,
 }: SettingsSectionProps) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const isFiltering = matchingKeys !== null && matchingKeys !== undefined;
+  useEffect(() => {
+    if (isFiltering) setIsOpen(true);
+  }, [isFiltering]);
   const hasBeenOpened = useRef(defaultOpen);
   if (isOpen) hasBeenOpened.current = true;
   const sectionMenus = useReactiveVar(
@@ -112,13 +203,15 @@ export const SettingsSection = memo(({
       ([key, binding]) =>
         !isDefaultBinding(section, key, binding, defaultBindings),
     );
-  const hasCustomMenus = sectionMenus.some((menu) =>
-    !isDefaultMenu(menu) && !menu.bindingOverrides
-  );
+  const hasCustomMenus = sectionMenus.some((menu) => !isDefaultMenu(menu));
   const hasDeletedDefaultMenus =
     menuManagement.restoration.getDeleted().length > 0;
   const hasOverrides = hasBindingOverrides || hasCustomMenus ||
     hasDeletedDefaultMenus;
+
+  useEffect(() => {
+    onConflictsChange?.(section, hasConflicts);
+  }, [onConflictsChange, section, hasConflicts]);
 
   const handleSetBinding = useCallback(
     (key: string, binding: string[]) => setBinding(key, binding),
@@ -193,7 +286,13 @@ export const SettingsSection = memo(({
       });
     }
 
-    return items.map((item) => {
+    const filtered = isFiltering
+      ? items.filter((item) =>
+        item.type === "shortcut" ? matchingKeys!.has(item.key) : true
+      )
+      : items;
+
+    return filtered.map((item) => {
       if (item.type === "shortcut") {
         const { key, shortcut } = item;
         return (
@@ -211,7 +310,7 @@ export const SettingsSection = memo(({
             draggedActionKey={draggedAction}
             altBindings={altBindingsMap[key]}
             allAltKeys={allAltKeysMap[key]}
-            tooltip={controlGroupTooltips[key]}
+            tooltip={getControlGroupTooltip(key)}
           />
         );
       } else {
@@ -231,6 +330,7 @@ export const SettingsSection = memo(({
             menuManagement={menuManagement}
             onSetBinding={handleSetBinding}
             draggedActionKey={draggedAction}
+            matchingKeys={isFiltering ? matchingKeys : null}
           />
         );
       }
@@ -264,63 +364,85 @@ export const SettingsSection = memo(({
   };
 
   const header = section === "controlGroups"
-    ? "Selection Groups"
+    ? t("settings.selectionGroups")
     : section === "misc"
-    ? "Misc"
+    ? t("settings.misc")
     : prefabs[section]?.name ?? section;
 
   return (
-    <VStack data-testid={`section-${header}`}>
-      <HoverHighlight as={SectionHeader} onClick={() => setIsOpen(!isOpen)}>
-        <HeaderIcon>
-          {isOpen ? "▼" : "▶"}
-        </HeaderIcon>
-        {header}
-        {hasOverrides && (
-          <span style={{ marginLeft: "8px", opacity: 0.6 }}>*</span>
+    <SectionContainer $open={isOpen} data-testid={`section-${header}`}>
+      <SectionHeader onClick={() => setIsOpen(!isOpen)}>
+        <HeaderChev>
+          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </HeaderChev>
+        <HeaderName>{header}</HeaderName>
+        {hasOverrides && onReset && (
+          <ModifiedPill
+            onClick={(e) => {
+              e.stopPropagation();
+              onReset();
+            }}
+          >
+            {t("settings.modified")}
+            <RotateCcw size={10} />
+          </ModifiedPill>
         )}
-        {hasConflicts && <span style={{ marginLeft: "8px" }}>⚠</span>}
-      </HoverHighlight>
+        {hasOverrides && !onReset && (
+          <ModifiedPill as="span" style={{ cursor: "default" }}>
+            {t("settings.modified")}
+          </ModifiedPill>
+        )}
+        {hasConflicts && <WarningTag>{t("settings.conflicts")}</WarningTag>}
+      </SectionHeader>
       <Collapse isOpen={isOpen}>
         {hasBeenOpened.current && (
-          <TopLevelDropZone ref={dropZoneRef}>
-            {renderTopLevelItems()}
-            {renderLegacyMenuShortcuts()}
-            {section !== "misc" && section !== "controlGroups" && (
-              <HStack>
-                <Button
-                  type="button"
-                  onClick={menuManagement.creation.createMenu}
-                  style={{ marginTop: "8px", alignSelf: "flex-start" }}
-                >
-                  + Create Menu
-                </Button>
-                {prefabs[section]?.actions?.some((a) => a.type === "build") &&
-                  !menuManagement.creation.hasNestedBuildActions() && (
-                  <Button
+          <SectionBody>
+            <TopLevelDropZone ref={dropZoneRef}>
+              {renderTopLevelItems()}
+              {renderLegacyMenuShortcuts()}
+              {section !== "misc" && section !== "controlGroups" && (
+                <SectionActions>
+                  <SmallButton
                     type="button"
-                    onClick={menuManagement.creation.createBuildMenu}
-                    style={{ marginTop: "8px", alignSelf: "flex-start" }}
+                    onClick={menuManagement.creation.createMenu}
                   >
-                    + Create Build Menu
-                  </Button>
-                )}
-                {menuManagement.restoration.getDeleted().map((menu) => (
-                  <Button
-                    key={menu.id}
-                    type="button"
-                    onClick={() => menuManagement.restoration.restore(menu.id)}
-                    style={{ marginTop: "8px", alignSelf: "flex-start" }}
-                  >
-                    ↻ Restore {menu.name} menu
-                  </Button>
-                ))}
-              </HStack>
-            )}
-          </TopLevelDropZone>
+                    <Plus size={14} />
+                    {t("settings.createMenu")}
+                  </SmallButton>
+                  {prefabs[section]?.actions?.some((a) => a.type === "build") &&
+                    !menuManagement.creation.hasNestedBuildActions() &&
+                    !menuManagement.restoration.getDeleted().some((m) =>
+                      m.actions.some((a) =>
+                        "type" in a && a.type === "action" &&
+                        a.actionKey.startsWith("build-")
+                      )
+                    ) && (
+                    <SmallButton
+                      type="button"
+                      onClick={menuManagement.creation.createBuildMenu}
+                    >
+                      <Plus size={14} />
+                      {t("settings.createBuildMenu")}
+                    </SmallButton>
+                  )}
+                  {menuManagement.restoration.getDeleted().map((menu) => (
+                    <SmallButton
+                      key={menu.id}
+                      type="button"
+                      onClick={() =>
+                        menuManagement.restoration.restore(menu.id)}
+                    >
+                      <RotateCcw size={14} />
+                      {t("settings.restoreMenu", { name: menu.name })}
+                    </SmallButton>
+                  ))}
+                </SectionActions>
+              )}
+            </TopLevelDropZone>
+          </SectionBody>
         )}
       </Collapse>
-    </VStack>
+    </SectionContainer>
   );
 });
 

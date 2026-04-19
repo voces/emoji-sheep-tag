@@ -19,6 +19,7 @@ import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { isNight } from "@/shared/dayNight.ts";
 import { ambientBirdsSound } from "../api/sound.ts";
 import { editorVar, editorWaterViewVar } from "@/vars/editor.ts";
+import { stateVar } from "@/vars/state.ts";
 
 const terrainTilePalette = [
   ...tileDefs.map((t) => ({
@@ -247,7 +248,9 @@ const animate = () => {
   if (!renderer || !fogPass || !renderTarget) return;
 
   fogPass.updateCamera(camera);
-  fogPass.setDisableFogOfWar(lobbySettingsVar().view);
+  fogPass.setDisableFogOfWar(
+    lobbySettingsVar().view || stateVar() !== "playing",
+  );
 
   // Smoothly interpolate night tint and ambient volume
   const nightTarget = isNight() ? 1 : 0;

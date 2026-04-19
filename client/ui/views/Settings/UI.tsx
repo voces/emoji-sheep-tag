@@ -1,23 +1,19 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useCallback, useState } from "react";
-import { styled } from "styled-components";
+import { useTranslation } from "react-i18next";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { Slider } from "@/components/forms/Slider.tsx";
-import { Checkbox } from "@/components/forms/Checkbox.tsx";
-import { SettingsPanelContainer, SettingsPanelTitle } from "./commonStyles.tsx";
+import { Toggle } from "@/components/forms/Toggle.tsx";
+import {
+  FieldGroup,
+  SettingsPanelContainer,
+  SettingsPanelTitle,
+  ToggleGroup,
+} from "./commonStyles.tsx";
 import { flags } from "../../../flags.ts";
 
-const SettingRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-`;
-
-const SettingLabel = styled.label`
-  font-size: 14px;
-`;
-
 export const UI = () => {
+  const { t } = useTranslation();
   const uiSettings = useReactiveVar(uiSettingsVar);
   const [debug, setDebug] = useState(flags.debug);
 
@@ -27,62 +23,48 @@ export const UI = () => {
 
   const formatPreferredActionsPerRow = useCallback((value: number) => {
     const modified = value !== 4 ? "* " : "";
-    if (value === 0) return `${modified}None`;
+    if (value === 0) return `${modified}${t("settings.preferredActionsNone")}`;
     return `${modified}${value}`;
-  }, []);
+  }, [t]);
 
   return (
     <SettingsPanelContainer>
-      <SettingsPanelTitle>UI Settings</SettingsPanelTitle>
-      <Slider
-        label="Preferred actions per row"
-        value={uiSettings.preferredActionsPerRow}
-        onChange={handlePreferredActionsPerRowChange}
-        formatValue={formatPreferredActionsPerRow}
-        min={0}
-        max={8}
-        step={1}
-      />
+      <SettingsPanelTitle>{t("settings.uiTitle")}</SettingsPanelTitle>
+      <FieldGroup>
+        <Slider
+          label={t("settings.preferredActionsPerRow")}
+          value={uiSettings.preferredActionsPerRow}
+          onChange={handlePreferredActionsPerRowChange}
+          formatValue={formatPreferredActionsPerRow}
+          min={0}
+          max={8}
+          step={1}
+        />
+      </FieldGroup>
 
-      <SettingRow>
-        <Checkbox
-          id="show-ping"
+      <ToggleGroup>
+        <Toggle
           checked={uiSettings.showPing}
-          onChange={(e) =>
-            uiSettingsVar({
-              ...uiSettings,
-              showPing: e.currentTarget.checked,
-            })}
-        />
-        <SettingLabel htmlFor="show-ping">
-          Show ping
-        </SettingLabel>
-      </SettingRow>
+          onChange={(checked) =>
+            uiSettingsVar({ ...uiSettings, showPing: checked })}
+        >
+          {t("settings.showPing")}
+        </Toggle>
 
-      <SettingRow>
-        <Checkbox
-          id="show-fps"
+        <Toggle
           checked={uiSettings.showFps}
-          onChange={(e) =>
-            uiSettingsVar({
-              ...uiSettings,
-              showFps: e.currentTarget.checked,
-            })}
-        />
-        <SettingLabel htmlFor="show-fps">
-          Show FPS
-        </SettingLabel>
-      </SettingRow>
+          onChange={(checked) =>
+            uiSettingsVar({ ...uiSettings, showFps: checked })}
+        >
+          {t("settings.showFps")}
+        </Toggle>
 
-      <SettingRow>
-        <Checkbox
-          id="enable-debugging"
+        <Toggle
           checked={debug}
-          onChange={(e) => {
-            const enabled = e.currentTarget.checked;
-            flags.debug = enabled;
-            setDebug(enabled);
-            if (!enabled) {
+          onChange={(checked) => {
+            flags.debug = checked;
+            setDebug(checked);
+            if (!checked) {
               localStorage.removeItem("debug");
               globalThis.latency = 0;
               globalThis.noise = 0;
@@ -90,11 +72,10 @@ export const UI = () => {
               localStorage.setItem("debug", "true");
             }
           }}
-        />
-        <SettingLabel htmlFor="enable-debugging">
-          Enable debugging
-        </SettingLabel>
-      </SettingRow>
+        >
+          {t("settings.enableDebugging")}
+        </Toggle>
+      </ToggleGroup>
     </SettingsPanelContainer>
   );
 };

@@ -9,112 +9,20 @@
     />
 
     <style>
-      /* Minimal CSS Reset - Only essential base styles */
       :root {
         color-scheme: dark;
       }
 
-      * {
-        box-sizing: border-box;
-        margin: 0;
-      }
-
+      /* Prevent FOUC — matches GlobalStyle values */
       body {
-        line-height: 1.5;
-        -webkit-font-smoothing: antialiased;
-        font-size: 1.2rem;
-        font-family: "Trebuchet MS", sans-serif;
-        color: white;
-        overflow: hidden;
-        text-shadow: 0.03em 0.05em 0 black;
-        background-color: #152700;
-      }
-
-      img,
-      picture,
-      video,
-      canvas,
-      svg {
-        display: block;
-        max-width: 100%;
-      }
-
-      input,
-      button,
-      textarea,
-      select {
-        font: inherit;
-        outline: none;
-      }
-
-      input:focus:not([disabled]) {
-        background-color: white;
-        box-shadow: #222 1px 1px 4px 1px;
-      }
-
-      /* Hide number input spinners */
-      input[type="number"]::-webkit-outer-spin-button,
-      input[type="number"]::-webkit-inner-spin-button {
-        -webkit-appearance: none;
         margin: 0;
-      }
-
-      input[type="number"] {
-        -moz-appearance: textfield;
-        appearance: textfield;
-      }
-
-      p,
-      h1,
-      h2,
-      h3,
-      h4,
-      h5,
-      h6 {
-        overflow-wrap: break-word;
-      }
-
-      p {
-        text-wrap: pretty;
-      }
-
-      h1,
-      h2,
-      h3,
-      h4,
-      h5,
-      h6 {
-        text-wrap: balance;
-      }
-
-      canvas {
-        position: absolute;
-      }
-
-      #ui {
-        position: absolute;
-        inset: 0;
-        z-index: 1;
-      }
-
-      #cursor {
-        position: absolute;
-        width: 24px;
-        height: 24px;
-        z-index: 1;
-        pointer-events: none;
-        visibility: hidden;
-      }
-
-      #cursor.entity {
-        filter: hue-rotate(90deg);
-      }
-
-      /* Animation for chat messages */
-      @keyframes fadeOut {
-        to {
-          opacity: 0;
-        }
+        background-color: oklch(0.18 0.008 145);
+        color: oklch(0.96 0.005 90);
+        font-family:
+          "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          sans-serif;
+        font-size: 13px;
+        overflow: hidden;
       }
     </style>
   </head>

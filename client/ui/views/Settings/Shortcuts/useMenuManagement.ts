@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { MenuActionRef, MenuConfig } from "@/vars/menus.ts";
-import { defaultMenus, menusVar } from "@/vars/menus.ts";
+import { getActiveDefaultMenus, menusVar } from "@/vars/menus.ts";
 import {
   buildActionsInMenusSet,
   createMenuActionRef,
@@ -99,7 +99,7 @@ export const useMenuManagement = (
   }, [section]);
 
   const restoreDefaultMenu = useCallback((menuId: string) => {
-    const defaultMenu = defaultMenus.find((m) => m.id === menuId);
+    const defaultMenu = getActiveDefaultMenus().find((m) => m.id === menuId);
     if (!defaultMenu) return;
 
     const menus = menusVar();
@@ -126,7 +126,7 @@ export const useMenuManagement = (
 
   const getDeletedDefaultMenus = useCallback(
     () =>
-      defaultMenus.filter((defaultMenu) =>
+      getActiveDefaultMenus().filter((defaultMenu) =>
         defaultMenu.prefabs.includes(section) &&
         !menusVar().some((m) => m.id === defaultMenu.id)
       ),

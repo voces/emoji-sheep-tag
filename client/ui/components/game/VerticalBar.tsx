@@ -19,7 +19,8 @@ const VerticalBarFill = styled.div.attrs<
   bottom: 0;
   width: 100%;
   background-color: ${({ color }) => color};
-  transition: height 0.2s ease-in-out;
+  transition: height ${({ theme }) => theme.motion.med} ${({ theme }) =>
+  theme.motion.easeOut};
 `;
 
 export const VerticalBar = ({

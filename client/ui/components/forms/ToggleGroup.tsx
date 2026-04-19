@@ -4,8 +4,8 @@ import { Button } from "./Button.tsx";
 export const ToggleGroup = styled.div`
   display: flex;
   gap: 0;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 2px;
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  border-radius: ${({ theme }) => theme.radius.xs};
   overflow: hidden;
 `;
 
@@ -14,18 +14,16 @@ export const ToggleButton = styled(Button)<{ $active: boolean }>`
   border-radius: 0;
   border: none;
   background: ${({ $active, theme }) =>
-    $active
-      ? theme.colors.body
-      : `hsl(from ${theme.colors.body} h s calc(l - 20))`};
+    $active ? theme.accent.DEFAULT : theme.surface[2]};
+  color: ${({ $active, theme }) => $active ? theme.accent.ink : theme.ink.hi};
 
   &:not(:last-child) {
-    border-right: 1px solid ${({ theme }) => theme.colors.border};
+    border-right: 1px solid ${({ theme }) => theme.border.DEFAULT};
   }
 
   &:disabled {
     background: ${({ $active, theme }) =>
-      $active
-        ? `hsl(from ${theme.colors.body} h s calc(l - 20))`
-        : `hsl(from ${theme.colors.body} h s calc(l - 30))`};
+      $active ? theme.surface[3] : theme.surface[1]};
+    color: ${({ theme }) => theme.ink.mute};
   }
 `;

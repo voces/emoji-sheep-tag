@@ -1,4 +1,5 @@
 import "global-jsdom/register";
+import "../i18n/index.ts";
 import { afterEach, beforeEach } from "@std/testing/bdd";
 import { cleanup, configure } from "@testing-library/react";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";

@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import { z } from "zod";
 import { pluck } from "../../util/pluck.ts";
 import { items, prefabs } from "@/shared/data.ts";
@@ -47,40 +48,49 @@ export type Shortcuts = Record<
   Record<string, string[]>
 >;
 
-export const miscNames = {
-  openCommandPalette: "Open command palette",
-  openChat: "Open chat",
-  cancel: "Cancel",
-  queueModifier: "Queue actions modifier",
-  addToSelectionModifier: "Add to selection modifier",
-  ping: "Ping location",
-  jumpToPing: "Jump to ping",
-  applyZoom: "Apply zoom",
-  toggleScoreboard: "Toggle scoreboard",
-  cycleSelection: "Cycle selection focus",
+const miscI18nKeys: Record<string, string> = {
+  openCommandPalette: "settings.miscOpenCommandPalette",
+  openChat: "settings.miscOpenChat",
+  cancel: "settings.miscCancel",
+  queueModifier: "settings.miscQueueModifier",
+  addToSelectionModifier: "settings.miscAddToSelectionModifier",
+  ping: "settings.miscPing",
+  jumpToPing: "settings.miscJumpToPing",
+  applyZoom: "settings.miscApplyZoom",
+  toggleScoreboard: "settings.miscToggleScoreboard",
+  cycleSelection: "settings.miscCycleSelection",
 };
 
-export const controlGroupNames: Record<string, string> = {
-  group1: "Group 1 — Primary unit",
-  group2: "Group 2 — Mirrors",
-  group3: "Group 3 — Foxes",
-  group4: "Group 4",
-  group5: "Group 5",
-  group6: "Group 6",
-  group7: "Group 7",
-  group8: "Group 8",
-  group9: "Group 9",
-  group0: "Group 10",
-  assignModifier: "Assign group modifier",
+export const getMiscName = (key: string): string =>
+  miscI18nKeys[key] ? i18next.t(miscI18nKeys[key]) : key;
+
+const controlGroupI18nKeys: Record<string, string> = {
+  group1: "settings.group1",
+  group2: "settings.group2",
+  group3: "settings.group3",
+  group4: "settings.group4",
+  group5: "settings.group5",
+  group6: "settings.group6",
+  group7: "settings.group7",
+  group8: "settings.group8",
+  group9: "settings.group9",
+  group0: "settings.group0",
+  assignModifier: "settings.assignModifier",
 };
 
-export const controlGroupTooltips: Record<string, string> = {
-  group1: "Always selects your primary unit (sheep, wolf, or spirit).",
-  group2:
-    "Selects mirror images for wolves. Custom group for sheep (assign with modifier + key).",
-  group3:
-    "Selects foxes for wolves. Custom group for sheep (assign with modifier + key).",
+export const getControlGroupName = (key: string): string =>
+  controlGroupI18nKeys[key] ? i18next.t(controlGroupI18nKeys[key]) : key;
+
+const controlGroupTooltipI18nKeys: Record<string, string> = {
+  group1: "settings.groupTooltip1",
+  group2: "settings.groupTooltip2",
+  group3: "settings.groupTooltip3",
 };
+
+export const getControlGroupTooltip = (key: string): string | undefined =>
+  controlGroupTooltipI18nKeys[key]
+    ? i18next.t(controlGroupTooltipI18nKeys[key])
+    : undefined;
 
 export const SLOT_COUNT = 6;
 export const slotDefaults: [string, string[]][] = [
@@ -250,12 +260,6 @@ export const getEffectiveDefault = (
   const overrides = presetOverrides[preset].bindings;
   const presetBinding = overrides[section]?.[fullKey];
   if (presetBinding) return presetBinding;
-  const allMenus = menusVar();
-  for (const m of allMenus) {
-    if (m.prefabs.includes(section) && m.bindingOverrides?.[fullKey]) {
-      return m.bindingOverrides[fullKey];
-    }
-  }
   return base;
 };
 
@@ -310,7 +314,8 @@ export const getActionDisplayName = (
   section: string,
 ): string => {
   if (section === "controlGroups") {
-    if (controlGroupNames[key]) return controlGroupNames[key];
+    const groupName = getControlGroupName(key);
+    if (groupName !== key) return groupName;
     // Cross-section conflict: search all prefabs for the action name
     for (const [, prefab] of Object.entries(prefabs)) {
       const found = prefab.actions?.find((a) => actionToShortcutKey(a) === key);
@@ -318,9 +323,9 @@ export const getActionDisplayName = (
     }
     return key;
   } else if (section === "misc") {
-    return miscNames[key as keyof typeof miscNames] || key;
+    return getMiscName(key);
   } else if (key.startsWith("slot-")) {
-    return `Item slot ${key.substring(5)}`;
+    return i18next.t("settings.itemSlot", { slot: key.substring(5) });
   } else if (key === "cancel-upgrade") {
     return "Cancel upgrade";
   } else if (key.startsWith("menu-back-")) {
@@ -398,7 +403,7 @@ export const getActionDisplayName = (
       if (found) return found.name;
     }
 
-    return controlGroupNames[key] || key;
+    return getControlGroupName(key);
   }
 };
 

@@ -1,9 +1,11 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Search } from "lucide-react";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { SettingsSection } from "./SettingsSection.tsx";
 import { SettingsPanelContainer } from "../commonStyles.tsx";
-import { Checkbox } from "@/components/forms/Checkbox.tsx";
+import { Toggle } from "@/components/forms/Toggle.tsx";
 import { shortcutSettingsVar } from "@/vars/shortcutSettings.ts";
 import {
   defaultBindings,
@@ -12,11 +14,19 @@ import {
   isAltKey,
   isDefaultBinding,
 } from "@/util/shortcutUtils.ts";
+import { formatShortcut } from "@/util/formatShortcut.ts";
 import { styled } from "styled-components";
+import { TextInput } from "@/components/forms/TextInput.tsx";
 import { Button } from "@/components/forms/Button.tsx";
+import { SmallButton } from "@/components/forms/ActionButton.tsx";
 import { VStack } from "@/components/layout/Layout.tsx";
 import { prefabs } from "@/shared/data.ts";
-import { menusVar } from "@/vars/menus.ts";
+import { getActiveDefaultMenus, menusVar } from "@/vars/menus.ts";
+import {
+  DangerSmallButton,
+  InlineConfirmBar,
+} from "@/components/InlineConfirm.tsx";
+import { bindingConflictsVar } from "@/hooks/useBindingConflicts.ts";
 
 const filterNonDefaultBindings = (sections: typeof defaultBindings) => {
   const filtered: typeof defaultBindings = {};
@@ -94,11 +104,9 @@ const findOtherUnitsWithSameBinding = (
 
 const Modal = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: ${({ theme }) => theme.surface.scrim};
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -106,25 +114,121 @@ const Modal = styled.div`
 `;
 
 const ModalContent = styled(VStack)`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  padding: 20px;
-  border-radius: 4px;
+  background: ${({ theme }) => theme.surface[1]};
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  padding: ${({ theme }) => theme.space[5]};
+  border-radius: ${({ theme }) => theme.radius.md};
+  box-shadow: ${({ theme }) => theme.shadow.lg};
   max-width: 400px;
-  gap: 16px;
+  gap: ${({ theme }) => theme.space[4]};
 `;
 
 const ModalButtons = styled.div`
   display: flex;
-  gap: 8px;
+  gap: ${({ theme }) => theme.space[2]};
   justify-content: flex-end;
+`;
+
+const ModalButton = styled(Button)`
+  min-height: 28px;
+  padding: 6px 14px;
+  font-size: ${({ theme }) => theme.text.sm};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+
+  &.hover:not([disabled]) {
+    border-color: ${({ theme }) => theme.border.hi};
+  }
+`;
+
+const PrimaryButton = styled(ModalButton)`
+  background: ${({ theme }) => theme.accent.DEFAULT};
+  color: ${({ theme }) => theme.accent.ink};
+  border-color: ${({ theme }) => theme.accent.DEFAULT};
+  font-weight: 600;
+
+  &.hover:not([disabled]) {
+    background: ${({ theme }) => theme.accent.hi};
+    border-color: ${({ theme }) => theme.accent.hi};
+  }
 `;
 
 const UnitList = styled.ul`
   max-height: 200px;
   overflow-y: auto;
-  padding-left: 20px;
+  padding-left: ${({ theme }) => theme.space[5]};
+  color: ${({ theme }) => theme.ink.mid};
+  font-size: ${({ theme }) => theme.text.md};
 `;
+
+const ToolbarTitle = styled.h3`
+  margin: 0;
+  font-size: ${({ theme }) => theme.text.lg};
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: ${({ theme }) => theme.ink.hi};
+  white-space: nowrap;
+`;
+
+const Toolbar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[3]};
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  margin-left: auto;
+  width: 220px;
+`;
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: ${({ theme }) => theme.ink.lo};
+  display: flex;
+  pointer-events: none;
+`;
+
+const SearchInput = styled(TextInput)`
+  padding-left: 28px;
+  min-height: 28px;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.ink.mute};
+  }
+`;
+
+const SectionsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space[2]};
+`;
+
+const EmptySearch = styled.div`
+  text-align: center;
+  padding: ${({ theme }) => theme.space[6]};
+  color: ${({ theme }) => theme.ink.lo};
+  font-size: ${({ theme }) => theme.text.sm};
+`;
+
+const computeMatchingKeys = (
+  section: string,
+  shortcuts: Record<string, string[]>,
+  query: string,
+): Set<string> => {
+  const q = query.toLowerCase();
+  const matches = new Set<string>();
+  for (const [key, binding] of Object.entries(shortcuts)) {
+    if (isAltKey(key)) continue;
+    const name = getActionDisplayName(key, section).toLowerCase();
+    const keyStr = formatShortcut(binding).toLowerCase();
+    if (name.includes(q) || keyStr.includes(q)) matches.add(key);
+  }
+  return matches;
+};
 
 type ConfirmDialogState = {
   section: string;
@@ -134,8 +238,22 @@ type ConfirmDialogState = {
 } | null;
 
 export const Shortcuts = () => {
+  const { t } = useTranslation();
   const sections = useReactiveVar(shortcutsVar);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [confirmingResetAll, setConfirmingResetAll] = useState(false);
+  const sectionConflictsRef = useRef(new Map<string, boolean>());
+
+  const handleConflictsChange = useCallback(
+    (section: string, hasConflicts: boolean) => {
+      sectionConflictsRef.current.set(section, hasConflicts);
+      bindingConflictsVar(
+        Array.from(sectionConflictsRef.current.values()).some(Boolean),
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     const filtered = filterNonDefaultBindings(sections);
@@ -251,12 +369,62 @@ export const Shortcuts = () => {
     }
   }
 
+  const handleResetAll = useCallback(() => {
+    menusVar(getActiveDefaultMenus());
+    const defaults = Object.fromEntries(
+      Object.entries(defaultBindings).map(([section, bindings]) => [
+        section,
+        { ...bindings },
+      ]),
+    );
+    shortcutsVar(defaults);
+    localStorage.setItem("shortcuts", JSON.stringify({}));
+  }, []);
+
+  const handleResetSection = useCallback((section: string) => {
+    // Reset menus first to prevent bindingOverrides from re-applying
+    const activeDefaults = getActiveDefaultMenus();
+    const defaultIds = new Set(activeDefaults.map((m) => m.id));
+    const currentMenus = menusVar();
+    const resetMenus = currentMenus.filter((m) =>
+      !m.prefabs.includes(section) || defaultIds.has(m.id)
+    );
+    const restoredDefaults = activeDefaults.filter((m) =>
+      m.prefabs.includes(section) &&
+      !currentMenus.some((cm) => cm.id === m.id)
+    );
+    menusVar([...resetMenus, ...restoredDefaults]);
+
+    const defaults = defaultBindings[section];
+    if (defaults) {
+      const updated = {
+        ...shortcutsVar(),
+        [section]: { ...defaults },
+      };
+      shortcutsVar(updated);
+      // Flush to localStorage synchronously so rebuilds from menu changes
+      // don't reload stale values
+      const filtered = filterNonDefaultBindings(updated);
+      localStorage.setItem("shortcuts", JSON.stringify(filtered));
+    }
+  }, []);
+
+  const sectionMatches = useMemo(() => {
+    if (!searchQuery.trim()) return null;
+    const result: Record<string, Set<string>> = {};
+    for (const [section, shortcuts] of Object.entries(sections)) {
+      const matches = computeMatchingKeys(section, shortcuts, searchQuery);
+      if (matches.size > 0) result[section] = matches;
+    }
+    return result;
+  }, [searchQuery, sections]);
+
   const { useSlotBindings } = useReactiveVar(shortcutSettingsVar);
   const handleSlotBindingsChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
+    (checked: boolean) =>
       shortcutSettingsVar({
         ...shortcutSettingsVar(),
-        useSlotBindings: e.target.checked,
+        useSlotBindings: checked,
       }),
     [],
   );
@@ -264,58 +432,116 @@ export const Shortcuts = () => {
   return (
     <>
       <SettingsPanelContainer>
-        <label
-          style={{ display: "flex", alignItems: "center", gap: "8px" }}
+        <Toolbar>
+          <ToolbarTitle>{t("settings.tabShortcuts")}</ToolbarTitle>
+          <SearchWrapper>
+            <SearchIcon>
+              <Search size={14} />
+            </SearchIcon>
+            <SearchInput
+              placeholder={t("settings.bindingsSearch")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            />
+          </SearchWrapper>
+          {confirmingResetAll
+            ? (
+              <InlineConfirmBar>
+                {t("settings.resetAllConfirm")}
+                <DangerSmallButton
+                  type="button"
+                  onClick={() => {
+                    handleResetAll();
+                    setConfirmingResetAll(false);
+                  }}
+                >
+                  {t("settings.resetAll")}
+                </DangerSmallButton>
+                <SmallButton
+                  type="button"
+                  onClick={() => setConfirmingResetAll(false)}
+                >
+                  {t("settings.cancel")}
+                </SmallButton>
+              </InlineConfirmBar>
+            )
+            : (
+              <SmallButton
+                type="button"
+                onClick={() => setConfirmingResetAll(true)}
+              >
+                {t("settings.resetAll")}
+              </SmallButton>
+            )}
+        </Toolbar>
+        <Toggle
+          checked={useSlotBindings}
+          onChange={handleSlotBindingsChange}
         >
-          <Checkbox
-            id="use-slot-bindings"
-            checked={useSlotBindings}
-            onChange={handleSlotBindingsChange}
-          />
-          Use item slot bindings
-        </label>
-        {sectionEntries.map(([section, shortcuts], index) => (
-          <SettingsSection
-            key={section}
-            section={section}
-            shortcuts={shortcuts}
-            defaultOpen={index === 0}
-            setBinding={(shortcut, binding) =>
-              handleSetBinding(section, shortcut, binding)}
-            useSlotBindings={useSlotBindings}
-            externalBindings={section === "controlGroups"
-              ? allPrefabBindings
-              : section !== "misc"
-              ? controlGroupBindings
-              : undefined}
-          />
-        ))}
+          {t("settings.useSlotBindings")}
+        </Toggle>
+        <SectionsContainer>
+          {sectionMatches && Object.keys(sectionMatches).length === 0 && (
+            <EmptySearch>
+              {t("settings.bindingsNoResults", { query: searchQuery })}
+            </EmptySearch>
+          )}
+          {sectionEntries
+            .filter(([section]) => !sectionMatches || section in sectionMatches)
+            .map(([section, shortcuts], index) => (
+              <SettingsSection
+                key={section}
+                section={section}
+                shortcuts={shortcuts}
+                defaultOpen={index === 0 || !!sectionMatches}
+                setBinding={(shortcut, binding) =>
+                  handleSetBinding(section, shortcut, binding)}
+                useSlotBindings={useSlotBindings}
+                externalBindings={section === "controlGroups"
+                  ? allPrefabBindings
+                  : section !== "misc"
+                  ? controlGroupBindings
+                  : undefined}
+                matchingKeys={sectionMatches?.[section] ?? null}
+                onReset={() => handleResetSection(section)}
+                onConflictsChange={handleConflictsChange}
+              />
+            ))}
+        </SectionsContainer>
       </SettingsPanelContainer>
 
       {confirmDialog && (
         <Modal onClick={() => setConfirmDialog(null)}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
-            <h3>Apply to all units?</h3>
+            <h3>{t("settings.applyToAll")}</h3>
             <p>
-              The action "{getActionDisplayName(
-                confirmDialog.actionKey,
-                confirmDialog.section,
-              )}" exists on {confirmDialog.otherSections.length}{" "}
-              other unit{confirmDialog.otherSections.length > 1 ? "s" : ""}:
+              {t("settings.applyToAllDesc", {
+                action: getActionDisplayName(
+                  confirmDialog.actionKey,
+                  confirmDialog.section,
+                ),
+                count: confirmDialog.otherSections.length,
+              })}
             </p>
             <UnitList>
               {confirmDialog.otherSections.map((s) => (
-                <li key={s}>{s === "misc" ? "Misc" : prefabs[s]?.name ?? s}</li>
+                <li key={s}>
+                  {s === "misc"
+                    ? t("settings.misc")
+                    : s === "controlGroups"
+                    ? t("settings.selectionGroups")
+                    : prefabs[s]?.name ?? s}
+                </li>
               ))}
             </UnitList>
-            <p>Do you want to apply this binding to all of them?</p>
+            <p>{t("settings.applyToAllPrompt")}</p>
             <ModalButtons>
-              <Button type="button" onClick={applyToCurrentOnly}>
-                Current only
-              </Button>
-              <Button type="button" onClick={applyToAll}>
-                Apply to all
-              </Button>
+              <ModalButton type="button" onClick={applyToCurrentOnly}>
+                {t("settings.currentOnly")}
+              </ModalButton>
+              <PrimaryButton type="button" onClick={applyToAll}>
+                {t("settings.applyAll")}
+              </PrimaryButton>
             </ModalButtons>
           </ModalContent>
         </Modal>

@@ -7,18 +7,26 @@ import { Entity } from "../../../../ecs.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { selectionFocusVar } from "@/vars/selectionFocus.ts";
 
-const AvatarContainer = styled.div`
+const AvatarContainer = styled.div<{ $rows: number; $cellSize: number }>`
   display: grid;
-  gap: ${({ theme }) => theme.spacing.sm};
-  grid-template-rows: repeat(3, 1fr);
+  gap: ${({ theme }) => theme.space[1]};
+  grid-template-rows: repeat(${({ $rows }) => $rows}, auto);
   grid-auto-flow: column;
+
+  & > div > div:first-child {
+    width: ${({ $cellSize }) => $cellSize}px;
+    height: ${({ $cellSize }) => $cellSize}px;
+  }
 `;
 
 const getGroupKey = (entity: Entity): string =>
   entity.unique ? `unique:${entity.id}` : `prefab:${entity.prefab ?? "none"}`;
 
 export const Avatars = (
-  props: React.ComponentProps<typeof AvatarContainer>,
+  props: Omit<
+    React.ComponentProps<typeof AvatarContainer>,
+    "$rows" | "$cellSize"
+  >,
 ) => {
   useSet(selection);
   const focused = useReactiveVar(selectionFocusVar);
@@ -39,8 +47,10 @@ export const Avatars = (
 
   if (!selection.size) return null;
 
+  const rows = groups.size <= 4 ? 2 : 3;
+
   return (
-    <AvatarContainer {...props}>
+    <AvatarContainer $rows={rows} $cellSize={rows <= 2 ? 54 : 44} {...props}>
       {Array.from(groups.entries(), ([groupKey, entities]) => (
         <Avatar
           key={groupKey ?? "none"}

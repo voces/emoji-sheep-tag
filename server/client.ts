@@ -5,6 +5,7 @@ import { lobbies, type Lobby, newLobby } from "./lobby.ts";
 import type { Entity } from "@/shared/types.ts";
 import { clientContext, lobbyContext } from "./contexts.ts";
 import { leave, sendJoinMessage } from "./lobbyApi.ts";
+import { notifyStatusChange } from "./statusStream.ts";
 import { build, zBuild } from "./actions/build.ts";
 import { start, zStart } from "./actions/start.ts";
 import { colors } from "@/shared/data.ts";
@@ -262,6 +263,7 @@ export const handleSocket = (socket: Socket, url?: URL, ip?: string) => {
         // Client in hub - send initial lobby list
         client.send({ type: "hubState", lobbies: serializeLobbyList() });
       }
+      notifyStatusChange();
     }),
   );
 
@@ -280,6 +282,7 @@ export const handleSocket = (socket: Socket, url?: URL, ip?: string) => {
       if (client.lobby) leave();
       else leaveHub(client);
       allClients.delete(client);
+      notifyStatusChange();
     }),
   );
 };

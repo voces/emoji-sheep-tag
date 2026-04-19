@@ -12,10 +12,15 @@ import { styled } from "styled-components";
 const Tooltip = styled.div`
   position: fixed;
   max-width: 400px;
-  background-color: ${({ theme }) => theme.colors.background};
-  box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
-  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) =>
-    theme.spacing.md};
+  background: ${({ theme }) => theme.surface.scrim};
+  backdrop-filter: blur(12px);
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  box-shadow: ${({ theme }) => theme.shadow.md};
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
+  font-size: ${({ theme }) => theme.text.sm};
+  color: ${({ theme }) => theme.ink.mid};
+  line-height: 1.4;
   pointer-events: none;
   z-index: 9999;
 `;
@@ -47,9 +52,9 @@ const calculatePosition = (
   const viewportHeight = globalThis.innerHeight;
   const containerCenterY = containerRect.top + containerRect.height / 2;
   if (containerCenterY < viewportHeight / 2) {
-    position.top = containerRect.bottom + 16;
+    position.top = containerRect.bottom + 6;
   } else {
-    position.bottom = viewportHeight - containerRect.top + 16;
+    position.bottom = viewportHeight - containerRect.top + 6;
   }
 
   return position;
@@ -72,7 +77,7 @@ export const useTooltip = <T extends HTMLElement = HTMLDivElement>(
     if (!tooltipRef.current) position.opacity = 0;
 
     setCoords(position);
-  }, [containerRef.current]);
+  }, []);
 
   // Recalculate position after tooltip is rendered to get accurate dimensions
   useLayoutEffect(() => {

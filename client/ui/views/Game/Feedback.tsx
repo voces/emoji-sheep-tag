@@ -8,6 +8,10 @@ const FeedbackContainer = styled.div`
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
+  font-size: ${({ theme }) => theme.text.lg};
+  font-weight: 700;
+  color: ${({ theme }) => theme.game.gold};
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9), -1px -1px 0 rgba(0, 0, 0, 0.3);
 `;
 
 export const Feedback = () => {

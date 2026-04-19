@@ -37,56 +37,47 @@ export const ChatOverlay = styled.div`
   > input {
     background: transparent;
     color: inherit;
-    text-shadow: 0 0 2px ${({ theme }) => theme.colors.border};
+    text-shadow: 0 0 2px ${({ theme }) => theme.surface[0]};
     opacity: 0;
-    transition: all 100ms ease-in-out;
+    transition: all ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeInOut};
     outline: none;
-    padding-left: ${({ theme }) => theme.spacing.sm};
-    margin-left: -${({ theme }) => theme.spacing.sm};
+    padding-left: ${({ theme }) => theme.space[1]};
+    margin-left: -${({ theme }) => theme.space[1]};
 
     &.open {
       opacity: 1;
       background-color: color-mix(
         in oklab,
-        ${({ theme }) => theme.colors.background} 70%,
+        ${({ theme }) => theme.surface[2]} 70%,
         transparent
       );
-      box-shadow: color-mix(in oklab, ${({ theme }) =>
-        theme.colors.shadow} 70%, transparent) 1px 1px 4px
-        1px;
-      }
+      box-shadow: ${({ theme }) => theme.shadow.sm};
+    }
 
-      &.dismissed {
-        opacity: 0.5;
-        background-color: color-mix(
-          in oklab,
-          ${({ theme }) => theme.colors.background} 20%,
-          transparent
-        );
-        box-shadow: color-mix(in oklab, ${({ theme }) =>
-          theme.colors.shadow} 20%, transparent) 1px 1px 4px
-          1px;
-        }
-      }
-    `;
-
-    export const Highlight = styled.span`
-      color: color-mix(
+    &.dismissed {
+      opacity: 0.5;
+      background-color: color-mix(
         in oklab,
-        ${({ theme }) => theme.colors.body} 30%,
-        ${({ theme }) => theme.colors.primary}
+        ${({ theme }) => theme.surface[2]} 20%,
+        transparent
       );
-    `;
+      box-shadow: ${({ theme }) => theme.shadow.sm};
+    }
+  }
+`;
 
-    export const Tooltip = styled.div`
-      position: fixed;
-      background-color: ${({ theme }) => theme.colors.background};
-      box-shadow: ${({ theme }) => theme.colors.shadow} 1px 1px 4px 1px;
-      padding: ${({ theme }) => theme.spacing.lg};
-      transform: translate(-50%, -100%);
-      padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) =>
-        theme.spacing.md};
-      white-space: nowrap;
-      pointer-events: none;
-      z-index: 9999;
-    `;
+export const Highlight = styled.span`
+  color: ${({ theme }) => theme.accent.DEFAULT};
+`;
+
+export const Tooltip = styled.div`
+  position: fixed;
+  background-color: ${({ theme }) => theme.surface[1]};
+  box-shadow: ${({ theme }) => theme.shadow.md};
+  transform: translate(-50%, -100%);
+  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+`;

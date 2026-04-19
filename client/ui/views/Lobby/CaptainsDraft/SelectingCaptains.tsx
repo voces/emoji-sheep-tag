@@ -1,22 +1,32 @@
+import { useTranslation } from "react-i18next";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { usePlayers } from "@/hooks/usePlayers.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
-import { Button } from "@/components/forms/Button.tsx";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
+import { GoldTag } from "@/components/Tag.tsx";
+import {
+  ActionButton,
+  SmallGhostButton,
+} from "@/components/forms/ActionButton.tsx";
 import { send } from "../../../../messaging.ts";
 import {
   ButtonRow,
-  IconWrapper,
-  PhaseIndicator,
-  PlayerCard,
-  PlayerList,
+  CaptainSlot,
+  CaptainSlots,
+  PhaseTag,
+  PlayerIcon,
   PlayerName,
+  PlayerPool,
+  PoolPlayer,
+  SlotLabel,
+  SlotName,
 } from "./styles.tsx";
 
 export const SelectingCaptains = () => {
+  const { t } = useTranslation();
   const draft = useReactiveVar(captainsDraftVar);
   const { host } = useReactiveVar(lobbySettingsVar);
   const localPlayerId = useReactiveVar(localPlayerIdVar);
@@ -30,61 +40,96 @@ export const SelectingCaptains = () => {
     (p) => p.team !== "observer" && p.team !== "pending",
   );
 
-  const handleSelectCaptain = (playerId: string) => {
-    if (!isHost) return;
-    send({ type: "selectCaptain", playerId });
-  };
+  const captain0 = draft.captains[0]
+    ? players.find((p) => p.id === draft.captains[0])
+    : null;
+  const captain1 = draft.captains[1]
+    ? players.find((p) => p.id === draft.captains[1])
+    : null;
 
-  const handleRandomCaptains = () => {
-    if (!isHost) return;
-    send({ type: "randomCaptains" });
-  };
-
-  const handleCancel = () => {
-    if (!isHost) return;
-    send({ type: "cancelCaptains" });
-  };
+  const remaining = 2 - draft.captains.length;
 
   return (
     <>
-      <PhaseIndicator>
+      <PhaseTag>
         {isHost
-          ? `Select ${2 - draft.captains.length} captain${
-            draft.captains.length === 1 ? "" : "s"
-          }`
-          : "Waiting for host to select captains..."}
-      </PhaseIndicator>
-      <PlayerList>
-        {nonObservers.map((p) => {
-          const isSelected = draft.captains.includes(p.id);
-          return (
-            <PlayerCard
+          ? remaining === 2
+            ? t("lobby.selectCaptains")
+            : t("lobby.selectCaptain1")
+          : t("lobby.waitingForCaptains")}
+      </PhaseTag>
+
+      <CaptainSlots>
+        <CaptainSlot $filled={!!captain0}>
+          {captain0
+            ? (
+              <>
+                <PlayerIcon>
+                  <SvgIcon
+                    icon="sheep"
+                    accentColor={captain0.playerColor ?? undefined}
+                  />
+                </PlayerIcon>
+                <SlotName>{captain0.name}</SlotName>
+                <GoldTag>{t("lobby.captain")}</GoldTag>
+              </>
+            )
+            : <SlotLabel>{t("lobby.captain")} 1</SlotLabel>}
+        </CaptainSlot>
+        <CaptainSlot $filled={!!captain1}>
+          {captain1
+            ? (
+              <>
+                <PlayerIcon>
+                  <SvgIcon
+                    icon="wolf"
+                    accentColor={captain1.playerColor ?? undefined}
+                  />
+                </PlayerIcon>
+                <SlotName>{captain1.name}</SlotName>
+                <GoldTag>{t("lobby.captain")}</GoldTag>
+              </>
+            )
+            : <SlotLabel>{t("lobby.captain")} 2</SlotLabel>}
+        </CaptainSlot>
+      </CaptainSlots>
+
+      <PlayerPool>
+        {nonObservers
+          .filter((p) => !draft.captains.includes(p.id))
+          .map((p) => (
+            <PoolPlayer
               key={p.id}
-              $selected={isSelected}
               $clickable={isHost}
-              onClick={() => handleSelectCaptain(p.id)}
+              onClick={() =>
+                isHost && send({ type: "selectCaptain", playerId: p.id })}
             >
-              <IconWrapper>
+              <PlayerIcon>
                 <SvgIcon
                   icon="sheep"
                   accentColor={p.playerColor ?? undefined}
                 />
-              </IconWrapper>
+              </PlayerIcon>
               <PlayerName>{p.name}</PlayerName>
-              {isSelected
-                ? <span>Captain</span>
-                : isHost && <Button>Select</Button>}
-            </PlayerCard>
-          );
-        })}
-      </PlayerList>
+            </PoolPlayer>
+          ))}
+      </PlayerPool>
+
       <ButtonRow>
-        <Button onClick={handleRandomCaptains} disabled={!isHost}>
-          Random Captains
-        </Button>
-        <Button onClick={handleCancel} disabled={!isHost}>
-          Cancel
-        </Button>
+        <ActionButton
+          type="button"
+          onClick={() => send({ type: "randomCaptains" })}
+          disabled={!isHost}
+        >
+          {t("lobby.randomize")}
+        </ActionButton>
+        <SmallGhostButton
+          type="button"
+          onClick={() => send({ type: "cancelCaptains" })}
+          disabled={!isHost}
+        >
+          {t("lobby.cancelDraft")}
+        </SmallGhostButton>
       </ButtonRow>
     </>
   );
