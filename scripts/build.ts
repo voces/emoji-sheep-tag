@@ -62,7 +62,7 @@ const buildDenoResolveMap = async (
 ): Promise<Map<string, string>> => {
   const map = new Map<string, string>();
   for (const entry of entryPoints) {
-    const cmd = new Deno.Command("deno", {
+    const cmd = new Deno.Command(Deno.execPath(), {
       args: ["info", "--json", entry],
       stdout: "piped",
       stderr: "null",
