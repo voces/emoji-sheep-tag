@@ -18,7 +18,6 @@ import { getCustomMapForLobby } from "./actions/uploadCustomMap.ts";
 import type { Lobby } from "./lobby.ts";
 import {
   handleCaptainsPlayerLeave,
-  isActiveCaptainsDraft,
   serializeCaptainsDraft,
 } from "./actions/captains.ts";
 import { broadcastShards } from "./shardRegistry.ts";
@@ -300,8 +299,8 @@ export const leave = (client?: Client) => {
     lobby.host = humanPlayers[0];
   }
 
-  // Handle captains draft when a non-observer player leaves during active draft
-  if (isActiveCaptainsDraft(lobby) && client.team !== "observer") {
+  // Handle captains draft when a player leaves
+  if (lobby.captainsDraft && client.team !== "observer") {
     handleCaptainsPlayerLeave(lobby, client.id);
   }
 

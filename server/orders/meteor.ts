@@ -44,6 +44,7 @@ export const meteorOrder = {
 
     newSfx(target, "meteor", DEFAULT_FACING, 0.25, undefined, undefined, {
       sounds: { birth: ["explosion1"] },
+      owner: unit.owner,
     });
 
     const damageRadius = "aoe" in action ? action.aoe ?? 0 : 0;

@@ -214,6 +214,7 @@ const zBuff = z.object({
   splashTargets: zClassification.array().readonly().array().readonly()
     .optional(),
   expiration: z.string().optional(),
+  spawnPrefab: z.string().optional(),
   totalDuration: z.number().optional(),
   progressEasing: z.object({
     type: z.enum(["ease-in", "ease-out", "ease-in-out"]),

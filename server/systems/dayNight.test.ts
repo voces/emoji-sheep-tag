@@ -11,29 +11,30 @@ import { yieldFor } from "@/server-testing/yieldFor.ts";
 afterEach(cleanupTest);
 
 describe("computeIsNight", () => {
-  it("is day at start", () => {
-    expect(computeIsNight(0)).toBe(false);
+  it("is night at start", () => {
+    expect(computeIsNight(0)).toBe(true);
   });
 
-  it("transitions to night and back", () => {
-    // Find the first night boundary by scanning
-    let firstNight = -1;
-    for (let t = 0; t < 300; t++) {
-      if (computeIsNight(t)) {
-        firstNight = t;
-        break;
-      }
-    }
-    expect(firstNight).toBeGreaterThan(0);
-    expect(computeIsNight(firstNight - 1)).toBe(false);
+  it("initial night lasts 6 seconds", () => {
+    expect(computeIsNight(5)).toBe(true);
+    expect(computeIsNight(6)).toBe(false);
+  });
 
-    // Night lasts 75s
-    expect(computeIsNight(firstNight + 74)).toBe(true);
-    expect(computeIsNight(firstNight + 75)).toBe(false);
+  it("initial day lasts 120 seconds", () => {
+    expect(computeIsNight(6)).toBe(false);
+    expect(computeIsNight(125)).toBe(false);
+    expect(computeIsNight(126)).toBe(true);
+  });
 
-    // Day lasts 120s, then night again
-    expect(computeIsNight(firstNight + 75 + 119)).toBe(false);
-    expect(computeIsNight(firstNight + 75 + 120)).toBe(true);
+  it("cycles between night and day", () => {
+    // First night cycle: 126 to 201
+    expect(computeIsNight(126)).toBe(true);
+    expect(computeIsNight(200)).toBe(true);
+    expect(computeIsNight(201)).toBe(false);
+
+    // Second day: 201 to 321
+    expect(computeIsNight(320)).toBe(false);
+    expect(computeIsNight(321)).toBe(true);
   });
 });
 

@@ -273,11 +273,15 @@ addSystem((app) => ({
     if (unit.prefab === "tree" && unit.position) {
       addEntity({
         prefab: "treeStump",
-        position: unit.position,
+        position: { x: unit.position.x, y: unit.position.y },
         facing: unit.facing,
         modelScale: unit.modelScale,
-        maxHealth: 45,
-        healthRegen: -1,
+        buffs: [{
+          remainingDuration: 45,
+          totalDuration: 45,
+          expiration: "tree",
+          spawnPrefab: "tree",
+        }],
       });
       for (
         const { x, y, scale } of [
@@ -295,18 +299,6 @@ addSystem((app) => ({
         );
         sfx.modelScale = scale;
       }
-    }
-
-    // Spawn tree when tree stump dies
-    if (unit.prefab === "treeStump" && unit.position) {
-      addEntity({
-        prefab: "tree",
-        position: unit.position,
-        facing: unit.facing,
-        modelScale: unit.modelScale,
-        progress: 0.11,
-        completionTime: 1.5,
-      });
     }
 
     app.removeEntity(unit);

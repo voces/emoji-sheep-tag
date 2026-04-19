@@ -323,6 +323,11 @@ export const handleCaptainsPlayerLeave = (lobby: Lobby, playerId: string) => {
       // Undrafted player left - check if remaining pool should be auto-drafted
       checkForcedPicks(lobby);
     }
+  } else if (draft.phase === "drafted" || draft.phase === "reversed") {
+    if (isCaptain) {
+      lobby.captainsDraft = undefined;
+      send({ type: "captainsDraft", phase: undefined });
+    }
   }
 };
 

@@ -3,6 +3,7 @@ import { expect } from "@std/expect";
 import { Buff, Entity } from "@/shared/types.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 import { yieldFor } from "@/server-testing/yieldFor.ts";
+import { addEntity } from "@/shared/api/entity.ts";
 
 afterEach(cleanupTest);
 
@@ -151,4 +152,94 @@ describe("buffs system", () => {
       expect(entity.buffs![0].movementSpeedMultiplier).toBe(1.15);
     },
   );
+
+  it("spawnPrefab spawns entity and removes source on expiration", function* ({
+    ecs,
+  }) {
+    const stump = addEntity({
+      prefab: "treeStump",
+      position: { x: 5, y: 5 },
+      buffs: [{
+        remainingDuration: 2,
+        totalDuration: 2,
+        expiration: "tree",
+        spawnPrefab: "tree",
+      }],
+    });
+
+    yield* yieldFor(3);
+
+    expect(ecs.entities.has(stump)).toBe(false);
+    const tree = Array.from(ecs.entities).find((e) => e.prefab === "tree");
+    expect(tree).toBeDefined();
+    expect(tree!.position).toEqual({ x: 5, y: 5 });
+    expect(tree!.maxHealth).toBe(25);
+  });
+
+  it("regrown tree can be killed", function* ({ ecs }) {
+    addEntity({
+      prefab: "treeStump",
+      position: { x: 5, y: 5 },
+      buffs: [{
+        remainingDuration: 2,
+        totalDuration: 2,
+        expiration: "tree",
+        spawnPrefab: "tree",
+      }],
+    });
+
+    yield* yieldFor(3);
+    const tree = Array.from(ecs.entities).find((e) => e.prefab === "tree")!;
+
+    // Wait for construction to complete
+    yield* yieldFor(2);
+    expect(tree.progress).toBeFalsy();
+
+    tree.health = 0;
+    yield;
+
+    expect(ecs.entities.has(tree)).toBe(false);
+    const newStump = Array.from(ecs.entities).find((e) =>
+      e.prefab === "treeStump"
+    );
+    expect(newStump).toBeDefined();
+  });
+
+  it("full tree lifecycle: die -> stump -> regrow -> die again", function* ({
+    ecs,
+  }) {
+    const tree = addEntity({
+      prefab: "tree",
+      position: { x: 5, y: 5 },
+    });
+
+    // Let the tree exist for a tick before killing
+    yield;
+    tree.health = 0;
+    yield;
+
+    const stump = Array.from(ecs.entities).find((e) =>
+      e.prefab === "treeStump"
+    );
+    expect(stump).toBeDefined();
+
+    // Wait for regrowth (45s) + construction (1.5s)
+    yield* yieldFor(48);
+
+    const regrownTree = Array.from(ecs.entities).find((e) =>
+      e.prefab === "tree"
+    );
+    expect(regrownTree).toBeDefined();
+    expect(regrownTree!.health).toBeCloseTo(25);
+
+    // Kill the regrown tree
+    regrownTree!.health = 0;
+    yield;
+
+    expect(ecs.entities.has(regrownTree!)).toBe(false);
+    const stump2 = Array.from(ecs.entities).find((e) =>
+      e.prefab === "treeStump"
+    );
+    expect(stump2).toBeDefined();
+  });
 });

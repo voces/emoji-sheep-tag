@@ -125,6 +125,7 @@ const applyPendingServerValues = (entity: Entity) => {
 
 export const alwaysVisible = (entity: Entity) =>
   entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
+  entity.prefab === "treeStump" ||
   entity.id.startsWith("blueprint-") ||
   entity.id.startsWith("paste-blueprint-") ||
   entity.id === "selection-rectangle" ||

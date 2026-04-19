@@ -1,6 +1,7 @@
 import { Entity } from "@/shared/types.ts";
 import { addSystem } from "@/shared/context.ts";
 import { iterateBuffs } from "@/shared/api/unit.ts";
+import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 
 addSystem((app) => ({
   props: ["buffs"],
@@ -85,7 +86,20 @@ addSystem((app) => ({
 
     // Handle expiration effects after updating buffs
     for (const buff of expiringBuffs) {
-      if (buff.expiration) return app.enqueue(() => app.removeEntity(entity));
+      if (buff.spawnPrefab && entity.position) {
+        addEntity({
+          prefab: buff.spawnPrefab,
+          position: { x: entity.position.x, y: entity.position.y },
+          facing: entity.facing,
+          modelScale: entity.modelScale,
+          // TODO: don't hardcode
+          progress: 0.11,
+          completionTime: 1.5,
+        });
+      }
+      if (buff.expiration) {
+        return app.enqueue(() => removeEntity(entity));
+      }
     }
   },
 }));

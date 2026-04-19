@@ -96,6 +96,9 @@ export const createMinimapRenderer = (
 
   const renderScene = () => {
     const scaledEntities: Array<{ entity: Entity; originalScale: number }> = [];
+    const boostedAlphaEntities: Array<
+      { entity: Entity; originalAlpha: number }
+    > = [];
     const maskedEntities: Entity[] = [];
 
     for (const entity of minimapUnits) {
@@ -107,6 +110,11 @@ export const createMinimapRenderer = (
     for (const entity of minimapPlayerEntities) {
       setMinimapMask(entity, true);
       maskedEntities.push(entity);
+      if (entity.alpha && entity.alpha < 1) {
+        const originalAlpha = entity.alpha;
+        boostedAlphaEntities.push({ entity, originalAlpha });
+        entity.alpha = Math.min(1, originalAlpha * 4);
+      }
     }
 
     renderer.setRenderTarget(sceneRenderTarget);
@@ -115,6 +123,10 @@ export const createMinimapRenderer = (
 
     for (const { entity, originalScale } of scaledEntities) {
       entity.modelScale = originalScale;
+    }
+
+    for (const { entity, originalAlpha } of boostedAlphaEntities) {
+      entity.alpha = originalAlpha;
     }
 
     for (const entity of maskedEntities) setMinimapMask(entity, false);

@@ -188,6 +188,7 @@ export const handleTargetOrder = (e: MouseButtonEvent): TargetOrderResult => {
 
   // Track if any unit failed due to range (vs classification)
   let anyOutOfRange = false;
+  const outOfRangeUnits = new Set<Entity>();
 
   const unitsWithTarget = isGroundOrder
     ? new ExtendedSet<Entity>()
@@ -217,10 +218,11 @@ export const handleTargetOrder = (e: MouseButtonEvent): TargetOrderResult => {
       if (!action) return false;
 
       if (typeof entity.movementSpeed !== "number") {
-        const range = action.range ?? 0;
+        const range = action.range ?? entity.attack?.range ?? 0;
         const distance = distanceBetweenEntities(entity, target, range);
         if (distance > range) {
           anyOutOfRange = true;
+          outOfRangeUnits.add(entity);
           return false;
         }
       }
@@ -244,6 +246,7 @@ export const handleTargetOrder = (e: MouseButtonEvent): TargetOrderResult => {
 
   const unitsWithoutTarget = selection.filter((entity) => {
     if (unitsWithTarget.has(entity)) return false;
+    if (outOfRangeUnits.has(entity)) return false;
 
     // Skip if entity is constructing
     const isConstructing = typeof entity.progress === "number";

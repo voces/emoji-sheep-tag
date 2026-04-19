@@ -96,6 +96,7 @@ export type Buff = {
   readonly splashRadius?: number;
   readonly splashTargets?: ReadonlyArray<ReadonlyArray<Classification>>;
   readonly expiration?: string;
+  readonly spawnPrefab?: string;
   readonly totalDuration?: number;
   readonly progressEasing?: {
     readonly type: "ease-in" | "ease-out" | "ease-in-out";

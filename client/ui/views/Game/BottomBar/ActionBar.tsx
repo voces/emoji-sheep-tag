@@ -338,8 +338,13 @@ export const ActionBar = () => {
         case "target":
           // Special cases for attack and move
           if (action.order === "attack") {
-            return selection.order?.type === "attack" ||
-              selection.order?.type === "attackMove";
+            if (selection.order?.type === "attackMove") return true;
+            return selection.order?.type === "attack" &&
+              "targetId" in selection.order;
+          }
+          if (action.order === "attack-ground") {
+            return selection.order?.type === "attack" &&
+              !("targetId" in selection.order);
           }
           if (action.order === "move") {
             return !!selection.order && "path" in selection.order;
