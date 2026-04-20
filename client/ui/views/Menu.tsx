@@ -13,10 +13,8 @@ import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { Tag } from "@/components/Tag.tsx";
 import { usePlayerCount } from "@/hooks/usePlayerCount.ts";
 import { colors } from "@/shared/data.ts";
+import { VERSION } from "@/shared/version.ts";
 import { PencilRuler, Play, Settings, WifiOff } from "lucide-react";
-
-// deno-lint-ignore no-process-global
-const buildDate = (process.env.BUILD_TIME ?? "").slice(0, 10);
 
 const popIn = keyframes`
   from { opacity: 0; transform: translate(-50%, -50%) translateY(8px) scale(0.98); }
@@ -448,7 +446,7 @@ export const Menu = () => {
           <div>
             <Title>{t("menu.title")}</Title>
             <Subtitle>
-              <Tag>{buildDate}</Tag>
+              <Tag>{VERSION}</Tag>
               <Dot />
               <span>{t("menu.playersOnline", { count: playerCount })}</span>
             </Subtitle>

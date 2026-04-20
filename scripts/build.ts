@@ -170,7 +170,6 @@ export const buildOptions = async (
       "process.env.NODE_ENV": JSON.stringify(
         env === "dev" ? "development" : "production",
       ),
-      "process.env.BUILD_TIME": JSON.stringify(new Date().toISOString()),
     },
     minify: env !== "dev",
   };

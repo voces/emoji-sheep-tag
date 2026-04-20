@@ -1,0 +1,98 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+        with:
+          lfs: "true"
+          fetch-depth: 0
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Verify CI passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CHECKS=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
+            --jq '.check_runs[] | "\(.name)\t\(.conclusion)"')
+
+          check_status() {
+            local name="$1" required="$2"
+            STATUS=$(echo "$CHECKS" | grep "^${name}	" | head -1 | cut -f2)
+            if [ -z "$STATUS" ]; then
+              if [ "$required" = "true" ]; then
+                echo "::error::${name} has not run on this commit"
+                return 1
+              fi
+              echo "${name}: skipped (not triggered)"
+              return 0
+            fi
+            if [ "$STATUS" != "success" ]; then
+              echo "::error::${name} status: ${STATUS}"
+              return 1
+            fi
+            echo "${name}: passed"
+          }
+
+          FAILED=0
+          check_status "build" true || FAILED=1
+          check_status "Lint & Format" true || FAILED=1
+          check_status "Tests" true || FAILED=1
+          check_status "Test Summary" true || FAILED=1
+          check_status "Build Shard Image" false || FAILED=1
+          [ "$FAILED" -eq 0 ] || exit 1
+
+      - name: Compute version
+        id: version
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          SUFFIX=""
+          # Check existing tags for today to determine suffix
+          EXISTING=$(git tag -l "${DATE}*" | sort)
+          if [ -n "$EXISTING" ]; then
+            # Find the last suffix used today
+            LAST=$(echo "$EXISTING" | tail -1)
+            if [ "$LAST" = "$DATE" ]; then
+              SUFFIX="b"
+            else
+              # Extract the suffix letter and increment
+              LAST_SUFFIX="${LAST#$DATE}"
+              NEXT=$(echo "$LAST_SUFFIX" | tr 'a-y' 'b-z')
+              SUFFIX="$NEXT"
+            fi
+          fi
+          VERSION="${DATE}${SUFFIX}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Write version
+        run: |
+          echo 'export const VERSION = "${{ steps.version.outputs.version }}";' > shared/version.ts
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add shared/version.ts
+          git commit -m "release: ${{ steps.version.outputs.version }}"
+          git tag "${{ steps.version.outputs.version }}"
+          git push origin master --tags
+
+      - name: Notify server
+        if: vars.DEPLOY_WEBHOOK_URL
+        run: |
+          curl -sf -X POST "${{ vars.DEPLOY_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"version": "${{ steps.version.outputs.version }}"}'
