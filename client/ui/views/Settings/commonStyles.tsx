@@ -26,6 +26,15 @@ export const ToggleGroup = styled.div`
   gap: 10px;
 `;
 
+export const SettingSectionTitle = styled.h4`
+  margin: 0;
+  font-size: ${({ theme }) => theme.text.sm};
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: ${({ theme }) => theme.ink.lo};
+`;
+
 export const SettingDivider = styled.hr`
   height: 1px;
   background: ${({ theme }) => theme.border.soft};

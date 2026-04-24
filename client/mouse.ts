@@ -10,6 +10,7 @@ import { checkShortcut } from "./controls/keyboardHandlers.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { addSystem } from "@/shared/context.ts";
+import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 
 export class MouseEvent extends Event {
   readonly pixels: Vector2;
@@ -175,13 +176,20 @@ const updateIntersects = () => {
 
 globalThis.addEventListener("pointermove", (event) => {
   if (document.pointerLockElement) {
+    const sensitivity = gameplaySettingsVar().mouseSensitivity;
     mouse.pixels.x = Math.max(
       8,
-      Math.min(mouse.pixels.x + event.movementX, globalThis.innerWidth - 8),
+      Math.min(
+        mouse.pixels.x + event.movementX * sensitivity,
+        globalThis.innerWidth - 8,
+      ),
     );
     mouse.pixels.y = Math.max(
       8,
-      Math.min(mouse.pixels.y + event.movementY, globalThis.innerHeight - 8),
+      Math.min(
+        mouse.pixels.y + event.movementY * sensitivity,
+        globalThis.innerHeight - 8,
+      ),
     );
   } else {
     mouse.pixels.x = event.clientX;

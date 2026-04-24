@@ -34,7 +34,6 @@
 - Per-player handicap
 - Death animation (sheep)
 - Monolith needs new model
-- Settings not discoverable in game
 - Mobile: observe+chat friendly
 
 # Bugs

@@ -241,11 +241,21 @@ export const en = {
       "Matches Warcraft 3: Move \u2192 M, Stop \u2192 S/H, Self-destruct \u2192 D, and more",
 
     gameplayTitle: "Gameplay Settings",
+    cameraSection: "Camera",
     sheepZoom: "Sheep Zoom",
     wolfZoom: "Wolf Zoom",
     spiritZoom: "Spirit Zoom",
+    panSpeed: "Pan Speed",
+    inputSection: "Input",
+    pointerLock: "Capture cursor",
+    pointerLockTooltip:
+      "Locks the cursor to the game window, enabling edge-of-screen panning. Recommended for multi-monitor setups.",
+    rawMouseInput: "Raw mouse input",
+    rawMouseInputTooltip:
+      "Bypasses OS mouse acceleration for more consistent cursor movement.",
+    mouseSensitivity: "Mouse Sensitivity",
+    interfaceSection: "Interface",
     clearOrderOnRightClick: "Clear order on right click",
-    rawMouseInput: "Raw mouse input (bypass OS acceleration)",
     showHealthbars: "Show healthbars above damaged units",
 
     audioTitle: "Volume Settings",

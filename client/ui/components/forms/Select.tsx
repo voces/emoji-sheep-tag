@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { styled } from "styled-components";
 import { ChevronDown } from "lucide-react";
-import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { mouse } from "../../../mouse.ts";
 
 type SelectOption = {
@@ -115,20 +114,6 @@ export const Select = ({
 }: SelectProps) => {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const requestPointerLock = () => {
-    try {
-      if (
-        document.body &&
-        !document.pointerLockElement &&
-        typeof document.body.requestPointerLock === "function"
-      ) {
-        document.body.requestPointerLock({
-          unadjustedMovement: gameplaySettingsVar().rawMouseInput,
-        });
-      }
-    } catch { /* ignore */ }
-  };
-
   const label = useMemo(
     () =>
       options.find((option) => option.value === value)?.label ?? placeholder,
@@ -151,7 +136,6 @@ export const Select = ({
   const handleSelect = (newValue: string) => {
     onChange(newValue);
     setOpen(false);
-    requestPointerLock();
   };
 
   return (

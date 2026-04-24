@@ -2,9 +2,11 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useTranslation } from "react-i18next";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { Toggle } from "@/components/forms/Toggle.tsx";
+import { InfoTooltip } from "@/components/InfoTooltip.tsx";
 import {
   FieldGroup,
   SettingDivider,
+  SettingSectionTitle,
   SettingsPanelContainer,
   SettingsPanelTitle,
   ToggleGroup,
@@ -20,6 +22,7 @@ export const Gameplay = () => {
     <SettingsPanelContainer>
       <SettingsPanelTitle>{t("settings.gameplayTitle")}</SettingsPanelTitle>
 
+      <SettingSectionTitle>{t("settings.cameraSection")}</SettingSectionTitle>
       <FieldGroup>
         <Slider
           label={t("settings.sheepZoom")}
@@ -54,10 +57,64 @@ export const Gameplay = () => {
             camera.position.z = value;
           }}
         />
+        <Slider
+          label={t("settings.panSpeed")}
+          value={settings.panSpeed}
+          min={0.2}
+          max={3}
+          step={0.1}
+          formatValue={(v) => `${v}x`}
+          onChange={(value) =>
+            gameplaySettingsVar({ ...settings, panSpeed: value })}
+        />
       </FieldGroup>
 
       <SettingDivider />
 
+      <SettingSectionTitle>{t("settings.inputSection")}</SettingSectionTitle>
+      <ToggleGroup>
+        <Toggle
+          checked={settings.pointerLock === "always"}
+          onChange={(checked) =>
+            gameplaySettingsVar({
+              ...settings,
+              pointerLock: checked ? "always" : "never",
+            })}
+        >
+          {t("settings.pointerLock")}{" "}
+          <InfoTooltip text={t("settings.pointerLockTooltip")} />
+        </Toggle>
+
+        <Toggle
+          checked={settings.rawMouseInput}
+          onChange={(checked) =>
+            gameplaySettingsVar({
+              ...settings,
+              rawMouseInput: checked,
+            })}
+          disabled={settings.pointerLock === "never"}
+        >
+          {t("settings.rawMouseInput")}{" "}
+          <InfoTooltip text={t("settings.rawMouseInputTooltip")} />
+        </Toggle>
+        <Slider
+          label={t("settings.mouseSensitivity")}
+          value={settings.mouseSensitivity}
+          min={0.2}
+          max={3}
+          step={0.1}
+          formatValue={(v) => `${v}x`}
+          disabled={settings.pointerLock === "never"}
+          onChange={(value) =>
+            gameplaySettingsVar({ ...settings, mouseSensitivity: value })}
+        />
+      </ToggleGroup>
+
+      <SettingDivider />
+
+      <SettingSectionTitle>
+        {t("settings.interfaceSection")}
+      </SettingSectionTitle>
       <ToggleGroup>
         <Toggle
           checked={settings.clearOrderOnRightClick}
@@ -68,17 +125,6 @@ export const Gameplay = () => {
             })}
         >
           {t("settings.clearOrderOnRightClick")}
-        </Toggle>
-
-        <Toggle
-          checked={settings.rawMouseInput}
-          onChange={(checked) =>
-            gameplaySettingsVar({
-              ...settings,
-              rawMouseInput: checked,
-            })}
-        >
-          {t("settings.rawMouseInput")}
         </Toggle>
 
         <Toggle

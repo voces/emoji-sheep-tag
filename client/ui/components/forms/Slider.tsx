@@ -2,10 +2,12 @@ import { styled } from "styled-components";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mouse, MouseButtonEvent, MouseMoveEvent } from "../../../mouse.ts";
 
-const SliderContainer = styled.div`
+const SliderContainer = styled.div<{ $disabled?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[1]};
+  opacity: ${({ $disabled }) => $disabled ? 0.45 : 1};
+  pointer-events: ${({ $disabled }) => $disabled ? "none" : "auto"};
 `;
 
 const SliderLabel = styled.label`
@@ -63,6 +65,7 @@ export const Slider = ({
   max = 1,
   step = 0.01,
   formatValue = (v) => v.toString(),
+  disabled,
 }: {
   label: string;
   value: number;
@@ -71,6 +74,7 @@ export const Slider = ({
   max?: number;
   step?: number;
   formatValue?: (value: number) => string;
+  disabled?: boolean;
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);
@@ -197,7 +201,7 @@ export const Slider = ({
   );
 
   return (
-    <SliderContainer>
+    <SliderContainer $disabled={disabled}>
       <SliderLabel>
         {label}
         <SliderValue>{formatValue(displayValue)}</SliderValue>

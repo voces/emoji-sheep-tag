@@ -110,6 +110,9 @@ const rebuild = () => {
       !position
     ) continue;
 
+    // Skip unowned entities (e.g. trees regrowing)
+    if (!owner) continue;
+
     // Skip if full health or dead
     const healthPercent = health / maxHealth;
     if (healthPercent >= 0.9999 || healthPercent <= 0) continue;

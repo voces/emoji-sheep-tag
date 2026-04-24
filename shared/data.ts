@@ -1108,6 +1108,7 @@ export const prefabs: Record<string, DataEntity> = {
   },
   treeStump: {
     name: "Tree Stump",
+    radius: 0.5,
     isDoodad: true,
     visibleInFog: true,
   },

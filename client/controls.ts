@@ -508,7 +508,11 @@ mouse.addEventListener("mouseButtonUp", (e) => {
   clearActives();
 
   // Emit mouseup and click/contextmenu to UI elements
+  // Only dispatch synthetic events when pointer lock is active; without it,
+  // native browser events already reach the elements and dispatching would
+  // double-fire.
   if (
+    document.pointerLockElement &&
     (e.element instanceof HTMLElement || e.element instanceof SVGElement) &&
     !isGameElement(e.element)
   ) {
@@ -1195,13 +1199,14 @@ addSystem({
 
     const panDuration = typeof startPan === "number" ? (time - startPan) : 0;
 
+    const panSpeed = gameplaySettingsVar().panSpeed;
     if (x) {
       x *= 1 + 1.3 * Math.exp(-10 * panDuration) + (panDuration / 5) ** 0.5 -
         0.32;
       camera.position.x = Math.min(
         Math.max(
           map.bounds.min.x,
-          camera.position.x + x * delta * camera.position.z,
+          camera.position.x + x * delta * camera.position.z * panSpeed,
         ),
         map.bounds.max.x,
       );
@@ -1212,7 +1217,7 @@ addSystem({
       camera.position.y = Math.min(
         Math.max(
           map.bounds.min.y,
-          camera.position.y + y * delta * camera.position.z,
+          camera.position.y + y * delta * camera.position.z * panSpeed,
         ),
         map.bounds.max.y,
       );
@@ -1235,7 +1240,10 @@ document.addEventListener("pointerlockchange", () => {
 
 for (const event of ["pointerdown", "keydown", "contextmenu"]) {
   globalThis.document.body.addEventListener(event, async () => {
-    if (!document.pointerLockElement && !isSoftwareRenderer()) {
+    if (
+      !document.pointerLockElement && !isSoftwareRenderer() &&
+      gameplaySettingsVar().pointerLock === "always"
+    ) {
       try {
         // Ensure body has focus before requesting pointer lock
         // This fixes scrolling issues when entering via keyboard
@@ -1311,9 +1319,17 @@ shortcutsVar.subscribe(() => {
   for (const e of entities) shortcutOverrides(e);
 });
 
-// Re-request pointer lock when rawMouseInput setting changes
+// Re-request pointer lock when rawMouseInput changes; release when pointerLock set to "never"
 let lastRawMouseInput = gameplaySettingsVar().rawMouseInput;
+let lastPointerLock = gameplaySettingsVar().pointerLock;
 gameplaySettingsVar.subscribe(async (settings) => {
+  if (settings.pointerLock !== lastPointerLock) {
+    lastPointerLock = settings.pointerLock;
+    if (settings.pointerLock === "never" && document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+  }
+
   if (settings.rawMouseInput !== lastRawMouseInput) {
     lastRawMouseInput = settings.rawMouseInput;
     if (document.pointerLockElement) {

@@ -8,6 +8,9 @@ const gameplaySettingsSchema = z.object({
   clearOrderOnRightClick: z.boolean().catch(true),
   rawMouseInput: z.boolean().catch(true),
   showHealthbars: z.boolean().catch(false),
+  pointerLock: z.enum(["always", "never"]).catch("always"),
+  panSpeed: z.number().min(0.2).max(3).catch(1),
+  mouseSensitivity: z.number().min(0.2).max(3).catch(1),
 });
 
 export type GameplaySettings = z.infer<typeof gameplaySettingsSchema>;
