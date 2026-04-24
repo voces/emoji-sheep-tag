@@ -174,16 +174,41 @@ const TabContent = styled.div`
   min-width: 0;
 `;
 
+const SETTINGS_TAB_KEY = "emoji-sheep-tag-settings-tab";
+const validTabs = new Set(
+  [
+    "presets",
+    "gameplay",
+    "shortcuts",
+    "audio",
+    "display",
+    "maps",
+  ] as const,
+);
+type SettingsTab = typeof validTabs extends Set<infer T> ? T : never;
+
+const getStoredTab = (): SettingsTab => {
+  try {
+    const stored = localStorage.getItem(SETTINGS_TAB_KEY);
+    if (stored && validTabs.has(stored as SettingsTab)) {
+      return stored as SettingsTab;
+    }
+  } catch { /* ignore */ }
+  return "presets";
+};
+
 export const Settings = () => {
   const { t } = useTranslation();
   const showSettings = useReactiveVar(showSettingsVar);
   const { preset } = useReactiveVar(shortcutSettingsVar);
   const hasBindingConflicts = useReactiveVar(bindingConflictsVar);
-  const [activeTab, setActiveTab] = useState<
-    "presets" | "gameplay" | "shortcuts" | "audio" | "display" | "maps"
-  >(
-    "presets",
-  );
+  const [activeTab, setActiveTabState] = useState<SettingsTab>(getStoredTab);
+  const setActiveTab = useCallback((tab: SettingsTab) => {
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem(SETTINGS_TAB_KEY, tab);
+    } catch { /* ignore */ }
+  }, []);
   const setPreset = useCallback(
     (p: Preset) => {
       const overrides = presetOverrides[p];
