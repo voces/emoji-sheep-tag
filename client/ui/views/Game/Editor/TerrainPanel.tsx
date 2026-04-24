@@ -12,37 +12,38 @@ import {
 } from "@/vars/editor.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { NumericSettingInput } from "../../Lobby/NumericSettingInput.tsx";
-import { Button } from "@/components/forms/Button.tsx";
-import { HStack, VStack } from "@/components/layout/Layout.tsx";
+import { SmallButton } from "@/components/forms/ActionButton.tsx";
+import { VStack } from "@/components/layout/Layout.tsx";
 import {
   executeCommand,
   fillWaterCommand,
 } from "../../../../editor/commands.ts";
 import { WATER_LEVEL_SCALE } from "@/shared/constants.ts";
-import { styled } from "styled-components";
+import { useTranslation } from "react-i18next";
+import {
+  Segment,
+  SegmentedControlWide,
+} from "@/components/forms/SegmentedControl.tsx";
 
-const waterViewLabels: Record<EditorWaterView, string> = {
-  hide: "Hide",
-  normal: "Normal",
-  level: "Mask",
+const waterViewKeys: EditorWaterView[] = ["hide", "normal", "level"];
+const waterViewI18n: Record<EditorWaterView, string> = {
+  hide: "editor.waterHide",
+  normal: "editor.waterNormal",
+  level: "editor.waterMask",
 };
 
-const SegmentedButton = styled(Button)<{ $active: boolean }>`
-  flex: 1;
-  padding: 2px ${({ theme }) => theme.space[1]};
-  opacity: ${({ $active }) => ($active ? 1 : 0.6)};
-  font-weight: ${({ $active }) => ($active ? "bold" : "normal")};
-`;
-
 export const TerrainPanel = () => {
+  const { t } = useTranslation();
   const waterLevel = useReactiveVar(editorWaterLevelVar);
   const waterView = useReactiveVar(editorWaterViewVar);
   const waterPaintLabel = waterLevel > 0
-    ? `Paint water (${waterLevel.toFixed(4).replace(/\.?0+$/, "")})`
-    : "Clear water";
+    ? t("editor.paintWater", {
+      level: waterLevel.toFixed(4).replace(/\.?0+$/, ""),
+    })
+    : t("editor.clearWater");
 
   return (
-    <CollapsiblePanel title="Terrain" defaultOpen>
+    <CollapsiblePanel title={t("editor.terrain")} defaultOpen>
       <VStack>
         <Grid>
           {tileDefs.map(({ name, color, pathing }) =>
@@ -73,7 +74,7 @@ export const TerrainPanel = () => {
             )
           )}
           <Command
-            name="Raise cliff"
+            name={t("editor.raiseCliff")}
             icon="raise"
             iconScale={0.85}
             onClick={() => {
@@ -89,7 +90,7 @@ export const TerrainPanel = () => {
             }}
           />
           <Command
-            name="Lower cliff"
+            name={t("editor.lowerCliff")}
             icon="lower"
             iconScale={0.85}
             onClick={() => {
@@ -105,7 +106,7 @@ export const TerrainPanel = () => {
             }}
           />
           <Command
-            name="Ramp"
+            name={t("editor.ramp")}
             icon="ramp"
             iconScale={0.85}
             onClick={() => {
@@ -140,7 +141,7 @@ export const TerrainPanel = () => {
         </Grid>
         <NumericSettingInput
           id="editor-water-level"
-          label="Water level"
+          label={t("editor.waterLevel")}
           value={waterLevel}
           min={0}
           max={16}
@@ -149,7 +150,7 @@ export const TerrainPanel = () => {
           disabled={false}
           onChange={editorWaterLevelVar}
         />
-        <Button
+        <SmallButton
           onClick={() => {
             const newValue = Math.max(
               0,
@@ -158,21 +159,27 @@ export const TerrainPanel = () => {
             executeCommand(fillWaterCommand(newValue));
           }}
         >
-          Fill all water
-        </Button>
-        <HStack $gap={1} role="radiogroup" aria-label="Water view">
-          {(["hide", "normal", "level"] as const).map((mode) => (
-            <SegmentedButton
+          {t("editor.fillAllWater")}
+        </SmallButton>
+        <SegmentedControlWide
+          role="radiogroup"
+          aria-label={t("editor.waterView", { defaultValue: "Water view" })}
+          style={{
+            gridTemplateColumns: `repeat(${waterViewKeys.length}, 1fr)`,
+          }}
+        >
+          {waterViewKeys.map((mode) => (
+            <Segment
               key={mode}
               role="radio"
               aria-checked={waterView === mode}
               $active={waterView === mode}
               onClick={() => editorWaterViewVar(mode)}
             >
-              {waterViewLabels[mode]}
-            </SegmentedButton>
+              {t(waterViewI18n[mode])}
+            </Segment>
           ))}
-        </HStack>
+        </SegmentedControlWide>
       </VStack>
     </CollapsiblePanel>
   );

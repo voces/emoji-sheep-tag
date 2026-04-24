@@ -1,5 +1,5 @@
 import { styled } from "styled-components";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { Color, PerspectiveCamera, WebGLRenderer } from "three";
 import {
   camera as mainCamera,
@@ -33,27 +33,79 @@ addSystem({
   },
 });
 
-const MinimapCanvas = styled.canvas`
-  position: static;
-  width: 277px;
-  height: 277px;
-  cursor: pointer;
+// --- Renderer pool ---
+
+type PoolEntry = {
+  canvas: HTMLCanvasElement;
+  renderer: WebGLRenderer;
+  pixelRatio: number;
+  timer?: number;
+};
+
+const pool: PoolEntry[] = [];
+const compiled = new WeakSet<WebGLRenderer>();
+const POOL_EXPIRY_MS = 60_000;
+
+const acquire = (): PoolEntry => {
+  const entry = pool.pop();
+  if (entry) {
+    clearTimeout(entry.timer);
+    delete entry.timer;
+    return entry;
+  }
+  const canvas = document.createElement("canvas");
+  const pixelRatio = Math.min(globalThis.devicePixelRatio, 2);
+  const renderer = new WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(pixelRatio);
+  renderer.setClearColor(new Color(0x333333));
+  return { canvas, renderer, pixelRatio };
+};
+
+const release = (entry: PoolEntry) => {
+  entry.timer = setTimeout(() => {
+    const idx = pool.indexOf(entry);
+    if (idx >= 0) pool.splice(idx, 1);
+    entry.renderer.forceContextLoss();
+    entry.renderer.dispose();
+  }, POOL_EXPIRY_MS);
+  pool.push(entry);
+};
+
+// --- Component ---
+
+const Container = styled.div`
+  & > canvas {
+    position: static;
+    width: 100%;
+    max-height: 277px;
+    aspect-ratio: 1;
+    cursor: pointer;
+    display: block;
+  }
 `;
 
 export const Minimap = (
   { showCameraBox = true, interactive = true, disableFog = false, ...props }:
-    & React.ComponentProps<typeof MinimapCanvas>
+    & React.ComponentProps<typeof Container>
     & { showCameraBox?: boolean; interactive?: boolean; disableFog?: boolean },
 ) => {
-  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if ("Deno" in globalThis || !canvas) return;
+    const container = containerRef.current;
+    if ("Deno" in globalThis || !container) return;
 
-    const renderer = new WebGLRenderer({ canvas, antialias: true });
-    const pixelRatio = Math.min(globalThis.devicePixelRatio, 2);
-    renderer.setPixelRatio(pixelRatio);
-    renderer.setClearColor(new Color(0x333333));
+    const entry = acquire();
+    const { canvas, renderer, pixelRatio } = entry;
+
+    // Copy data attributes to canvas for minimap click detection
+    canvas.setAttribute("data-minimap", "");
+    canvas.setAttribute("data-game-ui", "");
+    // Reset inline size so CSS rules apply in the new container
+    canvas.style.width = "";
+    canvas.style.height = "";
+    container.appendChild(canvas);
+
     renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 
     const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
@@ -92,23 +144,18 @@ export const Minimap = (
       });
 
     const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const width = entry.contentRect.width;
-        const height = entry.contentRect.height;
-        renderer.setSize(width, height, false);
+      for (const e of entries) {
+        renderer.setSize(e.contentRect.width, e.contentRect.height, false);
       }
     });
     resizeObserver.observe(canvas);
 
-    // Eagerly compile minimap-specific shaders in parallel, then warm up
-    // the game scene materials with a single offscreen render
     let disposed = false;
     let disposeRender: (() => void) | undefined;
 
-    minimapRenderer.compileAsync().then(() => {
+    const startRendering = () => {
       if (disposed) return;
 
-      // Warm up game scene materials (triggers synchronous compilation once)
       minimapRenderer.renderScene();
 
       const targetFPS = 15;
@@ -126,7 +173,17 @@ export const Minimap = (
 
         minimapRenderer.renderFogAndOverlay(delta, mainCamera);
       });
-    });
+    };
+
+    let compilePromise: Promise<unknown> | undefined;
+    if (compiled.has(renderer)) {
+      startRendering();
+    } else {
+      compilePromise = minimapRenderer.compileAsync().then(() => {
+        compiled.add(renderer);
+        startRendering();
+      });
+    }
 
     return () => {
       disposed = true;
@@ -136,11 +193,15 @@ export const Minimap = (
       disposeRender?.();
       cameraMovement?.dispose();
       raycast?.dispose();
-      minimapRenderer.dispose();
-      renderer.forceContextLoss();
-      renderer.dispose();
+      if (compilePromise) {
+        compilePromise.catch(() => {}).finally(() => minimapRenderer.dispose());
+      } else {
+        minimapRenderer.dispose();
+      }
+      canvas.remove();
+      release(entry);
     };
-  }, [canvas]);
+  }, []);
 
-  return <MinimapCanvas ref={setCanvas} data-minimap data-game-ui {...props} />;
+  return <Container ref={containerRef} {...props} />;
 };

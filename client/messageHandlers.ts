@@ -1,7 +1,7 @@
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { stateVar } from "@/vars/state.ts";
 import { app, map, unloadEcs } from "./ecs.ts";
-import { camera } from "./graphics/three.ts";
+import { camera, triggerFlowerRegeneration } from "./graphics/three.ts";
 import {
   clearDoodads,
   generateDoodads,
@@ -144,7 +144,7 @@ export const ensureMapLoaded = async (map: string) => {
     app.batch(() => {
       clearDoodads();
       setMapForApp(app, loadedMap);
-      generateDoodads();
+      if (!editorVar()) generateDoodads();
     });
 
     currentMapId = map;
@@ -230,6 +230,8 @@ export const handlers = {
       // Only send start if we're the one starting the editor, not joining
       if (!data.lobbySettings.editor) {
         send({ type: "start", practice: true, editor: true });
+      } else {
+        triggerFlowerRegeneration();
       }
     }
 
@@ -241,6 +243,7 @@ export const handlers = {
     stateVar("playing");
     practiceVar(e.practice ?? false);
     if (e.updates) processUpdates(e.updates);
+    triggerFlowerRegeneration();
     const center = getMapCenter();
     camera.position.x = center.x;
     camera.position.y = center.y;

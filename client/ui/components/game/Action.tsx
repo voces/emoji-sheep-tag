@@ -10,9 +10,10 @@ import { Command } from "./Command.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
 import { getPlayer } from "@/shared/api/player.ts";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
-import { useReactiveVar } from "@/hooks/useVar.tsx";
-import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
-import { getEffectivePlayerGold } from "../../../api/player.ts";
+import {
+  getEffectivePlayerGold,
+  isTeamGoldEnabled,
+} from "../../../api/player.ts";
 import { send } from "../../../messaging.ts";
 import { playSound } from "../../../api/sound.ts";
 
@@ -35,14 +36,11 @@ export const Action = memo(({ action, current, entity }: {
   );
 
   const owningPlayer = getPlayer(entity.owner);
-  const lobbySettings = useReactiveVar(lobbySettingsVar);
   const ownerTeam = owningPlayer?.team === "wolf" ||
       owningPlayer?.team === "sheep"
     ? owningPlayer.team
     : undefined;
-  const teamGoldEnabled = lobbySettings.mode === "vip" ||
-    (lobbySettings.mode === "vamp" && ownerTeam === "wolf") ||
-    (lobbySettings.mode === "survival" && lobbySettings.teamGold);
+  const teamGoldEnabled = isTeamGoldEnabled(ownerTeam);
 
   // Get team entity for team gold checks
   const teamEntityId = ownerTeam ? TEAM_ENTITY_IDS[ownerTeam] : undefined;

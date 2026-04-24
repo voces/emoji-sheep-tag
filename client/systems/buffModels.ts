@@ -60,6 +60,7 @@ const updateBuffModels = (e: Entity) => {
         owner: e.owner,
         isDoodad: true,
         isEffect: true,
+        visibleInFog: true,
         playerColor: buff.modelPlayerColor,
         alpha: buff.modelAlpha,
       });

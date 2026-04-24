@@ -9,6 +9,8 @@ import { styled } from "styled-components";
 
 const Container = styled(VStack)`
   max-height: calc(100vh - ${({ theme }) => theme.space[2]} * 2);
+  width: 260px;
+  gap: ${({ theme }) => theme.space[2]};
 `;
 
 export const Editor = () => {

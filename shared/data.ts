@@ -396,6 +396,7 @@ type DataEntity =
     | "sightRadius"
     | "trueVision"
     | "gait"
+    | "visibleInFog"
     | "blocksLineOfSight"
     | "actions"
     | "autocast"
@@ -1103,10 +1104,12 @@ export const prefabs: Record<string, DataEntity> = {
     targetedAs: ["tree"],
     sounds: { death: ["treefall1"] },
     blocksLineOfSight: 1,
+    visibleInFog: true,
   },
   treeStump: {
     name: "Tree Stump",
     isDoodad: true,
+    visibleInFog: true,
   },
   rock: {
     name: "Rock",
@@ -1187,13 +1190,6 @@ export const prefabs: Record<string, DataEntity> = {
     isDoodad: true,
     type: "static",
   },
-  grass: {
-    name: "Grass",
-    radius: 0.125,
-    pathing: PATHING_NONE,
-    isDoodad: true,
-    type: "cosmetic",
-  },
   flowers: {
     name: "Flowers",
     radius: 0.125,
@@ -1242,6 +1238,11 @@ export const tileDefs = [
   { name: "Pen", pathing: PATHING_BUILDABLE | PATHING_BLIGHT, color: 0x4b3061 },
   /** @deprecated Prefer the water mask (LoadedMap.water) for new maps. */
   { name: "Water", pathing: PATHING_BUILDABLE, color: 0x385670 },
+  { name: "Sand", pathing: PATHING_NONE, color: 0xd4c8a0 },
+];
+
+export const cliffDefs = [
+  { name: "Default", colorLight: 0xb8a090, colorDark: 0x786050 },
 ];
 
 export const colors: string[] = [

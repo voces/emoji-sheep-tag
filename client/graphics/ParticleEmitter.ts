@@ -9,6 +9,7 @@ import {
   type Texture,
 } from "three";
 import { scene } from "./three.ts";
+import { WIND_SHADER_INTEGRAL_FN } from "./windShader.ts";
 
 const INITIAL_CAPACITY = 64;
 const GROWTH_FACTOR = 2;
@@ -33,7 +34,8 @@ const vertexShader = `
   attribute vec2 physicsPack;
 
   uniform float uTime;
-  uniform float uWindSpeed;
+
+  ${WIND_SHADER_INTEGRAL_FN}
 
   varying float vAlpha;
   varying vec3 vColor;
@@ -58,18 +60,7 @@ const vertexShader = `
     float gravity = physicsPack.x;
     float rotation = physicsPack.y;
 
-    float vy = velocity.y;
-    float windFreqY = 2.0;
-    float windFreqT = uWindSpeed;
-    float a = vy * windFreqY + windFreqT;
-    float b = startPos.y * windFreqY + birthTime * windFreqT;
-    float windIntegral = 0.0;
-    if (abs(a) > 0.001) {
-      windIntegral = (-cos(a * age + b) + cos(b)) / a;
-    } else {
-      windIntegral = sin(b) * age;
-    }
-    float windX = windIntegral * 0.3;
+    float windX = windIntegral(startPos.y, velocity.y, birthTime, age);
 
     vec2 pos = startPos + velocity * age + vec2(windX, -0.5 * gravity * age * age);
     float scale = mix(startScale, endScale, t);
@@ -205,7 +196,6 @@ export class ParticleEmitter {
       depthWrite: false,
       uniforms: {
         uTime: { value: 0 },
-        uWindSpeed: { value: 0.3 },
         uMap: { value: null },
         uHasMap: { value: 0 },
       },

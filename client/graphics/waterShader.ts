@@ -238,16 +238,44 @@ export const WATER_SHADER_ENTITY_VERTEX = /* glsl */ `
  * varyings and `uTime` uniform. Uses the same disturbance/foam model as
  * Terrain2D so entity shorelines read as part of the same water surface.
  */
+/**
+ * Shared GLSL function: applies water tint, foam waterline, and caustic
+ * shimmer to a submerged surface color. Used by both entity materials and
+ * terrain procedural elements (cattails).
+ *
+ * Requires WATER_SHADER_CONSTANTS, WATER_SHADER_NOISE, WATER_SHADER_CAUSTICS,
+ * and WATER_SHADER_RIPPLES to be declared above.
+ */
+export const WATER_SHADER_SUBMERGE_FN = /* glsl */ `
+  vec3 applyWaterSubmerge(
+    vec3 baseColor, float waterlineDepth, float depthT,
+    vec2 worldXY, float time_
+  ) {
+    vec3 col = baseColor;
+    vec3 waterCol_ = mix(WATER_SHALLOW, WATER_DEEP, depthT);
+    col = mix(col, waterCol_, 0.6);
+    float waterShoreProx_ = 1.0 - smoothstep(0.0, 0.15, waterlineDepth);
+    float waterCausticsN_ = blendRipple(
+      waterCaustics(worldXY, time_),
+      waterRippleSignal(worldXY));
+    float waterDisturbance_ = waterCausticsN_ + waterShoreProx_ * 0.65;
+    float waterNoiseFoam_ = smoothstep(0.95, 1.15, waterDisturbance_);
+    float waterMinFoam_ = 1.0 - smoothstep(0.015, 0.025, waterlineDepth);
+    float waterFoamBand_ = max(waterMinFoam_, waterNoiseFoam_);
+    col = mix(col, WATER_FOAM, waterFoamBand_ * 0.75);
+    float waterShimmer_ = smoothstep(0.72, 0.95, waterCausticsN_);
+    col = mix(col, WATER_CAUSTICS,
+      waterShimmer_ * 0.35 * (1.0 - waterFoamBand_));
+    return col;
+  }
+`;
+
 export const WATER_SHADER_ENTITY_TINT = /* glsl */ `
   if (vInstanceMinimapMask < 0.5 && vSubmergence > 0.0 && vWaterline < 0.0) {
     vec3 waterCol_ = mix(WATER_SHALLOW, WATER_DEEP, vWaterDepthT);
     diffuseColor.rgb = mix(diffuseColor.rgb, waterCol_, 0.6);
     float waterDepth_ = -vWaterline;
     float waterShoreProx_ = 1.0 - smoothstep(0.0, 0.15, waterDepth_);
-    // Ripple signal is screen-blended with the caustic noise rather
-    // than linearly added, so it can't spike past 1.0 into the foam
-    // threshold — visible in calm water, gently saturating in bright
-    // spots rather than producing harsh white flares.
     float waterCausticsN_ = blendRipple(
       waterCaustics(vWaterWorldXY, uTime),
       waterRippleSignal(vWaterWorldXY));

@@ -3,13 +3,17 @@ import { styled } from "styled-components";
 
 export const Panel = styled(Card)`
   pointer-events: auto;
-  overflow-y: auto;
-  scrollbar-gutter: stable both-edges;
-  padding: ${({ theme }) => theme.space[4]} ${({ theme }) => theme.space[1]};
+  overflow: hidden;
+  padding: 0;
+  border-radius: ${({ theme }) => theme.radius.md};
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  display: flex;
+  flex-direction: column;
 `;
 
 export const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(5, 44px);
+  gap: ${({ theme }) => theme.space[1]};
+  justify-content: center;
 `;

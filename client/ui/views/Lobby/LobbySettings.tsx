@@ -401,7 +401,10 @@ export const LobbySettings = () => {
   const maxSheep = Math.max(nonObservers.length - 1, 1);
   const settingsDisabled = !isHost || isShardLaunching;
 
-  const selectedMap = MAPS.find((m) => m.id === lobbySettings.map);
+  const selectedMap = MAPS.find((m) => m.id === lobbySettings.map) ??
+    (lobbySettings.map?.startsWith("local:")
+      ? localMaps.find((m) => `local:${m.id}` === lobbySettings.map)
+      : undefined);
   const [mapMenuOpen, setMapMenuOpen] = useState(false);
   const mapButtonRef = useRef<HTMLButtonElement>(null);
 

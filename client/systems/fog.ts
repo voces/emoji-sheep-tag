@@ -25,7 +25,7 @@ import {
   setFogPass,
 } from "../graphics/three.ts";
 import { FogPass } from "../graphics/FogPass.ts";
-import { isAlly, isInvisible, isStructure, isTree } from "@/shared/api/unit.ts";
+import { isAlly, isInvisible, isStructure } from "@/shared/api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
@@ -124,13 +124,9 @@ const applyPendingServerValues = (entity: Entity) => {
 };
 
 export const alwaysVisible = (entity: Entity) =>
-  entity.type === "cosmetic" || entity.type === "static" || isTree(entity) ||
-  entity.prefab === "treeStump" ||
-  entity.id.startsWith("blueprint-") ||
-  entity.id.startsWith("paste-blueprint-") ||
-  entity.id === "selection-rectangle" ||
-  // TODO: this is a hack; find an alternative?
-  entity.model === "glow";
+  typeof entity.visibleInFog === "boolean"
+    ? entity.visibleInFog
+    : entity.type === "cosmetic" || entity.type === "static";
 
 type Cell = {
   visible: Set<Entity>;

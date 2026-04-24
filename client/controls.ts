@@ -76,8 +76,7 @@ import {
   setPendingEntityClick,
   updateSelectionRectangle,
 } from "./controls/selection.ts";
-import { getCliffs, getMap, getTiles, getWater } from "@/shared/map.ts";
-import { updatePathingForCliff } from "@/shared/pathing/updatePathingForCliff.ts";
+import { getCliffs, getMap } from "@/shared/map.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import {
@@ -88,11 +87,11 @@ import {
 import { WATER_LEVEL_SCALE } from "@/shared/constants.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
 import { tileDefs } from "@/shared/data.ts";
-import { pathingMap } from "./systems/pathing.ts";
 import {
   batchCommand,
   createEntityCommand,
   deleteEntityCommand,
+  doExecute,
   type EditorCommand,
   executeCommand,
   keyboardMoveCommand,
@@ -364,7 +363,7 @@ const applyEditorTileChange = (
     const oldWater = terrain.getWater(x, y);
     if (oldWater === newWater) return null;
     const command = setWaterCommand(x, y, oldWater, newWater);
-    doExecuteCommand(command);
+    doExecute(command);
     return command;
   }
 
@@ -374,7 +373,7 @@ const applyEditorTileChange = (
     const newHeight = editorTileDrag?.targetCliff ?? oldHeight + 1;
     if (oldHeight === newHeight) return null;
     const command = setCliffCommand(x, y, oldHeight, newHeight);
-    doExecuteCommand(command);
+    doExecute(command);
     return command;
   } else if (blueprint.vertexColor === 0xff02ff) {
     // Lower cliff
@@ -382,7 +381,7 @@ const applyEditorTileChange = (
     const newHeight = editorTileDrag?.targetCliff ?? oldHeight - 1;
     if (oldHeight === newHeight) return null;
     const command = setCliffCommand(x, y, oldHeight, newHeight);
-    doExecuteCommand(command);
+    doExecute(command);
     return command;
   } else if (blueprint.vertexColor === 0xff03ff) {
     // Ramp - toggle: if already a ramp, convert to interpolated height
@@ -393,11 +392,11 @@ const applyEditorTileChange = (
     if (currentCliff === "r") {
       // Remove ramp - convert to interpolated height
       const command = setCliffCommand(x, y, "r", oldHeight);
-      doExecuteCommand(command);
+      doExecute(command);
       return command;
     }
     const command = setCliffCommand(x, y, oldHeight, "r");
-    doExecuteCommand(command);
+    doExecute(command);
     return command;
   } else {
     // Regular tile
@@ -415,62 +414,8 @@ const applyEditorTileChange = (
       oldTile,
       tileIndex,
     );
-    doExecuteCommand(command);
+    doExecute(command);
     return command;
-  }
-};
-
-// Execute command without adding to undo stack (for batching during drag)
-const doExecuteCommand = (command: EditorCommand) => {
-  switch (command.type) {
-    case "setPathing": {
-      terrain.setGroundTile(command.x, command.y, command.newTile);
-      pathingMap.setPathing(command.x, command.y, command.newPathing);
-      send({
-        type: "editorSetPathing",
-        x: command.x,
-        y: command.y,
-        pathing: command.newPathing,
-        tile: command.newTile,
-      });
-      break;
-    }
-    case "setCliff":
-      terrain.setCliff(command.x, command.y, command.newCliff);
-      updatePathingForCliff(
-        pathingMap,
-        getTiles(),
-        getCliffs(),
-        getWater(),
-        command.x,
-        command.y,
-        getMap().bounds,
-      );
-      send({
-        type: "editorSetCliff",
-        x: command.x,
-        y: command.y,
-        cliff: command.newCliff,
-      });
-      break;
-    case "setWater":
-      terrain.setWater(command.x, command.y, command.newWater);
-      updatePathingForCliff(
-        pathingMap,
-        getTiles(),
-        getCliffs(),
-        getWater(),
-        command.x,
-        command.y,
-        getMap().bounds,
-      );
-      send({
-        type: "editorSetWater",
-        x: command.x,
-        y: command.y,
-        water: command.newWater,
-      });
-      break;
   }
 };
 
@@ -485,7 +430,7 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   }
 
   if (editorVar() && !blueprint.owner) {
-    const { id: _, position, ...entity } = blueprint;
+    const { id: _, position, isEffect: _e, ...entity } = blueprint;
     if (blueprint.prefab !== "tile") {
       const command = createEntityCommand(
         {

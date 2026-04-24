@@ -3,9 +3,10 @@ import { stateVar } from "@/vars/state.ts";
 import { selection } from "./selection.ts";
 import { addSystem } from "@/shared/context.ts";
 import { Entity } from "../ecs.ts";
-import { visibilityGrid, visibleToLocalPlayer } from "./fog.ts";
+import { alwaysVisible, visibilityGrid, visibleToLocalPlayer } from "./fog.ts";
 
 const isEntityVisible = (e: Entity): boolean =>
+  alwaysVisible(e) ||
   visibleToLocalPlayer(e) ||
   (e.position !== undefined &&
     visibilityGrid.isPositionVisible(e.position.x, e.position.y));

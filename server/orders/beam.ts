@@ -4,7 +4,7 @@ import { damageEntity } from "../api/unit.ts";
 import { getEntitiesInRect } from "@/shared/systems/kd.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
-import { testClassification } from "@/shared/api/unit.ts";
+import { canTeamSeePoint, testClassification } from "@/shared/api/unit.ts";
 import { newSfx } from "../api/sfx.ts";
 import { Point } from "@/shared/pathing/math.ts";
 import { addSystem } from "@/shared/context.ts";
@@ -133,6 +133,13 @@ export const beamOrder = {
       remainingTicks: 4,
     });
 
+    const endX = unit.position.x + Math.cos(angle) * BEAM_LENGTH;
+    const endY = unit.position.y + Math.sin(angle) * BEAM_LENGTH;
+    const midX = (unit.position.x + endX) / 2;
+    const midY = (unit.position.y + endY) / 2;
+    const visibleInFog = canTeamSeePoint("sheep", midX, midY) ||
+      canTeamSeePoint("sheep", endX, endY);
+
     // Create beam visual effect
     newSfx(
       { x: unit.position.x, y: unit.position.y },
@@ -144,6 +151,7 @@ export const beamOrder = {
       {
         sounds: { "birth": ["laser1"] },
         playerColor: unit.playerColor ?? getPlayer(unit.owner)?.playerColor,
+        visibleInFog,
       },
     );
   },

@@ -110,7 +110,6 @@ export const getEntitiesToSelect = (
 
   for (const entity of entitiesInRect) {
     if (entity.isDoodad && !editorVar()) continue;
-    if (entity.id === "selection-rectangle") continue;
     if (entity.isEffect) continue;
     if (entity.isFloatingText) continue;
     if ((entity as Entity).hiddenByFog) continue;
@@ -258,12 +257,14 @@ export const updateSelectionRectangle = (
       // Create the selection rectangle entity
       selectionEntity = appContext.current.addEntity({
         id: "selection-rectangle",
+        isEffect: true,
         model: "square",
         position: { x: 0, y: 0 },
         modelScale: 1,
         aspectRatio: 1,
         alpha: 0.2,
         isDoodad: true,
+        visibleInFog: true,
       });
     }
 

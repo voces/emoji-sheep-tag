@@ -13,7 +13,6 @@ import claw from "../assets/claw.svg" with { type: "text" };
 import claw2 from "../assets/claw2.svg" with { type: "text" };
 import collision from "../assets/collision.svg" with { type: "text" };
 import flowers from "../assets/flowers.svg" with { type: "text" };
-import grass from "../assets/grass.svg" with { type: "text" };
 import suspend from "../assets/suspend.svg" with { type: "text" };
 import ring from "../assets/ring.svg" with { type: "text" };
 import gravity from "../assets/gravity.svg" with { type: "text" };
@@ -157,7 +156,6 @@ export const svgs: Record<string, string> = {
   fence,
   flowers,
   rock,
-  grass,
   well,
   windmill,
   scarecrow,
@@ -171,6 +169,7 @@ export const svgs: Record<string, string> = {
   bee,
 
   // effects (buffs + sfx)
+  crimsonArc,
   flag,
   circle,
   fire,
@@ -239,7 +238,6 @@ const estme = (
 const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   // Background elements (lowest z-order)
   flowers: svg(flowers, 0.25, { layer: 2 }),
-  grass: svg(grass, 0.75, { layer: 2 }),
   treeStump: svg(treeStump, 0.11, {
     layer: 2,
     yOffset: -0.36,
@@ -348,6 +346,12 @@ const getCollection = (model: string): ModelCollection | undefined => {
 
   modelConfigs[model] = collection;
   return collection;
+};
+
+export const getModelScale = (model: string): number | undefined => {
+  const config = modelConfigs[model];
+  if (!config || isLoadedCollection(config) || config.type !== "svg") return;
+  return config.scale;
 };
 
 export const collections: Record<string, ModelCollection | undefined> =

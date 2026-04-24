@@ -93,6 +93,35 @@ export const canSee = (source: Entity, target: Entity): boolean => {
   return false;
 };
 
+export const canTeamSeePoint = (
+  team: "sheep" | "wolf",
+  x: number,
+  y: number,
+): boolean => {
+  const terrainLayers = getTerrainLayers();
+  const target = { position: { x, y } };
+  const targetHeight = getMinEntityHeight(
+    target.position,
+    undefined,
+    terrainLayers,
+  );
+
+  for (const viewer of iterateViewersInRange(team, x, y)) {
+    const viewerHeight = getMaxEntityHeight(
+      viewer.position,
+      viewer.tilemap,
+      terrainLayers,
+    );
+    if (targetHeight > viewerHeight) continue;
+
+    if (canSeeTarget(viewer, target, terrainLayers, getBlockersInRange)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 /**
  * Iterates over all buffs on an entity, including both direct buffs and buffs from inventory items.
  * Yields each buff for processing.

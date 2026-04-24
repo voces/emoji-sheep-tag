@@ -19,8 +19,10 @@ import {
   WATER_SHADER_MOTION,
   WATER_SHADER_NOISE,
   WATER_SHADER_RIPPLES,
+  WATER_SHADER_SUBMERGE_FN,
 } from "./waterShader.ts";
 import { waterRippleUniforms } from "./waterRipples.ts";
+import { cliffDefs } from "@/shared/data.ts";
 
 export type Cliff = number | "r";
 export type CliffMask = Cliff[][];
@@ -68,7 +70,10 @@ const buildWaterTexture = (waterMask: WaterMask): DataTexture => {
   return tex;
 };
 
-export const buildCliffTexture = (cliffMask: CliffMask): DataTexture => {
+/** Raw cliff distance field at 4× resolution. Exported for reuse in doodad proximity. */
+export const buildCliffDistanceField = (
+  cliffMask: CliffMask,
+): { dist: Float32Array; w: number; h: number; scale: number } => {
   // High-res distance field at 4x cliff mask resolution.
   // Distance measured from nearest different-integer-height cell BOUNDARY.
   // Ramps get maxR (no cliff).
@@ -307,6 +312,11 @@ export const buildCliffTexture = (cliffMask: CliffMask): DataTexture => {
     }
   }
 
+  return { dist, w, h, scale };
+};
+
+export const buildCliffTexture = (cliffMask: CliffMask): DataTexture => {
+  const { dist, w, h } = buildCliffDistanceField(cliffMask);
   const data = new Uint8Array(w * h);
   for (let i = 0; i < dist.length; i++) {
     data[i] = Math.min(255, Math.round(dist[i] / 2.0 * 255));
@@ -338,11 +348,160 @@ const buildTileColorTexture = (
       data[idx] = r;
       data[idx + 1] = g;
       data[idx + 2] = b;
-      data[idx + 3] = 255;
+      data[idx + 3] = tileIndex;
     }
   }
   const tex = new DataTexture(data, w, h, RGBAFormat, UnsignedByteType);
   tex.colorSpace = SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+};
+
+const buildCliffColorTexture = (
+  cliffTile: number[][],
+  defs: { colorLight: number; colorDark: number }[],
+): DataTexture => {
+  const h = cliffTile.length * 2;
+  const w = cliffTile[0].length * 2;
+  // 6 channels per texel: light RGB + dark RGB, packed into two rows
+  // Use a simpler approach: RGBA where RGB = light color, A = index
+  // Then a second sample for dark. Pack both into one texture by doubling height.
+  const totalH = h * 2; // bottom half = light, top half = dark
+  const data = new Uint8Array(w * totalH * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = cliffTile[Math.floor(y / 2)]?.[Math.floor(x / 2)] ?? 0;
+      const def = defs[idx] ?? defs[0];
+      const light = def.colorLight;
+      const dark = def.colorDark;
+      // Bottom half: light
+      const li = (y * w + x) * 4;
+      data[li] = (light >> 16) & 0xff;
+      data[li + 1] = (light >> 8) & 0xff;
+      data[li + 2] = light & 0xff;
+      data[li + 3] = idx;
+      // Top half: dark
+      const di = ((y + h) * w + x) * 4;
+      data[di] = (dark >> 16) & 0xff;
+      data[di + 1] = (dark >> 8) & 0xff;
+      data[di + 2] = dark & 0xff;
+      data[di + 3] = idx;
+    }
+  }
+  const tex = new DataTexture(data, w, totalH, RGBAFormat, UnsignedByteType);
+  tex.needsUpdate = true;
+  return tex;
+};
+
+export type DoodadPoint = { x: number; y: number; radius: number };
+
+/**
+ * Builds a proximity field at 2× cliff-mask resolution.  Each texel stores
+ * a 0-255 value representing how close it is to a doodad.  Larger-radius
+ * doodads have a wider influence.  The coordinate system matches the
+ * cliff-mask (Y-flipped from world space).
+ */
+/**
+ * Builds a combined proximity field (doodads + cliff edges) at 2× cliff-mask
+ * resolution. Each texel stores the max proximity (0–255) from either source.
+ */
+const buildDoodadTexture = (
+  cliffMask: CliffMask,
+  doodads: DoodadPoint[],
+): DataTexture => {
+  const h = cliffMask.length * 2;
+  const w = cliffMask[0].length * 2;
+  const data = new Uint8Array(w * h);
+
+  // Build cliff edge proximity at 2× resolution.
+  // Use the 4× cliff distance field to identify edge texels (dist < 0.5),
+  // then compute our own wider distance field from those edges.
+  const cliffField = buildCliffDistanceField(cliffMask);
+  const cliffInfluence = 7; // texels at 2× (~3.5 world units)
+
+  // Mark edge texels at 2× by checking if any sub-texel in the 4× field is near an edge
+  const cliffEdge = new Uint8Array(w * h);
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      let near = false;
+      for (let sy = 0; sy < 2 && !near; sy++) {
+        for (let sx = 0; sx < 2 && !near; sx++) {
+          if (
+            cliffField.dist[(py * 2 + sy) * cliffField.w + px * 2 + sx] < 0.5
+          ) {
+            near = true;
+          }
+        }
+      }
+      if (near) cliffEdge[py * w + px] = 1;
+    }
+  }
+
+  // Distance field from edge texels at 2× with wider radius
+  for (let py = 0; py < h; py++) {
+    for (let px = 0; px < w; px++) {
+      let minDist = cliffInfluence + 1;
+      if (cliffEdge[py * w + px]) {
+        minDist = 0;
+      } else {
+        const x0 = Math.max(0, px - cliffInfluence);
+        const x1 = Math.min(w - 1, px + cliffInfluence);
+        const y0 = Math.max(0, py - cliffInfluence);
+        const y1 = Math.min(h - 1, py + cliffInfluence);
+        for (let sy = y0; sy <= y1; sy++) {
+          for (let sx = x0; sx <= x1; sx++) {
+            if (!cliffEdge[sy * w + sx]) continue;
+            const ddx = px - sx;
+            const ddy = py - sy;
+            const d = Math.sqrt(ddx * ddx + ddy * ddy);
+            if (d < minDist) minDist = d;
+          }
+        }
+      }
+      if (minDist <= cliffInfluence) {
+        const t = Math.max(0, 1 - minDist / cliffInfluence);
+        // Remap so t stays at 1.0 for the first 15% of the range, then decays
+        const t2 = Math.min(1, t / 0.92);
+        const val = t2 * t2 * t2 * 0.7;
+        const byte = Math.round(val * 255);
+        if (byte > data[py * w + px]) data[py * w + px] = byte;
+      }
+    }
+  }
+
+  // Doodad proximity
+  for (const { x, y, radius } of doodads) {
+    const tx = x * 2;
+    const ty = y * 2;
+    const influence = Math.max(6, radius * 10);
+    // 0.25→0.82, 0.5→0.9, 0.75→0.95, 1.0→1.0
+    const strength = Math.min(1, 0.6 + Math.sqrt(radius) * 0.4);
+    const r = Math.ceil(influence);
+    const x0 = Math.max(0, Math.floor(tx) - r);
+    const x1 = Math.min(w - 1, Math.ceil(tx) + r);
+    const y0 = Math.max(0, Math.floor(ty) - r);
+    const y1 = Math.min(h - 1, Math.ceil(ty) + r);
+    for (let py = y0; py <= y1; py++) {
+      for (let px = x0; px <= x1; px++) {
+        const ddx = px + 0.5 - tx;
+        const ddy = py + 0.5 - ty;
+        const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+        // Ring shape: peaks at ringDist from center, suppressed at center
+        const ringDist = radius * 3;
+        const ringVal = Math.exp(-3 * Math.abs(dist - ringDist) / influence);
+        // Suppress center: 0 at center, ramps up to 1 at ringDist
+        const centerSuppress = Math.min(1, dist / ringDist);
+        const val = ringVal * centerSuppress * strength * 0.75;
+        const byte = Math.round(val * 255);
+        const idx = py * w + px;
+        if (byte > data[idx]) data[idx] = byte;
+      }
+    }
+  }
+
+  const tex = new DataTexture(data, w, h, RedFormat, UnsignedByteType);
+  tex.minFilter = LinearFilter;
+  tex.magFilter = LinearFilter;
   tex.needsUpdate = true;
   return tex;
 };
@@ -361,8 +520,10 @@ const fragmentShader = `
   uniform sampler2D heightMap;
   uniform sampler2D cliffMap;
   uniform sampler2D tileColorMap;
+  uniform sampler2D doodadMap;
   uniform sampler2D waterMap;
   uniform vec2 texelSize;
+  uniform sampler2D cliffColorMap;
   /** 0 = hide water, 1 = normal, 2 = show water mask as indicator over dry cells */
   uniform int waterViewMode;
   uniform float time;
@@ -375,6 +536,7 @@ const fragmentShader = `
   ${WATER_SHADER_MOTION}
   ${WATER_SHADER_CAUSTICS}
   ${WATER_SHADER_RIPPLES}
+  ${WATER_SHADER_SUBMERGE_FN}
 
   // Aliases so the existing non-water uses of the noise field below still
   // read naturally. Both refer to the shared waterHash/waterNoise impl.
@@ -411,9 +573,40 @@ const fragmentShader = `
     );
   }
 
+  // Sample tile color with noise-displaced UV for wavy borders.
+  // Reduce displacement near "hard" tiles (pen etc.) for cleaner edges.
+  vec3 wavyTileColor(vec2 uv, vec2 wp) {
+    float noiseX = vnoise(wp * 1.2) - 0.5;
+    float noiseY = vnoise(wp * 1.2 + vec2(97.0, 43.0)) - 0.5;
+    vec2 offset = vec2(noiseX, noiseY) * texelSize * 0.8;
+
+    // Check if any neighbor is a different tile
+    float centerIdx = texture2D(tileColorMap, uv).a * 255.0;
+    float scale = 1.0;
+    for (int i = 0; i < 4; i++) {
+      vec2 dir = i == 0 ? vec2(1.0, 0.0) : i == 1 ? vec2(-1.0, 0.0)
+               : i == 2 ? vec2(0.0, 1.0) : vec2(0.0, -1.0);
+      float neighborIdx = texture2D(tileColorMap, uv + dir * texelSize * 2.0).a * 255.0;
+      if (abs(neighborIdx - centerIdx) > 0.5) {
+        // Either side is pen (index 1) → reduce waviness
+        float hardness = (abs(centerIdx - 1.0) < 0.5 || abs(neighborIdx - 1.0) < 0.5) ? 0.3 : 1.0;
+        scale = min(scale, hardness);
+      }
+    }
+
+    vec2 duv = uv + offset * scale;
+    // Antialias: sample across pixel footprint to soften tile boundary
+    vec2 dx = dFdx(duv) * 0.35;
+    vec2 dy = dFdy(duv) * 0.35;
+    return (texture2D(tileColorMap, duv + dx + dy).rgb +
+            texture2D(tileColorMap, duv - dx + dy).rgb +
+            texture2D(tileColorMap, duv + dx - dy).rgb +
+            texture2D(tileColorMap, duv - dx - dy).rgb) * 0.25;
+  }
+
   void main() {
     vec2 wp = vWorldPos;
-    vec3 tileColor = texture2D(tileColorMap, vUv).rgb;
+    vec3 tileColor = wavyTileColor(vUv, wp);
 
     float smoothH = heightSmooth(vUv);
 
@@ -427,8 +620,9 @@ const fragmentShader = `
     float steps = 2.0;
     float band = floor(smoothH * steps) / steps;
     float bandT = band / 6.0;
-    vec3 rockLight = vec3(0.90, 0.78, 0.58);
-    vec3 rockDark = vec3(0.68, 0.50, 0.30);
+    vec2 cliffUv = vUv * vec2(1.0, 0.5);
+    vec3 rockLight = texture2D(cliffColorMap, cliffUv).rgb;
+    vec3 rockDark = texture2D(cliffColorMap, cliffUv + vec2(0.0, 0.5)).rgb;
     vec3 rockColor = mix(rockDark, rockLight, clamp(bandT, 0.0, 1.0));
     // Directional shading: darken north and east facing cliff faces
     float shL = heightSmooth(vUv - vec2(texelSize.x, 0.0));
@@ -448,6 +642,170 @@ const fragmentShader = `
     groundColor *= 0.26 + smoothH * 0.37;
     rockColor *= 0.70 + smoothH * 0.12;
     vec3 color = mix(groundColor, rockColor, cliffAmount);
+
+    // Procedural grass — blades rooted in grass tiles can extend over neighbors
+    {
+      float cellSize = 0.55;
+      float bladeScale = 1.6;
+      float grassScale = 1.3;
+
+      vec2 cellPos = wp / cellSize;
+
+      float winAlpha = 0.0;
+      vec3 winColor = vec3(0.0);
+
+      // Check current cell and all 8 neighbors for fanning blades
+      for (int nyi = 0; nyi < 9; nyi++) {
+      int nx = nyi / 3 - 1;
+      int nyv = nyi - (nyi / 3) * 3 - 1;
+      vec2 cellId = floor(cellPos) + vec2(float(nx), float(nyv));
+      vec2 cellUv = cellPos - cellId;
+
+      float h0 = hash(cellId);
+      float h1 = hash(cellId + vec2(127.1, 311.7));
+      float h2 = hash(cellId + vec2(269.5, 183.3));
+
+      vec2 clumpCenter = vec2(0.2 + h1 * 0.6, 0.1 + h2 * 0.5);
+
+      vec2 rootWorld = (cellId + clumpCenter) * cellSize;
+      vec2 rootUv = rootWorld * 2.0 * texelSize;
+
+      float featureProx = texture2D(doodadMap, rootUv).r;
+      float grassNoise = vnoise(rootWorld * 0.8) * 0.5 + 0.5;
+      float proximity = clamp(featureProx + grassNoise * 0.12, 0.0, 1.0);
+
+      if (h0 >= proximity * proximity * 1.2 + 0.03) continue;
+      float rootTile = texture2D(tileColorMap, rootUv).a * 255.0;
+      if (rootTile > 0.5) continue;
+      // Ban roots on cliff faces using cliff texture directly
+      float rootCliff = texture2D(cliffMap, rootUv).r * 2.0;
+      if (rootCliff < 0.3) continue;
+      float rootWaterLevel = texture2D(waterMap, rootUv).r;
+      float rootHeight = texture2D(heightMap, rootUv).r;
+      if (rootWaterLevel > rootHeight) continue;
+
+      vec2 d = (cellUv - clumpCenter) / grassScale * vec2(1.0, 1.1);
+
+      float sizeBoost = 0.6 + proximity * 0.4;
+      float baseH = (0.35 + h1 * 0.2) * bladeScale * sizeBoost;
+
+      float px = fwidth(cellUv.x);
+      // Accumulate blade coverage and color — blades within a clump overlap
+      float clumpAlpha = 0.0;
+      vec3 clumpColor = vec3(0.0);
+
+      // 4 or 5 blades, split into left fan (2-3) and right fan (2-3)
+      float hBlades = hash(cellId + vec2(531.7, 213.1));
+      float hSplit = hash(cellId + vec2(317.9, 149.3));
+      int totalBlades = hBlades < 0.2 ? 4 : 5;
+      int leftCount = totalBlades == 4 ? 2 : 2 + int(hSplit * 1.99);
+
+      for (int b = 0; b < 5; b++) {
+        if (b >= totalBlades) break;
+
+        // Fan assignment follows blade order — no swap
+        bool isLeft = b < leftCount;
+        int fanSize = isLeft ? leftCount : totalBlades - leftCount;
+        int fanIdx = isLeft ? b : (fanSize - 1) - (b - leftCount);
+
+        float bHash1 = hash(cellId + float(b) * 93.1);
+        float bHash2 = hash(cellId + float(b) * 41.7);
+        float bHash3 = hash(cellId + float(b) * 137.3);
+
+        // fanPos for height: 0=outermost, 1=innermost (lead=tallest)
+        float fanPos = float(fanIdx) / max(float(fanSize - 1), 1.0);
+
+        // Length: lead blade tallest, outer blades shorter.
+        // Smaller fans have a narrower length range to avoid big jumps.
+        float minLen = fanSize == 2 ? 0.55 : 0.35;
+        float maxLen = fanSize == 2 ? 0.9 : 1.0;
+        float lengthMul = mix(minLen, maxLen, fanPos) + (bHash1 - 0.5) * 0.1;
+        lengthMul = clamp(lengthMul, 0.3, 1.0);
+        float bladeH = baseH * lengthMul;
+
+        // X position follows render order (left to right)
+        // Swap x-position at the fan transition
+        int xPos = b;
+        if (b == leftCount - 1) xPos = leftCount;
+        else if (b == leftCount) xPos = leftCount - 1;
+        float baseOffset = (float(xPos) - float(totalBlades - 1) * 0.5) * 0.04;
+        baseOffset += (bHash2 - 0.5) * 0.02;
+        vec2 bladeD = d - vec2(baseOffset, 0.0);
+
+        // Angle uses original blade position (not reversed fanIdx)
+        // so angles always progress outward within each fan
+        int origFanIdx = isLeft ? b : b - leftCount;
+        float anglePos = float(origFanIdx) / max(float(fanSize - 1), 1.0);
+        float maxAngle = 0.4 + h1 * 0.3;
+        float targetAngle;
+        if (isLeft) {
+          // ~135° to ~100°
+          targetAngle = mix(-maxAngle * 0.95, -maxAngle * 0.45, anglePos);
+        } else {
+          // ~80° to ~45°
+          targetAngle = mix(maxAngle * 0.25, maxAngle * 0.95, anglePos);
+        }
+        targetAngle += (bHash3 - 0.5) * 0.08;
+
+        // Blades start near-vertical and curve to their target angle
+        // Scale curve with blade length so short blades don't sweep far
+        float angle = targetAngle * 0.1;
+        float curve = (targetAngle * 0.9 + (bHash2 - 0.5) * 0.06) * lengthMul;
+
+        float ca = cos(angle);
+        float sa = sin(angle);
+        vec2 db = vec2(bladeD.x*ca - bladeD.y*sa, bladeD.x*sa + bladeD.y*ca);
+
+        float t = db.y / max(bladeH, 0.001);
+        if (t < 0.0 || t > 1.15) continue;
+
+        db.x -= curve * mix(t * t, t, 0.3);
+
+        // Compensate width for blade lean (rotation + curve)
+        float curveSlope = curve * mix(2.0 * min(t, 1.0), 1.0, 0.3);
+        float leanCompensation = sqrt(1.0 + (sa / max(ca, 0.01) + curveSlope) * (sa / max(ca, 0.01) + curveSlope));
+
+        // Capsule blade: gentle taper + semicircular tip
+        float baseW = 0.04 * bladeScale * sizeBoost * (0.55 + lengthMul * 0.45) * leanCompensation;
+        float taper = mix(1.0, 0.25, min(t, 1.0) * min(t, 1.0));
+        float w = baseW * taper;
+        // Past the tip: measure 2D distance for semicircular cap
+        float dy = max(0.0, t - 1.0) * bladeH;
+        float dist = length(vec2(db.x, dy));
+
+        float alpha = 1.0 - smoothstep(w - px, w + px, dist);
+        alpha *= step(0.0, t);
+
+        if (alpha > 0.01) {
+          // Left fan: outer=lighter, lead=darker
+          // Right fan: lead=darker, outer=lighter
+          // Both fans: outer=lighter, lead=darker
+          // Left fan's lead slightly lighter than right fan's lead
+          float baseBright = isLeft ? 1.08 : 0.92;
+          float brightness = baseBright + (1.0 - fanPos) * 0.25;
+          float r = (8.0 + h0 * 12.0) / 255.0 * brightness;
+          float g = (30.0 + h1 * 25.0) / 255.0 * brightness;
+          vec3 bladeCol = vec3(r, g, 0.0) * (0.9 + t * 0.1);
+          bladeCol *= 0.26 + smoothH * 0.37;
+
+          // Alpha-composite this blade over previous blades
+          clumpColor = mix(clumpColor, bladeCol, alpha / max(clumpAlpha + alpha * (1.0 - clumpAlpha), 0.001));
+          clumpAlpha = clumpAlpha + alpha * (1.0 - clumpAlpha);
+        }
+      }
+
+      // Track the winning clump across all neighbors
+      if (clumpAlpha > winAlpha) {
+        winAlpha = clumpAlpha;
+        winColor = clumpColor;
+      }
+      } // end neighbor loop
+
+      if (winAlpha > 0.01) {
+        color = mix(color, winColor, winAlpha);
+      }
+    }
+
 
     // Water overlay: anywhere smoothWater > waterGroundH, tint toward deep water.
     if (waterViewMode != 0) {
@@ -627,6 +985,190 @@ const fragmentShader = `
       }
     }
 
+    // Procedural cattails — rendered after water so they poke out above it.
+    // Only the above-water portion is drawn.
+    {
+      float cattailCellSize = 0.5;
+      float cattailScale = 2.1;
+
+      // Water depth at current pixel including tide/wave motion
+      float pixelWaterLevel = waterSmooth(vUv);
+      float pixelWaterPresence = smoothstep(0.001, 0.05, pixelWaterLevel);
+      float pixelTide = waterTideOffset(time);
+      float pixelWave = waterWaveOffset(wp, time);
+      float pixelDynamicWater = pixelWaterLevel
+        + (pixelTide + pixelWave) * pixelWaterPresence;
+      float pixelDepth = pixelDynamicWater - smoothH;
+
+      vec2 cattailCellPos = wp / cattailCellSize;
+
+      float cattailWinAlpha = 0.0;
+      vec3 cattailWinColor = vec3(0.0);
+
+      for (int nyi = 0; nyi < 12; nyi++) {
+      int cnx = nyi / 4 - 1;
+      int cny = nyi - (nyi / 4) * 4 - 2;
+      vec2 cattailCellId = floor(cattailCellPos) + vec2(float(cnx), float(cny));
+      vec2 cattailCellUv = cattailCellPos - cattailCellId;
+
+      float ch0 = hash(cattailCellId + vec2(71.7, 33.1));
+      float ch1 = hash(cattailCellId + vec2(193.5, 417.3));
+      float ch2 = hash(cattailCellId + vec2(347.1, 251.7));
+
+      // Cell center = waterline point. Check if it's in water.
+      vec2 cattailCenter = vec2(0.15 + ch1 * 0.7, 0.1 + ch2 * 0.5);
+      vec2 cattailWorldPos = (cattailCellId + cattailCenter) * cattailCellSize;
+      vec2 cattailUv = cattailWorldPos * 2.0 * texelSize;
+
+      float cattailWaterLevel = waterSmooth(cattailUv);
+      float cattailHeight = heightSmooth(cattailUv);
+      float cattailDepth = cattailWaterLevel - cattailHeight;
+      if (cattailDepth < 0.1) continue;
+      // Ban only if waterline itself is on a cliff face
+      float cattailCliffDist = texture2D(cliffMap, cattailUv).r * 2.0;
+      if (cattailCliffDist < 0.25) continue;
+      // Check slightly below to avoid truncated cattails at shore/cliff
+      vec2 belowUv2 = cattailUv - vec2(0.0, texelSize.y * 0.5);
+      float belowDepth = waterSmooth(belowUv2) - heightSmooth(belowUv2);
+      if (belowDepth < 0.05) continue;
+      float belowCliff = texture2D(cliffMap, belowUv2).r * 2.0;
+      if (belowCliff < 0.25) continue;
+
+      // Density: base in all water, more in deep water and near cliffs
+      float cattailCliffProx = texture2D(doodadMap, cattailUv).r;
+      float directCliffProx = 1.0 - smoothstep(0.25, 1.5, cattailCliffDist);
+      // Deep water starts contributing at 0.3+, fully at 0.7+
+      float depthFactor = smoothstep(0.3, 0.7, cattailDepth);
+      float cliffFactor = max(cattailCliffProx, directCliffProx);
+      float cattailDensity = depthFactor * 0.25 + cliffFactor * 0.6;
+      cattailDensity = clamp(cattailDensity, 0.0, 1.0);
+      if (ch0 >= cattailDensity) continue;
+
+      // d.y = 0 at waterline, positive = above water, negative = below
+      vec2 cd = (cattailCellUv - cattailCenter) / cattailScale * vec2(1.0, 1.1);
+
+      // Tide/wave for dynamic waterline offset
+      float dynTide = waterTideOffset(time);
+      float dynWave = waterWaveOffset(cattailWorldPos, time);
+      float dynOffset = (dynTide + dynWave) / cattailScale;
+
+      // Ripple signal at this cattail's position (computed once per cell)
+      float cattailRipple = cattailDepth > 0.0 ? waterRippleSignal(cattailWorldPos) : 0.0;
+
+      int cattailBladeCount = 1 + int(ch2 * 2.99);
+      float cpx = fwidth(cattailCellUv.x);
+
+      float cattailClumpAlpha = 0.0;
+      vec3 cattailClumpColor = vec3(0.0);
+
+      for (int cb = 0; cb < 3; cb++) {
+        if (cb >= cattailBladeCount) break;
+
+        float cbHash1 = hash(cattailCellId + float(cb) * 57.3);
+        float cbHash2 = hash(cattailCellId + float(cb) * 123.7);
+        float cbHash3 = hash(cattailCellId + float(cb) * 199.1);
+
+        // Per-blade above-water part sizes
+        float aboveStem = 0.1 + cbHash1 * 0.25;
+        float headSize = 0.06 + cbHash2 * 0.1;
+        float tipSize = 0.08 + cbHash3 * 0.2;
+        float aboveTotal = aboveStem + headSize + tipSize;
+        // Underwater stem length based on depth
+        float belowLen = max(0.25, cattailDepth * 1.5);
+
+        float cattailAngle = (cbHash1 - 0.5) * 0.25;
+        float cattailCurve = (cbHash2 - 0.5) * 0.1;
+
+        float cca = cos(cattailAngle);
+        float csa = sin(cattailAngle);
+        vec2 cdb = vec2(cd.x*cca - cd.y*csa, cd.x*csa + cd.y*cca);
+
+        // Converge blade centers below waterline — offset the centerline, not the width
+        float maxOffset = (float(cb) - float(cattailBladeCount - 1) * 0.5) * 0.03;
+        float convergeFrac = smoothstep(-belowLen, 0.0, cdb.y);
+        cdb.x -= maxOffset * convergeFrac;
+
+
+        // cdb.y: 0 = waterline, positive = above, negative = below
+        if (cdb.y > aboveTotal || cdb.y < -belowLen) continue;
+
+        // Normalized t for curve (0 at bottom, 1 at top)
+        float totalLen = aboveTotal + belowLen;
+        float ct = (cdb.y + belowLen) / max(totalLen, 0.001);
+
+        cdb.x -= cattailCurve * mix(ct * ct, ct, 0.3);
+
+        // Sway with water waves — more at the tip, none at the root
+        cdb.x += dynWave * ct * ct;
+
+        // Ripple sway: water pushes at the base, above-water follows
+        // Underwater: moves with the water directly
+        // Above water: pushed from base, slight amplification toward tip
+        float aboveFrac = max(0.0, cdb.y) / aboveTotal;
+        float rippleSway = cdb.y < 0.0
+          ? cattailRipple * 0.2
+          : cattailRipple * 0.2 * (1.0 + aboveFrac * 0.4);
+        cdb.x += rippleSway;
+
+        // aboveT: 0 at waterline, 1 at tip
+        float aboveT = cdb.y / aboveTotal;
+
+        // Thin stem — squared off at bottom, tapered at top
+        float cattailTaper = smoothstep(aboveTotal, aboveTotal * 0.92, cdb.y);
+        // Head bulge in above-water space
+        float headStart = aboveStem / aboveTotal;
+        float headEnd = (aboveStem + headSize) / aboveTotal;
+        float headBulge = step(headStart, aboveT) * step(aboveT, headEnd) * 1.5;
+        float cw = (0.012 + headBulge * 0.018) * cattailScale * cattailTaper;
+
+        float cdist = abs(cdb.x);
+        float calpha = 1.0 - smoothstep(cw - cpx, cw + cpx, cdist);
+
+        if (calpha > 0.01) {
+          float isHead = step(headStart, aboveT) * step(aboveT, headEnd);
+          // Per-clump color variation
+          // Stems darker in deep water, lighter in shallow
+          float depthBias = 1.0 - smoothstep(0.1, 0.8, cattailDepth) * 0.4;
+          float stemVar = (ch0 + (cbHash1 - 0.5) * 0.4 - 0.5) * depthBias;
+          float headVar = ch1 + (cbHash2 - 0.5) * 0.7 - 0.5;
+          vec3 stemCol = vec3(
+            (35.0 + stemVar * 60.0)/255.0,
+            (85.0 + stemVar * 70.0)/255.0,
+            (15.0 + stemVar * 30.0)/255.0
+          ) * depthBias;
+          vec3 headCol = vec3(
+            (100.0 + headVar * 40.0)/255.0,
+            (65.0 + headVar * 30.0)/255.0,
+            (25.0 + headVar * 15.0)/255.0
+          );
+          vec3 cattailCol = mix(stemCol, headCol, isHead);
+          cattailCol *= (0.3 + ch2 * 0.25) + smoothH * 0.3;
+
+          // Below dynamic waterline: apply water effect
+          if (cdb.y < dynOffset) {
+            float waterDist = (dynOffset - cdb.y) * cattailCellSize * 2.0;
+            float depthT = clamp(cattailDepth * 1.5, 0.0, 1.0);
+            cattailCol = applyWaterSubmerge(
+              cattailCol, waterDist, depthT, wp, time);
+          }
+
+          cattailClumpColor = mix(cattailClumpColor, cattailCol,
+            calpha / max(cattailClumpAlpha + calpha * (1.0 - cattailClumpAlpha), 0.001));
+          cattailClumpAlpha = cattailClumpAlpha + calpha * (1.0 - cattailClumpAlpha);
+        }
+      }
+
+      if (cattailClumpAlpha > cattailWinAlpha) {
+        cattailWinAlpha = cattailClumpAlpha;
+        cattailWinColor = cattailClumpColor;
+      }
+      } // end cattail neighbor loop
+
+      if (cattailWinAlpha > 0.01) {
+        color = mix(color, cattailWinColor, cattailWinAlpha);
+      }
+    }
+
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -658,9 +1200,15 @@ const rampAllowed = (cliffMask: CliffMask, x: number, y: number) => {
 export class Terrain2D extends Mesh {
   masks: TerrainMasks;
   tiles: { color: string }[];
+  doodads: DoodadPoint[];
+  onChange?: () => void;
   declare material: ShaderMaterial;
 
-  constructor(masks: TerrainMasks, tiles: { color: string }[]) {
+  constructor(
+    masks: TerrainMasks,
+    tiles: { color: string }[],
+    doodads: DoodadPoint[] = [],
+  ) {
     const w = masks.cliff[0].length * 2;
     const h = masks.cliff.length * 2;
     const geometry = new PlaneGeometry(w, h);
@@ -669,6 +1217,7 @@ export class Terrain2D extends Mesh {
     const heightTex = buildHeightTexture(masks.cliff);
     const cliffTex = buildCliffTexture(masks.cliff);
     const tileColorTex = buildTileColorTexture(masks.groundTile, tiles);
+    const doodadTex = buildDoodadTexture(masks.cliff, doodads);
     const waterTex = buildWaterTexture(masks.water);
 
     const material = new ShaderMaterial({
@@ -676,8 +1225,12 @@ export class Terrain2D extends Mesh {
         heightMap: { value: heightTex },
         cliffMap: { value: cliffTex },
         tileColorMap: { value: tileColorTex },
+        doodadMap: { value: doodadTex },
         waterMap: { value: waterTex },
         texelSize: { value: new Vector2(1 / w, 1 / h) },
+        cliffColorMap: {
+          value: buildCliffColorTexture(masks.cliffTile, cliffDefs),
+        },
         waterViewMode: { value: 1 },
         time: { value: 0 },
         waterRippleCount: waterRippleUniforms.waterRippleCount,
@@ -692,6 +1245,7 @@ export class Terrain2D extends Mesh {
     super(geometry, material);
     this.masks = masks;
     this.tiles = tiles;
+    this.doodads = doodads;
   }
 
   private rebuildTextures() {
@@ -700,6 +1254,8 @@ export class Terrain2D extends Mesh {
     uniforms.heightMap.value.dispose();
     uniforms.cliffMap.value.dispose();
     uniforms.tileColorMap.value.dispose();
+    uniforms.cliffColorMap.value.dispose();
+    uniforms.doodadMap.value.dispose();
     uniforms.waterMap.value.dispose();
 
     uniforms.heightMap.value = buildHeightTexture(this.masks.cliff);
@@ -708,11 +1264,20 @@ export class Terrain2D extends Mesh {
       this.masks.groundTile,
       this.tiles,
     );
+    uniforms.cliffColorMap.value = buildCliffColorTexture(
+      this.masks.cliffTile,
+      cliffDefs,
+    );
+    uniforms.doodadMap.value = buildDoodadTexture(
+      this.masks.cliff,
+      this.doodads,
+    );
     uniforms.waterMap.value = buildWaterTexture(this.masks.water);
 
     const w = this.masks.cliff[0].length * 2;
     const h = this.masks.cliff.length * 2;
     uniforms.texelSize.value.set(1 / w, 1 / h);
+    this.onChange?.();
   }
 
   getCliff(x: number, y: number) {
@@ -780,12 +1345,22 @@ export class Terrain2D extends Mesh {
     this.rebuildTextures();
   }
 
+  setDoodads(doodads: DoodadPoint[]) {
+    this.doodads = doodads;
+    const uniforms = this.material.uniforms;
+    uniforms.doodadMap.value.dispose();
+    uniforms.doodadMap.value = buildDoodadTexture(this.masks.cliff, doodads);
+    this.onChange?.();
+  }
+
   load(
     masks: TerrainMasks,
     tiles: { color: string }[],
+    doodads: DoodadPoint[] = [],
   ) {
     this.masks = masks;
     this.tiles = tiles;
+    this.doodads = doodads;
 
     const w = masks.cliff[0].length * 2;
     const h = masks.cliff.length * 2;

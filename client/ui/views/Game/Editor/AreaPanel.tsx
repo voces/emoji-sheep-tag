@@ -1,81 +1,124 @@
 import { Panel } from "./common.ts";
 import { Minimap } from "../../../components/Minimap/index.tsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { send } from "../../../../messaging.ts";
 import { styled } from "styled-components";
 import { onMapChange } from "@/shared/map.ts";
+import { useTranslation } from "react-i18next";
+import { ChevronDown, ChevronRight, Minus, Plus } from "lucide-react";
+import Collapse from "@/components/layout/Collapse.tsx";
+import { camera } from "../../../../graphics/three.ts";
+import { getEntityShiftForResize } from "@/shared/map/resizeMap.ts";
 
 const MinimapContainer = styled.div`
-  position: relative;
-`;
-
-const ArrowButton = styled.button<{ $position: string }>`
-  position: absolute;
-  background: none;
-  border: none;
-  color: ${({ theme }) => theme.ink.mid};
-  font-size: ${({ theme }) => theme.text.lg};
-  cursor: pointer;
-  padding: 4px;
-  line-height: 1;
-
-  &.hover {
-    color: ${({ theme }) => theme.ink.hi};
+  & > canvas {
+    border-radius: ${({ theme }) => theme.radius.md} ${({ theme }) =>
+      theme.radius.md} 0 0;
+    display: block;
   }
-
-  ${(props) => {
-    switch (props.$position) {
-      case "top-terrain-expand":
-        return "top: 2.5px; left: calc(50% - 12px); transform: translateX(-50%);";
-      case "top-terrain-shrink":
-        return "top: 4px; left: calc(50% + 12px); transform: translateX(-50%);";
-      case "top-bounds-expand":
-        return "top: 22.5px; left: calc(50% - 12px); transform: translateX(-50%);";
-      case "top-bounds-shrink":
-        return "top: 24px; left: calc(50% + 12px); transform: translateX(-50%);";
-      case "bottom-terrain-expand":
-        return "bottom: 2.5px; left: calc(50% - 12px); transform: translateX(-50%);";
-      case "bottom-terrain-shrink":
-        return "bottom: 4px; left: calc(50% + 12px); transform: translateX(-50%);";
-      case "bottom-bounds-expand":
-        return "bottom: 22.5px; left: calc(50% - 12px); transform: translateX(-50%);";
-      case "bottom-bounds-shrink":
-        return "bottom: 24px; left: calc(50% + 12px); transform: translateX(-50%);";
-      case "left-terrain-expand":
-        return "left: 2.5px; top: calc(50% - 12px); transform: translateY(-50%);";
-      case "left-terrain-shrink":
-        return "left: 4px; top: calc(50% + 12px); transform: translateY(-50%);";
-      case "left-bounds-expand":
-        return "left: 22.5px; top: calc(50% - 12px); transform: translateY(-50%);";
-      case "left-bounds-shrink":
-        return "left: 24px; top: calc(50% + 12px); transform: translateY(-50%);";
-      case "right-terrain-expand":
-        return "right: 2.5px; top: calc(50% - 12px); transform: translateY(-50%);";
-      case "right-terrain-shrink":
-        return "right: 4px; top: calc(50% + 12px); transform: translateY(-50%);";
-      case "right-bounds-expand":
-        return "right: 22.5px; top: calc(50% - 12px); transform: translateY(-50%);";
-      case "right-bounds-shrink":
-        return "right: 24px; top: calc(50% + 12px); transform: translateY(-50%);";
-      default:
-        return "";
-    }
-  }};
 `;
 
 const InfoDisplay = styled.div`
   font-size: ${({ theme }) => theme.text.xs};
   color: ${({ theme }) => theme.ink.lo};
-  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[2]} 0;
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]};
   text-align: center;
 `;
 
+const ResizeHeader = styled.button`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[1]};
+  width: 100%;
+  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[3]};
+  background: transparent;
+  border: none;
+  border-top: 1px solid ${({ theme }) => theme.border.soft};
+  color: ${({ theme }) => theme.ink.mid};
+  font-size: ${({ theme }) => theme.text.xs};
+  text-align: left;
+  cursor: pointer;
+
+  &.hover {
+    color: ${({ theme }) => theme.ink.hi};
+  }
+`;
+
+const Chev = styled.span`
+  display: inline-flex;
+  align-items: center;
+  color: ${({ theme }) => theme.ink.lo};
+`;
+
+const ResizeBody = styled.div`
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[3]} ${(
+    { theme },
+  ) => theme.space[3]};
+`;
+
+const ResizeGrid = styled.div`
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};
+  align-items: center;
+  font-size: ${({ theme }) => theme.text.xs};
+`;
+
+const ColumnHeader = styled.span`
+  font-weight: 600;
+  color: ${({ theme }) => theme.ink.mid};
+  text-align: center;
+`;
+
+const SideLabel = styled.span`
+  color: ${({ theme }) => theme.ink.lo};
+`;
+
+const AdjustCell = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${({ theme }) => theme.space[1]};
+`;
+
+const AdjustButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid ${({ theme }) => theme.border.soft};
+  border-radius: ${({ theme }) => theme.radius.xs};
+  background: ${({ theme }) => theme.surface[2]};
+  color: ${({ theme }) => theme.ink.mid};
+  cursor: pointer;
+  padding: 0;
+
+  &.hover {
+    background: ${({ theme }) => theme.surface[3]};
+    color: ${({ theme }) => theme.ink.hi};
+  }
+`;
+
+type Direction = "top" | "bottom" | "left" | "right";
+const directions: Direction[] = ["top", "bottom", "left", "right"];
+const directionI18n: Record<Direction, string> = {
+  top: "editor.top",
+  bottom: "editor.bottom",
+  left: "editor.left",
+  right: "editor.right",
+};
+
 export const AreaPanel = () => {
+  const { t } = useTranslation();
   const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
   const [bounds, setBounds] = useState({
     min: { x: 0, y: 0 },
     max: { x: 0, y: 0 },
   });
+  const [resizeOpen, setResizeOpen] = useState(false);
+  const hasBeenOpened = useRef(false);
+  if (resizeOpen) hasBeenOpened.current = true;
 
   useEffect(() => {
     const unsubscribe = onMapChange((map) => {
@@ -87,167 +130,104 @@ export const AreaPanel = () => {
     };
   }, []);
 
-  const resizeTerrain = (direction: "top" | "bottom" | "left" | "right") => {
-    send({ type: "editorResizeMap", direction, amount: 1 });
-  };
-
-  const shrinkTerrain = (direction: "top" | "bottom" | "left" | "right") => {
-    send({ type: "editorResizeMap", direction, amount: -1 });
-  };
-
-  const expandBounds = (direction: "top" | "bottom" | "left" | "right") => {
-    send({ type: "editorAdjustBounds", direction, amount: 1 });
-  };
-
-  const shrinkBounds = (direction: "top" | "bottom" | "left" | "right") => {
-    send({ type: "editorAdjustBounds", direction, amount: -1 });
-  };
-
   const boundsSpan = {
     x: bounds.max.x - bounds.min.x,
     y: bounds.max.y - bounds.min.y,
   };
 
-  const formatBounds = (value: number) => {
-    return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+  const resizeTerrain = (direction: Direction, amount: number) => {
+    const shift = getEntityShiftForResize({ direction, amount });
+    camera.position.x += shift.x;
+    camera.position.y += shift.y;
+    send({ type: "editorResizeMap", direction, amount });
   };
 
+  const fmt = (value: number) =>
+    Number.isInteger(value) ? value.toString() : value.toFixed(1);
+
   return (
-    <Panel style={{ overflow: "visible" }}>
+    <Panel style={{ padding: 0 }}>
       <MinimapContainer>
         <Minimap />
-        {/* Top terrain arrows */}
-        <ArrowButton
-          $position="top-terrain-expand"
-          onClick={() => resizeTerrain("top")}
-          title="Expand terrain top"
-        >
-          ▲
-        </ArrowButton>
-        <ArrowButton
-          $position="top-terrain-shrink"
-          onClick={() => shrinkTerrain("top")}
-          title="Shrink terrain top"
-        >
-          ▼
-        </ArrowButton>
-
-        {/* Top bounds arrows */}
-        <ArrowButton
-          $position="top-bounds-expand"
-          onClick={() => expandBounds("top")}
-          title="Expand bounds top"
-        >
-          △
-        </ArrowButton>
-        <ArrowButton
-          $position="top-bounds-shrink"
-          onClick={() => shrinkBounds("top")}
-          title="Shrink bounds top"
-        >
-          ▽
-        </ArrowButton>
-
-        {/* Bottom terrain arrows */}
-        <ArrowButton
-          $position="bottom-terrain-expand"
-          onClick={() => resizeTerrain("bottom")}
-          title="Expand terrain bottom"
-        >
-          ▼
-        </ArrowButton>
-        <ArrowButton
-          $position="bottom-terrain-shrink"
-          onClick={() => shrinkTerrain("bottom")}
-          title="Shrink terrain bottom"
-        >
-          ▲
-        </ArrowButton>
-
-        {/* Bottom bounds arrows */}
-        <ArrowButton
-          $position="bottom-bounds-expand"
-          onClick={() => expandBounds("bottom")}
-          title="Expand bounds bottom"
-        >
-          ▽
-        </ArrowButton>
-        <ArrowButton
-          $position="bottom-bounds-shrink"
-          onClick={() => shrinkBounds("bottom")}
-          title="Shrink bounds bottom"
-        >
-          △
-        </ArrowButton>
-
-        {/* Left terrain arrows */}
-        <ArrowButton
-          $position="left-terrain-expand"
-          onClick={() => resizeTerrain("left")}
-          title="Expand terrain left"
-        >
-          ◀
-        </ArrowButton>
-        <ArrowButton
-          $position="left-terrain-shrink"
-          onClick={() => shrinkTerrain("left")}
-          title="Shrink terrain left"
-        >
-          ▶
-        </ArrowButton>
-
-        {/* Left bounds arrows */}
-        <ArrowButton
-          $position="left-bounds-expand"
-          onClick={() => expandBounds("left")}
-          title="Expand bounds left"
-        >
-          ◁
-        </ArrowButton>
-        <ArrowButton
-          $position="left-bounds-shrink"
-          onClick={() => shrinkBounds("left")}
-          title="Shrink bounds left"
-        >
-          ▷
-        </ArrowButton>
-
-        {/* Right terrain arrows */}
-        <ArrowButton
-          $position="right-terrain-expand"
-          onClick={() => resizeTerrain("right")}
-          title="Expand terrain right"
-        >
-          ▶
-        </ArrowButton>
-        <ArrowButton
-          $position="right-terrain-shrink"
-          onClick={() => shrinkTerrain("right")}
-          title="Shrink terrain right"
-        >
-          ◀
-        </ArrowButton>
-
-        {/* Right bounds arrows */}
-        <ArrowButton
-          $position="right-bounds-expand"
-          onClick={() => expandBounds("right")}
-          title="Expand bounds right"
-        >
-          ▷
-        </ArrowButton>
-        <ArrowButton
-          $position="right-bounds-shrink"
-          onClick={() => shrinkBounds("right")}
-          title="Shrink bounds right"
-        >
-          ◁
-        </ArrowButton>
       </MinimapContainer>
       <InfoDisplay>
-        Map: {mapSize.width} × {mapSize.height} | Bounds:{" "}
-        {formatBounds(boundsSpan.x)} × {formatBounds(boundsSpan.y)}
+        {t("editor.mapSize", { w: mapSize.width, h: mapSize.height })}
+        {" | "}
+        {t("editor.boundsSize", {
+          bw: fmt(boundsSpan.x),
+          bh: fmt(boundsSpan.y),
+        })}
       </InfoDisplay>
+      <ResizeHeader onClick={() => setResizeOpen(!resizeOpen)}>
+        <Chev>
+          {resizeOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        </Chev>
+        {t("editor.resizeMap")}
+      </ResizeHeader>
+      <Collapse isOpen={resizeOpen}>
+        {hasBeenOpened.current && (
+          <ResizeBody>
+            <ResizeGrid>
+              <span />
+              <ColumnHeader>{t("editor.mapTerrain")}</ColumnHeader>
+              <ColumnHeader>{t("editor.mapBounds")}</ColumnHeader>
+              {directions.map((dir) => (
+                <>
+                  <SideLabel key={`label-${dir}`}>
+                    {t(directionI18n[dir])}
+                  </SideLabel>
+                  <AdjustCell key={`terrain-${dir}`}>
+                    <AdjustButton
+                      title={`${t("editor.mapTerrain")} ${
+                        t(directionI18n[dir])
+                      } −1`}
+                      onClick={() => resizeTerrain(dir, -1)}
+                    >
+                      <Minus size={12} />
+                    </AdjustButton>
+                    <AdjustButton
+                      title={`${t("editor.mapTerrain")} ${
+                        t(directionI18n[dir])
+                      } +1`}
+                      onClick={() => resizeTerrain(dir, 1)}
+                    >
+                      <Plus size={12} />
+                    </AdjustButton>
+                  </AdjustCell>
+                  <AdjustCell key={`bounds-${dir}`}>
+                    <AdjustButton
+                      title={`${t("editor.mapBounds")} ${
+                        t(directionI18n[dir])
+                      } −1`}
+                      onClick={() =>
+                        send({
+                          type: "editorAdjustBounds",
+                          direction: dir,
+                          amount: -1,
+                        })}
+                    >
+                      <Minus size={12} />
+                    </AdjustButton>
+                    <AdjustButton
+                      title={`${t("editor.mapBounds")} ${
+                        t(directionI18n[dir])
+                      } +1`}
+                      onClick={() =>
+                        send({
+                          type: "editorAdjustBounds",
+                          direction: dir,
+                          amount: 1,
+                        })}
+                    >
+                      <Plus size={12} />
+                    </AdjustButton>
+                  </AdjustCell>
+                </>
+              ))}
+            </ResizeGrid>
+          </ResizeBody>
+        )}
+      </Collapse>
     </Panel>
   );
 };

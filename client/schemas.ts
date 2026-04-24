@@ -360,6 +360,7 @@ export const zUpdate = z.object({
   bounty: z.number().optional(),
 
   // Fog of war
+  visibleInFog: z.boolean().optional(),
   blocksLineOfSight: z.number().optional(),
 
   unique: z.boolean().optional(),

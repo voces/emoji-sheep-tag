@@ -10,8 +10,10 @@ import { editorVar } from "@/vars/editor.ts";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { getDistanceMultiplier } from "@/shared/penAreas.ts";
-import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
-import { getEffectivePlayerGold } from "../../../api/player.ts";
+import {
+  getEffectivePlayerGold,
+  isTeamGoldEnabled,
+} from "../../../api/player.ts";
 import { selection } from "../../../systems/selection.ts";
 import { useSet } from "@/hooks/useSet.ts";
 
@@ -88,11 +90,8 @@ const TEAM_ENTITY_IDS = {
 const InnerGold = (
   { entity, team }: { entity: Entity; team: string | undefined },
 ) => {
-  const lobbySettings = useReactiveVar(lobbySettingsVar);
   const validTeam = team === "wolf" || team === "sheep" ? team : undefined;
-  const teamGoldEnabled = lobbySettings.mode === "vip" ||
-    (lobbySettings.mode === "vamp" && validTeam === "wolf") ||
-    (lobbySettings.mode === "survival" && lobbySettings.teamGold);
+  const teamGoldEnabled = isTeamGoldEnabled(validTeam);
 
   // Listen to gold changes to trigger rerenders, flooring to avoid unnecessary rerenders
   useListenToEntityProp(entity, "gold", (g) => Math.floor(g ?? 0));

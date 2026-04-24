@@ -372,6 +372,8 @@ export type Entity = {
   bounty?: number;
 
   // Fog of war
+  /** Always visible regardless of fog of war state */
+  visibleInFog?: boolean;
   blocksLineOfSight?: number; // Number of height levels this blocks vision
 
   // Grouping

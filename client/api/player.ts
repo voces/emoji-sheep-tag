@@ -3,6 +3,7 @@ import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { getPlayer, Player, playerEntities } from "@/shared/api/player.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
+import { practiceVar } from "@/vars/practice.ts";
 // Import triggers module resolution order that prevents circular dependency issues
 import "../systems/selection.ts";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
@@ -99,6 +100,7 @@ const TEAM_ENTITY_IDS = {
  * @param team - Optional team to check. In vamp mode, wolves have team gold but sheep don't.
  */
 export const isTeamGoldEnabled = (team?: "sheep" | "wolf"): boolean => {
+  if (practiceVar()) return false;
   const settings = lobbySettingsVar();
   if (settings.mode === "vip") return true;
   if (settings.mode === "vamp") return team === "wolf";

@@ -196,7 +196,7 @@ export const recordCommand = (command: EditorCommand) => {
 };
 
 // Actually perform the command (no stack manipulation)
-const doExecute = (command: EditorCommand) => {
+export const doExecute = (command: EditorCommand) => {
   switch (command.type) {
     case "createEntity":
       send({
@@ -236,8 +236,11 @@ const doExecute = (command: EditorCommand) => {
       break;
     }
 
-    case "setCliff":
+    case "setCliff": {
       terrain.setCliff(command.x, command.y, command.newCliff);
+      const cliffs = getCliffs();
+      cliffs[cliffs.length - 1 - command.y][command.x] =
+        terrain.masks.cliff[command.y][command.x];
       updateClientPathingForCliff(command.x, command.y);
       send({
         type: "editorSetCliff",
@@ -246,9 +249,12 @@ const doExecute = (command: EditorCommand) => {
         cliff: command.newCliff,
       });
       break;
+    }
 
-    case "setWater":
+    case "setWater": {
       terrain.setWater(command.x, command.y, command.newWater);
+      const water = getWater();
+      water[water.length - 1 - command.y][command.x] = command.newWater;
       updateClientPathingForCliff(command.x, command.y);
       send({
         type: "editorSetWater",
@@ -257,15 +263,23 @@ const doExecute = (command: EditorCommand) => {
         water: command.newWater,
       });
       break;
+    }
 
-    case "fillWater":
+    case "fillWater": {
       terrain.fillWater(command.newValue);
+      const water = getWater();
+      for (let y = 0; y < water.length; y++) {
+        for (let x = 0; x < water[y].length; x++) {
+          water[y][x] = terrain.masks.water[water.length - 1 - y][x];
+        }
+      }
       rebuildFullClientPathing();
       send({
         type: "editorReplaceWater",
         water: terrain.masks.water.toReversed(),
       });
       break;
+    }
 
     case "keyboardMove":
       send({
@@ -329,8 +343,11 @@ const doUndo = (command: EditorCommand) => {
       break;
     }
 
-    case "setCliff":
+    case "setCliff": {
       terrain.setCliff(command.x, command.y, command.oldCliff);
+      const cliffs = getCliffs();
+      cliffs[cliffs.length - 1 - command.y][command.x] =
+        terrain.masks.cliff[command.y][command.x];
       updateClientPathingForCliff(command.x, command.y);
       send({
         type: "editorSetCliff",
@@ -339,9 +356,12 @@ const doUndo = (command: EditorCommand) => {
         cliff: command.oldCliff,
       });
       break;
+    }
 
-    case "setWater":
+    case "setWater": {
       terrain.setWater(command.x, command.y, command.oldWater);
+      const water = getWater();
+      water[water.length - 1 - command.y][command.x] = command.oldWater;
       updateClientPathingForCliff(command.x, command.y);
       send({
         type: "editorSetWater",
@@ -350,6 +370,7 @@ const doUndo = (command: EditorCommand) => {
         water: command.oldWater,
       });
       break;
+    }
 
     case "fillWater":
       replaceWaterMask(command.oldMask);

@@ -4,20 +4,11 @@ import { createBlueprint } from "../../../../controls/blueprintHandlers.ts";
 import { mouse } from "../../../../mouse.ts";
 import { Grid } from "./common.ts";
 import { CollapsiblePanel } from "./CollapsiblePanel.tsx";
+import { useTranslation } from "react-i18next";
 
 export const pickDoodad = (prefab: string) => {
   const blueprint = createBlueprint(prefab, mouse.world.x, mouse.world.y);
-  if (blueprint?.prefab === "grass") {
-    blueprint.modelScale = Math.round((1 + (Math.random() - 0.5)) * 100) / 100;
-    const r = Math.round(37 + (Math.random() - 0.5) * 30);
-    const g = Math.round(102 + (Math.random() - 0.5) * 45);
-    blueprint.vertexColor = parseInt(
-      `${r.toString(16)}${g.toString(16)}00`,
-      16,
-    );
-    blueprint.facing = Math.round(Math.random()) * Math.PI;
-    blueprint.isDoodad = true;
-  } else if (blueprint?.prefab === "flowers") {
+  if (blueprint?.prefab === "flowers") {
     blueprint.modelScale = Math.round((1 + (Math.random() - 0.5)) * 100) / 100;
     const r = Math.random();
     const g = Math.random();
@@ -41,19 +32,22 @@ export const pickDoodad = (prefab: string) => {
   }
 };
 
-export const DoodadsPanel = () => (
-  <CollapsiblePanel title="Doodads">
-    <Grid>
-      {Object.entries(prefabs).filter(([prefab, v]) =>
-        v.isDoodad && prefab !== "tile"
-      ).map(([k, v]) => (
-        <Command
-          key={k}
-          name={v.name ?? k}
-          icon={v.model ?? k}
-          onClick={() => pickDoodad(k)}
-        />
-      ))}
-    </Grid>
-  </CollapsiblePanel>
-);
+export const DoodadsPanel = () => {
+  const { t } = useTranslation();
+  return (
+    <CollapsiblePanel title={t("editor.doodads")}>
+      <Grid>
+        {Object.entries(prefabs).filter(([prefab, v]) =>
+          v.isDoodad && prefab !== "tile"
+        ).map(([k, v]) => (
+          <Command
+            key={k}
+            name={v.name ?? k}
+            icon={v.model ?? k}
+            onClick={() => pickDoodad(k)}
+          />
+        ))}
+      </Grid>
+    </CollapsiblePanel>
+  );
+};

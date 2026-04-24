@@ -9,9 +9,10 @@ import {
   WebGLRenderTarget,
 } from "three";
 import { getMap, type LoadedMap, onMapChange } from "@/shared/map.ts";
+import { addSystem } from "@/shared/context.ts";
 import { stats } from "../util/Stats.ts";
-import { tileDefs } from "@/shared/data.ts";
-import { Terrain2D } from "./Terrain2D.ts";
+import { prefabs, tileDefs } from "@/shared/data.ts";
+import { type DoodadPoint, Terrain2D } from "./Terrain2D.ts";
 import { FogPass } from "./FogPass.ts";
 import { floatingTextScene } from "../systems/floatingText.ts";
 import { healthbarScene } from "../systems/healthbars.ts";
@@ -20,20 +21,32 @@ import { isNight } from "@/shared/dayNight.ts";
 import { ambientBirdsSound } from "../api/sound.ts";
 import { editorVar, editorWaterViewVar } from "@/vars/editor.ts";
 import { stateVar } from "@/vars/state.ts";
+import { Entity } from "../ecs.ts";
+import { clearGeneratedFlowers, regenerateFlowers } from "../flowers.ts";
 
-const terrainTilePalette = [
-  ...tileDefs.map((t) => ({
-    color: `#${t.color.toString(16).padStart(6, "0")}`,
-  })),
-  { color: "#dbbba3" },
-];
+const terrainTilePalette = tileDefs.map((t) => ({
+  color: `#${t.color.toString(16).padStart(6, "0")}`,
+}));
+
+const extractDoodads = (map: LoadedMap): DoodadPoint[] =>
+  map.entities
+    .filter((e) =>
+      e.prefab && e.prefab !== "flowers" &&
+      e.position &&
+      prefabs[e.prefab as keyof typeof prefabs]?.isDoodad
+    )
+    .map((e) => ({
+      x: e.position!.x,
+      y: e.position!.y,
+      radius: prefabs[e.prefab as keyof typeof prefabs]?.radius ?? 0.5,
+    }));
 
 const createTerrainMasks = (map: LoadedMap = getMap()) => ({
   cliff: map.cliffs.toReversed(),
   groundTile: map.tiles.toReversed(),
   cliffTile: Array.from(
     { length: map.height },
-    () => Array(map.width).fill(tileDefs.length),
+    () => Array(map.width).fill(0),
   ),
   water: map.water.toReversed(),
 });
@@ -151,6 +164,7 @@ if (listener) {
 export const terrain = new Terrain2D(
   createTerrainMasks(initialMap),
   terrainTilePalette,
+  extractDoodads(initialMap),
 );
 terrain.layers.set(3);
 terrain.position.z = -0.002;
@@ -159,13 +173,45 @@ if ("depthWrite" in terrain.material) terrain.material.depthWrite = false;
 scene.add(terrain);
 let currentTerrainMapId = initialMap.id;
 onMapChange((map) => {
-  if (map.id === currentTerrainMapId) return;
-  currentTerrainMapId = map.id;
-  terrain.load(createTerrainMasks(map), terrainTilePalette);
+  const terrainChanged = map.id !== currentTerrainMapId;
+  if (terrainChanged) {
+    currentTerrainMapId = map.id;
+    terrain.load(
+      createTerrainMasks(map),
+      terrainTilePalette,
+      extractDoodads(map),
+    );
+  }
+  try {
+    clearGeneratedFlowers();
+    regenerateFlowers(getTerrainData());
+  } catch { /* app context not yet available */ }
+  if (!terrainChanged) return;
   if (editorVar() && map.id.includes("-resized-")) return;
   camera.position.x = map.center.x;
   camera.position.y = map.center.y;
 });
+
+const getTerrainData = () => ({
+  cliff: terrain.masks.cliff,
+  groundTile: terrain.masks.groundTile,
+  water: terrain.masks.water,
+  doodads: terrain.doodads,
+});
+
+let flowerDebounce: number | undefined;
+export const triggerFlowerRegeneration = () => {
+  clearTimeout(flowerDebounce);
+  regenerateFlowers(getTerrainData());
+};
+terrain.onChange = () => {
+  if (!editorVar()) return;
+  clearTimeout(flowerDebounce);
+  flowerDebounce = setTimeout(
+    () => regenerateFlowers(getTerrainData()),
+    300,
+  );
+};
 const waterViewModeId: Record<
   ReturnType<typeof editorWaterViewVar>,
   0 | 1 | 2
@@ -177,6 +223,39 @@ const applyWaterViewMode = () => {
 applyWaterViewMode();
 editorWaterViewVar.subscribe(applyWaterViewMode);
 editorVar.subscribe(applyWaterViewMode);
+
+const doodads = new Map<Entity, DoodadPoint>();
+let queued = false;
+const queueRebuild = () => {
+  if (queued) return;
+  queued = true;
+  setTimeout(() => {
+    queued = false;
+    terrain.setDoodads(Array.from(doodads.values()));
+  }, 0);
+};
+addSystem({
+  props: ["isDoodad", "position", "radius"],
+  onAdd: (e) => {
+    if (e.prefab === "flowers" || e.isEffect) return;
+    doodads.set(e, {
+      x: e.position.x,
+      y: e.position.y,
+      radius: e.radius,
+    });
+    queueRebuild();
+  },
+  onChange: (e) => {
+    if (e.prefab === "flowers" || e.isEffect) return;
+    doodads.set(e, {
+      x: e.position.x,
+      y: e.position.y,
+      radius: e.radius,
+    });
+    queueRebuild();
+  },
+  onRemove: (e) => doodads.delete(e) && queueRebuild(),
+});
 
 // deno-lint-ignore no-explicit-any
 (globalThis as any).terrain = terrain;

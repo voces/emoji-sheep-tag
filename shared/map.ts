@@ -226,6 +226,7 @@ export const generateDoodads = (types?: Entity["type"][]) => {
   const map = getMap();
   appContext.current.batch(() => {
     for (const entityData of map.entities) {
+      if (entityData.prefab === "flowers") continue;
       if (types?.length) {
         const prefabData = entityData.prefab
           ? prefabs[entityData.prefab]

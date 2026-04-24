@@ -173,6 +173,7 @@ const createPasteBlueprints = (centerX: number, centerY: number) => {
       },
       alpha: 0.75,
       vertexColor: 0x00ff00,
+      visibleInFog: true,
     });
 
     pasteBlueprints.push(blueprint);

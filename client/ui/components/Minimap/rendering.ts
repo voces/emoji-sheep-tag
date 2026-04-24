@@ -29,8 +29,8 @@ export const createMinimapRenderer = (
   pixelRatio: number,
   showCameraBox = true,
 ) => {
-  const renderWidth = 277 * pixelRatio;
-  const renderHeight = 277 * pixelRatio;
+  const renderWidth = 260 * pixelRatio;
+  const renderHeight = 260 * pixelRatio;
 
   const sceneRenderTarget = new WebGLRenderTarget(renderWidth, renderHeight, {
     depthBuffer: true,

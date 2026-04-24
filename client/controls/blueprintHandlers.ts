@@ -89,6 +89,7 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
       model: "location",
       modelScale: 1,
       isDoodad: true,
+      visibleInFog: true,
       vertexColor: 0x31aaef, // Blue color for ally
       alpha: 0.75,
     });
@@ -130,6 +131,7 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
     modelScale: prefabs[prefab]?.modelScale,
     isDoodad: true,
     isEffect: true,
+    visibleInFog: true,
     ...(owner &&
       {
         vertexColor: playerColor

@@ -29,7 +29,7 @@ const createTerrain = (cliffMask: CliffMask) =>
     {
       cliff: cliffMask,
       groundTile: cliffMask.map((r) => r.map(() => 0)),
-      cliffTile: cliffMask.map((r) => r.map(() => 1)),
+      cliffTile: cliffMask.map((r) => r.map(() => 0)),
       water: cliffMask.map((r) => r.map(() => 0)),
     },
     [
@@ -131,7 +131,7 @@ Deno.test("Terrain2D load rebuilds with new data", () => {
     {
       cliff: newMask,
       groundTile: [[0, 0], [0, 0]],
-      cliffTile: [[1, 1], [1, 1]],
+      cliffTile: [[0, 0], [0, 0]],
       water: [[0, 0], [0, 0]],
     },
     [{ color: "#90ee90" }, { color: "#ffdc41" }],
