@@ -19,6 +19,7 @@ import { MAPS } from "@/shared/maps/manifest.ts";
 import { isMultiplayer } from "../../../connection.ts";
 import { stats } from "../../../util/Stats.ts";
 import { getCurrentPingTarget } from "../../../ping.ts";
+import { useTooltip } from "@/hooks/useTooltip.tsx";
 
 const LobbyShell = styled.div`
   position: absolute;
@@ -72,13 +73,15 @@ const CrumbCurrent = styled(Crumb)`
   font-weight: 500;
 `;
 
-const PingDot = styled.span<{ $ping: number }>`
+const PingDot = styled.span<{ $ping: number | null }>`
   display: inline-block;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: ${({ $ping, theme }) =>
-    $ping < 50
+    $ping === null
+      ? theme.ink.mute
+      : $ping < 50
       ? theme.success.DEFAULT
       : $ping < 100
       ? theme.game.orange
@@ -100,26 +103,36 @@ const PingTag = (
     primaryLabel: string | undefined;
   },
 ) => {
-  const [ping, setPing] = useState(NaN);
+  const [ping, setPing] = useState<number | null>(null);
   const [target, setTarget] = useState(getCurrentPingTarget());
   useEffect(() => {
     if (!isMultiplayer()) return;
     const id = setInterval(() => {
-      setPing(stats.msPanel.value);
+      const v = stats.msPanel.value;
+      setPing(isNaN(v) ? null : v);
       setTarget(getCurrentPingTarget());
     }, 1000);
     return () => clearInterval(id);
   }, []);
 
-  const label = target === "primary" || target === "none"
-    ? primaryLabel
-    : shardLabel;
+  const label = shardLabel ?? primaryLabel;
+  const tooltipText = ping === null
+    ? "No ping yet — measuring…"
+    : target === "shard-game"
+    ? `Round shard · ${Math.round(ping)}ms`
+    : target === "shard-ping"
+    ? `Selected shard · ${Math.round(ping)}ms`
+    : target === "primary"
+    ? `Primary server · ${Math.round(ping)}ms`
+    : "Disconnected";
+  const { tooltipContainerProps, tooltip } = useTooltip(tooltipText);
 
   return (
-    <Tag>
-      {!isNaN(ping) && <PingDot $ping={ping} />}
+    <Tag {...tooltipContainerProps}>
+      <PingDot $ping={ping} />
       {label}
-      {!isNaN(ping) && ` ${Math.round(ping)}ms`}
+      {ping !== null && ` ${Math.round(ping)}ms`}
+      {tooltip}
     </Tag>
   );
 };

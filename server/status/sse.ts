@@ -33,7 +33,8 @@ export type LobbyInfo = {
 const shardDisplayName = (id: string | undefined, shards: ShardInfo[]) => {
   if (!id) return undefined;
   const match = shards.find((s) => s.id === id);
-  return match?.name ?? id;
+  if (!match) return id;
+  return match.region ? `${match.name} (${match.region})` : match.name;
 };
 
 export type StatusSnapshot = {
