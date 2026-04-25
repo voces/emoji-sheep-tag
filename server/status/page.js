@@ -66,14 +66,13 @@ const render = (snap) => {
     shardsBody.innerHTML =
       '<tr><td colspan="5" class="muted">No shards.</td></tr>';
   } else {
-    shardsBody.innerHTML = snap.shards.map((s) => {
-      const status = s.status ?? (s.isOnline ? "online" : "offline");
-      return "<tr><td>" + escape(s.name) + "</td><td>" +
-        (s.region ? escape(s.region) : '<span class="muted">—</span>') +
-        "</td><td>" + escape(status) +
-        "</td><td>" + fmtNum(s.playerCount) +
-        "</td><td>" + fmtNum(s.lobbyCount) + "</td></tr>";
-    }).join("");
+    shardsBody.innerHTML = snap.shards.map((s) =>
+      "<tr><td>" + escape(s.name) + "</td><td>" +
+      (s.region ? escape(s.region) : '<span class="muted">—</span>') +
+      "</td><td>" + escape(s.status) +
+      "</td><td>" + fmtNum(s.playerCount) +
+      "</td><td>" + fmtNum(s.lobbyCount) + "</td></tr>"
+    ).join("");
   }
 
   const body = $("recentBody");

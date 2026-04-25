@@ -53,7 +53,7 @@ describe("shard connection via message handlers", () => {
             region: "New York",
             playerCount: 10,
             lobbyCount: 2,
-            isOnline: true,
+            status: "online",
           },
           {
             id: "shard-1",
@@ -61,7 +61,7 @@ describe("shard connection via message handlers", () => {
             region: "London",
             playerCount: 5,
             lobbyCount: 1,
-            isOnline: true,
+            status: "online",
           },
         ],
       });
@@ -83,7 +83,7 @@ describe("shard connection via message handlers", () => {
           region: "New York",
           playerCount: 10,
           lobbyCount: 2,
-          isOnline: true,
+          status: "online",
         }],
       });
 
@@ -124,7 +124,7 @@ describe("shard connection via message handlers", () => {
             name: "US East",
             playerCount: 0,
             lobbyCount: 0,
-            isOnline: true,
+            status: "online",
           }],
         },
         captainsDraft: null,

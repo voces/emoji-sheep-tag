@@ -381,7 +381,7 @@ export const LobbySettings = () => {
     for (const s of lobbySettings.shards) {
       if (s.flyRegion) {
         options.push({ value: s.id, label: `fly.io (${s.region})` });
-      } else if (s.isOnline) {
+      } else if (s.status === "online" || s.status === "suspended") {
         options.push({
           value: s.id,
           label: s.region ? `${s.name} (${s.region})` : s.name,

@@ -586,7 +586,7 @@ const buildShardInfoList = (
     region: "Columbus",
     playerCount: 0,
     lobbyCount: 0,
-    isOnline: true,
+    status: "online",
     coordinates: PRIMARY_SERVER_COORDS,
   });
 
@@ -598,7 +598,7 @@ const buildShardInfoList = (
       region: s.region,
       playerCount: s.playerCount,
       lobbyCount: s.lobbyCount,
-      isOnline: s.socket.readyState === WebSocket.OPEN,
+      status: s.socket.readyState === WebSocket.OPEN ? "online" : "suspended",
       coordinates: s.coordinates,
     });
   }
@@ -619,7 +619,8 @@ const buildShardInfoList = (
         }
       }
 
-      // Determine status
+      // Determine status — "suspended" for fly regions that can be launched
+      // on-demand but have no running machine yet.
       const launching = isFlyRegionLaunching(region.code);
 
       result.push({
@@ -628,9 +629,8 @@ const buildShardInfoList = (
         region: getRegionDisplayName(region.code, region.name),
         playerCount: 0,
         lobbyCount: 0,
-        isOnline: false,
         flyRegion: region.code,
-        status: launching ? "launching" : "offline",
+        status: launching ? "launching" : "suspended",
         coordinates: { lat: region.latitude, lon: region.longitude },
       });
     }
