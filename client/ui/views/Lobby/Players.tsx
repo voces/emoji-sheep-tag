@@ -33,9 +33,11 @@ import {
   Palette,
   PenLine,
   Trash2,
+  Trophy,
 } from "lucide-react";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
+import { IconTooltip } from "@/components/InfoTooltip.tsx";
 import { Chat } from "./Chat.tsx";
 
 const PlayersPanel = styled(Panel)`
@@ -195,6 +197,18 @@ const StatCell = styled.span`
   text-align: right;
 `;
 
+const GoldStatCell = styled(StatCell)`
+  color: ${({ theme }) => theme.game.gold};
+  font-weight: 600;
+`;
+
+const StatCellWithIcon = styled(StatCell)`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+`;
+
 const PlayerMenuOverlay = styled.div`
   position: fixed;
   inset: 0;
@@ -261,6 +275,8 @@ const PlayerRow = ({
   isCaptain,
   isComputer,
   playerRounds,
+  hasBestAverage,
+  longestRoundTooltip,
 }: {
   player: Player;
   isLocalPlayer: boolean;
@@ -269,6 +285,8 @@ const PlayerRow = ({
   isCaptain: boolean;
   isComputer: boolean;
   playerRounds: readonly { duration: number }[];
+  hasBestAverage: boolean;
+  longestRoundTooltip: React.ReactNode | null;
 }) => {
   const { t } = useTranslation();
   const nameInputRef = useRef<NameInputRef>(null);
@@ -342,15 +360,27 @@ const PlayerRow = ({
           )}
         </PlayerNameCell>
         <StatCell>{player.sheepCount ?? 0}</StatCell>
-        <StatCell>
-          {playerRounds.length
+        {(() => {
+          const avg = playerRounds.length
             ? formatDuration(
               playerRounds.reduce((sum, r) => sum + r.duration, 0) /
                 playerRounds.length,
               true,
             )
-            : "\u2014"}
-        </StatCell>
+            : "\u2014";
+          const crown = longestRoundTooltip && (
+            <IconTooltip
+              icon={Trophy}
+              size={12}
+              content={longestRoundTooltip}
+              color="inherit"
+            />
+          );
+          const Cell = hasBestAverage ? GoldStatCell : StatCell;
+          return crown
+            ? <StatCellWithIcon as={Cell}>{crown}{avg}</StatCellWithIcon>
+            : <Cell>{avg}</Cell>;
+        })()}
         {canEdit
           ? (
             <KebabButton
@@ -549,22 +579,59 @@ export const Players = () => {
     setPendingMode(null);
   };
 
-  const playerRoundsMap = useMemo(() => {
-    const sheepCount = players.filter((p) => p.team === "sheep").length;
-    const wolfCount = players.filter((p) => p.team === "wolf").length;
-    const map = new Map<string, typeof rounds>();
-    for (const p of players) {
-      map.set(
-        p.id,
-        rounds.filter((r) =>
-          r.sheep.includes(p.id) &&
-          r.sheep.length === sheepCount &&
-          r.wolves.length === wolfCount
-        ),
-      );
-    }
-    return map;
-  }, [players, rounds]);
+  const {
+    playerRoundsMap,
+    bestAverageIds,
+    longestRoundIds,
+    longestRoundByPlayer,
+  } = useMemo(
+    () => {
+      const sheepCount = players.filter((p) => p.team === "sheep").length;
+      const wolfCount = players.filter((p) => p.team === "wolf").length;
+      const map = new Map<string, typeof rounds>();
+      for (const p of players) {
+        map.set(
+          p.id,
+          rounds.filter((r) =>
+            r.sheep.includes(p.id) &&
+            r.sheep.length === sheepCount &&
+            r.wolves.length === wolfCount
+          ),
+        );
+      }
+
+      let bestAvg = 0;
+      let bestAvgIds: string[] = [];
+      let longestDuration = 0;
+      let longestIds: string[] = [];
+      const longestByPlayer = new Map<string, typeof rounds[number]>();
+      for (const [id, pRounds] of map) {
+        if (!pRounds.length) continue;
+        const avg = pRounds.reduce((s, r) => s + r.duration, 0) /
+          pRounds.length;
+        if (avg > bestAvg) {
+          bestAvg = avg;
+          bestAvgIds = [id];
+        } else if (avg === bestAvg) bestAvgIds.push(id);
+
+        let max = pRounds[0];
+        for (const r of pRounds) if (r.duration > max.duration) max = r;
+        longestByPlayer.set(id, max);
+        if (max.duration > longestDuration) {
+          longestDuration = max.duration;
+          longestIds = [id];
+        } else if (max.duration === longestDuration) longestIds.push(id);
+      }
+
+      return {
+        playerRoundsMap: map,
+        bestAverageIds: new Set(bestAvgIds),
+        longestRoundIds: new Set(longestIds),
+        longestRoundByPlayer: longestByPlayer,
+      };
+    },
+    [players, rounds],
+  );
 
   return (
     <PlayersPanel>
@@ -645,18 +712,53 @@ export const Players = () => {
           <span>{t("lobby.averageTime")}</span>
           <span />
         </ListHeader>
-        {players.map((p) => (
-          <PlayerRow
-            key={p.id}
-            player={p}
-            isLocalPlayer={p.id === localPlayer?.id}
-            isHost={isHost}
-            isPlayerHost={p.id === lobbySettings.host}
-            isCaptain={captains?.includes(p.id) ?? false}
-            isComputer={p.isComputer ?? false}
-            playerRounds={playerRoundsMap.get(p.id) ?? []}
-          />
-        ))}
+        {players.map((p) => {
+          const hasLongest = longestRoundIds.has(p.id);
+          const longest = hasLongest
+            ? longestRoundByPlayer.get(p.id)
+            : undefined;
+          const tooltipContent = longest
+            ? (
+              <div>
+                <div>
+                  {t("lobby.longestRound", {
+                    duration: formatDuration(longest.duration, true),
+                  })}
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  {longest.sheep.map((sid) => {
+                    const sp = players.find((pl) => pl.id === sid);
+                    return (
+                      <span
+                        key={sid}
+                        style={{
+                          color: sp?.playerColor ?? undefined,
+                          marginRight: 6,
+                        }}
+                      >
+                        {sp?.name ?? sid}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )
+            : null;
+          return (
+            <PlayerRow
+              key={p.id}
+              player={p}
+              isLocalPlayer={p.id === localPlayer?.id}
+              isHost={isHost}
+              isPlayerHost={p.id === lobbySettings.host}
+              isCaptain={captains?.includes(p.id) ?? false}
+              isComputer={p.isComputer ?? false}
+              playerRounds={playerRoundsMap.get(p.id) ?? []}
+              hasBestAverage={bestAverageIds.has(p.id)}
+              longestRoundTooltip={tooltipContent}
+            />
+          );
+        })}
       </PlayerList>
 
       <Chat />

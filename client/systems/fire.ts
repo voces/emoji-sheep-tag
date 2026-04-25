@@ -1,5 +1,6 @@
 import { isStructure } from "@/shared/api/unit.ts";
 import { addSystem } from "@/shared/context.ts";
+import { id } from "@/shared/util/id.ts";
 import { app, Entity } from "../ecs.ts";
 import { playSoundAt } from "../api/sound.ts";
 import { PositionalAudio } from "three";
@@ -118,7 +119,7 @@ const updateFires = (e: Entity, remove = false) => {
       const center = 60 + Math.floor(Math.random() * 136);
       existing.push({
         entity: app.addEntity({
-          id: `fire-${crypto.randomUUID()}`,
+          id: id("fire"),
           prefab: "fire",
           position: {
             x: e.position.x + offsets[i].x * radius,

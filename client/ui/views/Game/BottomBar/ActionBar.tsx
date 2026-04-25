@@ -1,16 +1,10 @@
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { styled } from "styled-components";
-import { app } from "../../../../ecs.ts";
-import { selection } from "../../../../systems/selection.ts";
 import { UnitDataAction } from "@/shared/types.ts";
 import { useLocalPlayer } from "@/hooks/usePlayers.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
-import {
-  closeMenusForUnit,
-  getCurrentMenu,
-  menuStateVar,
-} from "@/vars/menuState.ts";
+import { getCurrentMenu, menuStateVar } from "@/vars/menuState.ts";
 import { useMemo } from "react";
 import { Action } from "@/components/game/Action.tsx";
 import { applyShortcutOverride } from "../../../../util/applyShortcutOverrides.ts";
@@ -34,29 +28,6 @@ const Row = styled(HStack)<{ $preferredActionsPerRow: number }>`
       Math.max($preferredActionsPerRow - 1, 0)
     })`};
 `;
-
-selection.addEventListener(
-  "add",
-  (e) => selectionVar((v) => v?.selected && app.entities.has(v) ? v : e),
-);
-// Batch selection updates to avoid React update cascades when deleting many entities
-let pendingSelectionUpdate = false;
-selection.addEventListener(
-  "delete",
-  (e) => {
-    closeMenusForUnit(e.id);
-    if (!pendingSelectionUpdate) {
-      pendingSelectionUpdate = true;
-      // Use setTimeout(0) instead of queueMicrotask to defer until after React's render cycle
-      setTimeout(() => {
-        pendingSelectionUpdate = false;
-        selectionVar((v) =>
-          v?.selected && app.entities.has(v) ? v : selection.first()
-        );
-      }, 0);
-    }
-  },
-);
 
 const rowKeys = [
   "QWERTYUIOP",

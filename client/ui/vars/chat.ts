@@ -1,4 +1,5 @@
 import { makeVar } from "@/hooks/useVar.tsx";
+import { id } from "@/shared/util/id.ts";
 import { colorName, playerEntities } from "@/shared/api/player.ts";
 import { localPlayerIdVar } from "./localPlayerId.ts";
 import { stateVar } from "./state.ts";
@@ -24,7 +25,7 @@ export const addChatMessage = (message: string, channel?: ChatChannel) => {
   );
   chatLogVar(
     (log) => [...(log.length > 100 ? log.slice(-99) : log), {
-      id: crypto.randomUUID(),
+      id: id("chat"),
       timestamp: Date.now(),
       message,
       channel,

@@ -7,13 +7,8 @@ import { usePlayers } from "@/hooks/usePlayers.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { GoldTag } from "@/components/Tag.tsx";
-import {
-  ActionButton,
-  SmallGhostButton,
-} from "@/components/forms/ActionButton.tsx";
 import { send } from "../../../../messaging.ts";
 import {
-  ButtonRow,
   CaptainSlot,
   CaptainSlots,
   PhaseTag,
@@ -114,23 +109,6 @@ export const SelectingCaptains = () => {
             </PoolPlayer>
           ))}
       </PlayerPool>
-
-      <ButtonRow>
-        <ActionButton
-          type="button"
-          onClick={() => send({ type: "randomCaptains" })}
-          disabled={!isHost}
-        >
-          {t("lobby.randomize")}
-        </ActionButton>
-        <SmallGhostButton
-          type="button"
-          onClick={() => send({ type: "cancelCaptains" })}
-          disabled={!isHost}
-        >
-          {t("lobby.cancelDraft")}
-        </SmallGhostButton>
-      </ButtonRow>
     </>
   );
 };

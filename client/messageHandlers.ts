@@ -219,7 +219,7 @@ export const handlers = {
     }
     practiceVar(data.lobbySettings.practice ?? false);
     ensureMapLoaded(data.lobbySettings.map);
-    lobbySettingsVar(data.lobbySettings);
+    lobbySettingsVar({ ...data.lobbySettings, name: data.lobby });
     captainsDraftVar(data.captainsDraft ?? undefined);
     processUpdates(data.updates);
 
@@ -268,7 +268,7 @@ export const handlers = {
   },
   leave: (data: Extract<ServerToClientMessage, { type: "leave" }>) => {
     processUpdates(data.updates);
-    lobbySettingsVar(data.lobbySettings);
+    lobbySettingsVar({ ...data.lobbySettings, name: lobbySettingsVar().name });
   },
   pong: ({ data }: Extract<ServerToClientMessage, { type: "pong" }>) => {
     if (typeof data === "number") {
@@ -295,12 +295,11 @@ export const handlers = {
     >,
   ) => {
     ensureMapLoaded(lobbySettings.map);
-    lobbySettingsVar(lobbySettings);
+    lobbySettingsVar({ ...lobbySettings, name: lobbySettingsVar().name });
   },
   captainsDraft: (
     data: Extract<ServerToClientMessage, { type: "captainsDraft" }>,
   ) => {
-    console.log("[captainsDraft]", data.phase ?? "(clearing)");
     if (!data.phase) {
       captainsDraftVar(undefined);
     } else {

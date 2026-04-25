@@ -29,6 +29,7 @@ const DEFAULT_LOBBY_SETTINGS = {
   view: false,
   teamGold: true,
   host: null,
+  name: "Strong Spirit",
   shard: null,
   shards: [],
 } as const;

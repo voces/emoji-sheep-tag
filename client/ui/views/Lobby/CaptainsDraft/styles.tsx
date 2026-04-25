@@ -6,7 +6,8 @@ export const DraftPanel = styled(Panel)`
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
-  padding: ${({ theme }) => theme.space[4]};
+  min-width: 0;
+  padding: ${({ theme }) => theme.space[4]} ${({ theme }) => theme.space[4]} 0;
   gap: ${({ theme }) => theme.space[4]};
 `;
 
@@ -86,6 +87,7 @@ export const PoolPlayer = styled.button<{
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space[2]};
+  width: 100%;
   padding: 8px ${({ theme }) => theme.space[3]};
   border-radius: ${({ theme }) => theme.radius.md};
   border: 1px solid ${({ $selected, theme }) =>
@@ -164,6 +166,16 @@ export const TeamHeader = styled.div`
   border-bottom: 1px solid ${({ theme }) => theme.border.soft};
 `;
 
+export const TeamPlayer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: 8px 0;
+  font-size: ${({ theme }) => theme.text.md};
+  font-weight: 500;
+  color: ${({ theme }) => theme.ink.hi};
+`;
+
 export const TeamLabel = styled.span`
   font-size: ${({ theme }) => theme.text.sm};
   font-weight: 600;
@@ -175,6 +187,9 @@ export const PoolSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[2]};
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 `;
 
 export const PoolLabel = styled.div`

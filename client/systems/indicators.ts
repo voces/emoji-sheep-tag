@@ -2,6 +2,7 @@ import { SystemEntity } from "../ecs.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
+import { id } from "@/shared/util/id.ts";
 import { panCameraTo } from "../api/camera.ts";
 
 const indicators = new Map<
@@ -74,7 +75,7 @@ export const newIndicator = (
   } = {},
 ) => {
   addEntity({
-    id: `indicator-${crypto.randomUUID()}`,
+    id: id("indicator"),
     prefab: "indicator",
     model,
     playerColor: color,

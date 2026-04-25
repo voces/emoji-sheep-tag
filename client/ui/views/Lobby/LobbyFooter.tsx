@@ -8,6 +8,7 @@ import { draftModeVar } from "@/vars/draftMode.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import {
   ActionButton,
+  GhostButton,
   LargePrimaryButton,
 } from "@/components/forms/ActionButton.tsx";
 import { useShakeError } from "@/components/ShakeError.tsx";
@@ -21,6 +22,8 @@ const Footer = styled.footer`
   background: ${({ theme }) => theme.surface[0]};
   border-top: 1px solid ${({ theme }) => theme.border.soft};
   gap: ${({ theme }) => theme.space[3]};
+  min-height: 70px;
+  box-sizing: border-box;
 `;
 
 const FooterInfo = styled.div`
@@ -46,6 +49,9 @@ export const LobbyFooter = () => {
   useListenToEntities(players, ["team"]);
 
   const isHost = localPlayer?.id === lobbySettings.host;
+
+  if (!isHost) return null;
+
   const nonObserversCount = players.filter((p) => p.team !== "observer").length;
 
   const {
@@ -57,6 +63,32 @@ export const LobbyFooter = () => {
 
   const isCaptainsPhase = captainsDraft?.phase === "drafted" ||
     captainsDraft?.phase === "reversed";
+  const isSelectingCaptains = captainsDraft?.phase === "selecting-captains";
+  const isDrafting = captainsDraft?.phase === "drafting";
+
+  if (isSelectingCaptains || isDrafting) {
+    return (
+      <Footer>
+        <FooterInfo />
+        <FooterActions>
+          <GhostButton
+            type="button"
+            onClick={() => send({ type: "cancelCaptains" })}
+          >
+            {t("lobby.cancelDraft")}
+          </GhostButton>
+          {isSelectingCaptains && (
+            <LargePrimaryButton
+              type="button"
+              onClick={() => send({ type: "randomCaptains" })}
+            >
+              {t("lobby.randomize")}
+            </LargePrimaryButton>
+          )}
+        </FooterActions>
+      </Footer>
+    );
+  }
 
   const handleStart = () => {
     if (nonObserversCount < 2) {
@@ -95,32 +127,28 @@ export const LobbyFooter = () => {
     <Footer>
       <FooterInfo />
       <FooterActions>
-        {isHost && (
-          <>
-            {isCaptainsPhase && captainsDraft?.phase === "drafted" && (
-              <ActionButton
-                type="button"
-                onClick={() => send({ type: "reverseTeams" })}
-                title={t("lobby.reverseTooltip")}
-              >
-                {t("lobby.reverseTeams")}
-              </ActionButton>
-            )}
-            <ActionButton type="button" onClick={handlePractice}>
-              {t("lobby.practice")}
-            </ActionButton>
-            <ShakeWrapper ref={startRef}>
-              <LargePrimaryButton
-                type="button"
-                onClick={handleStart}
-                title={startTooltip}
-              >
-                {startLabel}
-              </LargePrimaryButton>
-            </ShakeWrapper>
-            {errorBubble}
-          </>
+        {isCaptainsPhase && captainsDraft?.phase === "drafted" && (
+          <ActionButton
+            type="button"
+            onClick={() => send({ type: "reverseTeams" })}
+            title={t("lobby.reverseTooltip")}
+          >
+            {t("lobby.reverseTeams")}
+          </ActionButton>
         )}
+        <ActionButton type="button" onClick={handlePractice}>
+          {t("lobby.practice")}
+        </ActionButton>
+        <ShakeWrapper ref={startRef}>
+          <LargePrimaryButton
+            type="button"
+            onClick={handleStart}
+            title={startTooltip}
+          >
+            {startLabel}
+          </LargePrimaryButton>
+        </ShakeWrapper>
+        {errorBubble}
       </FooterActions>
     </Footer>
   );

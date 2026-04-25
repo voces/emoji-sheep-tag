@@ -1,4 +1,5 @@
 import { Point } from "@/shared/pathing/math.ts";
+import { id } from "@/shared/util/id.ts";
 import { app, Entity } from "../ecs.ts";
 import { flags } from "../flags.ts";
 
@@ -130,7 +131,7 @@ export const updateDebugRings = (e: Entity) => {
     } else {
       // Create new entity
       const e2 = app.addEntity({
-        id: crypto.randomUUID(),
+        id: id("debug"),
         prefab,
         position,
         modelScale,

@@ -1,4 +1,5 @@
 import { isStructure } from "@/shared/api/unit.ts";
+import { id } from "@/shared/util/id.ts";
 import { app } from "../ecs.ts";
 
 app.addSystem({
@@ -7,7 +8,7 @@ app.addSystem({
     if (!e.position || !isStructure(e) || e.health === null) return;
 
     app.addEntity({
-      id: `kaboom-${crypto.randomUUID()}`,
+      id: id("kaboom"),
       prefab: "collision",
       position: { x: e.position.x, y: e.position.y },
       facing: Math.random() * Math.PI * 2,

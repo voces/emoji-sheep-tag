@@ -1,4 +1,5 @@
 import { Entity, SystemEntity } from "../ecs.ts";
+import { app } from "../ecs.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { cancelOrder } from "../controls.ts";
 import { selectEntity } from "../api/selection.ts";
@@ -11,6 +12,8 @@ import { getPlayer } from "@/shared/api/player.ts";
 import { isAlly } from "@/shared/api/unit.ts";
 import { Color } from "three";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
+import { selectionFocusVar } from "@/vars/selectionFocus.ts";
+import { closeMenusForUnit } from "@/vars/menuState.ts";
 import { startFollowingEntity, stopFollowingEntity } from "../api/camera.ts";
 import { practiceVar } from "@/vars/practice.ts";
 
@@ -181,4 +184,23 @@ addSystem({
     mirrors.delete(e);
     foxes.delete(e);
   },
+});
+
+// Sync selectionFocusVar when selection changes
+selection.addEventListener(
+  "add",
+  (e) => selectionFocusVar((v) => v?.selected && app.entities.has(v) ? v : e),
+);
+let pendingSelectionUpdate = false;
+selection.addEventListener("delete", (e) => {
+  closeMenusForUnit(e.id);
+  if (!pendingSelectionUpdate) {
+    pendingSelectionUpdate = true;
+    setTimeout(() => {
+      pendingSelectionUpdate = false;
+      selectionFocusVar((v) =>
+        v?.selected && app.entities.has(v) ? v : selection.first()
+      );
+    }, 0);
+  }
 });

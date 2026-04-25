@@ -4,6 +4,7 @@ import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { DraftHeader, DraftPanel, DraftTitle } from "./styles.tsx";
 import { SelectingCaptains } from "./SelectingCaptains.tsx";
 import { Drafting } from "./Drafting.tsx";
+import { Chat } from "../Chat.tsx";
 
 export const CaptainsDraft = () => {
   const { t } = useTranslation();
@@ -18,6 +19,7 @@ export const CaptainsDraft = () => {
       </DraftHeader>
       {draft.phase === "selecting-captains" && <SelectingCaptains />}
       {draft.phase === "drafting" && <Drafting />}
+      <Chat />
     </DraftPanel>
   );
 };

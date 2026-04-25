@@ -1,9 +1,10 @@
 import { afterEach, describe } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { leave } from "./lobbyApi.ts";
+import { endRound, leave } from "./lobbyApi.ts";
 import { cleanupTest, it } from "./testing/setup.ts";
 import { getPlayerGold, grantPlayerGold } from "./api/player.ts";
 import { newUnit } from "./api/unit.ts";
+import { lobbyContext } from "./contexts.ts";
 
 afterEach(cleanupTest);
 
@@ -100,6 +101,36 @@ describe("leave - gold distribution", () => {
       // Gold should NOT be distributed in practice mode
       const sheep2FinalGold = getPlayerGold("sheep2");
       expect(sheep2FinalGold).toBe(sheep2InitialGold);
+    },
+  );
+});
+
+describe("endRound - captains draft round summary", () => {
+  it(
+    "should record original teams when first captains round ends (before swap)",
+    { sheep: ["sheep1"], wolves: ["wolf1"] },
+    function* () {
+      const lobby = lobbyContext.current!;
+      lobby.captainsDraft = {
+        phase: "drafted",
+        captains: ["sheep1", "wolf1"],
+        picks: [[], []],
+        currentPicker: 0,
+        picksThisTurn: 1,
+      };
+
+      yield;
+
+      endRound(false);
+
+      expect(lobby.rounds).toHaveLength(1);
+      expect(lobby.rounds[0].sheep).toEqual(["sheep1"]);
+      expect(lobby.rounds[0].wolves).toEqual(["wolf1"]);
+
+      const sheep1 = Array.from(lobby.players).find((p) => p.id === "sheep1");
+      const wolf1 = Array.from(lobby.players).find((p) => p.id === "wolf1");
+      expect(sheep1?.team).toBe("wolf");
+      expect(wolf1?.team).toBe("sheep");
     },
   );
 });

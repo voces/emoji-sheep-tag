@@ -147,18 +147,18 @@ export const endRound = (canceled = false) => {
   console.log(new Date(), "Round ended in lobby", lobby.name);
   lobby.round.clearInterval();
 
-  const { captainsPhaseChanged, inSecondCaptainsRound } = processRoundEnd(
-    lobby,
-    canceled,
-    wasPractice,
-  );
-
   const round = !canceled &&
       !wasPractice &&
       lobby.settings.mode !== "switch" &&
       lobby.settings.mode !== "vamp"
     ? createRoundSummary()
     : undefined;
+
+  const { captainsPhaseChanged, inSecondCaptainsRound } = processRoundEnd(
+    lobby,
+    canceled,
+    wasPractice,
+  );
 
   // Sync sheepCount from ECS entities back to Client objects (before clearing round)
   if (!canceled) {

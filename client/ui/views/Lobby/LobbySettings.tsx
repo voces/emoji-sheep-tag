@@ -65,7 +65,11 @@ const MapSelector = styled.button`
   transition: background ${({ theme }) => theme.motion.fast} ${({ theme }) =>
     theme.motion.easeOut};
 
-  &.hover {
+  &[disabled] {
+    cursor: default;
+  }
+
+  &.hover:not([disabled]) {
     background: ${({ theme }) => theme.surface[2]};
   }
 `;
@@ -435,9 +439,11 @@ export const LobbySettings = () => {
             <Map size={14} />
             <MapName>{selectedMap?.name ?? lobbySettings.map}</MapName>
           </MapSelectorLeft>
-          <MapChevron>
-            <ChevronDown size={14} />
-          </MapChevron>
+          {!settingsDisabled && (
+            <MapChevron>
+              <ChevronDown size={14} />
+            </MapChevron>
+          )}
         </MapSelector>
         {mapMenuOpen && mapButtonRef.current && createPortal(
           (() => {

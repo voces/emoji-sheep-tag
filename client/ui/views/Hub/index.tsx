@@ -15,7 +15,7 @@ import { Tag } from "@/components/Tag.tsx";
 import { send } from "../../../messaging.ts";
 import { setStoredPlayerName } from "../../../util/playerPrefs.ts";
 import { colors } from "@/shared/data.ts";
-import { disconnect } from "../../../connection.ts";
+import { disconnect, isMultiplayer } from "../../../connection.ts";
 
 const HubCard = styled.div`
   position: absolute;
@@ -236,7 +236,9 @@ export const Hub = () => {
         >
           <ChevronLeft size={16} />
         </SmallGhostButton>
-        <HeaderTitle>{t("hub.title")}</HeaderTitle>
+        <HeaderTitle>
+          {t(isMultiplayer() ? "hub.title" : "hub.offlineTitle")}
+        </HeaderTitle>
         <Tag>
           <Users size={12} />{" "}
           {lobbies.reduce((sum, l) => sum + l.playerCount, 0)}

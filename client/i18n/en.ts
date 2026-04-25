@@ -21,6 +21,7 @@ export const en = {
   lobby: {
     leave: "Leave",
     multiplayer: "Multiplayer",
+    offline: "Offline",
     settings: "Settings",
 
     players: "Players",
@@ -113,6 +114,7 @@ export const en = {
     nameNudgeAction: "Set a real name",
 
     averageTime: "Average time",
+    longestRound: "Longest round: {{duration}}",
     cpu: "CPU",
 
     server: "Server",
@@ -334,6 +336,7 @@ export const en = {
   },
   hub: {
     title: "Multiplayer",
+    offlineTitle: "Offline",
     createLobby: "Create lobby",
     join: "Join",
     full: "Full",

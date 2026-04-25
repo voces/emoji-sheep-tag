@@ -84,10 +84,9 @@ const PingDot = styled.span<{ $ping: number }>`
       : theme.danger.DEFAULT};
 `;
 
-const MainGrid = styled.div<{ $showSidebar: boolean }>`
+const MainGrid = styled.div`
   display: grid;
-  grid-template-columns: ${({ $showSidebar }) =>
-    $showSidebar ? "1fr 380px" : "1fr"};
+  grid-template-columns: 1fr 380px;
   gap: ${({ theme }) => theme.space[4]};
   padding: ${({ theme }) => theme.space[4]};
   overflow: hidden;
@@ -139,9 +138,13 @@ export const Lobby = () => {
             <ChevronLeft size={14} /> {t("lobby.leave")}
           </SmallGhostButton>
           <CrumbSep>/</CrumbSep>
-          <Crumb>{t("lobby.multiplayer")}</Crumb>
+          <Crumb>
+            {t(isMultiplayer() ? "lobby.multiplayer" : "lobby.offline")}
+          </Crumb>
           <CrumbSep>/</CrumbSep>
-          <CrumbCurrent>{selectedMap?.name ?? lobbySettings.map}</CrumbCurrent>
+          <CrumbCurrent>
+            {lobbySettings.name ?? selectedMap?.name ?? lobbySettings.map}
+          </CrumbCurrent>
           <AccentTag>
             {sheepCount}v{wolfCount}
           </AccentTag>
@@ -154,9 +157,9 @@ export const Lobby = () => {
         </TopRight>
       </TopBar>
 
-      <MainGrid $showSidebar={!inCaptainsMode}>
+      <MainGrid>
         {inCaptainsMode ? <CaptainsDraft /> : <Players />}
-        {!inCaptainsMode && <LobbySettings />}
+        <LobbySettings />
       </MainGrid>
 
       <LobbyFooter />

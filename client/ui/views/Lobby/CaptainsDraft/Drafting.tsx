@@ -1,17 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
-import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { usePlayers } from "@/hooks/usePlayers.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { GoldTag } from "@/components/Tag.tsx";
-import { SmallGhostButton } from "@/components/forms/ActionButton.tsx";
 import { send } from "../../../../messaging.ts";
 import { nonNull } from "@/shared/types.ts";
 import {
-  ButtonRow,
   DraftColumns,
   PlayerIcon,
   PlayerName,
@@ -21,20 +18,19 @@ import {
   TeamColumn,
   TeamHeader,
   TeamLabel,
+  TeamPlayer,
   TurnBanner,
 } from "./styles.tsx";
 
 export const Drafting = () => {
   const { t } = useTranslation();
   const draft = useReactiveVar(captainsDraftVar);
-  const { host } = useReactiveVar(lobbySettingsVar);
   const localPlayerId = useReactiveVar(localPlayerIdVar);
   const players = usePlayers();
   useListenToEntities(players, ["playerColor", "name", "team"]);
 
   if (!draft) return null;
 
-  const isHost = localPlayerId === host;
   const nonObservers = players.filter(
     (p) => p.team !== "observer" && p.team !== "pending",
   );
@@ -85,7 +81,7 @@ export const Drafting = () => {
             <GoldTag>{t("lobby.captain")}</GoldTag>
           </TeamHeader>
           {team0Players.map((p) => (
-            <PoolPlayer key={p.id} $clickable={false}>
+            <TeamPlayer key={p.id}>
               <PlayerIcon>
                 <SvgIcon
                   icon="sheep"
@@ -93,7 +89,7 @@ export const Drafting = () => {
                 />
               </PlayerIcon>
               <PlayerName>{p.name}</PlayerName>
-            </PoolPlayer>
+            </TeamPlayer>
           ))}
         </TeamColumn>
 
@@ -113,7 +109,7 @@ export const Drafting = () => {
             <GoldTag>{t("lobby.captain")}</GoldTag>
           </TeamHeader>
           {team1Players.map((p) => (
-            <PoolPlayer key={p.id} $clickable={false}>
+            <TeamPlayer key={p.id}>
               <PlayerIcon>
                 <SvgIcon
                   icon="wolf"
@@ -121,7 +117,7 @@ export const Drafting = () => {
                 />
               </PlayerIcon>
               <PlayerName>{p.name}</PlayerName>
-            </PoolPlayer>
+            </TeamPlayer>
           ))}
         </TeamColumn>
       </DraftColumns>
@@ -146,17 +142,6 @@ export const Drafting = () => {
             </PoolPlayer>
           ))}
         </PoolSection>
-      )}
-
-      {isHost && (
-        <ButtonRow>
-          <SmallGhostButton
-            type="button"
-            onClick={() => send({ type: "cancelCaptains" })}
-          >
-            {t("lobby.cancelDraft")}
-          </SmallGhostButton>
-        </ButtonRow>
       )}
     </>
   );
