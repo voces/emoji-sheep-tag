@@ -18,6 +18,7 @@ import {
   sendToShard,
 } from "../shardRegistry.ts";
 import { id as generateId } from "@/shared/util/id.ts";
+import { notifyStatusChange } from "../statusStream.ts";
 
 export const zJoinLobby = z.object({
   type: z.literal("joinLobby"),
@@ -124,6 +125,7 @@ export const joinLobby = (
 
     // Update lobby list for hub
     broadcastLobbyList();
+    notifyStatusChange();
 
     // Fetch geolocation for shard sorting (async, broadcasts when complete)
     fetchClientGeoAndBroadcast(client);

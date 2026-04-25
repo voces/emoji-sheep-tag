@@ -60,6 +60,7 @@ export class ShardLobby {
     playerId: string,
     startLocation: { x: number; y: number; map: string },
   ) => void;
+  onClientChange?: () => void;
 
   /** Broadcast a message to all clients in this lobby */
   send(message: Parameters<GameClient["send"]>[0]) {
@@ -119,10 +120,12 @@ export class ShardLobby {
     if (this.round) {
       this.addPlayerToRunningGame(client);
       this.clients.set(client.id, client);
+      this.onClientChange?.();
       return;
     }
 
     this.clients.set(client.id, client);
+    this.onClientChange?.();
 
     // Check if all expected players have connected and start
     if (this.expectedPlayers.size === 0) this.startGame();
@@ -215,6 +218,7 @@ export class ShardLobby {
     }
 
     this.clients.delete(client.id);
+    this.onClientChange?.();
 
     // If all clients disconnect, end the lobby
     if (this.clients.size === 0) {

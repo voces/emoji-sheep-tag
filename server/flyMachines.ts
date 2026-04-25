@@ -72,6 +72,10 @@ const managedMachines = new Map<string, ManagedMachine>();
 // Maps region code -> machineId for quick lookup
 const regionToMachine = new Map<string, string>();
 
+// Reverse lookup: lobbyId -> machineId. Survives shard disconnects so cleanup
+// can still run after a RegisteredShard is gone.
+const lobbyToMachine = new Map<string, string>();
+
 // Machines currently launching (region code -> Promise that resolves to machine ID or rejects)
 const launchingMachines = new Map<string, Promise<string>>();
 
@@ -307,6 +311,7 @@ export const addLobbyToFlyMachine = (machineId: string, lobbyId: string) => {
   if (!machine) return;
 
   machine.lobbies.add(lobbyId);
+  lobbyToMachine.set(lobbyId, machineId);
 
   // Cancel any pending destruction
   if (machine.destroyTimer) {
@@ -320,13 +325,18 @@ export const addLobbyToFlyMachine = (machineId: string, lobbyId: string) => {
 };
 
 /**
- * Remove a lobby from a machine and schedule destruction if no lobbies remain
+ * Remove a lobby from a machine and schedule destruction if no lobbies remain.
+ * Looks up the machine via the reverse map if `machineId` is omitted, so cleanup
+ * works even after the RegisteredShard is gone.
  */
 export const removeLobbyFromFlyMachine = (
-  machineId: string,
+  machineIdOrUndefined: string | undefined,
   lobbyId: string,
 ) => {
+  const machineId = machineIdOrUndefined ?? lobbyToMachine.get(lobbyId);
+  if (!machineId) return;
   const machine = managedMachines.get(machineId);
+  lobbyToMachine.delete(lobbyId);
   if (!machine) return;
 
   machine.lobbies.delete(lobbyId);
@@ -345,41 +355,54 @@ export const removeLobbyFromFlyMachine = (
   }
 };
 
-/**
- * Destroy a machine
- */
-export const destroyFlyMachine = async (machineId: string) => {
-  const machine = managedMachines.get(machineId);
-  if (!machine) return;
-
-  // Clear timer if set
-  if (machine.destroyTimer) {
-    clearTimeout(machine.destroyTimer);
-  }
-
-  // Clean up tracking
-  managedMachines.delete(machineId);
-  regionToMachine.delete(machine.region);
-
-  console.log(new Date(), `[Fly] Destroying machine ${machineId}...`);
+const sendDestroyRequest = async (machineId: string): Promise<boolean> => {
   try {
     const response = await flyRequest(`/machines/${machineId}?force=true`, {
       method: "DELETE",
     });
-    if (!response.ok) {
-      console.error(
-        new Date(),
-        `[Fly] Failed to destroy machine ${machineId}: ${await response
-          .text()}`,
-      );
-    } else {
-      console.log(new Date(), `[Fly] Machine ${machineId} destroyed`);
-    }
+    if (response.ok || response.status === 404) return true;
+    console.error(
+      new Date(),
+      `[Fly] Destroy ${machineId} returned ${response.status}: ${await response
+        .text()}`,
+    );
+    return false;
   } catch (err) {
     console.error(
       new Date(),
-      `[Fly] Error destroying machine ${machineId}:`,
+      `[Fly] Network error destroying ${machineId}:`,
       err,
+    );
+    return false;
+  }
+};
+
+const untrackMachine = (machineId: string) => {
+  const machine = managedMachines.get(machineId);
+  if (!machine) return;
+  if (machine.destroyTimer) clearTimeout(machine.destroyTimer);
+  for (const lobbyId of machine.lobbies) lobbyToMachine.delete(lobbyId);
+  managedMachines.delete(machineId);
+  if (regionToMachine.get(machine.region) === machineId) {
+    regionToMachine.delete(machine.region);
+  }
+};
+
+/**
+ * Destroy a machine. DELETE first, then untrack only on success — failures
+ * leave the machine in `managedMachines` so the periodic reconciliation loop
+ * (or a subsequent destroy) can retry.
+ */
+export const destroyFlyMachine = async (machineId: string) => {
+  console.log(new Date(), `[Fly] Destroying machine ${machineId}...`);
+  const ok = await sendDestroyRequest(machineId);
+  if (ok) {
+    console.log(new Date(), `[Fly] Machine ${machineId} destroyed`);
+    untrackMachine(machineId);
+  } else {
+    console.warn(
+      new Date(),
+      `[Fly] Destroy ${machineId} failed; will retry via reconciliation`,
     );
   }
 };
@@ -434,19 +457,113 @@ export const getFlyRegionForMachine = (
   machineId: string,
 ): string | undefined => managedMachines.get(machineId)?.region;
 
+const RECONCILE_INTERVAL_MS = 10 * 60 * 1000;
+const RECONCILE_MIN_AGE_MS = 10 * 60 * 1000;
+
+const listAllMachines = async (): Promise<Machine[]> => {
+  const response = await flyRequest("/machines");
+  if (!response.ok) {
+    throw new Error(`List machines failed: ${await response.text()}`);
+  }
+  return response.json();
+};
+
+const isLiveState = (state: MachineState) =>
+  state === "created" || state === "starting" || state === "started" ||
+  state === "stopping" || state === "stopped";
+
 /**
- * Handle a shard disconnecting - clear shard association but keep machine tracking
- * so destruction timers can still fire
+ * Periodic reconciliation against the Fly API. Treats in-memory state as a
+ * cache; destroys any machine that:
+ *  - exists in Fly but not in `managedMachines` (orphaned by a primary restart), or
+ *  - is tracked but has no lobbies, no active destroy timer, and is older than
+ *    RECONCILE_MIN_AGE_MS (covers timers lost to process exit / failed cleanup).
  */
-export const onFlyShardDisconnected = (shardId: string) => {
-  const machineId = getFlyMachineIdForShard(shardId);
-  if (machineId) {
-    const machine = managedMachines.get(machineId);
-    if (machine) {
-      // Clear shard association but keep machine tracking for destruction timer
-      machine.shardId = undefined;
-      // Clear region mapping so a new shard can be launched if needed
-      regionToMachine.delete(machine.region);
+const reconcileFlyMachines = async () => {
+  let machines: Machine[];
+  try {
+    machines = await listAllMachines();
+  } catch (err) {
+    console.error(new Date(), "[Fly] Reconciliation list failed:", err);
+    return;
+  }
+
+  const seen = new Set<string>();
+  for (const m of machines) {
+    seen.add(m.id);
+    if (!isLiveState(m.state)) continue;
+
+    const tracked = managedMachines.get(m.id);
+    if (!tracked) {
+      console.warn(
+        new Date(),
+        `[Fly] Reconciliation: orphan machine ${m.id} (${m.region}, ${m.state}) — destroying`,
+      );
+      await destroyFlyMachine(m.id);
+      continue;
     }
+
+    const ageMs = Date.now() - tracked.launchTime;
+    if (
+      tracked.lobbies.size === 0 && !tracked.destroyTimer &&
+      ageMs > RECONCILE_MIN_AGE_MS
+    ) {
+      console.warn(
+        new Date(),
+        `[Fly] Reconciliation: idle machine ${m.id} (no lobbies, no timer, age ${
+          Math.round(ageMs / 1000)
+        }s) — destroying`,
+      );
+      await destroyFlyMachine(m.id);
+    }
+  }
+
+  // Drop tracking for machines Fly no longer reports as live.
+  for (const machineId of [...managedMachines.keys()]) {
+    if (!seen.has(machineId)) {
+      console.warn(
+        new Date(),
+        `[Fly] Reconciliation: tracked machine ${machineId} not found in Fly — clearing local state`,
+      );
+      untrackMachine(machineId);
+    }
+  }
+};
+
+let reconcileTimer: number | undefined;
+
+export const startFlyReconciliation = () => {
+  if (!isFlyEnabled() || reconcileTimer !== undefined) return;
+  // Run once on startup (catches restart-orphans immediately), then on interval.
+  reconcileFlyMachines().catch((err) =>
+    console.error(new Date(), "[Fly] Reconciliation crashed:", err)
+  );
+  reconcileTimer = setInterval(() => {
+    reconcileFlyMachines().catch((err) =>
+      console.error(new Date(), "[Fly] Reconciliation crashed:", err)
+    );
+  }, RECONCILE_INTERVAL_MS);
+};
+
+/**
+ * Handle a shard disconnecting - clear shard association, explicitly remove
+ * each lobby from the machine (so the destruction timer starts), and keep the
+ * machine entry around so the timer can fire.
+ */
+export const onFlyShardDisconnected = (shardId: string, lobbyIds: string[]) => {
+  const machineId = getFlyMachineIdForShard(shardId);
+  if (!machineId) return;
+  const machine = managedMachines.get(machineId);
+  if (!machine) return;
+
+  for (const lobbyId of lobbyIds) {
+    removeLobbyFromFlyMachine(machineId, lobbyId);
+  }
+
+  // Clear shard association but keep machine tracking for destruction timer
+  machine.shardId = undefined;
+  // Clear region mapping so a new shard can be launched if needed
+  if (regionToMachine.get(machine.region) === machineId) {
+    regionToMachine.delete(machine.region);
   }
 };

@@ -149,6 +149,8 @@ const connectToPrimary = () => {
           });
         };
 
+        lobby.onClientChange = () => reportStatus();
+
         reportStatus();
         break;
       }

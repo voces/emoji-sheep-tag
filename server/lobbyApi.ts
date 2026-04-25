@@ -21,6 +21,7 @@ import {
   serializeCaptainsDraft,
 } from "./actions/captains.ts";
 import { broadcastShards } from "./shardRegistry.ts";
+import { emitRoundEnded, notifyStatusChange } from "./statusStream.ts";
 
 export const convertPendingPlayersToTeams = (lobby: Lobby) => {
   const pendingPlayers = Array.from(lobby.players).filter((p) =>
@@ -126,6 +127,11 @@ export const sendRoundEndMessages = (
 
 export const createRoundSummary = () => {
   const lobby = lobbyContext.current;
+  const duration = Math.min(
+    (lobby.round?.duration ?? 0) * 1000,
+    Date.now() - (lobby.round?.start ?? Date.now()),
+  );
+  if (duration <= 0) return undefined;
   return {
     sheep: Array.from(lobby.players).filter((p) => p.team === "sheep").map((
       p,
@@ -133,10 +139,7 @@ export const createRoundSummary = () => {
     wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((
       p,
     ) => p.id),
-    duration: Math.min(
-      (lobby.round?.duration ?? 0) * 1000,
-      Date.now() - (lobby.round?.start ?? Date.now()),
-    ),
+    duration,
   };
 };
 
@@ -177,7 +180,21 @@ export const endRound = (canceled = false) => {
   });
 
   lobby.status = "lobby";
-  if (round) lobby.rounds.push(round);
+  if (round) {
+    lobby.rounds.push(round);
+    const nameById = new Map(
+      Array.from(lobby.players).map((p) => [p.id, p.name]),
+    );
+    emitRoundEnded({
+      lobby: lobby.name,
+      mode: lobby.settings.mode,
+      sheep: round.sheep.map((id) => nameById.get(id) ?? id),
+      wolves: round.wolves.map((id) => nameById.get(id) ?? id),
+      durationMs: round.duration,
+      endedAt: Date.now(),
+    });
+  }
+  notifyStatusChange();
 
   sendRoundEndMessages(round, captainsPhaseChanged, inSecondCaptainsRound, {
     canceled,
@@ -333,6 +350,7 @@ export const leave = (client?: Client) => {
 
   // Update lobby list for hub
   broadcastLobbyList();
+  notifyStatusChange();
 
   // Update shard list (player set changed, may affect auto-select)
   broadcastShards(lobby);

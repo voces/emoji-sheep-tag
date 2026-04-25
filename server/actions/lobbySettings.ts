@@ -6,6 +6,7 @@ import { LobbySettings } from "../../client/schemas.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
 import { getIdealSheep, getIdealTime } from "../st/roundHelpers.ts";
 import { getShardInfoList, isValidShardId } from "../shardRegistry.ts";
+import { notifyStatusChange } from "../statusStream.ts";
 
 // C->S
 export const zLobbySettings = z.object({
@@ -127,6 +128,7 @@ export const lobbySettings = (
     lobby.settings.shard = shard ?? undefined;
     // Host explicitly chose a server, disable auto-select
     lobby.settings.shardAutoSelect = false;
+    notifyStatusChange();
   }
   if (speedMultiplier !== undefined) {
     lobby.settings.speedMultiplier = speedMultiplier;

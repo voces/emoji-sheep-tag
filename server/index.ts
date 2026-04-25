@@ -4,7 +4,10 @@ import { handleSocket } from "./client.ts";
 import { handleShardSocket } from "./shardRegistry.ts";
 import { startWatchdog } from "./watchdog.ts";
 import { ensureDir } from "@std/fs";
-import { createStatusStream, getPlayerCount } from "./statusStream.ts";
+import { handleStatusRoute, isPageLoad } from "./status/handlers.ts";
+import { getPlayerCount } from "./status/sse.ts";
+import { incrementPageLoads } from "./status/storage.ts";
+import { startFlyReconciliation } from "./flyMachines.ts";
 
 const isDev = Deno.args.includes("--dev");
 
@@ -22,6 +25,7 @@ Deno.serve({
   port,
   onListen: async (path) => {
     await startWatchdog();
+    startFlyReconciliation();
     console.log(
       `[Server] Server ready on port ${path.transport}://${path.hostname}:${path.port}`,
     );
@@ -45,7 +49,14 @@ Deno.serve({
     return response;
   }
 
-  if (url.pathname === "/api/status") return createStatusStream();
+  if (req.method === "GET" && isPageLoad(url.pathname)) {
+    incrementPageLoads().catch((err) =>
+      console.error("[status] incrementPageLoads failed:", err)
+    );
+  }
+
+  const statusResponse = await handleStatusRoute(req, url);
+  if (statusResponse) return statusResponse;
 
   const filepath = resolve(dist, url.pathname.slice(1));
   if (

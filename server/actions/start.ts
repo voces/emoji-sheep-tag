@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
 import { endRound, send } from "../lobbyApi.ts";
+import { notifyStatusChange } from "../statusStream.ts";
 import {
   draftTeams,
   getIdealSheep,
@@ -320,6 +321,7 @@ export const start = async (
   if (activePlayers.length === 1) practice = true;
 
   lobby.status = "playing";
+  notifyStatusChange();
 
   // Clear captains draft when using Smart (randomized teams)
   if (!fixedTeams && lobby.captainsDraft) {

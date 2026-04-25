@@ -11,7 +11,8 @@
       "Bash(cp \"/mnt/c/Users/verit/Downloads/est-handoff.tar.gz\" /tmp/)",
       "Bash(tar -tzf /tmp/est-handoff.tar.gz)",
       "Bash(tar -xzf /tmp/est-handoff.tar.gz -C /tmp/)",
-      "Read(//home/verit/.local/share/**)"
+      "Read(//home/verit/.local/share/**)",
+      "Bash(git log *)"
     ],
     "additionalDirectories": [
       "/tmp"

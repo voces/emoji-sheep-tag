@@ -1,51 +1,42 @@
-import { getAllClients } from "./client.ts";
-import { lobbies } from "./lobby.ts";
+const handlers = new Set<() => void>();
 
-const encoder = new TextEncoder();
-const controllers = new Set<ReadableStreamDefaultController>();
+export const onStatusChange = (handler: () => void) => {
+  handlers.add(handler);
+  return () => handlers.delete(handler);
+};
 
-export const getPlayerCount = () => getAllClients().size;
-export const getLobbyCount = () => lobbies.size;
-
-const broadcast = () => {
-  const data = JSON.stringify({
-    players: getPlayerCount(),
-    lobbies: getLobbyCount(),
-  });
-  for (const controller of controllers) {
+export const notifyStatusChange = () => {
+  for (const handler of handlers) {
     try {
-      controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+      handler();
     } catch (err) {
-      console.error(err);
-      controllers.delete(controller);
+      console.error("[status] handler failed:", err);
     }
   }
 };
 
-export const notifyStatusChange = () => broadcast();
+export type RoundEndedEvent = {
+  lobby: string;
+  mode: string;
+  sheep: string[];
+  wolves: string[];
+  durationMs: number;
+  endedAt: number;
+};
 
-export const createStatusStream = () => {
-  let ctrl: ReadableStreamDefaultController;
-  const body = new ReadableStream({
-    start(controller) {
-      ctrl = controller;
-      controllers.add(ctrl);
-      const data = JSON.stringify({
-        players: getPlayerCount(),
-        lobbies: getLobbyCount(),
-      });
-      ctrl.enqueue(encoder.encode(`data: ${data}\n\n`));
-    },
-    cancel() {
-      controllers.delete(ctrl);
-    },
-  });
+const roundHandlers = new Set<(event: RoundEndedEvent) => void>();
 
-  return new Response(body, {
-    headers: {
-      "content-type": "text/event-stream",
-      "cache-control": "no-cache",
-      "connection": "keep-alive",
-    },
-  });
+export const onRoundEnded = (handler: (event: RoundEndedEvent) => void) => {
+  roundHandlers.add(handler);
+  return () => roundHandlers.delete(handler);
+};
+
+export const emitRoundEnded = (event: RoundEndedEvent) => {
+  for (const handler of roundHandlers) {
+    try {
+      handler(event);
+    } catch (err) {
+      console.error("[status] round handler failed:", err);
+    }
+  }
 };

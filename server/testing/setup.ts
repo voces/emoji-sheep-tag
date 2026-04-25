@@ -103,6 +103,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   lobby.round = {
     ecs,
     start: Date.now(),
+    duration: 60,
     clearInterval: () => {},
     practice: false,
     editor: false,

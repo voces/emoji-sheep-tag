@@ -5,6 +5,7 @@ import { broadcastLobbyList } from "./hub.ts";
 import { generateLobbyName } from "./util/lobbyNames.ts";
 import { cleanupSmartDrafter } from "./st/roundHelpers.ts";
 import { cleanupShardForDeletedLobby } from "./shardRegistry.ts";
+import { notifyStatusChange } from "./statusStream.ts";
 import type { Game } from "./ecs.ts";
 
 export type LobbyPlayer = Client | ComputerPlayer;
@@ -105,6 +106,7 @@ export const deleteLobby = (lobby: Lobby) => {
   cleanupShardForDeletedLobby(lobby.name, lobby.activeShard);
   console.log(new Date(), "Lobby deleted", lobby.name);
   broadcastLobbyList();
+  notifyStatusChange();
 };
 
 export const newLobby = (host?: Client, silent = false) => {
@@ -140,6 +142,7 @@ export const newLobby = (host?: Client, silent = false) => {
 
   // Update lobby list for hub
   broadcastLobbyList();
+  notifyStatusChange();
 
   return lobby;
 };

@@ -10,6 +10,7 @@ import { lobbyContext } from "./contexts.ts";
 import { lobbies, type Lobby } from "./lobby.ts";
 import { processRoundEnd, send, sendRoundEndMessages } from "./lobbyApi.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
+import { emitRoundEnded, notifyStatusChange } from "./statusStream.ts";
 import {
   type FlyRegion,
   getFlyMachineForRegion,
@@ -214,13 +215,13 @@ export const endShardRound = (
     `[Shard] Round ended in ${lobbyId}${options.canceled ? " (canceled)" : ""}`,
   );
 
-  // Clean up Fly machine tracking before clearing activeShard
+  // Clean up Fly machine tracking before clearing activeShard.
+  // removeLobbyFromFlyMachine looks up via the reverse map when shard ref is
+  // missing (shard may have already disconnected).
   if (lobby.activeShard) {
     const shard = shards.get(lobby.activeShard);
-    if (shard?.flyMachineId) {
-      removeLobbyFromFlyMachine(shard.flyMachineId, lobbyId);
-    }
     shard?.lobbies.delete(lobbyId);
+    removeLobbyFromFlyMachine(shard?.flyMachineId, lobbyId);
   }
 
   lobbyContext.with(lobby, () => {
@@ -251,7 +252,23 @@ export const endShardRound = (
           }
         }
       }
+
+      if (options.round.duration > 0) {
+        const nameById = new Map(
+          Array.from(lobby.players).map((p) => [p.id, p.name]),
+        );
+        emitRoundEnded({
+          lobby: lobby.name,
+          mode: lobby.settings.mode,
+          sheep: options.round.sheep.map((id) => nameById.get(id) ?? id),
+          wolves: options.round.wolves.map((id) => nameById.get(id) ?? id),
+          durationMs: options.round.duration,
+          endedAt: Date.now(),
+        });
+      }
     }
+
+    notifyStatusChange();
 
     // Update start locations on Client objects for next round
     if (options.startLocations) {
@@ -284,15 +301,10 @@ export const cleanupShardForDeletedLobby = (
   lobbyId: string,
   activeShardId?: string,
 ) => {
-  if (!activeShardId) return;
-
-  const shard = shards.get(activeShardId);
-  if (shard) {
-    shard.lobbies.delete(lobbyId);
-    if (shard.flyMachineId) {
-      removeLobbyFromFlyMachine(shard.flyMachineId, lobbyId);
-    }
-  }
+  if (activeShardId) shards.get(activeShardId)?.lobbies.delete(lobbyId);
+  // Always run Fly cleanup via the reverse map — the shard may have already
+  // disconnected before the lobby was deleted.
+  removeLobbyFromFlyMachine(undefined, lobbyId);
 };
 
 export const handleShardSocket = (
@@ -433,6 +445,7 @@ export const handleShardSocket = (
 
         sendToShard(shard, { type: "registered", shardId: id });
         broadcastShards();
+        notifyStatusChange();
         break;
       }
 
@@ -440,6 +453,7 @@ export const handleShardSocket = (
         if (!shard) return;
         shard.lobbyCount = message.lobbies;
         shard.playerCount = message.players;
+        notifyStatusChange();
         break;
       }
 
@@ -493,8 +507,11 @@ export const handleShardSocket = (
         `[Shard] Shard disconnected: ${shard.name} (${shard.id})`,
       );
 
-      // End rounds for all lobbies that were playing on this shard
-      for (const lobbyId of shard.lobbies) {
+      // Snapshot the lobby ids — endShardRound mutates shard.lobbies via
+      // removeLobbyFromFlyMachine + shard.lobbies.delete. Iterating the live
+      // Set would skip entries.
+      const lobbyIds = Array.from(shard.lobbies);
+      for (const lobbyId of lobbyIds) {
         endShardRound(lobbyId, {
           canceled: true,
           cancelMessage: `Round canceled (${shard.name} disconnected).`,
@@ -509,10 +526,11 @@ export const handleShardSocket = (
 
       // Clean up Fly machine tracking
       if (shard.flyMachineId) {
-        onFlyShardDisconnected(shard.id);
+        onFlyShardDisconnected(shard.id, lobbyIds);
       }
 
       broadcastShards();
+      notifyStatusChange();
     }
   });
 };
