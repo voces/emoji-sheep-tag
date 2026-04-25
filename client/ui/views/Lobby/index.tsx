@@ -18,6 +18,7 @@ import { LobbyFooter } from "./LobbyFooter.tsx";
 import { MAPS } from "@/shared/maps/manifest.ts";
 import { isMultiplayer } from "../../../connection.ts";
 import { stats } from "../../../util/Stats.ts";
+import { getCurrentPingTarget } from "../../../ping.ts";
 
 const LobbyShell = styled.div`
   position: absolute;
@@ -93,18 +94,31 @@ const MainGrid = styled.div`
   min-height: 0;
 `;
 
-const PingTag = ({ shardLabel }: { shardLabel: string | undefined }) => {
+const PingTag = (
+  { shardLabel, primaryLabel }: {
+    shardLabel: string | undefined;
+    primaryLabel: string | undefined;
+  },
+) => {
   const [ping, setPing] = useState(NaN);
+  const [target, setTarget] = useState(getCurrentPingTarget());
   useEffect(() => {
     if (!isMultiplayer()) return;
-    const id = setInterval(() => setPing(stats.msPanel.value), 1000);
+    const id = setInterval(() => {
+      setPing(stats.msPanel.value);
+      setTarget(getCurrentPingTarget());
+    }, 1000);
     return () => clearInterval(id);
   }, []);
+
+  const label = target === "primary" || target === "none"
+    ? primaryLabel
+    : shardLabel;
 
   return (
     <Tag>
       {!isNaN(ping) && <PingDot $ping={ping} />}
-      {shardLabel}
+      {label}
       {!isNaN(ping) && ` ${Math.round(ping)}ms`}
     </Tag>
   );
@@ -127,8 +141,10 @@ export const Lobby = () => {
 
   const currentShard = lobbySettings.shard
     ? lobbySettings.shards.find((s) => s.id === lobbySettings.shard)
-    : lobbySettings.shards[0];
+    : undefined;
   const shardLabel = currentShard?.region ?? currentShard?.name;
+  const primaryShard = lobbySettings.shards.find((s) => s.id === "");
+  const primaryLabel = primaryShard?.region ?? primaryShard?.name;
 
   return (
     <LobbyShell>
@@ -148,7 +164,9 @@ export const Lobby = () => {
           <AccentTag>
             {sheepCount}v{wolfCount}
           </AccentTag>
-          {isMultiplayer() && <PingTag shardLabel={shardLabel} />}
+          {isMultiplayer() && (
+            <PingTag shardLabel={shardLabel} primaryLabel={primaryLabel} />
+          )}
         </TopLeft>
         <TopRight>
           <SmallGhostButton onClick={() => showSettingsVar(true)}>

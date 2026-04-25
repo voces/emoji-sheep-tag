@@ -592,13 +592,15 @@ const buildShardInfoList = (
 
   // Add registered shards
   for (const s of shards.values()) {
+    const isOpen = s.socket.readyState === WebSocket.OPEN;
     result.push({
       id: s.id,
       name: s.name,
       region: s.region,
       playerCount: s.playerCount,
       lobbyCount: s.lobbyCount,
-      status: s.socket.readyState === WebSocket.OPEN ? "online" : "suspended",
+      status: isOpen ? "online" : "suspended",
+      publicUrl: isOpen ? s.publicUrl : undefined,
       coordinates: s.coordinates,
     });
   }

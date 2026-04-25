@@ -270,7 +270,7 @@ beforeEach(async () => {
 afterEach(async () => {
   // Stop ping timer to prevent timer leaks
   try {
-    const { stopPing } = await import("../messaging.ts");
+    const { stopPing } = await import("../ping.ts");
     stopPing();
   } catch {
     // Ignore import errors during cleanup

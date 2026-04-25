@@ -286,6 +286,18 @@ Deno.serve({
     return response;
   }
 
+  // Latency probe for clients measuring RTT. Empty body, CORS open so any
+  // origin can fetch it from the browser.
+  if (url.pathname === "/ping") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "access-control-allow-origin": "*",
+        "cache-control": "no-store",
+      },
+    });
+  }
+
   // Health check endpoint
   if (url.pathname === "/health") {
     return new Response(

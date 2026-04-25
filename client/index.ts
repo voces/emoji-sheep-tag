@@ -1,6 +1,6 @@
 import "./i18n/index.ts";
 import "./suppressReactDevtools.ts";
-import { startPing } from "./messaging.ts";
+import { startPing } from "./ping.ts";
 import "./ui/root.tsx";
 import "./controls.ts";
 import "./systems/lookup.ts";

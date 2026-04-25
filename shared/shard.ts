@@ -138,6 +138,9 @@ export const zShardInfo = z.object({
   status: z.enum(["online", "launching", "suspended"]),
   // For Fly.io regions that can be launched on-demand
   flyRegion: z.string().optional(), // e.g., "lax", "ewr"
+  // Public URL of the shard, included only when status === "online" so clients
+  // can open a lightweight ping connection without needing a token.
+  publicUrl: z.string().optional(),
 });
 
 export type ShardInfo = z.infer<typeof zShardInfo>;

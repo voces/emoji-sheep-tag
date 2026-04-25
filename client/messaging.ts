@@ -1,7 +1,6 @@
 import type { ClientToServerMessage } from "../server/client.ts";
 import { getWebSocket } from "./connection.ts";
 import { getShardSocket } from "./shardConnection.ts";
-import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { editorMapModifiedVar } from "@/vars/editor.ts";
 
 const delay = (fn: () => void) => {
@@ -64,30 +63,6 @@ export const send = (message: ClientToServerMessage) => {
       console.error("Failed to send message:", err);
     }
   });
-};
-
-let pingInterval: number | undefined;
-
-export const startPing = () => {
-  // Clear any existing ping interval
-  if (pingInterval) {
-    clearInterval(pingInterval);
-  }
-
-  pingInterval = setInterval(() => {
-    if (!uiSettingsVar().showPing) return;
-    const ws = getWebSocket();
-    if (ws?.readyState !== WebSocket.OPEN) return;
-    const time = performance.now();
-    send({ type: "ping", data: time });
-  }, 1000);
-};
-
-export const stopPing = () => {
-  if (pingInterval) {
-    clearInterval(pingInterval);
-    pingInterval = undefined;
-  }
 };
 
 declare global {
