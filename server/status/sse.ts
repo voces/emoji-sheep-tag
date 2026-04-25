@@ -177,6 +177,18 @@ const broadcast = async () => {
   await maybeSendPush(snapshot);
 };
 
+const KEEPALIVE_MS = 15_000;
+const KEEPALIVE_FRAME = encoder.encode(": ping\n\n");
+setInterval(() => {
+  for (const controller of controllers) {
+    try {
+      controller.enqueue(KEEPALIVE_FRAME);
+    } catch {
+      controllers.delete(controller);
+    }
+  }
+}, KEEPALIVE_MS);
+
 onRoundEnded((event) => {
   addRoundRecord(event).catch((err) =>
     console.error("[status] Failed to record round:", err)
@@ -212,8 +224,9 @@ export const createStatusStream = async () => {
   return new Response(body, {
     headers: {
       "content-type": "text/event-stream",
-      "cache-control": "no-cache",
+      "cache-control": "no-cache, no-transform",
       "connection": "keep-alive",
+      "x-accel-buffering": "no",
     },
   });
 };
