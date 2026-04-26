@@ -5,6 +5,7 @@ import { getStoredPlayerName } from "./util/playerPrefs.ts";
 import { handlers } from "./messageHandlers.ts";
 import { type ServerToClientMessage, zMessage } from "./schemas.ts";
 import { unloadEcs } from "./ecs.ts";
+import { recordPing } from "./ping.ts";
 
 let ws: WebSocket | LocalWebSocket | undefined;
 let reconnectTimeout: number | undefined;
@@ -82,6 +83,10 @@ export const connect = () => {
       throw err;
     }
 
+    if (data.type === "pong" && typeof data.data === "number") {
+      recordPing("primary", performance.now() - data.data);
+      return;
+    }
     delay(() => handlers[data.type](data as never));
   });
 };

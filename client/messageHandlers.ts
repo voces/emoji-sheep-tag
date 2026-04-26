@@ -10,7 +10,6 @@ import {
   type PackedMap,
   setMapForApp,
 } from "@/shared/map.ts";
-import { stats } from "./util/Stats.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { roundsVar } from "@/vars/rounds.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
@@ -270,11 +269,9 @@ export const handlers = {
     processUpdates(data.updates);
     lobbySettingsVar({ ...data.lobbySettings, name: lobbySettingsVar().name });
   },
-  pong: ({ data }: Extract<ServerToClientMessage, { type: "pong" }>) => {
-    if (typeof data === "number") {
-      stats.msPanel.update(performance.now() - data);
-    }
-  },
+  // pong is intercepted at the connection-site dispatchers (connection.ts and
+  // shardConnection.ts) so each ping source can be recorded under its own key.
+  pong: () => {},
   chat: (
     { player, message, channel }: Extract<
       ServerToClientMessage,

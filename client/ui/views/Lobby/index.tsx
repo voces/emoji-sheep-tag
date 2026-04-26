@@ -17,8 +17,7 @@ import { CaptainsDraft } from "./CaptainsDraft/index.tsx";
 import { LobbyFooter } from "./LobbyFooter.tsx";
 import { MAPS } from "@/shared/maps/manifest.ts";
 import { isMultiplayer } from "../../../connection.ts";
-import { stats } from "../../../util/Stats.ts";
-import { getCurrentPingTarget } from "../../../ping.ts";
+import { getCurrentPingTarget, getSelectedPing } from "../../../ping.ts";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 
 const LobbyShell = styled.div`
@@ -98,9 +97,10 @@ const MainGrid = styled.div`
 `;
 
 const PingTag = (
-  { shardLabel, primaryLabel }: {
+  { shardLabel, primaryLabel, selectedShardId }: {
     shardLabel: string | undefined;
     primaryLabel: string | undefined;
+    selectedShardId: string | null | undefined;
   },
 ) => {
   const [ping, setPing] = useState<number | null>(null);
@@ -108,23 +108,23 @@ const PingTag = (
   useEffect(() => {
     if (!isMultiplayer()) return;
     const id = setInterval(() => {
-      const v = stats.msPanel.value;
-      setPing(isNaN(v) ? null : v);
+      const v = getSelectedPing(selectedShardId);
+      setPing(v ?? null);
       setTarget(getCurrentPingTarget());
     }, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [selectedShardId]);
 
   const label = shardLabel ?? primaryLabel;
   const tooltipText = ping === null
-    ? "No ping yet — measuring…"
+    ? selectedShardId
+      ? `${label} has no machine running — no ping available until a round starts.`
+      : "Measuring…"
     : target === "shard-game"
     ? `Round shard · ${Math.round(ping)}ms`
-    : target === "shard-ping"
+    : selectedShardId
     ? `Selected shard · ${Math.round(ping)}ms`
-    : target === "primary"
-    ? `Primary server · ${Math.round(ping)}ms`
-    : "Disconnected";
+    : `Primary server · ${Math.round(ping)}ms`;
   const { tooltipContainerProps, tooltip } = useTooltip(tooltipText);
 
   return (
@@ -178,7 +178,11 @@ export const Lobby = () => {
             {sheepCount}v{wolfCount}
           </AccentTag>
           {isMultiplayer() && (
-            <PingTag shardLabel={shardLabel} primaryLabel={primaryLabel} />
+            <PingTag
+              shardLabel={shardLabel}
+              primaryLabel={primaryLabel}
+              selectedShardId={lobbySettings.shard}
+            />
           )}
         </TopLeft>
         <TopRight>

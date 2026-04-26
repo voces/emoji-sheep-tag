@@ -5,6 +5,7 @@ import { stateVar } from "@/vars/state.ts";
 import { unloadEcs } from "./ecs.ts";
 import { generateDoodads } from "@/shared/map.ts";
 import { addChatMessage } from "@/vars/chat.ts";
+import { recordPing } from "./ping.ts";
 
 let shardSocket: WebSocket | undefined;
 let intentionalDisconnect = false;
@@ -36,6 +37,10 @@ export const connectToShard = (
       return;
     }
 
+    if (data.type === "pong" && typeof data.data === "number") {
+      recordPing("shard-game", performance.now() - data.data);
+      return;
+    }
     // Route messages through the same handlers
     handlers[data.type](data as never);
   });
