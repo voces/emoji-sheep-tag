@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { editorCurrentMapVar, editorMapModifiedVar } from "@/vars/editor.ts";
 import { buildPackedMapFromEditor } from "../../../util/mapExport.ts";
@@ -11,13 +12,14 @@ import { addChatMessage } from "@/vars/chat.ts";
 import { triggerLocalMapsRefresh } from "@/vars/localMapsRefresh.ts";
 
 export const useQuickSaveMap = () => {
+  const { t } = useTranslation();
   const currentMap = useReactiveVar(editorCurrentMapVar);
 
   return useMemo(() => ({
-    name: "Save map",
+    name: t("commands.saveMap"),
     description: currentMap
-      ? `Save changes to "${currentMap.name}"`
-      : "Save the current map",
+      ? t("commands.saveMapDescNamed", { name: currentMap.name })
+      : t("commands.saveMapDescUnnamed"),
     valid: () => !!currentMap,
     callback: async () => {
       if (!currentMap) return;
@@ -46,5 +48,5 @@ export const useQuickSaveMap = () => {
         );
       }
     },
-  }), [currentMap]);
+  }), [currentMap, t]);
 };

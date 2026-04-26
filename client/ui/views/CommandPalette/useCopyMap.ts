@@ -1,11 +1,13 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { editorVar } from "@/vars/editor.ts";
 import { buildPackedMapFromEditor } from "../../../util/mapExport.ts";
 
-export const useCopyMap = () =>
-  useMemo(() => ({
-    name: "Copy map",
-    description: "Copy map JSON to clipboard",
+export const useCopyMap = () => {
+  const { t } = useTranslation();
+  return useMemo(() => ({
+    name: t("commands.copyMap"),
+    description: t("commands.copyMapDesc"),
     valid: editorVar,
     callback: async () => {
       try {
@@ -20,4 +22,5 @@ export const useCopyMap = () =>
         );
       }
     },
-  }), []);
+  }), [t]);
+};

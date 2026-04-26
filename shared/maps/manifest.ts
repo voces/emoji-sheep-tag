@@ -17,6 +17,10 @@ export const MAPS: readonly MapManifestEntry[] = [{
   id: "compact",
   name: "Compact",
   file: "compact",
+}, {
+  id: "ultimate",
+  name: "Ultimate",
+  file: "ultimate",
 }] as const;
 
 export const getMapMeta = (id: string) => MAPS.find((map) => map.id === id);

@@ -23,6 +23,8 @@ import { useCopyMap } from "./useCopyMap.ts";
 import { useSelectMap } from "./useSelectMap.ts";
 import { useSaveMapAs } from "./useSaveMapAs.ts";
 import { useQuickSaveMap } from "./useQuickSaveMap.ts";
+import { useNewMap } from "./useNewMap.ts";
+import { fuzzyScore, highlightText } from "@/util/fuzzyMatch.tsx";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
@@ -152,10 +154,6 @@ const Footer = styled.div`
   }
 `;
 
-const Highlight = styled.span`
-  color: ${({ theme }) => theme.accent.DEFAULT};
-`;
-
 type CommandResult =
   | void
   | { type: "prompt"; placeholder: string; callback: (value: string) => void }
@@ -178,38 +176,6 @@ type FilteredCommand =
     description?: (string | React.JSX.Element)[] | string;
     group?: string;
   };
-
-const highlightText = (text: string, query: string) => {
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  let lastIndex = 0;
-  const result = [];
-
-  // Loop through each character in the query
-  for (let i = 0; i < lowerQuery.length; i++) {
-    const char = lowerQuery[i];
-    // Find the next occurrence of the character starting from lastIndex
-    const matchIndex = lowerText.indexOf(char, lastIndex);
-    if (matchIndex === -1) {
-      // If a character from the query isn't found, stop highlighting.
-      break;
-    }
-    // Append any text between the previous match and this one (not highlighted)
-    if (matchIndex > lastIndex) {
-      result.push(text.slice(lastIndex, matchIndex));
-    }
-    // Append the matched character wrapped in a span for highlighting
-    result.push(
-      <Highlight key={matchIndex}>
-        {text.charAt(matchIndex)}
-      </Highlight>,
-    );
-    lastIndex = matchIndex + 1;
-  }
-  // Append the remaining part of the text after the last match
-  result.push(text.slice(lastIndex));
-  return result;
-};
 
 export const CommandPalette = () => {
   const showCommandPalette = useReactiveVar(showCommandPaletteVar);
@@ -234,6 +200,7 @@ export const CommandPalette = () => {
   const selectMap = useSelectMap();
   const saveMapAs = useSaveMapAs();
   const quickSaveMap = useQuickSaveMap();
+  const newMap = useNewMap();
 
   const practice = useReactiveVar(practiceVar);
 
@@ -241,10 +208,10 @@ export const CommandPalette = () => {
     ...(isEditor
       ? [
         ...((currentMap && !MAPS.find((m) => m.id === currentMap.id))
-          ? [quickSaveMap, saveMapAs, copyMap, selectMap]
+          ? [quickSaveMap, saveMapAs, copyMap, selectMap, newMap]
           : mapModified
-          ? [saveMapAs, copyMap, selectMap]
-          : [selectMap, copyMap]).map((c) => ({
+          ? [saveMapAs, copyMap, selectMap, newMap]
+          : [selectMap, copyMap, newMap]).map((c) => ({
             ...c,
             group: t("commands.groupEditor"),
           })),
@@ -419,29 +386,52 @@ export const CommandPalette = () => {
         typeof cmd.valid !== "function" || cmd.valid()
       );
 
-    const regexp = new RegExp(input.toLowerCase().split("").join(".*"), "i");
-    const matches: FilteredCommand[] = [];
+    const scored: {
+      command: Command;
+      score: number;
+      nameScore: number | null;
+      descScore: number | null;
+    }[] = [];
     for (let i = 0; i < sourceList.length; i++) {
       const command = sourceList[i];
-      const nameMatches = command.name.match(regexp);
-      const descriptionMatches = command.description?.match(regexp);
-      const searchMatches = command.searchTerms?.match(regexp);
-      if (nameMatches || descriptionMatches || searchMatches) {
-        matches.push({
-          ...command,
-          originalName: command.name,
-          name: nameMatches
-            ? highlightText(command.name, input)
-            : [command.name],
-          description: command.description
-            ? (descriptionMatches
-              ? highlightText(command.description, input)
-              : [command.description])
-            : undefined,
-        } as FilteredCommand);
-      }
+      const nameScore = fuzzyScore(command.name, input);
+      const descScore = command.description
+        ? fuzzyScore(command.description, input)
+        : null;
+      const searchScore = command.searchTerms
+        ? fuzzyScore(command.searchTerms, input)
+        : null;
+
+      const best = Math.max(
+        nameScore ?? -Infinity,
+        descScore ?? -Infinity,
+        searchScore ?? -Infinity,
+      );
+      if (!Number.isFinite(best)) continue;
+
+      const nameBonus = nameScore !== null ? 1000 : 0;
+      scored.push({
+        command,
+        score: best + nameBonus,
+        nameScore,
+        descScore,
+      });
     }
-    return matches;
+
+    scored.sort((a, b) => b.score - a.score);
+
+    return scored.map(({ command, nameScore, descScore }) => ({
+      ...command,
+      originalName: command.name,
+      name: nameScore !== null
+        ? highlightText(command.name, input)
+        : [command.name],
+      description: command.description
+        ? (descScore !== null
+          ? highlightText(command.description, input)
+          : [command.description])
+        : undefined,
+    } as FilteredCommand));
   }, [input, showCommandPalette, nestedCommands, prompt]);
 
   const groupedCommands = useMemo(() => {
@@ -546,6 +536,7 @@ export const CommandPalette = () => {
         <PaletteInput
           placeholder={prompt || t("commands.searchPlaceholder")}
           value={input}
+          maxLength={128}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setInput(e.target.value)}
           ref={inputRef}

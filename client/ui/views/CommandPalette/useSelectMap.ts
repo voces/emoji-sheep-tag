@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { editorCurrentMapVar, editorVar } from "@/vars/editor.ts";
 import { MAPS } from "@/shared/maps/manifest.ts";
 import { send } from "../../../messaging.ts";
@@ -22,6 +23,7 @@ const formatTimestamp = (timestamp: number): string => {
 };
 
 export const useSelectMap = () => {
+  const { t } = useTranslation();
   const [localMaps, setLocalMaps] = useState<LocalMapMetadata[]>([]);
   const refreshTrigger = useReactiveVar(localMapsRefreshVar);
 
@@ -38,12 +40,12 @@ export const useSelectMap = () => {
 
   return useMemo(
     () => ({
-      name: "Select map",
-      description: "Change the current map in the editor",
+      name: t("commands.selectMap"),
+      description: t("commands.selectMapDesc"),
       valid: () => editorVar(),
       callback: () => ({
         type: "options" as const,
-        placeholder: "Map",
+        placeholder: t("commands.selectMapPlaceholder"),
         commands: [
           ...MAPS.map((map) => ({
             name: map.name,
@@ -69,7 +71,10 @@ export const useSelectMap = () => {
           })),
           ...localMaps.map((map) => ({
             name: map.name,
-            description: `By ${map.author} • ${formatTimestamp(map.timestamp)}`,
+            description: t("commands.selectMapAuthorTimestamp", {
+              author: map.author,
+              timestamp: formatTimestamp(map.timestamp),
+            }),
             callback: () => {
               if (!confirmEditorExit()) return;
 
@@ -102,6 +107,6 @@ export const useSelectMap = () => {
         ],
       }),
     }),
-    [localMaps],
+    [localMaps, t],
   );
 };

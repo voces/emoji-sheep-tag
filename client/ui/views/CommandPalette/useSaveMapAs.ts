@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   editorCurrentMapVar,
   editorMapModifiedVar,
@@ -78,18 +79,19 @@ const overwriteMap = async (id: string, name: string): Promise<boolean> => {
   }
 };
 
-export const useSaveMapAs = () =>
-  useMemo(() => ({
-    name: "Save map as",
-    description: "Save the current map with a new name",
+export const useSaveMapAs = () => {
+  const { t } = useTranslation();
+  return useMemo(() => ({
+    name: t("commands.saveMapAs"),
+    description: t("commands.saveMapAsDesc"),
     valid: editorVar,
     callback: () => ({
       type: "options" as const,
-      placeholder: "Save option",
+      placeholder: t("commands.saveMapAs"),
       commands: [
         {
-          name: "Save to browser",
-          description: "Save the map to browser storage",
+          name: t("commands.saveMapAsToBrowser"),
+          description: t("commands.saveMapAsToBrowserDesc"),
           callback: () => {
             const handleSave = async (mapName: string) => {
               const trimmedName = mapName.trim();
@@ -107,21 +109,23 @@ export const useSaveMapAs = () =>
               if (result.reason === "conflict") {
                 const conflictResult = {
                   type: "options" as const,
-                  placeholder: `A map named "${trimmedName}" already exists`,
+                  placeholder: t("commands.saveMapAsConflict", {
+                    name: trimmedName,
+                  }),
                   commands: [
                     {
-                      name: "Overwrite",
-                      description: "Overwrite the existing map",
+                      name: t("commands.saveMapAsOverwrite"),
+                      description: t("commands.saveMapAsOverwriteDesc"),
                       callback: () => {
                         overwriteMap(result.existingId, trimmedName);
                       },
                     },
                     {
-                      name: "New name",
-                      description: "Choose a different name",
+                      name: t("commands.saveMapAsNewName"),
+                      description: t("commands.saveMapAsNewNameDesc"),
                       callback: () => ({
                         type: "prompt" as const,
-                        placeholder: "Map name",
+                        placeholder: t("commands.saveMapAsNamePrompt"),
                         callback: handleSave,
                       }),
                     },
@@ -133,17 +137,17 @@ export const useSaveMapAs = () =>
 
             return {
               type: "prompt" as const,
-              placeholder: "Map name",
+              placeholder: t("commands.saveMapAsNamePrompt"),
               callback: handleSave,
             };
           },
         },
         {
-          name: "Export to file",
-          description: "Download the map as a JSON file",
+          name: t("commands.saveMapAsExport"),
+          description: t("commands.saveMapAsExportDesc"),
           callback: () => ({
             type: "prompt" as const,
-            placeholder: "Map name",
+            placeholder: t("commands.saveMapAsNamePrompt"),
             callback: (name: string) => {
               if (!name.trim()) {
                 addChatMessage("Map name cannot be empty");
@@ -173,4 +177,5 @@ export const useSaveMapAs = () =>
         },
       ],
     }),
-  }), []);
+  }), [t]);
+};

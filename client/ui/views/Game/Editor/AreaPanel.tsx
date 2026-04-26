@@ -1,6 +1,6 @@
 import { Panel } from "./common.ts";
 import { Minimap } from "../../../components/Minimap/index.tsx";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { send } from "../../../../messaging.ts";
 import { styled } from "styled-components";
 import { onMapChange } from "@/shared/map.ts";
@@ -172,11 +172,11 @@ export const AreaPanel = () => {
               <ColumnHeader>{t("editor.mapTerrain")}</ColumnHeader>
               <ColumnHeader>{t("editor.mapBounds")}</ColumnHeader>
               {directions.map((dir) => (
-                <>
-                  <SideLabel key={`label-${dir}`}>
+                <Fragment key={dir}>
+                  <SideLabel>
                     {t(directionI18n[dir])}
                   </SideLabel>
-                  <AdjustCell key={`terrain-${dir}`}>
+                  <AdjustCell>
                     <AdjustButton
                       title={`${t("editor.mapTerrain")} ${
                         t(directionI18n[dir])
@@ -194,7 +194,7 @@ export const AreaPanel = () => {
                       <Plus size={12} />
                     </AdjustButton>
                   </AdjustCell>
-                  <AdjustCell key={`bounds-${dir}`}>
+                  <AdjustCell>
                     <AdjustButton
                       title={`${t("editor.mapBounds")} ${
                         t(directionI18n[dir])
@@ -222,7 +222,7 @@ export const AreaPanel = () => {
                       <Plus size={12} />
                     </AdjustButton>
                   </AdjustCell>
-                </>
+                </Fragment>
               ))}
             </ResizeGrid>
           </ResizeBody>

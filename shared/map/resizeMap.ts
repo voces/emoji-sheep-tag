@@ -196,15 +196,15 @@ export const resizeMap = (
   const newWidth = newTiles[0]?.length ?? 0;
   const newHeight = newTiles.length;
 
-  newBounds.min.x = Math.max(0, Math.min(newBounds.min.x, newWidth));
+  newBounds.min.x = Math.max(0.5, Math.min(newBounds.min.x, newWidth - 0.5));
   newBounds.max.x = Math.max(
     newBounds.min.x,
-    Math.min(newBounds.max.x, newWidth),
+    Math.min(newBounds.max.x, newWidth - 0.5),
   );
-  newBounds.min.y = Math.max(0, Math.min(newBounds.min.y, newHeight));
+  newBounds.min.y = Math.max(0.5, Math.min(newBounds.min.y, newHeight - 0.5));
   newBounds.max.y = Math.max(
     newBounds.min.y,
-    Math.min(newBounds.max.y, newHeight),
+    Math.min(newBounds.max.y, newHeight - 0.5),
   );
 
   // Rebuild terrain pathing and layers (these will be recalculated)
