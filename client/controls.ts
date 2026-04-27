@@ -80,28 +80,51 @@ import { getCliffs, getMap } from "@/shared/map.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import {
+  editorActiveActionVar,
+  editorBrushShapeVar,
+  editorBrushSizeVar,
+  editorTerrainClipboardVar,
+  editorTerrainSelectionVar,
   editorTileModeVar,
   editorVar,
   editorWaterLevelVar,
 } from "@/vars/editor.ts";
+import {
+  type Cell,
+  getAllCells,
+  getBrushCells,
+  getFloodFillCells,
+} from "./editor/brush.ts";
+import "./editor/brushPreview.ts";
+import {
+  clearTerrainSelection,
+  clipCellsToSelection,
+  commitPaste,
+  copyTerrainSelection,
+  setSelectionFromDrag,
+} from "./editor/selection.ts";
 import { WATER_LEVEL_SCALE } from "@/shared/constants.ts";
 import { pickDoodad } from "./ui/views/Game/Editor/DoodadsPanel.tsx";
 import { tileDefs } from "@/shared/data.ts";
 import {
   batchCommand,
+  type BulkSetCliffsCommand,
+  bulkSetCliffsCommand,
+  type BulkSetWatersCommand,
+  bulkSetWatersCommand,
   createEntityCommand,
   deleteEntityCommand,
   doExecute,
   type EditorCommand,
   executeCommand,
+  fillTilesCommand,
   keyboardMoveCommand,
+  mergeDragCommands,
   moveEntitiesCommand,
   recordCommand,
   redo,
-  setCliffCommand,
-  setPathingCommand,
-  setWaterCommand,
   undo,
+  undoLastStep,
 } from "./editor/commands.ts";
 import {
   cancelPaste,
@@ -186,6 +209,27 @@ let editorTileDrag: {
   visited: Set<string>;
   targetCliff?: number | "r";
 } | null = null;
+
+// Editor terrain-selection drag state. Active while the user is dragging out
+// the rectangle for the Select tool. `moved` becomes true once the cursor
+// changes cell, distinguishing a drag from a click that should clear the
+// existing selection.
+let editorSelectionDrag:
+  | {
+    startX: number;
+    startY: number;
+    moved: boolean;
+    hadSelection: boolean;
+  }
+  | null = null;
+
+// Editor paste drag state. While the mouse is held down in paste mode we
+// commit a fresh paste every time the cursor crosses into a new cell, so the
+// user can stamp a row of clipboards by dragging. Sub-commands accumulate
+// across the drag and are merged into a single undo entry on mouseUp.
+let editorPasteDrag:
+  | { lastX: number; lastY: number; commands: EditorCommand[] }
+  | null = null;
 
 // Middle-click camera panning state
 let panGrabPixels: { x: number; y: number } | null = null;
@@ -340,7 +384,176 @@ const handleLeftClick = (e: MouseButtonEvent) => {
   }
 };
 
-// Apply a tile or cliff change at the given position, returning the command if applied
+type TileBlueprint = NonNullable<ReturnType<typeof getBlueprint>>;
+
+const computeWaterTarget = () =>
+  Math.max(0, Math.round(editorWaterLevelVar() * WATER_LEVEL_SCALE));
+
+const wrapBatch = (commands: EditorCommand[]): EditorCommand | null => {
+  if (commands.length === 0) return null;
+  if (commands.length === 1) return commands[0];
+  return batchCommand(commands);
+};
+
+const getMaskDimensions = () => {
+  const grid = terrain.masks.groundTile;
+  return { width: grid[0]?.length ?? 0, height: grid.length };
+};
+
+// Build a single bulk command for the current blueprint operation across the
+// supplied cells. `targetCliff` is honored for raise/lower/ramp when set
+// (plateau behavior); for ramp without a target it falls back to per-cell
+// toggle. Returns null if nothing actually changes.
+const buildBatchedChanges = (
+  blueprint: TileBlueprint,
+  cellsIn: Cell[],
+  targetCliff: number | "r" | undefined,
+): EditorCommand | null => {
+  // Restrict every brush / fill / all op to the active terrain selection.
+  const cells = clipCellsToSelection(cellsIn) as Cell[];
+  if (!cells.length) return null;
+
+  if (editorTileModeVar() === "paintWater") {
+    const newWater = computeWaterTarget();
+    const water = terrain.masks.water;
+    const updates: BulkSetWatersCommand["cells"] = [];
+    for (const [x, y] of cells) {
+      const old = water[y]?.[x];
+      if (old === undefined || old === newWater) continue;
+      updates.push({ x, y, oldWater: old, newWater });
+    }
+    return updates.length ? bulkSetWatersCommand(updates) : null;
+  }
+
+  const vc = blueprint.vertexColor;
+  if (
+    vc === 0xff01ff || vc === 0xff02ff || vc === 0xff03ff || vc === 0xff04ff
+  ) {
+    const cliffs = getCliffs();
+    const updates: BulkSetCliffsCommand["cells"] = [];
+    for (const [x, y] of cells) {
+      const mapY = cliffs.length - 1 - y;
+      const currentCliff = cliffs[mapY]?.[x];
+      if (currentCliff === undefined) continue;
+      const oldHeight = terrain.getCliff(x, y);
+      let newCliff: number | "r";
+      if (vc === 0xff01ff || vc === 0xff02ff) {
+        newCliff = typeof targetCliff === "number"
+          ? targetCliff
+          : oldHeight + (vc === 0xff01ff ? 1 : -1);
+        if (newCliff < 0) continue;
+      } else if (vc === 0xff04ff) {
+        // Plateau: every cell in the brush gets the start cell's height.
+        if (typeof targetCliff !== "number") continue;
+        newCliff = targetCliff;
+      } else if (targetCliff !== undefined) {
+        newCliff = targetCliff;
+      } else {
+        newCliff = currentCliff === "r" ? oldHeight : "r";
+      }
+      if (currentCliff === newCliff) continue;
+      updates.push({ x, y, oldCliff: currentCliff, newCliff });
+    }
+    return updates.length ? bulkSetCliffsCommand(updates) : null;
+  }
+
+  // Regular tile painting — group cells by their original tile so each
+  // fillTilesCommand keeps a single (oldTile -> newTile) pair for undo.
+  const tileIndex = tileDefs.findIndex((t) => t.color === vc);
+  if (tileIndex < 0) return null;
+  const grid = terrain.masks.groundTile;
+  const newPathing = blueprint.pathing!;
+  const groups = new Map<number, Cell[]>();
+  for (const [x, y] of cells) {
+    const oldTile = grid[y]?.[x];
+    if (oldTile === undefined || oldTile === tileIndex) continue;
+    const list = groups.get(oldTile);
+    if (list) list.push([x, y]);
+    else groups.set(oldTile, [[x, y]]);
+  }
+  const subs = [...groups].map(([oldTile, gcells]) =>
+    fillTilesCommand(
+      gcells,
+      oldTile,
+      tileIndex,
+      tileDefs[oldTile]?.pathing ?? 0,
+      newPathing,
+    )
+  );
+  return wrapBatch(subs);
+};
+
+// Build the command for "fill" or "all" at a click. "fill" selects cells
+// matching the source value at the start cell (same tile, water level, or
+// starting cliff height). "all" applies to every cell on the map.
+const buildRegionCommand = (
+  blueprint: TileBlueprint,
+  startX: number,
+  startY: number,
+  size: "fill" | "all",
+): EditorCommand | null => {
+  const { width, height } = getMaskDimensions();
+  if (width === 0 || height === 0) return null;
+
+  let cells: Cell[];
+  if (size === "all") {
+    cells = getAllCells(width, height);
+  } else if (
+    editorTileModeVar() === "paintWater" ||
+    blueprint.vertexColor === 0xff01ff ||
+    blueprint.vertexColor === 0xff02ff ||
+    blueprint.vertexColor === 0xff03ff ||
+    blueprint.vertexColor === 0xff04ff
+  ) {
+    // Both water and cliff/ramp fills follow cliff height — water fill walks
+    // the basin defined by surrounding cliffs, not the existing water mask.
+    cells = getFloodFillCells(
+      startX,
+      startY,
+      width,
+      height,
+      (x, y) => terrain.getCliff(x, y),
+    );
+  } else {
+    const grid = terrain.masks.groundTile;
+    cells = getFloodFillCells(
+      startX,
+      startY,
+      width,
+      height,
+      (x, y) => grid[y][x],
+    );
+  }
+
+  return buildBatchedChanges(
+    blueprint,
+    cells,
+    computeFillTargetCliff(blueprint, startX, startY),
+  );
+};
+
+// Plateau target for cliff/ramp ops anchored at the start cell.
+const computeFillTargetCliff = (
+  blueprint: TileBlueprint,
+  startX: number,
+  startY: number,
+): number | "r" | undefined => {
+  const vc = blueprint.vertexColor;
+  if (vc === 0xff01ff) return terrain.getCliff(startX, startY) + 1;
+  if (vc === 0xff02ff) return terrain.getCliff(startX, startY) - 1;
+  if (vc === 0xff04ff) return terrain.getCliff(startX, startY);
+  if (vc === 0xff03ff) {
+    const cliffs = getCliffs();
+    const startMapY = cliffs.length - 1 - startY;
+    const startCurrent = cliffs[startMapY]?.[startX];
+    if (startCurrent === undefined) return undefined;
+    return startCurrent === "r" ? terrain.getCliff(startX, startY) : "r";
+  }
+  return undefined;
+};
+
+// Apply a brush stroke (size 1-5) at the given world position, executing one
+// bulk command and returning it (or null if no cells changed).
 const applyEditorTileChange = (
   blueprint: ReturnType<typeof getBlueprint>,
   worldX: number,
@@ -349,74 +562,38 @@ const applyEditorTileChange = (
   if (!blueprint || blueprint.prefab !== "tile" || blueprint.owner) return null;
 
   const [normX, normY] = normalizeBuildPosition(worldX, worldY, "tile");
-  const x = normX - 0.5;
-  const y = normY - 0.5;
-  const key = `${x},${y}`;
+  const cx = normX - 0.5;
+  const cy = normY - 0.5;
 
-  // Skip if already visited in this drag
-  if (editorTileDrag?.visited.has(key)) return null;
-  editorTileDrag?.visited.add(key);
+  const { width, height } = getMaskDimensions();
+  if (width === 0 || height === 0) return null;
 
-  if (editorTileModeVar() === "paintWater") {
-    const level = editorWaterLevelVar();
-    const newWater = Math.max(0, Math.round(level * WATER_LEVEL_SCALE));
-    const oldWater = terrain.getWater(x, y);
-    if (oldWater === newWater) return null;
-    const command = setWaterCommand(x, y, oldWater, newWater);
-    doExecute(command);
-    return command;
+  const size = editorBrushSizeVar();
+  const brushSize = typeof size === "number" ? size : 1;
+  const cells = getBrushCells(
+    cx,
+    cy,
+    brushSize,
+    editorBrushShapeVar(),
+    width,
+    height,
+  );
+
+  const newCells: Cell[] = [];
+  for (const cell of cells) {
+    const key = `${cell[0]},${cell[1]}`;
+    if (editorTileDrag?.visited.has(key)) continue;
+    editorTileDrag?.visited.add(key);
+    newCells.push(cell);
   }
 
-  if (blueprint.vertexColor === 0xff01ff) {
-    // Raise cliff
-    const oldHeight = terrain.getCliff(x, y);
-    const newHeight = editorTileDrag?.targetCliff ?? oldHeight + 1;
-    if (oldHeight === newHeight) return null;
-    const command = setCliffCommand(x, y, oldHeight, newHeight);
-    doExecute(command);
-    return command;
-  } else if (blueprint.vertexColor === 0xff02ff) {
-    // Lower cliff
-    const oldHeight = terrain.getCliff(x, y);
-    const newHeight = editorTileDrag?.targetCliff ?? oldHeight - 1;
-    if (oldHeight === newHeight) return null;
-    const command = setCliffCommand(x, y, oldHeight, newHeight);
-    doExecute(command);
-    return command;
-  } else if (blueprint.vertexColor === 0xff03ff) {
-    // Ramp - toggle: if already a ramp, convert to interpolated height
-    const oldHeight = terrain.getCliff(x, y);
-    const cliffs = getCliffs();
-    const mapY = cliffs.length - 1 - y;
-    const currentCliff = cliffs[mapY]?.[x];
-    if (currentCliff === "r") {
-      // Remove ramp - convert to interpolated height
-      const command = setCliffCommand(x, y, "r", oldHeight);
-      doExecute(command);
-      return command;
-    }
-    const command = setCliffCommand(x, y, oldHeight, "r");
-    doExecute(command);
-    return command;
-  } else {
-    // Regular tile
-    const tileIndex = tileDefs.findIndex((t) =>
-      t.color === blueprint.vertexColor
-    );
-    const oldTile = terrain.masks.groundTile[y]?.[x] ?? 0;
-    if (oldTile === tileIndex) return null;
-    const oldPathing = tileDefs[oldTile]?.pathing ?? 0;
-    const command = setPathingCommand(
-      x,
-      y,
-      oldPathing,
-      blueprint.pathing!,
-      oldTile,
-      tileIndex,
-    );
-    doExecute(command);
-    return command;
-  }
+  const cmd = buildBatchedChanges(
+    blueprint,
+    newCells,
+    editorTileDrag?.targetCliff,
+  );
+  if (cmd) doExecute(cmd);
+  return cmd;
 };
 
 const handleBlueprintClick = (e: MouseButtonEvent) => {
@@ -452,14 +629,41 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
     const x = normX - 0.5;
     const y = normY - 0.5;
 
-    // Calculate target cliff height for plateau behavior
-    let targetCliff: number | "r" | undefined;
+    const action = editorActiveActionVar()?.kind;
+    if (action === "select") {
+      // Stash the previous selection so a click-without-drag can clear it on
+      // mouseUp. Don't mutate the selection yet — that way an unmoved click
+      // doesn't replace the existing rect with a 1×1 stub.
+      editorSelectionDrag = {
+        startX: x,
+        startY: y,
+        moved: false,
+        hadSelection: !!editorTerrainSelectionVar(),
+      };
+      return;
+    }
+    if (action === "paste") {
+      const cmds = commitPaste();
+      editorPasteDrag = { lastX: x, lastY: y, commands: cmds };
+      return;
+    }
+
+    const brushSize = editorBrushSizeVar();
+    if (brushSize === "fill" || brushSize === "all") {
+      const command = buildRegionCommand(blueprint, x, y, brushSize);
+      if (command) executeCommand(command);
+      return;
+    }
+
+    // Plateau target for raise/lower/plateau brushes (ramp drag toggles per
+    // cell, so it intentionally leaves targetCliff undefined).
+    let targetCliff: number | undefined;
     if (blueprint.vertexColor === 0xff01ff) {
       targetCliff = terrain.getCliff(x, y) + 1;
     } else if (blueprint.vertexColor === 0xff02ff) {
       targetCliff = terrain.getCliff(x, y) - 1;
-    } else if (blueprint.vertexColor === 0xff03ff) {
-      targetCliff = "r";
+    } else if (blueprint.vertexColor === 0xff04ff) {
+      targetCliff = terrain.getCliff(x, y);
     }
 
     editorTileDrag = {
@@ -546,14 +750,38 @@ mouse.addEventListener("mouseButtonUp", (e) => {
   }
 
   if (e.button === "middle") panGrabPixels = null;
-  else if (e.button === "left" && editorTileDrag) {
-    // Finish editor tile/cliff drag - record all commands in undo stack (already executed)
+  else if (e.button === "left" && editorPasteDrag) {
+    // Collapse every stamp from this drag into a single undo entry. The merger
+    // dedupes per-cell so a drag that retraces over the same cells still
+    // restores the true pre-drag state.
+    if (editorPasteDrag.commands.length > 0) {
+      const merged = mergeDragCommands(editorPasteDrag.commands);
+      if (merged) recordCommand(merged);
+    }
+    editorPasteDrag = null;
+  } else if (e.button === "left" && editorSelectionDrag) {
+    // Click without drag clears the existing selection (or starts a 1×1 if
+    // there wasn't one). Drag finalizes the rectangle that mouseMove already
+    // set on the var.
+    if (!editorSelectionDrag.moved) {
+      if (editorSelectionDrag.hadSelection) {
+        clearTerrainSelection();
+      } else {
+        setSelectionFromDrag(
+          editorSelectionDrag.startX,
+          editorSelectionDrag.startY,
+          editorSelectionDrag.startX,
+          editorSelectionDrag.startY,
+        );
+      }
+    }
+    editorSelectionDrag = null;
+  } else if (e.button === "left" && editorTileDrag) {
+    // Finish editor tile/cliff drag - record all commands in undo stack (already executed).
+    // Coalesce per-stroke bulk ops into one bulk per mask so undo stays cheap.
     if (editorTileDrag.commands.length > 0) {
-      recordCommand(
-        editorTileDrag.commands.length === 1
-          ? editorTileDrag.commands[0]
-          : batchCommand(editorTileDrag.commands),
-      );
+      const merged = mergeDragCommands(editorTileDrag.commands);
+      if (merged) recordCommand(merged);
     }
     editorTileDrag = null;
   } else if (e.button === "left" && editorDragEntities.length > 0) {
@@ -603,6 +831,39 @@ mouse.addEventListener("mouseMove", (e) => {
     const blueprint = getBlueprint();
     const command = applyEditorTileChange(blueprint, e.world.x, e.world.y);
     if (command) editorTileDrag.commands.push(command);
+  }
+
+  // Handle editor terrain-selection dragging
+  if (editorSelectionDrag) {
+    const [nx, ny] = normalizeBuildPosition(e.world.x, e.world.y, "tile");
+    const cx = nx - 0.5;
+    const cy = ny - 0.5;
+    if (
+      cx !== editorSelectionDrag.startX || cy !== editorSelectionDrag.startY
+    ) {
+      editorSelectionDrag.moved = true;
+    }
+    if (editorSelectionDrag.moved) {
+      setSelectionFromDrag(
+        editorSelectionDrag.startX,
+        editorSelectionDrag.startY,
+        cx,
+        cy,
+      );
+    }
+  }
+
+  // Handle editor paste-stamp dragging: commit a fresh paste each time the
+  // cursor crosses into a new cell so dragging stamps multiple copies.
+  if (editorPasteDrag) {
+    const [nx, ny] = normalizeBuildPosition(e.world.x, e.world.y, "tile");
+    const cx = nx - 0.5;
+    const cy = ny - 0.5;
+    if (cx !== editorPasteDrag.lastX || cy !== editorPasteDrag.lastY) {
+      editorPasteDrag.lastX = cx;
+      editorPasteDrag.lastY = cy;
+      editorPasteDrag.commands.push(...commitPaste());
+    }
   }
 
   // Handle editor doodad dragging
@@ -723,19 +984,22 @@ document.addEventListener("keydown", (e) => {
 
   if (document.activeElement?.tagName === "INPUT") return false;
 
-  // Handle editor undo/redo (Ctrl+Z / Ctrl+Shift+Z)
+  // Handle editor undo/redo (Ctrl+Z / Ctrl+Shift+Z / Ctrl+Alt+Z)
   if (editorVar() && (e.ctrlKey || e.metaKey) && e.code === "KeyZ") {
     e.preventDefault();
     if (e.shiftKey) redo();
+    else if (e.altKey) undoLastStep();
     else undo();
     return false;
   }
 
-  // Handle editor copy/cut/paste (Ctrl+C / Ctrl+X / Ctrl+V)
+  // Handle editor copy/cut/paste (Ctrl+C / Ctrl+X / Ctrl+V). Terrain
+  // selection takes precedence over doodad selection when both could match.
   if (editorVar() && (e.ctrlKey || e.metaKey)) {
     if (e.code === "KeyC") {
       e.preventDefault();
-      copySelectedDoodads(false);
+      if (editorTerrainSelectionVar()) copyTerrainSelection();
+      else copySelectedDoodads(false);
       return false;
     }
     if (e.code === "KeyX") {
@@ -745,7 +1009,21 @@ document.addEventListener("keydown", (e) => {
     }
     if (e.code === "KeyV") {
       e.preventDefault();
-      startPaste();
+      if (editorTerrainClipboardVar()) {
+        // Switch to terrain paste mode — a hidden tile blueprint tracks the
+        // cursor so the SelectionOverlay's stamp follows it.
+        const blueprint = createBlueprint(
+          "tile",
+          mouse.world.x,
+          mouse.world.y,
+        );
+        if (blueprint) {
+          blueprint.vertexColor = 0xff06ff;
+          blueprint.isDoodad = true;
+          blueprint.alpha = 0;
+          editorActiveActionVar({ kind: "paste" });
+        }
+      } else startPaste();
       return false;
     }
   }
@@ -773,6 +1051,16 @@ document.addEventListener("keydown", (e) => {
       // Cancel paste mode if active
       if (editorVar() && isPasting()) {
         cancelPaste();
+        return false;
+      }
+      // Cancel terrain paste / clear terrain selection in the editor before
+      // falling back to the generic cancel-order path.
+      if (editorVar() && editorActiveActionVar()?.kind === "paste") {
+        cancelBlueprint();
+        return false;
+      }
+      if (editorVar() && editorTerrainSelectionVar()) {
+        clearTerrainSelection();
         return false;
       }
       cancelOrder();
@@ -853,7 +1141,8 @@ const handleUIShortcuts = (
     checkShortcut(shortcuts.misc, "applyZoom", e.code) &&
     showChatBoxVar() !== "open" &&
     showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
+    stateVar() === "playing" &&
+    !editorVar()
   ) {
     e.preventDefault();
     applyZoom();

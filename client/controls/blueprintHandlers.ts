@@ -8,7 +8,7 @@ import { updateCursor } from "../graphics/cursor.ts";
 import { setFind } from "@/shared/util/set.ts";
 import { computeBlueprintColor } from "../util/colorHelpers.ts";
 import { queued } from "./orderHandlers.ts";
-import { editorVar } from "@/vars/editor.ts";
+import { editorActiveActionVar, editorVar } from "@/vars/editor.ts";
 import { BuildGrid } from "../graphics/BuildGrid.ts";
 import { scene } from "../graphics/three.ts";
 
@@ -92,6 +92,7 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
       visibleInFog: true,
       vertexColor: 0x31aaef, // Blue color for ally
       alpha: 0.75,
+      preserveCursor: true,
     });
     updateCursor();
     return blueprint;
@@ -132,6 +133,10 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
     isDoodad: true,
     isEffect: true,
     visibleInFog: true,
+    // Editor blueprints (no owner) keep the OS cursor visible — the brush
+    // preview shows the affected area on the world, and hiding the cursor
+    // makes the tool buttons unreadable.
+    ...(editorVar() && !owner ? { preserveCursor: true } : {}),
     ...(owner &&
       {
         vertexColor: playerColor
@@ -232,6 +237,7 @@ export const cancelBlueprint = () => {
     clearInterval(updateBlueprintInterval);
     updateBlueprintInterval = 0;
   }
+  if (editorActiveActionVar()) editorActiveActionVar(undefined);
 };
 
 export const clearBlueprint = (

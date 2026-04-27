@@ -34,8 +34,9 @@ export const send = (message: ClientToServerMessage) => {
     message.type === "editorUpdateEntities" ||
     message.type === "editorSetPathing" ||
     message.type === "editorSetCliff" ||
+    message.type === "editorBulkSetCliffs" ||
     message.type === "editorSetWater" ||
-    message.type === "editorReplaceWater" ||
+    message.type === "editorBulkSetWaters" ||
     message.type === "editorResizeMap" ||
     message.type === "editorAdjustBounds"
   ) {

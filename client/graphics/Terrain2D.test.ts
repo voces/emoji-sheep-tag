@@ -33,8 +33,8 @@ const createTerrain = (cliffMask: CliffMask) =>
       water: cliffMask.map((r) => r.map(() => 0)),
     },
     [
-      { color: "#90ee90" },
-      { color: "#ffdc41" },
+      { color: "#90ee90", strength: 0, noiseFreq: 0, noiseAmp: 0 },
+      { color: "#ffdc41", strength: 0, noiseFreq: 0, noiseAmp: 0 },
     ],
   );
 
@@ -134,7 +134,10 @@ Deno.test("Terrain2D load rebuilds with new data", () => {
       cliffTile: [[0, 0], [0, 0]],
       water: [[0, 0], [0, 0]],
     },
-    [{ color: "#90ee90" }, { color: "#ffdc41" }],
+    [
+      { color: "#90ee90", strength: 0, noiseFreq: 0, noiseAmp: 0 },
+      { color: "#ffdc41", strength: 0, noiseFreq: 0, noiseAmp: 0 },
+    ],
   );
   const { w, h } = getTexSize(terrain);
   expect(w).toBe(4);

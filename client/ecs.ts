@@ -18,6 +18,12 @@ export type Entity = CommonEntity & {
   aspectRatio?: number;
   /** Hidden by fog of war */
   hiddenByFog?: boolean;
+  /**
+   * Blueprint that does not own the cursor: the OS cursor stays visible while
+   * this blueprint is active. Used for the editor's terrain tools and ping —
+   * places where positional feedback comes from the world, not the cursor.
+   */
+  preserveCursor?: boolean;
 };
 
 export type SystemEntity<K extends keyof Entity> = ECSSystemEntity<Entity, K>;

@@ -35,6 +35,7 @@
 - Death animation (sheep)
 - Monolith needs new model
 - Mobile: observe+chat friendly
+- Share lobby link
 
 # Bugs
 

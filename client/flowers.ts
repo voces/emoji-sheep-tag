@@ -18,7 +18,7 @@ const hash = (x: number, y: number) => {
 };
 
 const CELL_SIZE = 2.0;
-const SPAWN_PROBABILITY = 0.15;
+const SPAWN_PROBABILITY = 0.2;
 const MIN_DOODAD_DIST = 1.5;
 // Distance field is at 4× cliff mask resolution (1 world unit = 4 texels, maxR = 12)
 const CLIFF_DIST_MIN = 2; // too close = on cliff face (~0.5 world units)
@@ -75,8 +75,6 @@ export const regenerateFlowers = (td: TerrainData) => {
 
   for (let cy = 0; cy < cellsY; cy++) {
     for (let cx = 0; cx < cellsX; cx++) {
-      if (hash(cx, cy) >= SPAWN_PROBABILITY) continue;
-
       const props = makeFlowerProps(cx, cy);
       const { x: wx, y: wy } = props;
 
@@ -85,10 +83,16 @@ export const regenerateFlowers = (td: TerrainData) => {
         continue;
       }
 
-      // Ground tile check (only grass = index 0)
+      // Ground tile check (grass = 0, dark grass = 4 with reduced rate)
       const tileX = Math.floor(wx);
       const tileY = Math.floor(wy);
-      if ((td.groundTile[tileY]?.[tileX] ?? 1) !== 0) continue;
+      const tile = td.groundTile[tileY]?.[tileX] ?? 1;
+      const spawnProb = tile === 0
+        ? SPAWN_PROBABILITY
+        : tile === 4
+        ? SPAWN_PROBABILITY * 0.6
+        : 0;
+      if (spawnProb === 0 || hash(cx, cy) >= spawnProb) continue;
 
       // Water check: compare water level to ground height
       const waterLevel = (td.water[tileY]?.[tileX] ?? 0) / WATER_LEVEL_SCALE;

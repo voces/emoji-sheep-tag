@@ -25,6 +25,7 @@ const events: {
   dur?: number;
   pid: number;
   tid: number;
+  id?: string | number;
   args?: Record<string, unknown>;
 }[] = Array.isArray(parsed) ? parsed : parsed.traceEvents;
 
@@ -165,4 +166,185 @@ if (jsEvents.length > 0) {
       totalJs.toFixed(1)
     }ms total across ${jsEvents.length} events ===`,
   );
+}
+
+// V8 CPU profile: ProfileChunk events embed sampled call stacks per thread.
+// IMPORTANT: ProfileNode ids are unique within a single profile (one per
+// thread), NOT across profiles. Merging chunks across threads silently
+// collides ids and produces garbage numbers. Always group by (pid, profile id)
+// before resolving samples.
+type CallFrame = {
+  functionName: string;
+  url?: string;
+  lineNumber?: number;
+  columnNumber?: number;
+  scriptId?: number | string;
+  codeType?: string;
+};
+type ProfileNode = { id: number; parent?: number; callFrame: CallFrame };
+
+const profileEvents = events.filter((e) => e.name === "Profile");
+const profileChunks = events.filter((e) =>
+  e.name === "ProfileChunk" && e.args && (e.args as { data?: unknown }).data
+);
+
+const threadNames = new Map<string, string>();
+for (const e of events) {
+  if (e.name !== "thread_name") continue;
+  const name = (e.args as { name?: string } | undefined)?.name;
+  if (name) threadNames.set(`${e.pid}/${e.tid}`, name);
+}
+
+const analyzeProfile = (
+  threadLabel: string,
+  pid: number,
+  profileId: string | number,
+) => {
+  const myChunks = profileChunks.filter((c) =>
+    c.pid === pid &&
+    (c as unknown as { id?: string | number }).id === profileId
+  );
+  if (myChunks.length === 0) return;
+
+  const nodes = new Map<number, ProfileNode>();
+  const samples: number[] = [];
+  const deltas: number[] = [];
+
+  for (const c of myChunks) {
+    const cpu = (c.args as {
+      data: {
+        cpuProfile?: { nodes?: ProfileNode[]; samples?: number[] };
+        timeDeltas?: number[];
+      };
+    }).data.cpuProfile;
+    if (cpu?.nodes) { for (const n of cpu.nodes) nodes.set(n.id, n); }
+    if (cpu?.samples) samples.push(...cpu.samples);
+    const td = (c.args as { data: { timeDeltas?: number[] } }).data.timeDeltas;
+    if (td) deltas.push(...td);
+  }
+
+  // Self time per node id (leaf credit).
+  const selfTime = new Map<number, number>();
+  // Total/inclusive time per node id (leaf + every ancestor).
+  const totalTime = new Map<number, number>();
+
+  // Cache of resolved ancestor chain per node id, computed lazily.
+  const ancestorsCache = new Map<number, number[]>();
+  const resolveAncestors = (id: number): number[] => {
+    const cached = ancestorsCache.get(id);
+    if (cached) return cached;
+    const chain: number[] = [];
+    let cur: number | undefined = id;
+    while (cur !== undefined) {
+      chain.push(cur);
+      const node = nodes.get(cur);
+      cur = node?.parent;
+    }
+    ancestorsCache.set(id, chain);
+    return chain;
+  };
+
+  const sampleCount = Math.min(samples.length, deltas.length);
+  let totalSampleTime = 0;
+  for (let i = 0; i < sampleCount; i++) {
+    const id = samples[i];
+    const dt = deltas[i];
+    if (dt <= 0) continue;
+    totalSampleTime += dt;
+    selfTime.set(id, (selfTime.get(id) ?? 0) + dt);
+    for (const a of resolveAncestors(id)) {
+      totalTime.set(a, (totalTime.get(a) ?? 0) + dt);
+    }
+  }
+
+  // Aggregate by callFrame identity (function + url + line) so multiple
+  // node ids for the same function are merged.
+  type Bucket = { self: number; total: number; count: number; key: string };
+  const buckets = new Map<string, Bucket>();
+  const formatKey = (cf: CallFrame): string => {
+    const fn = cf.functionName || "(anonymous)";
+    if (cf.url) {
+      const short = cf.url.replace(/^https?:\/\/[^/]+\//, "").replace(
+        /\?.*$/,
+        "",
+      );
+      return `${fn} @ ${short}:${cf.lineNumber ?? "?"}`;
+    }
+    return `${fn} [${cf.codeType ?? "?"}]`;
+  };
+
+  for (const [id, node] of nodes) {
+    const key = formatKey(node.callFrame);
+    let b = buckets.get(key);
+    if (!b) {
+      b = { self: 0, total: 0, count: 0, key };
+      buckets.set(key, b);
+    }
+    b.self += selfTime.get(id) ?? 0;
+    b.total += totalTime.get(id) ?? 0;
+    b.count++;
+  }
+
+  const idleTime = [...nodes.values()]
+    .filter((n) =>
+      n.callFrame.functionName === "(idle)" ||
+      n.callFrame.functionName === "(program)"
+    )
+    .reduce((s, n) => s + (selfTime.get(n.id) ?? 0), 0);
+  const totalSampleMs = totalSampleTime / 1000;
+  const activeMs = (totalSampleTime - idleTime) / 1000;
+  console.log(
+    `\n=== ${threadLabel} — total=${totalSampleMs.toFixed(1)}ms active=${
+      activeMs.toFixed(1)
+    }ms idle=${(idleTime / 1000).toFixed(1)}ms (${sampleCount} samples) ===`,
+  );
+
+  const sortBySelf = [...buckets.values()].sort((a, b) => b.self - a.self);
+  console.log("\n--- Top 30 by SELF time (where time was actually spent) ---");
+  console.log(
+    `${"Function".padEnd(70)} ${"Self ms".padStart(10)} ${
+      "Self %".padStart(8)
+    } ${"Total ms".padStart(10)}`,
+  );
+  console.log("-".repeat(102));
+  for (const b of sortBySelf.slice(0, 30)) {
+    if (b.self === 0) break;
+    const selfMs = (b.self / 1000).toFixed(1);
+    const selfPct = (b.self / totalSampleTime * 100).toFixed(1);
+    const totalMs = (b.total / 1000).toFixed(1);
+    console.log(
+      `${b.key.slice(0, 70).padEnd(70)} ${selfMs.padStart(10)} ${
+        (selfPct + "%").padStart(8)
+      } ${totalMs.padStart(10)}`,
+    );
+  }
+
+  const sortByTotal = [...buckets.values()].sort((a, b) => b.total - a.total);
+  console.log(
+    "\n--- Top 20 by TOTAL/inclusive time (work done by + below) ---",
+  );
+  console.log(
+    `${"Function".padEnd(70)} ${"Total ms".padStart(10)} ${
+      "Total %".padStart(9)
+    } ${"Self ms".padStart(10)}`,
+  );
+  console.log("-".repeat(103));
+  for (const b of sortByTotal.slice(0, 20)) {
+    if (b.total === 0) break;
+    const totalMs = (b.total / 1000).toFixed(1);
+    const totalPct = (b.total / totalSampleTime * 100).toFixed(1);
+    const selfMs = (b.self / 1000).toFixed(1);
+    console.log(
+      `${b.key.slice(0, 70).padEnd(70)} ${totalMs.padStart(10)} ${
+        (totalPct + "%").padStart(9)
+      } ${selfMs.padStart(10)}`,
+    );
+  }
+};
+
+for (const profile of profileEvents) {
+  if (profile.id === undefined) continue;
+  const threadLabel = threadNames.get(`${profile.pid}/${profile.tid}`) ??
+    `pid=${profile.pid} tid=${profile.tid}`;
+  analyzeProfile(threadLabel, profile.pid, profile.id);
 }

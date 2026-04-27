@@ -35,15 +35,6 @@ import square from "../assets/square.svg" with { type: "text" };
 import pinkPotion from "../assets/pinkPotion.svg" with { type: "text" };
 import rock from "../assets/rock.svg" with { type: "text" };
 import house from "../assets/house.svg" with { type: "text" };
-import atom from "../assets/atom.svg" with { type: "text" };
-import ramp from "../assets/ramp.svg" with { type: "text" };
-import raise from "../assets/raise.svg" with { type: "text" };
-import lower from "../assets/lower.svg" with { type: "text" };
-import waterDrop from "../assets/waterDrop.svg" with { type: "text" };
-import left from "../assets/left.svg" with { type: "text" };
-import right from "../assets/right.svg" with { type: "text" };
-import up from "../assets/up.svg" with { type: "text" };
-import down from "../assets/down.svg" with { type: "text" };
 import location from "../assets/location.svg" with { type: "text" };
 import well from "../assets/well.svg" with { type: "text" };
 import windmill from "../assets/windmill.svg" with { type: "text" };
@@ -66,12 +57,12 @@ import wind from "../assets/wind.svg" with { type: "text" };
 import sparkle from "../assets/sparkle.svg" with { type: "text" };
 import rune from "../assets/rune.svg" with { type: "text" };
 import rune2 from "../assets/rune2.svg" with { type: "text" };
+import atom from "../assets/atom.svg" with { type: "text" };
 import swap from "../assets/swap.svg" with { type: "text" };
 import scythe from "../assets/scythe.svg" with { type: "text" };
 import fangs from "../assets/fangs.svg" with { type: "text" };
 import direCollar from "../assets/direCollar.svg" with { type: "text" };
 import crimsonArc from "../assets/crimsonArc.svg" with { type: "text" };
-import pause from "../assets/pause.svg" with { type: "text" };
 import cancel from "../assets/cancel.svg" with { type: "text" };
 import vip from "../assets/vip.svg" with { type: "text" };
 import wolfDodge from "../assets/wolf-dodge.svg" with { type: "text" };
@@ -190,20 +181,7 @@ export const svgs: Record<string, string> = {
 
   // misc
   square,
-
-  // editor
   atom,
-  ramp,
-  raise,
-  lower,
-  waterDrop,
-  left,
-  right,
-  up,
-  down,
-
-  // unused
-  pause,
 };
 
 type SvgConfig = {

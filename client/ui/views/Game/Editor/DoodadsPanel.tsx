@@ -5,9 +5,12 @@ import { mouse } from "../../../../mouse.ts";
 import { Grid } from "./common.ts";
 import { CollapsiblePanel } from "./CollapsiblePanel.tsx";
 import { useTranslation } from "react-i18next";
+import { editorActiveActionVar } from "@/vars/editor.ts";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
 
 export const pickDoodad = (prefab: string) => {
   const blueprint = createBlueprint(prefab, mouse.world.x, mouse.world.y);
+  editorActiveActionVar({ kind: "doodad", prefab });
   if (blueprint?.prefab === "flowers") {
     blueprint.modelScale = Math.round((1 + (Math.random() - 0.5)) * 100) / 100;
     const r = Math.random();
@@ -34,6 +37,7 @@ export const pickDoodad = (prefab: string) => {
 
 export const DoodadsPanel = () => {
   const { t } = useTranslation();
+  const activeAction = useReactiveVar(editorActiveActionVar);
   return (
     <CollapsiblePanel title={t("editor.doodads")}>
       <Grid>
@@ -44,6 +48,8 @@ export const DoodadsPanel = () => {
             key={k}
             name={v.name ?? k}
             icon={v.model ?? k}
+            pressed={activeAction?.kind === "doodad" &&
+              activeAction.prefab === k}
             onClick={() => pickDoodad(k)}
           />
         ))}

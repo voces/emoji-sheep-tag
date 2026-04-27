@@ -66,7 +66,7 @@ const updateColor = (e: Entity) => {
     collection.setPlayerColorAt(e.id, color.set(accentColor ?? 0xffffff));
   }
 
-  if (e.alpha) collection.setAlphaAt(e.id, e.alpha, false);
+  if (typeof e.alpha === "number") collection.setAlphaAt(e.id, e.alpha, false);
   else if (
     typeof e.progress === "number" && collection instanceof InstancedSvg
   ) {

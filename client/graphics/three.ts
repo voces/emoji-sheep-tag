@@ -26,6 +26,9 @@ import { clearGeneratedFlowers, regenerateFlowers } from "../flowers.ts";
 
 const terrainTilePalette = tileDefs.map((t) => ({
   color: `#${t.color.toString(16).padStart(6, "0")}`,
+  strength: t.strength,
+  noiseFreq: t.noiseFreq,
+  noiseAmp: t.noiseAmp,
 }));
 
 const extractDoodads = (map: LoadedMap): DoodadPoint[] =>

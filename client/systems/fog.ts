@@ -129,8 +129,8 @@ export const alwaysVisible = (entity: Entity) =>
     : entity.type === "cosmetic" || entity.type === "static";
 
 type Cell = {
-  visible: Set<Entity>;
-  isVisible: boolean; // Cache for visible.size > 0
+  visibleCount: number;
+  isVisible: boolean; // Cache for visibleCount > 0
   x: number;
   y: number;
 };
@@ -138,8 +138,10 @@ type Cell = {
 // Track entities that block line of sight (for quick lookup)
 const blockerMap = new Map<string, Entity>();
 
-// Track entities by grid cell for efficient fog updates (y -> x -> entities)
-const entityGridMap = new Map<number, Map<number, Set<Entity>>>();
+// Track entities by grid cell for efficient fog updates (y -> x -> entities).
+// Plain object (not Map) so the hot getEntitiesNeedingUpdate path can use
+// integer-key element access instead of Map.get.
+const entityGridMap: Record<number, Map<number, Set<Entity>>> = {};
 
 let terrainLayerData = getTerrainLayers();
 let fogBounds = getMapBounds();
@@ -180,10 +182,10 @@ const addEntityToGrid = (entity: Entity) => {
   const bounds = getEntityFogBounds(entity);
 
   for (let y = bounds.minY; y <= bounds.maxY; y++) {
-    let row = entityGridMap.get(y);
+    let row = entityGridMap[y];
     if (!row) {
       row = new Map();
-      entityGridMap.set(y, row);
+      entityGridMap[y] = row;
     }
     for (let x = bounds.minX; x <= bounds.maxX; x++) {
       let cell = row.get(x);
@@ -228,7 +230,7 @@ const removeEntityFromGrid = (
     };
 
   for (let y = bounds.minY; y <= bounds.maxY; y++) {
-    const row = entityGridMap.get(y);
+    const row = entityGridMap[y];
     if (!row) continue;
     for (let x = bounds.minX; x <= bounds.maxX; x++) {
       const cell = row.get(x);
@@ -237,7 +239,7 @@ const removeEntityFromGrid = (
       if (cell.size === 0) {
         row.delete(x);
         if (row.size === 0) {
-          entityGridMap.delete(y);
+          delete entityGridMap[y];
         }
       }
     }
@@ -268,15 +270,20 @@ class VisibilityGrid {
   private readonly width: number;
   private readonly height: number;
   private readonly cells: Cell[][];
-  private readonly entityToCells: Map<Entity, Set<Cell>> = new Map();
+  private readonly entityToViewshed: Map<Entity, number[]> = new Map();
   private readonly entityLastPos: Map<
     Entity,
     { x: number; y: number; r: number }
   > = new Map();
   readonly fogTexture: DataTexture;
   private readonly fogData: Uint8Array;
-  private readonly changedCells: Set<number> = new Set();
-  readonly modifiedCells: Set<number> = new Set(); // Cells modified in this update
+  readonly modifiedCells: Set<number> = new Set(); // Cells whose isVisible transitioned this update
+  private readonly bfsVisited: Uint8Array;
+  private readonly bfsBlocked: Uint8Array;
+  private readonly bfsQueueX: Int32Array;
+  private readonly bfsQueueY: Int32Array;
+  private readonly bfsOldMark: Uint8Array;
+  private readonly bfsNewMark: Uint8Array;
 
   constructor(width: number, height: number) {
     this.width = width;
@@ -285,7 +292,7 @@ class VisibilityGrid {
       { length: height },
       (_, y) =>
         Array.from({ length: width }, (_, x) => ({
-          visible: new Set<Entity>(),
+          visibleCount: 0,
           isVisible: false,
           x,
           y,
@@ -293,6 +300,12 @@ class VisibilityGrid {
     );
 
     this.fogData = new Uint8Array(width * height);
+    this.bfsVisited = new Uint8Array(width * height);
+    this.bfsBlocked = new Uint8Array(width * height);
+    this.bfsQueueX = new Int32Array(width * height);
+    this.bfsQueueY = new Int32Array(width * height);
+    this.bfsOldMark = new Uint8Array(width * height);
+    this.bfsNewMark = new Uint8Array(width * height);
 
     this.fogTexture = new DataTexture(
       this.fogData,
@@ -322,9 +335,15 @@ class VisibilityGrid {
     }
     this.entityLastPos.set(entity, { x: cx, y: cy, r });
 
-    const oldCells = this.entityToCells.get(entity);
-    const newCells = new Set<Cell>();
-    const newCellKeys = new Set<number>();
+    const oldViewshed = this.entityToViewshed.get(entity);
+    const oldMark = this.bfsOldMark;
+    const newMark = this.bfsNewMark;
+    if (oldViewshed) {
+      for (let i = 0; i < oldViewshed.length; i++) {
+        oldMark[oldViewshed[i]] = 1;
+      }
+    }
+    const newViewshed: number[] = [];
 
     // terrainLayers is 2x resolution; fog grid is 4x
     const terrainScale = FOG_RESOLUTION_MULTIPLIER / 2;
@@ -392,20 +411,27 @@ class VisibilityGrid {
     // Use flood fill with shadow casting for blockers and cliffs
     const radiusSquared = (effectiveSightRadius * FOG_RESOLUTION_MULTIPLIER) **
       2;
-    const visited = new Set<number>();
-    const blocked = new Set<number>(); // Cells in shadow of blockers/cliffs
-    const queue: { x: number; y: number }[] = [{
-      x: cx,
-      y: cy,
-    }];
+    const width = this.width;
+    const visited = this.bfsVisited;
+    const blocked = this.bfsBlocked;
+    visited.fill(0);
+    blocked.fill(0);
+    const queueX = this.bfsQueueX;
+    const queueY = this.bfsQueueY;
+    queueX[0] = cx;
+    queueY[0] = cy;
+    let queueHead = 0;
+    let queueTail = 1;
 
-    visited.add(cy * this.width + cx);
+    visited[cy * width + cx] = 1;
 
-    while (queue.length > 0) {
-      const { x, y } = queue.shift()!;
+    while (queueHead < queueTail) {
+      const x = queueX[queueHead];
+      const y = queueY[queueHead];
+      queueHead++;
 
       // Skip if this cell is in a shadow
-      if (blocked.has(y * this.width + x)) continue;
+      if (blocked[y * width + x]) continue;
 
       // Check distance
       const dx = x - cx;
@@ -444,6 +470,7 @@ class VisibilityGrid {
           const perpY = normalX;
 
           // Cast shadow rays in a cone (1 cell wide for cliff edges)
+          const mapHeight = this.height;
           for (let offset = -1; offset <= 1; offset += 0.5) {
             const rayStartX = x + perpX * offset;
             const rayStartY = y + perpY * offset;
@@ -452,11 +479,10 @@ class VisibilityGrid {
               const shadowX = Math.round(rayStartX + normalX * i);
               const shadowY = Math.round(rayStartY + normalY * i);
               if (
-                shadowX >= 0 && shadowX < this.width && shadowY >= 0 &&
-                shadowY < this.height
-              ) {
-                blocked.add(shadowY * this.width + shadowX);
-              }
+                shadowX < 0 || shadowX >= width || shadowY < 0 ||
+                shadowY >= mapHeight
+              ) break;
+              blocked[shadowY * width + shadowX] = 1;
             }
           }
         }
@@ -464,14 +490,17 @@ class VisibilityGrid {
       }
 
       // Mark as visible
-      const cellIndex = y * this.width + x;
+      const cellIndex = y * width + x;
       const cell = this.cells[y][x];
-      const wasVisible = cell.isVisible;
-      cell.visible.add(entity);
-      if (!wasVisible) cell.isVisible = true;
-      newCells.add(cell);
-      newCellKeys.add(cellIndex);
-      this.modifiedCells.add(cellIndex);
+      if (!oldMark[cellIndex]) {
+        cell.visibleCount++;
+        if (cell.visibleCount === 1) {
+          cell.isVisible = true;
+          this.modifiedCells.add(cellIndex);
+        }
+      }
+      newMark[cellIndex] = 1;
+      newViewshed.push(cellIndex);
 
       // Check if blocked by entity - mark cells behind the blocker
       const blockerRow = blockerGrid.get(y);
@@ -502,6 +531,7 @@ class VisibilityGrid {
               // Use blocker's radius to determine cone width (convert to fog cells)
               const blockerRadius = blocker.radius ?? 0.5;
               const coneWidth = blockerRadius * FOG_RESOLUTION_MULTIPLIER;
+              const mapHeight = this.height;
               for (
                 let offset = -coneWidth;
                 offset <= coneWidth;
@@ -515,11 +545,10 @@ class VisibilityGrid {
                   const shadowX = Math.round(rayStartX + normalX * i);
                   const shadowY = Math.round(rayStartY + normalY * i);
                   if (
-                    shadowX >= 0 && shadowX < this.width && shadowY >= 0 &&
-                    shadowY < this.height
-                  ) {
-                    blocked.add(shadowY * this.width + shadowX);
-                  }
+                    shadowX < 0 || shadowX >= width || shadowY < 0 ||
+                    shadowY >= mapHeight
+                  ) break;
+                  blocked[shadowY * width + shadowX] = 1;
                 }
               }
             }
@@ -528,80 +557,82 @@ class VisibilityGrid {
         }
       }
 
-      // Add neighbors to queue
-      const neighbors = [
-        { x: x + 1, y },
-        { x: x - 1, y },
-        { x, y: y + 1 },
-        { x, y: y - 1 },
-        { x: x + 1, y: y + 1 },
-        { x: x + 1, y: y - 1 },
-        { x: x - 1, y: y + 1 },
-        { x: x - 1, y: y - 1 },
-      ];
-
-      for (const neighbor of neighbors) {
-        if (
-          neighbor.x < 0 || neighbor.x >= this.width || neighbor.y < 0 ||
-          neighbor.y >= this.height
-        ) continue;
-        const neighborIndex = neighbor.y * this.width + neighbor.x;
-        if (visited.has(neighborIndex)) continue;
-        visited.add(neighborIndex);
-        queue.push({
-          x: neighbor.x,
-          y: neighbor.y,
-        });
-      }
-    }
-
-    // Differential update: remove entity from cells it no longer sees
-    if (oldCells) {
-      for (const cell of oldCells) {
-        if (!newCells.has(cell)) {
-          cell.visible.delete(entity);
-          cell.isVisible = cell.visible.size > 0;
-          this.modifiedCells.add(cell.y * this.width + cell.x);
+      const mapHeight = this.height;
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= mapHeight) continue;
+        const rowBase = ny * width;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          if (nx < 0 || nx >= width) continue;
+          const idx = rowBase + nx;
+          if (visited[idx]) continue;
+          visited[idx] = 1;
+          queueX[queueTail] = nx;
+          queueY[queueTail] = ny;
+          queueTail++;
         }
       }
     }
 
-    this.entityToCells.set(entity, newCells);
+    // Differential update: cells in old viewshed but not new lose this entity.
+    // Also clears oldMark in the same pass for cheap scratch reset.
+    if (oldViewshed) {
+      for (let i = 0; i < oldViewshed.length; i++) {
+        const idx = oldViewshed[i];
+        if (!newMark[idx]) {
+          const cellY = (idx / width) | 0;
+          const cellX = idx - cellY * width;
+          const cell = this.cells[cellY][cellX];
+          cell.visibleCount--;
+          if (cell.visibleCount === 0) {
+            cell.isVisible = false;
+            this.modifiedCells.add(idx);
+          }
+        }
+        oldMark[idx] = 0;
+      }
+    }
+
+    // Reset newMark scratch.
+    for (let i = 0; i < newViewshed.length; i++) {
+      newMark[newViewshed[i]] = 0;
+    }
+
+    this.entityToViewshed.set(entity, newViewshed);
   }
 
   removeEntity(entity: Entity) {
-    const cells = this.entityToCells.get(entity);
-    if (!cells) return;
+    const viewshed = this.entityToViewshed.get(entity);
+    if (!viewshed) return;
 
-    for (const cell of cells) {
-      cell.visible.delete(entity);
-      cell.isVisible = cell.visible.size > 0;
-      // Mark cell as modified so fog updates
-      this.modifiedCells.add(cell.y * this.width + cell.x);
+    const width = this.width;
+    for (let i = 0; i < viewshed.length; i++) {
+      const idx = viewshed[i];
+      const cellY = (idx / width) | 0;
+      const cellX = idx - cellY * width;
+      const cell = this.cells[cellY][cellX];
+      cell.visibleCount--;
+      if (cell.visibleCount === 0) {
+        cell.isVisible = false;
+        this.modifiedCells.add(idx);
+      }
     }
 
-    this.entityToCells.delete(entity);
+    this.entityToViewshed.delete(entity);
     this.entityLastPos.delete(entity);
   }
 
   updateFog() {
-    // Clear changed cells from last frame
-    this.changedCells.clear();
-
-    // Only iterate cells that were modified in this update
+    // modifiedCells now only contains cells whose isVisible transitioned, so
+    // every entry corresponds to a fogData byte that needs flipping.
+    const width = this.width;
+    const fogData = this.fogData;
     for (const cellIndex of this.modifiedCells) {
-      const y = Math.floor(cellIndex / this.width);
-      const x = cellIndex % this.width;
-      const cell = this.cells[y][x];
-      const visible = cell.isVisible;
-
-      const oldValue = this.fogData[cellIndex];
-      const newValue = visible ? 255 : 0;
-
-      if (oldValue !== newValue) {
-        this.fogData[cellIndex] = newValue;
-        this.changedCells.add(cellIndex);
-      }
+      const y = (cellIndex / width) | 0;
+      const x = cellIndex - y * width;
+      fogData[cellIndex] = this.cells[y][x].isVisible ? 255 : 0;
     }
 
     // Don't clear modifiedCells here - getEntitiesNeedingUpdate() needs it
@@ -612,7 +643,7 @@ class VisibilityGrid {
     const fx = Math.floor(x * FOG_RESOLUTION_MULTIPLIER);
     const fy = Math.floor(y * FOG_RESOLUTION_MULTIPLIER);
     if (fx < 0 || fx >= this.width || fy < 0 || fy >= this.height) return false;
-    return this.cells[fy][fx].visible.size > 0;
+    return this.cells[fy][fx].visibleCount > 0;
   }
 
   isPositionVisible(x: number, y: number): boolean {
@@ -622,34 +653,27 @@ class VisibilityGrid {
   getEntitiesNeedingUpdate(): Set<Entity> {
     const entities = new Set<Entity>();
 
-    // Also check modifiedCells in addition to changedCells
-    // This catches cases where visibility providers change but cell visibility stays the same
-    const cellsToCheck = new Set([...this.changedCells, ...this.modifiedCells]);
-
-    // Check all changed cells and collect entities in those cells
-    for (const cellIndex of cellsToCheck) {
-      const y = Math.floor(cellIndex / this.width);
-      const x = cellIndex % this.width;
+    // modifiedCells contains exactly the cells whose isVisible transitioned;
+    // any entity standing in (or near) one of those cells may need a refresh.
+    const width = this.width;
+    const height = this.height;
+    for (const cellIndex of this.modifiedCells) {
+      const y = (cellIndex / width) | 0;
+      const x = cellIndex - y * width;
 
       // Check entities in a small radius around changed cells (±2 for entity size)
       for (let dy = -2; dy <= 2; dy++) {
+        const cy = y + dy;
+        if (cy < 0 || cy >= height) continue;
+        const row = entityGridMap[cy];
+        if (!row) continue;
         for (let dx = -2; dx <= 2; dx++) {
           const cx = x + dx;
-          const cy = y + dy;
-
-          if (cx < 0 || cx >= this.width || cy < 0 || cy >= this.height) {
-            continue;
-          }
-
-          // Get entities at this grid cell
-          const row = entityGridMap.get(cy);
-          if (row) {
-            const cellEntities = row.get(cx);
-            if (cellEntities) {
-              for (const entity of cellEntities) {
-                entities.add(entity);
-              }
-            }
+          if (cx < 0 || cx >= width) continue;
+          const cellEntities = row.get(cx);
+          if (!cellEntities) continue;
+          for (const entity of cellEntities) {
+            entities.add(entity);
           }
         }
       }
@@ -661,7 +685,7 @@ class VisibilityGrid {
   getVisionProvidingEntities(): Entity[] {
     // Return a copy to avoid concurrent modification issues when caller
     // modifies visibility during iteration
-    return Array.from(this.entityToCells.keys());
+    return Array.from(this.entityToViewshed.keys());
   }
 }
 
@@ -826,7 +850,7 @@ const rebuildFogResources = () => {
   terrainLayerData = getTerrainLayers();
   fogBounds = getMapBounds();
   visibilityGrid = createVisibilityGrid();
-  entityGridMap.clear();
+  for (const k in entityGridMap) delete entityGridMap[k];
   for (const entity of app.entities) {
     if (alwaysVisible(entity)) continue;
     addEntityToGrid(entity);

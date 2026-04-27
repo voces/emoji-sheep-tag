@@ -1234,12 +1234,65 @@ export const prefabs: Record<string, DataEntity> = {
   },
 };
 
+/**
+ * `strength` (0..1): each tile's influence radius is `0.5 + strength * 0.5`
+ * tile-units. A 1.0-strength tile next to a 0.0-strength tile leaks half a
+ * tile into it; two 0.5-strength tiles meet at the midpoint.
+ *
+ * `noiseFreq` / `noiseAmp`: per-tile boundary distortion. Higher freq = finer
+ * wobble; amp is the radius perturbation in tile-units (keep ≲ 0.4 so the
+ * 3×3 neighbor window stays sufficient).
+ */
 export const tileDefs = [
-  { name: "Grass", pathing: PATHING_NONE, color: 0x6caa00 },
-  { name: "Pen", pathing: PATHING_BUILDABLE | PATHING_BLIGHT, color: 0x4b3061 },
+  {
+    name: "Grass",
+    pathing: PATHING_NONE,
+    color: 0x5cb300,
+    strength: 0.6,
+    noiseFreq: 5,
+    noiseAmp: 0.2,
+  },
+  {
+    name: "Pen",
+    pathing: PATHING_BUILDABLE | PATHING_BLIGHT,
+    color: 0x4b3061,
+    strength: 0.5,
+    noiseFreq: 2.5,
+    noiseAmp: 0.04,
+  },
   /** @deprecated Prefer the water mask (LoadedMap.water) for new maps. */
-  { name: "Water", pathing: PATHING_BUILDABLE, color: 0x385670 },
-  { name: "Sand", pathing: PATHING_NONE, color: 0xd4c8a0 },
+  {
+    name: "Water",
+    pathing: PATHING_BUILDABLE,
+    color: 0x385670,
+    strength: 0.5,
+    noiseFreq: 1.5,
+    noiseAmp: 0.15,
+  },
+  {
+    name: "Sand",
+    pathing: PATHING_NONE,
+    color: 0xd4c8a0,
+    strength: 0.2,
+    noiseFreq: 0.1,
+    noiseAmp: 1,
+  },
+  {
+    name: "Dark Grass",
+    pathing: PATHING_NONE,
+    color: 0x429900,
+    strength: 0.5,
+    noiseFreq: 5,
+    noiseAmp: 0.25,
+  },
+  {
+    name: "Dirt",
+    pathing: PATHING_NONE,
+    color: 0xc4935f,
+    strength: 0.3,
+    noiseFreq: 3,
+    noiseAmp: 0.15,
+  },
 ];
 
 export const cliffDefs = [

@@ -45,7 +45,12 @@ const cursor = document.getElementById("cursor");
 
 const getCursorVariant = (intersect: Entity | undefined) => {
   const blueprint = getBlueprint();
-  if (blueprint && blueprint.prefab !== "ping") return "hidden";
+  // Blueprints with `preserveCursor` keep the OS cursor visible — used for the
+  // editor brush tools (brush preview shows the affected area) and ping (where
+  // hiding the cursor over UI buttons is unhelpful).
+  if (blueprint && blueprint.prefab !== "ping" && !blueprint.preserveCursor) {
+    return "hidden";
+  }
   const active = getActiveOrder()?.variant;
   if (active) return active;
   if (!intersect) return "default";

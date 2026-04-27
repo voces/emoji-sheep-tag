@@ -28,6 +28,13 @@ export type Cliff = number | "r";
 export type CliffMask = Cliff[][];
 export type WaterMask = number[][];
 
+export type TileDef = {
+  color: string;
+  strength: number;
+  noiseFreq: number;
+  noiseAmp: number;
+};
+
 type TerrainMasks = {
   cliff: CliffMask;
   groundTile: number[][];
@@ -357,6 +364,29 @@ const buildTileColorTexture = (
   return tex;
 };
 
+/**
+ * 1×N RGBA float lookup of per-tile field knobs:
+ * R = influence radius (0.5 + strength*0.5, in tile-units),
+ * G = noise frequency, B = noise amplitude (radius perturbation).
+ * Sampled in the shader at u = (tileIndex + 0.5) / N.
+ */
+const buildTileFieldTexture = (tiles: TileDef[]): DataTexture => {
+  const n = Math.max(tiles.length, 1);
+  const data = new Float32Array(n * 4);
+  for (let i = 0; i < tiles.length; i++) {
+    const t = tiles[i];
+    data[i * 4] = 0.5 + t.strength * 0.5;
+    data[i * 4 + 1] = t.noiseFreq;
+    data[i * 4 + 2] = t.noiseAmp;
+    data[i * 4 + 3] = 0;
+  }
+  const tex = new DataTexture(data, n, 1, RGBAFormat, FloatType);
+  tex.minFilter = LinearFilter;
+  tex.magFilter = LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
+};
+
 const buildCliffColorTexture = (
   cliffTile: number[][],
   defs: { colorLight: number; colorDark: number }[],
@@ -517,9 +547,12 @@ const vertexShader = `
 `;
 
 const fragmentShader = `
+  // cache buster: d
   uniform sampler2D heightMap;
   uniform sampler2D cliffMap;
   uniform sampler2D tileColorMap;
+  uniform sampler2D tileFieldMap;
+  uniform float tileCount;
   uniform sampler2D doodadMap;
   uniform sampler2D waterMap;
   uniform vec2 texelSize;
@@ -573,40 +606,111 @@ const fragmentShader = `
     );
   }
 
-  // Sample tile color with noise-displaced UV for wavy borders.
-  // Reduce displacement near "hard" tiles (pen etc.) for cleaner edges.
-  vec3 wavyTileColor(vec2 uv, vec2 wp) {
-    float noiseX = vnoise(wp * 1.2) - 0.5;
-    float noiseY = vnoise(wp * 1.2 + vec2(97.0, 43.0)) - 0.5;
-    vec2 offset = vec2(noiseX, noiseY) * texelSize * 0.8;
+  // Polynomial smooth-min — Iñigo Quílez. Smaller k → harder min.
+  float smin(float a, float b, float k) {
+    float h = max(k - abs(a - b), 0.0) / k;
+    return min(a, b) - h * h * k * 0.25;
+  }
 
-    // Check if any neighbor is a different tile
-    float centerIdx = texture2D(tileColorMap, uv).a * 255.0;
-    float scale = 1.0;
+  // Soft tile field. Each pixel surveys the 4 nearest tile centers
+  // (Voronoi quad) — sufficient because at strength≤1 + amp≤0.4, the
+  // effective radius is ≤1.4 and any tile center beyond the quad is at
+  // distance ≥ 1.5, so it can never win or be a near-miss runner-up:
+  //   1. Per-quad-corner: distance to center, perturbed radius, tile
+  //      color and index.
+  //   2. Per candidate: smooth-min distance against every same-type
+  //      sibling in the quad. Same-type tiles merge into one distance
+  //      field — this gives rounded corners and hourglass crossings.
+  //   3. Best (radius - softDist) wins; AA blend against runner-up of
+  //      a different type.
+  vec3 softTileColor(vec2 wp) {
+    // Anchor at the bottom-left of the 4 surrounding tile centers.
+    vec2 quadId = floor(wp - 0.5);
+
+    float tIdx[4];
+    float dist[4];
+    float rad[4];
+    vec3 col[4];
+
+    for (int j = 0; j < 4; j++) {
+      int dx = j - (j / 2) * 2;
+      int dy = j / 2;
+      vec2 nbrId = quadId + vec2(float(dx), float(dy));
+      vec2 nbrCenter = nbrId + 0.5;
+      vec2 nbrUv = nbrCenter * 2.0 * texelSize;
+
+      vec4 nbrTexel = texture2D(tileColorMap, nbrUv);
+      float nbrIdx = nbrTexel.a * 255.0;
+
+      vec2 fieldUv = vec2((nbrIdx + 0.5) / tileCount, 0.5);
+      vec3 field = texture2D(tileFieldMap, fieldUv).rgb;
+
+      // Per-type noise (function of wp only). Per-instance noise here
+      // would make sibling same-type tiles disagree on rad, putting a
+      // tangent kink at every same-type boundary and making the runner-
+      // up's secondInf jump as the quad shifts to a different same-type
+      // instance at Voronoi-cell boundaries.
+      float n = vnoise(wp * field.g + vec2(nbrIdx * 27.3, nbrIdx * 41.1)) -
+                0.5;
+      tIdx[j] = nbrIdx;
+      dist[j] = distance(wp, nbrCenter);
+      rad[j] = field.r + n * field.b;
+      col[j] = nbrTexel.rgb;
+    }
+
+    // Roundness knob. 0 = boxy cells, 0.5–0.7 = bulbous, >1.0 = gooey.
+    const float k = 0.65;
+    float bestInf = -1e9;
+    vec3 bestCol = vec3(0.0);
+    float bestIdx = -1.0;
+    float secondInf = -1e9;
+    vec3 secondCol = vec3(0.0);
+
     for (int i = 0; i < 4; i++) {
-      vec2 dir = i == 0 ? vec2(1.0, 0.0) : i == 1 ? vec2(-1.0, 0.0)
-               : i == 2 ? vec2(0.0, 1.0) : vec2(0.0, -1.0);
-      float neighborIdx = texture2D(tileColorMap, uv + dir * texelSize * 2.0).a * 255.0;
-      if (abs(neighborIdx - centerIdx) > 0.5) {
-        // Either side is pen (index 1) → reduce waviness
-        float hardness = (abs(centerIdx - 1.0) < 0.5 || abs(neighborIdx - 1.0) < 0.5) ? 0.3 : 1.0;
-        scale = min(scale, hardness);
+      float sd = dist[i];
+      for (int j = 0; j < 4; j++) {
+        if (j == i) continue;
+        if (abs(tIdx[j] - tIdx[i]) > 0.5) continue;
+        sd = smin(sd, dist[j], k);
+      }
+      float inf = rad[i] - sd;
+
+      if (inf > bestInf) {
+        if (abs(tIdx[i] - bestIdx) > 0.5) {
+          secondInf = bestInf;
+          secondCol = bestCol;
+        }
+        bestInf = inf;
+        bestCol = col[i];
+        bestIdx = tIdx[i];
+      } else if (abs(tIdx[i] - bestIdx) > 0.5 && inf > secondInf) {
+        secondInf = inf;
+        secondCol = col[i];
       }
     }
 
-    vec2 duv = uv + offset * scale;
-    // Antialias: sample across pixel footprint to soften tile boundary
-    vec2 dx = dFdx(duv) * 0.35;
-    vec2 dy = dFdy(duv) * 0.35;
-    return (texture2D(tileColorMap, duv + dx + dy).rgb +
-            texture2D(tileColorMap, duv - dx + dy).rgb +
-            texture2D(tileColorMap, duv + dx - dy).rgb +
-            texture2D(tileColorMap, duv - dx - dy).rgb) * 0.25;
+    float gap = bestInf - secondInf;
+    // Clamp aa to a max so a fwidth(gap) spike at a window-shift
+    // discontinuity (where secondInf jumps as the 4-quad swaps a
+    // smin-dominating same-type instance for another) can't collapse
+    // the smoothstep into a 1-px band of loser color.
+    float aa = clamp(fwidth(gap), 0.0005, 0.05);
+    // Center the AA on gap=0 so the boundary itself is a 50/50 blend and
+    // each side ramps smoothly into its own color. A one-sided smoothstep
+    // here would invert the transition (render secondCol *at* the boundary).
+    float t = smoothstep(-aa, aa, gap);
+    // Suppress the runner-up entirely when it's outside its own blob
+    // (negative influence). The 3×3 window can swap which far-away
+    // tile holds the runner-up slot at every cell-grid boundary, and
+    // that jump makes fwidth(gap) spike — without this gate it leaks
+    // a 1-px band of the loser color far from any real transition.
+    float overlap = smoothstep(-0.05, 0.05, secondInf);
+    return mix(bestCol, mix(secondCol, bestCol, t), overlap);
   }
 
   void main() {
     vec2 wp = vWorldPos;
-    vec3 tileColor = wavyTileColor(vUv, wp);
+    vec3 tileColor = softTileColor(wp);
 
     float smoothH = heightSmooth(vUv);
 
@@ -643,6 +747,99 @@ const fragmentShader = `
     rockColor *= 0.70 + smoothH * 0.12;
     vec3 color = mix(groundColor, rockColor, cliffAmount);
 
+    // Procedural pebbles — small dark stones scattered on dirt tiles.
+    // Drawn before grass so blade tips overlay pebbles at dirt/grass seams.
+    {
+      float pebCellSize = 0.3;
+      // Rotate the cell grid off the tile axes so the periodic structure
+      // isn't aligned with anything else on screen — kills the row/column
+      // pattern that was visible at axis-aligned spacing.
+      const float pebCosR = 0.934;
+      const float pebSinR = 0.358;
+      vec2 wpRot = vec2(pebCosR * wp.x + pebSinR * wp.y,
+                        -pebSinR * wp.x + pebCosR * wp.y);
+      vec2 pebCellPos = wpRot / pebCellSize;
+
+      float winAlpha = 0.0;
+      vec3 winColor = vec3(0.0);
+
+      // 4-quad: pebble radius (~0.13 cell-units) is well under the
+      // half-cell, so pebbles never extend past their own cell — the 4
+      // closest cells are sufficient.
+      vec2 pebQuadId = floor(pebCellPos - 0.5);
+      for (int j = 0; j < 4; j++) {
+        int dx = j - (j / 2) * 2;
+        int dy = j / 2;
+        vec2 cellId = pebQuadId + vec2(float(dx), float(dy));
+        vec2 cellUv = pebCellPos - cellId;
+
+        float h0 = hash(cellId);
+
+        float h1 = hash(cellId + vec2(127.1, 311.7));
+        float h2 = hash(cellId + vec2(269.5, 183.3));
+        float h3 = hash(cellId + vec2(531.7, 213.1));
+        float h4 = hash(cellId + vec2(317.9, 149.3));
+
+        // Full-cell jitter — no axis-aligned dead zone between cells.
+        vec2 pebCenter = vec2(h1, h2);
+
+        vec2 rootWorldRot = (cellId + pebCenter) * pebCellSize;
+        vec2 rootWorld = vec2(
+          pebCosR * rootWorldRot.x - pebSinR * rootWorldRot.y,
+          pebSinR * rootWorldRot.x + pebCosR * rootWorldRot.y);
+        vec2 rootUv = rootWorld * 2.0 * texelSize;
+
+        // Low-frequency density octave — creates patches of denser/sparser
+        // pebbles instead of a uniform sprinkle. Period ~3 tile-units.
+        float densityNoise = vnoise(rootWorld * 0.35);
+        float threshold = 0.05 + densityNoise * 0.85;
+        if (h0 > threshold) continue;
+        float rootTile = texture2D(tileColorMap, rootUv).a * 255.0;
+        if (abs(rootTile - 5.0) > 0.5) continue;
+
+        float rootCliff = texture2D(cliffMap, rootUv).r * 2.0;
+        if (rootCliff < 0.3) continue;
+        float rootWaterLevel = texture2D(waterMap, rootUv).r;
+        float rootHeight = texture2D(heightMap, rootUv).r;
+        if (rootWaterLevel > rootHeight) continue;
+
+        // Pebble = rotated, slightly elongated ellipse. Sizes in cell-units
+        // (multiply by pebCellSize for tile-units): 0.08–0.14 → ~0.024–0.042
+        // tile-radius, similar visual scale to a grass blade's width.
+        float pebRx = 0.08 + h3 * 0.06;
+        float pebRy = pebRx * (0.7 + h4 * 0.5);
+        float angle = h0 * 6.2831853;
+        float ca = cos(angle);
+        float sa = sin(angle);
+
+        vec2 d = cellUv - pebCenter;
+        vec2 dr = vec2(d.x * ca - d.y * sa, d.x * sa + d.y * ca);
+        float dist = length(vec2(dr.x / pebRx, dr.y / pebRy));
+
+        float px = max(fwidth(dist), 0.0001);
+        float alpha = 1.0 - smoothstep(1.0 - px, 1.0 + px, dist);
+        if (alpha < 0.01) continue;
+
+        // Stone tone: brown-gray, per-pebble brightness variation, plus
+        // a subtle upper-left → lower-right gradient to suggest roundness.
+        float tone = 0.55 + h2 * 0.45;
+        vec3 stoneColor = vec3(0.42, 0.32, 0.22) * tone;
+        float light = 1.0 - 0.25 *
+          (dr.x / max(pebRx, pebRy) + dr.y / max(pebRx, pebRy));
+        stoneColor *= clamp(light, 0.7, 1.2);
+        stoneColor *= 0.26 + smoothH * 0.37;
+
+        if (alpha > winAlpha) {
+          winAlpha = alpha;
+          winColor = stoneColor;
+        }
+      }
+
+      if (winAlpha > 0.01) {
+        color = mix(color, winColor, winAlpha);
+      }
+    }
+
     // Procedural grass — blades rooted in grass tiles can extend over neighbors
     {
       float cellSize = 0.55;
@@ -654,11 +851,15 @@ const fragmentShader = `
       float winAlpha = 0.0;
       vec3 winColor = vec3(0.0);
 
-      // Check current cell and all 8 neighbors for fanning blades
-      for (int nyi = 0; nyi < 9; nyi++) {
-      int nx = nyi / 3 - 1;
-      int nyv = nyi - (nyi / 3) * 3 - 1;
-      vec2 cellId = floor(cellPos) + vec2(float(nx), float(nyv));
+      // 4-quad: the 4 closest clump cells to the pixel. Max blade extent
+      // (~0.88 cell-units) is short enough that blades rooted outside
+      // this quad effectively never reach the pixel — they were
+      // contributing only edge-case slivers in the old 9-cell window.
+      vec2 quadId = floor(cellPos - 0.5);
+      for (int nyi = 0; nyi < 4; nyi++) {
+      int nx = nyi - (nyi / 2) * 2;
+      int nyv = nyi / 2;
+      vec2 cellId = quadId + vec2(float(nx), float(nyv));
       vec2 cellUv = cellPos - cellId;
 
       float h0 = hash(cellId);
@@ -674,9 +875,11 @@ const fragmentShader = `
       float grassNoise = vnoise(rootWorld * 0.8) * 0.5 + 0.5;
       float proximity = clamp(featureProx + grassNoise * 0.12, 0.0, 1.0);
 
-      if (h0 >= proximity * proximity * 1.2 + 0.03) continue;
       float rootTile = texture2D(tileColorMap, rootUv).a * 255.0;
-      if (rootTile > 0.5) continue;
+      bool isDarkGrass = rootTile > 3.5 && rootTile < 4.5;
+      if (rootTile > 0.5 && !isDarkGrass) continue;
+      float densityBoost = isDarkGrass ? 0.05 : 0.0;
+      if (h0 >= proximity * proximity * 0.9 + 0.02 + densityBoost) continue;
       // Ban roots on cliff faces using cliff texture directly
       float rootCliff = texture2D(cliffMap, rootUv).r * 2.0;
       if (rootCliff < 0.3) continue;
@@ -783,8 +986,9 @@ const fragmentShader = `
           // Left fan's lead slightly lighter than right fan's lead
           float baseBright = isLeft ? 1.08 : 0.92;
           float brightness = baseBright + (1.0 - fanPos) * 0.25;
-          float r = (8.0 + h0 * 12.0) / 255.0 * brightness;
-          float g = (30.0 + h1 * 25.0) / 255.0 * brightness;
+          float darkMul = isDarkGrass ? 0.55 : 1.0;
+          float r = (8.0 + h0 * 12.0) / 255.0 * brightness * darkMul;
+          float g = (30.0 + h1 * 25.0) / 255.0 * brightness * darkMul;
           vec3 bladeCol = vec3(r, g, 0.0) * (0.9 + t * 0.1);
           bladeCol *= 0.26 + smoothH * 0.37;
 
@@ -1005,10 +1209,20 @@ const fragmentShader = `
       float cattailWinAlpha = 0.0;
       vec3 cattailWinColor = vec3(0.0);
 
-      for (int nyi = 0; nyi < 12; nyi++) {
-      int cnx = nyi / 4 - 1;
-      int cny = nyi - (nyi / 4) * 4 - 2;
-      vec2 cattailCellId = floor(cattailCellPos) + vec2(float(cnx), float(cny));
+      // 2×4 window: 4-quad horizontal × 4 rows {pixel-2, -1, 0, +1}.
+      // Cattails extend ~1.66 cell-units above and (depth-dependent)
+      // below their root, so we need 2 rows below for tall tops and
+      // 1 row above for deep-water stems reaching down. Anchor is
+      // referenced to the pixel's cell row, not floor(y-0.5), so
+      // coverage is consistent regardless of pixel position in cell.
+      vec2 cattailQuadId = vec2(
+        floor(cattailCellPos.x - 0.5),
+        floor(cattailCellPos.y) - 2.0
+      );
+      for (int nyi = 0; nyi < 8; nyi++) {
+      int cnx = nyi - (nyi / 2) * 2;
+      int cny = nyi / 2;
+      vec2 cattailCellId = cattailQuadId + vec2(float(cnx), float(cny));
       vec2 cattailCellUv = cattailCellPos - cattailCellId;
 
       float ch0 = hash(cattailCellId + vec2(71.7, 33.1));
@@ -1199,14 +1413,14 @@ const rampAllowed = (cliffMask: CliffMask, x: number, y: number) => {
 
 export class Terrain2D extends Mesh {
   masks: TerrainMasks;
-  tiles: { color: string }[];
+  tiles: TileDef[];
   doodads: DoodadPoint[];
   onChange?: () => void;
   declare material: ShaderMaterial;
 
   constructor(
     masks: TerrainMasks,
-    tiles: { color: string }[],
+    tiles: TileDef[],
     doodads: DoodadPoint[] = [],
   ) {
     const w = masks.cliff[0].length * 2;
@@ -1217,6 +1431,7 @@ export class Terrain2D extends Mesh {
     const heightTex = buildHeightTexture(masks.cliff);
     const cliffTex = buildCliffTexture(masks.cliff);
     const tileColorTex = buildTileColorTexture(masks.groundTile, tiles);
+    const tileFieldTex = buildTileFieldTexture(tiles);
     const doodadTex = buildDoodadTexture(masks.cliff, doodads);
     const waterTex = buildWaterTexture(masks.water);
 
@@ -1225,6 +1440,8 @@ export class Terrain2D extends Mesh {
         heightMap: { value: heightTex },
         cliffMap: { value: cliffTex },
         tileColorMap: { value: tileColorTex },
+        tileFieldMap: { value: tileFieldTex },
+        tileCount: { value: Math.max(tiles.length, 1) },
         doodadMap: { value: doodadTex },
         waterMap: { value: waterTex },
         texelSize: { value: new Vector2(1 / w, 1 / h) },
@@ -1254,6 +1471,7 @@ export class Terrain2D extends Mesh {
     uniforms.heightMap.value.dispose();
     uniforms.cliffMap.value.dispose();
     uniforms.tileColorMap.value.dispose();
+    uniforms.tileFieldMap.value.dispose();
     uniforms.cliffColorMap.value.dispose();
     uniforms.doodadMap.value.dispose();
     uniforms.waterMap.value.dispose();
@@ -1264,6 +1482,8 @@ export class Terrain2D extends Mesh {
       this.masks.groundTile,
       this.tiles,
     );
+    uniforms.tileFieldMap.value = buildTileFieldTexture(this.tiles);
+    uniforms.tileCount.value = Math.max(this.tiles.length, 1);
     uniforms.cliffColorMap.value = buildCliffColorTexture(
       this.masks.cliffTile,
       cliffDefs,
@@ -1296,13 +1516,18 @@ export class Terrain2D extends Mesh {
     this.rebuildTextures();
   }
 
-  /** Overwrites the entire water mask in one pass (for bulk operations). */
-  fillWater(value: number) {
-    const v = Math.max(0, Math.round(value));
-    for (const row of this.masks.water) {
-      for (let x = 0; x < row.length; x++) row[x] = v;
+  /** Bulk-update water cells with a single texture rebuild. */
+  setWaters(updates: Iterable<[number, number, number]>) {
+    let mutated = false;
+    for (const [x, y, value] of updates) {
+      const row = this.masks.water[y];
+      if (!row || row[x] === undefined) continue;
+      const v = Math.max(0, Math.round(value));
+      if (row[x] === v) continue;
+      row[x] = v;
+      mutated = true;
     }
-    this.rebuildTextures();
+    if (mutated) this.rebuildTextures();
   }
 
   setWaterViewMode(mode: 0 | 1 | 2) {
@@ -1311,6 +1536,41 @@ export class Terrain2D extends Mesh {
 
   setTime(time: number) {
     this.material.uniforms.time.value = time;
+  }
+
+  /** Bulk-update cliff cells with a single texture rebuild. */
+  setCliffs(updates: Iterable<[number, number, number | "r"]>) {
+    let mutated = false;
+    for (const [x, y, rawValue] of updates) {
+      const row = this.masks.cliff[y];
+      if (!row || row[x] === undefined) continue;
+      let value = rawValue;
+      if (value === "r") {
+        if (row[x] === "r") value = this.getCliff(x, y);
+        else if (!rampAllowed(this.masks.cliff, x, y)) continue;
+      } else {
+        if (value < 0) value = 0;
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            if (
+              this.masks.cliff[y + dy]?.[x + dx] === "r" &&
+              !rampAllowed(this.masks.cliff, x + dx, y + dy)
+            ) {
+              row[x] = getCliffHeight(
+                (x + dx) * 2,
+                (y + dy) * 2,
+                this.masks.cliff,
+              );
+            }
+          }
+        }
+      }
+      if (row[x] === value) continue;
+      row[x] = value;
+      mutated = true;
+    }
+    if (mutated) this.rebuildTextures();
   }
 
   setCliff(x: number, y: number, value: number | "r") {
@@ -1345,6 +1605,17 @@ export class Terrain2D extends Mesh {
     this.rebuildTextures();
   }
 
+  setGroundTiles(updates: Iterable<[number, number, number]>) {
+    let mutated = false;
+    for (const [x, y, value] of updates) {
+      const row = this.masks.groundTile[y];
+      if (!row || row[x] === undefined || row[x] === value) continue;
+      row[x] = value;
+      mutated = true;
+    }
+    if (mutated) this.rebuildTextures();
+  }
+
   setDoodads(doodads: DoodadPoint[]) {
     this.doodads = doodads;
     const uniforms = this.material.uniforms;
@@ -1355,7 +1626,7 @@ export class Terrain2D extends Mesh {
 
   load(
     masks: TerrainMasks,
-    tiles: { color: string }[],
+    tiles: TileDef[],
     doodads: DoodadPoint[] = [],
   ) {
     this.masks = masks;
