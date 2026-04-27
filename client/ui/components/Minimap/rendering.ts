@@ -19,6 +19,7 @@ import { visibilityGrid } from "../../../systems/fog.ts";
 import { FogPass } from "../../../graphics/FogPass.ts";
 import { type Entity } from "../../../ecs.ts";
 import { setMinimapMask } from "../../../systems/three.ts";
+import { terrain } from "../../../graphics/three.ts";
 
 export const createMinimapRenderer = (
   renderer: WebGLRenderer,
@@ -117,9 +118,11 @@ export const createMinimapRenderer = (
       }
     }
 
+    terrain.setDecalsEnabled(false);
     renderer.setRenderTarget(sceneRenderTarget);
     renderer.clear();
     renderer.render(scene, camera);
+    terrain.setDecalsEnabled(true);
 
     for (const { entity, originalScale } of scaledEntities) {
       entity.modelScale = originalScale;

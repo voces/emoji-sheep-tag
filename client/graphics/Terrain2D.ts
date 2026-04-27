@@ -547,7 +547,6 @@ const vertexShader = `
 `;
 
 const fragmentShader = `
-  // cache buster: d
   uniform sampler2D heightMap;
   uniform sampler2D cliffMap;
   uniform sampler2D tileColorMap;
@@ -560,6 +559,7 @@ const fragmentShader = `
   /** 0 = hide water, 1 = normal, 2 = show water mask as indicator over dry cells */
   uniform int waterViewMode;
   uniform float time;
+  uniform float decalsEnabled;
 
   varying vec2 vUv;
   varying vec2 vWorldPos;
@@ -747,91 +747,192 @@ const fragmentShader = `
     rockColor *= 0.70 + smoothH * 0.12;
     vec3 color = mix(groundColor, rockColor, cliffAmount);
 
-    // Procedural pebbles — small dark stones scattered on dirt tiles.
-    // Drawn before grass so blade tips overlay pebbles at dirt/grass seams.
-    {
-      float pebCellSize = 0.3;
-      // Rotate the cell grid off the tile axes so the periodic structure
-      // isn't aligned with anything else on screen — kills the row/column
-      // pattern that was visible at axis-aligned spacing.
-      const float pebCosR = 0.934;
-      const float pebSinR = 0.358;
-      vec2 wpRot = vec2(pebCosR * wp.x + pebSinR * wp.y,
-                        -pebSinR * wp.x + pebCosR * wp.y);
-      vec2 pebCellPos = wpRot / pebCellSize;
+    // Procedural decals on dirt: small flat dirt clods + larger sparse rocks.
+    // Two passes because clods sit on a fine grid (many small patches) while
+    // rocks need a coarse grid (few large rocks). Same rotated lattice used
+    // for both, just with different cell sizes; rotation kills axis-aligned
+    // periodicity that would otherwise be visible.
+    const float pebCosR = 0.934;
+    const float pebSinR = 0.358;
+    vec2 wpRot = vec2(pebCosR * wp.x + pebSinR * wp.y,
+                      -pebSinR * wp.x + pebCosR * wp.y);
 
+    // Pass 1 — dirt clods: small flat ovals, color tied to ground hue.
+    if (decalsEnabled > 0.5) {
+      float clodCellSize = 0.3;
+      vec2 clodCellPos = wpRot / clodCellSize;
       float winAlpha = 0.0;
       vec3 winColor = vec3(0.0);
 
-      // 4-quad: pebble radius (~0.13 cell-units) is well under the
-      // half-cell, so pebbles never extend past their own cell — the 4
-      // closest cells are sufficient.
-      vec2 pebQuadId = floor(pebCellPos - 0.5);
+      vec2 clodQuadId = floor(clodCellPos - 0.5);
       for (int j = 0; j < 4; j++) {
         int dx = j - (j / 2) * 2;
         int dy = j / 2;
-        vec2 cellId = pebQuadId + vec2(float(dx), float(dy));
-        vec2 cellUv = pebCellPos - cellId;
+        vec2 cellId = clodQuadId + vec2(float(dx), float(dy));
+        vec2 cellUv = clodCellPos - cellId;
 
         float h0 = hash(cellId);
-
         float h1 = hash(cellId + vec2(127.1, 311.7));
         float h2 = hash(cellId + vec2(269.5, 183.3));
         float h3 = hash(cellId + vec2(531.7, 213.1));
         float h4 = hash(cellId + vec2(317.9, 149.3));
 
-        // Full-cell jitter — no axis-aligned dead zone between cells.
-        vec2 pebCenter = vec2(h1, h2);
-
-        vec2 rootWorldRot = (cellId + pebCenter) * pebCellSize;
+        vec2 clodCenter = vec2(h1, h2);
+        vec2 rootRot = (cellId + clodCenter) * clodCellSize;
         vec2 rootWorld = vec2(
-          pebCosR * rootWorldRot.x - pebSinR * rootWorldRot.y,
-          pebSinR * rootWorldRot.x + pebCosR * rootWorldRot.y);
+          pebCosR * rootRot.x - pebSinR * rootRot.y,
+          pebSinR * rootRot.x + pebCosR * rootRot.y);
         vec2 rootUv = rootWorld * 2.0 * texelSize;
 
-        // Low-frequency density octave — creates patches of denser/sparser
-        // pebbles instead of a uniform sprinkle. Period ~3 tile-units.
         float densityNoise = vnoise(rootWorld * 0.35);
-        float threshold = 0.05 + densityNoise * 0.85;
+        float threshold = 0.0 + densityNoise * 0.5;
         if (h0 > threshold) continue;
         float rootTile = texture2D(tileColorMap, rootUv).a * 255.0;
         if (abs(rootTile - 5.0) > 0.5) continue;
-
         float rootCliff = texture2D(cliffMap, rootUv).r * 2.0;
         if (rootCliff < 0.3) continue;
         float rootWaterLevel = texture2D(waterMap, rootUv).r;
         float rootHeight = texture2D(heightMap, rootUv).r;
         if (rootWaterLevel > rootHeight) continue;
 
-        // Pebble = rotated, slightly elongated ellipse. Sizes in cell-units
-        // (multiply by pebCellSize for tile-units): 0.08–0.14 → ~0.024–0.042
-        // tile-radius, similar visual scale to a grass blade's width.
-        float pebRx = 0.08 + h3 * 0.06;
-        float pebRy = pebRx * (0.7 + h4 * 0.5);
-        float angle = h0 * 6.2831853;
-        float ca = cos(angle);
-        float sa = sin(angle);
-
-        vec2 d = cellUv - pebCenter;
-        vec2 dr = vec2(d.x * ca - d.y * sa, d.x * sa + d.y * ca);
-        float dist = length(vec2(dr.x / pebRx, dr.y / pebRy));
-
-        float px = max(fwidth(dist), 0.0001);
-        float alpha = 1.0 - smoothstep(1.0 - px, 1.0 + px, dist);
+        // Flat ellipse, random rotation + aspect ratio.
+        vec2 d = cellUv - clodCenter;
+        float cRx = 0.07 + h3 * 0.07;
+        float cRy = cRx * (0.75 + h4 * 0.4);
+        float cAng = h0 * 6.2831853;
+        float cCa = cos(cAng);
+        float cSa = sin(cAng);
+        vec2 dr = vec2(d.x * cCa - d.y * cSa, d.x * cSa + d.y * cCa);
+        float cDist = length(vec2(dr.x / cRx, dr.y / cRy));
+        float cPx = max(fwidth(cDist), 0.0001);
+        float alpha = 1.0 - smoothstep(1.0 - cPx, 1.0 + cPx, cDist);
         if (alpha < 0.01) continue;
 
-        // Stone tone: brown-gray, per-pebble brightness variation, plus
-        // a subtle upper-left → lower-right gradient to suggest roundness.
-        float tone = 0.55 + h2 * 0.45;
-        vec3 stoneColor = vec3(0.42, 0.32, 0.22) * tone;
-        float light = 1.0 - 0.25 *
-          (dr.x / max(pebRx, pebRy) + dr.y / max(pebRx, pebRy));
-        stoneColor *= clamp(light, 0.7, 1.2);
-        stoneColor *= 0.26 + smoothH * 0.37;
+        // Solid fill derived from the dirt tile's own color (sampled at
+        // the clod's root cell — guaranteed dirt because we filtered for
+        // rootTile == 5). Multiplier saturates and darkens. Independent
+        // of the pixel's current rendered color, so the clod is not
+        // tinted by whatever is being drawn underneath at this pixel.
+        vec3 clodColor = texture2D(tileColorMap, rootUv).rgb *
+                         vec3(0.55, 0.45, 0.32);
 
         if (alpha > winAlpha) {
           winAlpha = alpha;
-          winColor = stoneColor;
+          winColor = clodColor;
+        }
+      }
+
+      if (winAlpha > 0.01) {
+        color = mix(color, winColor, winAlpha);
+      }
+    }
+
+    // Pass 2 — gray rocks: ~3× larger than clods, ~5× less frequent. Dark NE
+    // silhouette band that follows the rock's polygon contour.
+    if (decalsEnabled > 0.5) {
+      float rockCellSize = 0.7;
+      vec2 rockCellPos = wpRot / rockCellSize;
+      float winAlpha = 0.0;
+      vec3 winColor = vec3(0.0);
+
+      vec2 rockQuadId = floor(rockCellPos - 0.5);
+      for (int j = 0; j < 4; j++) {
+        int dx = j - (j / 2) * 2;
+        int dy = j / 2;
+        vec2 cellId = rockQuadId + vec2(float(dx), float(dy));
+        vec2 cellUv = rockCellPos - cellId;
+
+        float h0 = hash(cellId + vec2(53.1, 17.9));
+        float h1 = hash(cellId + vec2(127.1, 311.7));
+        float h2 = hash(cellId + vec2(269.5, 183.3));
+        float h3 = hash(cellId + vec2(531.7, 213.1));
+        float h4 = hash(cellId + vec2(317.9, 149.3));
+
+        // Keep rocks well clear of cell edges so the 4-quad sample window
+        // always catches them — rocks are big enough that corner placement
+        // would skim the half-cell limit.
+        vec2 rockCenter = vec2(0.25 + h1 * 0.5, 0.25 + h2 * 0.5);
+        vec2 rootRot = (cellId + rockCenter) * rockCellSize;
+        vec2 rootWorld = vec2(
+          pebCosR * rootRot.x - pebSinR * rootRot.y,
+          pebSinR * rootRot.x + pebCosR * rootRot.y);
+        vec2 rootUv = rootWorld * 2.0 * texelSize;
+
+        // Low spawn rate (~30% pass × density noise) → noticeably sparser.
+        float densityNoise = vnoise(rootWorld * 0.35);
+        float threshold = 0.0 + densityNoise * 0.30;
+        if (h0 > threshold) continue;
+        float rootTile = texture2D(tileColorMap, rootUv).a * 255.0;
+        if (abs(rootTile - 5.0) > 0.5) continue;
+        float rootCliff = texture2D(cliffMap, rootUv).r * 2.0;
+        if (rootCliff < 0.3) continue;
+        float rootWaterLevel = texture2D(waterMap, rootUv).r;
+        float rootHeight = texture2D(heightMap, rootUv).r;
+        if (rootWaterLevel > rootHeight) continue;
+
+        // Irregular rock: intersection of N half-planes with smoothed
+        // corners (smax via -smin) and per-edge radius jitter. The closed-
+        // form regular-n-gon SDF produced inward "notches" wherever
+        // adjacent edges had different radii — the half-plane formulation
+        // doesn't, and the corner-rounding makes the silhouette read as
+        // a worn rock rather than a hard polygon.
+        // Aspect: squash y so rocks are wider than tall on average.
+        // 0.65–0.85 means vertical extent is 65–85% of horizontal.
+        float h6 = hash(cellId + vec2(81.4, 23.5));
+        float aspect = 0.65 + h6 * 0.20;
+
+        vec2 d = vec2((cellUv - rockCenter).x, (cellUv - rockCenter).y / aspect);
+        float pSidesF = floor(5.0 + h3 * 3.0);  // 5-7 sides
+        int pSides = int(pSidesF);
+        float pAng = h0 * 6.2831853;
+        float pR = 0.13 + h4 * 0.05;
+        float pAn = 6.2831853 / pSidesF;
+        float kCorner = pR * 0.20;  // corner roundness
+
+        // Shadow direction: world south rotated into cellUv frame
+        // (atan2(-0.934, -0.358) ≈ -1.94 rad), jittered ±0.5 rad per rock
+        // so the shadow angle varies between rocks. Strongly downward-
+        // biased — ranges roughly W-of-S to E-of-S.
+        float h5 = hash(cellId + vec2(43.7, 91.3));
+        float lightAngle = -1.937 + (h5 - 0.5) * 1.0;
+        vec2 shadowDir = vec2(cos(lightAngle), sin(lightAngle) / aspect);
+        float band = pR * 0.7;
+        vec2 dOff = d + shadowDir * band;
+
+        float sdP = -1e9;
+        float sdOff = -1e9;
+        for (int i = 0; i < 7; i++) {
+          if (i >= pSides) break;
+          float ang_i = pAng + float(i) * pAn;
+          vec2 norm = vec2(cos(ang_i), sin(ang_i));
+          float jitter = fract(
+            sin(float(i) * 12.9898 + h2 * 78.233) * 43758.5
+          ) - 0.5;
+          float r_i = pR * (1.0 + jitter * 0.25);
+          float hp = dot(d, norm) - r_i;
+          float hpOff = dot(dOff, norm) - r_i;
+          // Smooth-max via negated smin: rounds intersection corners.
+          sdP = -smin(-sdP, -hp, kCorner);
+          sdOff = -smin(-sdOff, -hpOff, kCorner);
+        }
+
+        float pxP = max(fwidth(sdP), 0.0001);
+        float alpha = 1.0 - smoothstep(-pxP, pxP, sdP);
+        if (alpha < 0.01) continue;
+
+        float darkness = smoothstep(-pxP, pxP, sdOff);
+
+        // Muted gray-brown tones — darker than the previous bright stone
+        // colors, with the dark side biased toward warm shadow rather than
+        // pure gray so it sits naturally on dirt.
+        vec3 pLight = vec3(0.41, 0.40, 0.39);
+        vec3 pDark = vec3(0.20, 0.195, 0.19);
+        vec3 rockColor = mix(pLight, pDark, darkness);
+        rockColor *= 0.26 + smoothH * 0.37;
+
+        if (alpha > winAlpha) {
+          winAlpha = alpha;
+          winColor = rockColor;
         }
       }
 
@@ -841,7 +942,7 @@ const fragmentShader = `
     }
 
     // Procedural grass — blades rooted in grass tiles can extend over neighbors
-    {
+    if (decalsEnabled > 0.5) {
       float cellSize = 0.55;
       float bladeScale = 1.6;
       float grassScale = 1.3;
@@ -1191,7 +1292,7 @@ const fragmentShader = `
 
     // Procedural cattails — rendered after water so they poke out above it.
     // Only the above-water portion is drawn.
-    {
+    if (decalsEnabled > 0.5) {
       float cattailCellSize = 0.5;
       float cattailScale = 2.1;
 
@@ -1450,6 +1551,7 @@ export class Terrain2D extends Mesh {
         },
         waterViewMode: { value: 1 },
         time: { value: 0 },
+        decalsEnabled: { value: 1 },
         waterRippleCount: waterRippleUniforms.waterRippleCount,
         waterRipples: waterRippleUniforms.waterRipples,
       },
@@ -1536,6 +1638,10 @@ export class Terrain2D extends Mesh {
 
   setTime(time: number) {
     this.material.uniforms.time.value = time;
+  }
+
+  setDecalsEnabled(enabled: boolean) {
+    this.material.uniforms.decalsEnabled.value = enabled ? 1 : 0;
   }
 
   /** Bulk-update cliff cells with a single texture rebuild. */
