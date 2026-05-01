@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { zMode, zRound } from "./round.ts";
+
+export type { Mode, Round, RoundEvent } from "./round.ts";
 
 // Messages from Shard to Primary Server
 export const zShardToServerMessage = z.discriminatedUnion("type", [
@@ -23,11 +26,7 @@ export const zShardToServerMessage = z.discriminatedUnion("type", [
     canceled: z.boolean().optional(), // True if host canceled the round
     practice: z.boolean().optional(), // True if practice mode
     sheepWon: z.boolean().optional(), // True if sheep won (timer expired)
-    round: z.object({
-      sheep: z.array(z.string()),
-      wolves: z.array(z.string()),
-      duration: z.number(),
-    }).optional(),
+    round: zRound.optional(),
     // Player start locations to persist for next round
     startLocations: z.record(
       z.string(),
@@ -64,12 +63,7 @@ export const zServerToShardMessage = z.discriminatedUnion("type", [
     lobbyId: z.string(),
     settings: z.object({
       map: z.string(),
-      mode: z.union([
-        z.literal("survival"),
-        z.literal("vip"),
-        z.literal("switch"),
-        z.literal("vamp"),
-      ]),
+      mode: zMode,
       vipHandicap: z.number(),
       sheep: z.union([z.literal("auto"), z.number()]),
       time: z.union([z.literal("auto"), z.number()]),

@@ -1,6 +1,7 @@
 import z from "zod";
 import { unpackMap2D } from "../util/2dPacking.ts";
 import { unpackEntities } from "../util/entityPacking.ts";
+import { generateMapTags } from "../maps/tags.ts";
 
 export const MAP_LIMITS = {
   MIN_WIDTH: 16,
@@ -27,7 +28,10 @@ const zPackedMap = z.object({
   }),
   terrain: z.string(),
   cliffs: z.string(),
+  water: z.string().optional(),
+  mask: z.string().optional(),
   entities: z.string().optional(),
+  tags: z.array(z.string()).readonly().optional(),
 });
 
 export type MapValidationError =
@@ -37,7 +41,8 @@ export type MapValidationError =
   | { type: "height_too_small"; min: number; actual: number }
   | { type: "height_too_large"; max: number; actual: number }
   | { type: "entity_count_exceeded"; max: number; actual: number }
-  | { type: "terrain_size_mismatch"; expected: string; actual: string };
+  | { type: "terrain_size_mismatch"; expected: string; actual: string }
+  | { type: "no_tags" };
 
 export const validatePackedMap = (
   map: unknown,
@@ -115,6 +120,12 @@ export const validatePackedMap = (
         });
       }
     }
+
+    // Validate tag presence by re-deriving from terrain so a missing or empty
+    // tags field can't smuggle in an unqualified map.
+    if (generateMapTags(terrain).length === 0) {
+      errors.push({ type: "no_tags" });
+    }
   } catch (err) {
     errors.push({
       type: "invalid_structure",
@@ -123,23 +134,4 @@ export const validatePackedMap = (
   }
 
   return errors.length === 0 ? { valid: true } : { valid: false, errors };
-};
-
-export const formatValidationError = (error: MapValidationError): string => {
-  switch (error.type) {
-    case "invalid_structure":
-      return error.message;
-    case "width_too_small":
-      return `Map width too small: ${error.actual} (minimum: ${error.min})`;
-    case "width_too_large":
-      return `Map width too large: ${error.actual} (maximum: ${error.max})`;
-    case "height_too_small":
-      return `Map height too small: ${error.actual} (minimum: ${error.min})`;
-    case "height_too_large":
-      return `Map height too large: ${error.actual} (maximum: ${error.max})`;
-    case "entity_count_exceeded":
-      return `Too many entities: ${error.actual} (maximum: ${error.max})`;
-    case "terrain_size_mismatch":
-      return `Terrain size mismatch: expected ${error.expected}, got ${error.actual}`;
-  }
 };

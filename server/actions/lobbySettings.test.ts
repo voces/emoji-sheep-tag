@@ -376,6 +376,82 @@ describe("lobbySettings action", () => {
     expect(settings.sheep).toBe(1);
   });
 
+  it("rolls gold and income to bulldog defaults on mode switch", () => {
+    const hostClient = createMockClient(true);
+    const lobby = newLobby(hostClient, true);
+    lobby.players.add(hostClient);
+    hostClient.lobby = lobby;
+    hostClient.team = "sheep";
+
+    // Add wolves so the ratio computation has > 0 wolves
+    for (let i = 0; i < 3; i++) {
+      const w = createMockClient(false);
+      w.id = `wolf-${i}`;
+      w.team = "wolf";
+      w.lobby = lobby;
+      lobby.players.add(w);
+    }
+
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
+
+    // Verify starting at survival defaults
+    expect(lobby.settings.startingGold).toEqual({ sheep: 0, wolves: 0 });
+    expect(lobby.settings.income).toEqual({ sheep: 1, wolves: 1 });
+
+    lobbySettings(hostClient, { type: "lobbySettings", mode: "bulldog" });
+
+    expect(lobby.settings.mode).toBe("bulldog");
+    expect(lobby.settings.startingGold.sheep).toBeGreaterThan(0);
+    expect(lobby.settings.income.wolves).toBe(2);
+  });
+
+  it("preserves manually-tweaked gold across mode switches", () => {
+    const hostClient = createMockClient(true);
+    const lobby = newLobby(hostClient, true);
+    lobby.players.add(hostClient);
+    hostClient.lobby = lobby;
+    hostClient.team = "sheep";
+
+    lobby.settings.startingGold = { sheep: 500, wolves: 250 };
+    lobby.settings.income = { sheep: 7, wolves: 9 };
+
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
+
+    lobbySettings(hostClient, { type: "lobbySettings", mode: "bulldog" });
+
+    // User-customized values stay put — they don't match survival defaults.
+    expect(lobby.settings.startingGold).toEqual({ sheep: 500, wolves: 250 });
+    expect(lobby.settings.income).toEqual({ sheep: 7, wolves: 9 });
+  });
+
+  it("rolls back to survival defaults when leaving bulldog with default values", () => {
+    const hostClient = createMockClient(true);
+    const lobby = newLobby(hostClient, true);
+    lobby.players.add(hostClient);
+    hostClient.lobby = lobby;
+    hostClient.team = "sheep";
+
+    for (let i = 0; i < 3; i++) {
+      const w = createMockClient(false);
+      w.id = `wolf-${i}`;
+      w.team = "wolf";
+      w.lobby = lobby;
+      lobby.players.add(w);
+    }
+
+    lobbyContext.current = lobby;
+    clientContext.current = hostClient;
+
+    // Survival → bulldog → survival without any host edits in between.
+    lobbySettings(hostClient, { type: "lobbySettings", mode: "bulldog" });
+    lobbySettings(hostClient, { type: "lobbySettings", mode: "survival" });
+
+    expect(lobby.settings.startingGold).toEqual({ sheep: 0, wolves: 0 });
+    expect(lobby.settings.income).toEqual({ sheep: 1, wolves: 1 });
+  });
+
   it("should clamp stored sheep count to 1 when only observers remain", () => {
     const hostClient = createMockClient(true);
     const lobby = newLobby(hostClient, true);

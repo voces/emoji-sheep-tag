@@ -10,10 +10,8 @@ import {
   getLocalMapByName,
   saveLocalMap,
 } from "../../../storage/localMaps.ts";
-import {
-  formatValidationError,
-  validatePackedMap,
-} from "@/shared/map/validation.ts";
+import { validatePackedMap } from "@/shared/map/validation.ts";
+import { translateValidationError } from "@/util/mapValidationMessages.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { triggerLocalMapsRefresh } from "@/vars/localMapsRefresh.ts";
 
@@ -35,7 +33,7 @@ const saveMapWithName = async (name: string): Promise<SaveResult> => {
   const validation = validatePackedMap(packed);
 
   if (!validation.valid) {
-    const errorMessages = validation.errors.map(formatValidationError).join(
+    const errorMessages = validation.errors.map(translateValidationError).join(
       ", ",
     );
     addChatMessage(`Map validation failed: ${errorMessages}`);
@@ -62,6 +60,15 @@ const overwriteMap = async (id: string, name: string): Promise<boolean> => {
   editorCurrentMapVar({ id, name });
 
   const packed = buildPackedMapFromEditor();
+  const validation = validatePackedMap(packed);
+  if (!validation.valid) {
+    const errorMessages = validation.errors.map(translateValidationError).join(
+      ", ",
+    );
+    addChatMessage(`Map validation failed: ${errorMessages}`);
+    return false;
+  }
+
   try {
     await saveLocalMap(id, name, packed);
     addChatMessage(`Map "${name}" overwritten successfully!`);
@@ -155,7 +162,7 @@ export const useSaveMap = () =>
 
               if (!validation.valid) {
                 const errorMessages = validation.errors.map(
-                  formatValidationError,
+                  translateValidationError,
                 ).join(", ");
                 addChatMessage(`Map validation failed: ${errorMessages}`);
                 return;

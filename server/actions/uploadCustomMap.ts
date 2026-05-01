@@ -60,3 +60,8 @@ export const getCustomMapForLobby = (
   const customMaps = customMapsByLobby.get(lobby);
   return customMaps?.get(mapId);
 };
+
+export const getCustomMapTags = (
+  lobby: Lobby,
+  mapId: string,
+): readonly string[] | undefined => getCustomMapForLobby(lobby, mapId)?.tags;

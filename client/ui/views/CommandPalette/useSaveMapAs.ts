@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
 import {
   editorCurrentMapVar,
   editorMapModifiedVar,
@@ -11,10 +12,8 @@ import {
   getLocalMapByName,
   saveLocalMap,
 } from "../../../storage/localMaps.ts";
-import {
-  formatValidationError,
-  validatePackedMap,
-} from "@/shared/map/validation.ts";
+import { validatePackedMap } from "@/shared/map/validation.ts";
+import { translateValidationError } from "@/util/mapValidationMessages.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { triggerLocalMapsRefresh } from "@/vars/localMapsRefresh.ts";
 
@@ -36,7 +35,7 @@ const saveMapWithName = async (name: string): Promise<SaveResult> => {
   const validation = validatePackedMap(packed);
 
   if (!validation.valid) {
-    const errorMessages = validation.errors.map(formatValidationError).join(
+    const errorMessages = validation.errors.map(translateValidationError).join(
       ", ",
     );
     addChatMessage(`Map validation failed: ${errorMessages}`);
@@ -63,6 +62,15 @@ const overwriteMap = async (id: string, name: string): Promise<boolean> => {
   editorCurrentMapVar({ id, name });
 
   const packed = buildPackedMapFromEditor();
+  const validation = validatePackedMap(packed);
+  if (!validation.valid) {
+    const errorMessages = validation.errors.map(translateValidationError).join(
+      ", ",
+    );
+    addChatMessage(`Map validation failed: ${errorMessages}`);
+    return false;
+  }
+
   try {
     await saveLocalMap(id, name, packed);
     addChatMessage(`Map "${name}" overwritten successfully!`);
@@ -81,13 +89,15 @@ const overwriteMap = async (id: string, name: string): Promise<boolean> => {
 
 export const useSaveMapAs = () => {
   const { t } = useTranslation();
+  const currentMap = useReactiveVar(editorCurrentMapVar);
+  const isUnnamed = !currentMap;
   return useMemo(() => ({
-    name: t("commands.saveMapAs"),
+    name: isUnnamed ? t("commands.saveMap") : t("commands.saveMapAs"),
     description: t("commands.saveMapAsDesc"),
     valid: editorVar,
     callback: () => ({
       type: "options" as const,
-      placeholder: t("commands.saveMapAs"),
+      placeholder: isUnnamed ? t("commands.saveMap") : t("commands.saveMapAs"),
       commands: [
         {
           name: t("commands.saveMapAsToBrowser"),
@@ -159,7 +169,7 @@ export const useSaveMapAs = () => {
 
               if (!validation.valid) {
                 const errorMessages = validation.errors.map(
-                  formatValidationError,
+                  translateValidationError,
                 ).join(", ");
                 addChatMessage(`Map validation failed: ${errorMessages}`);
                 return;
@@ -177,5 +187,5 @@ export const useSaveMapAs = () => {
         },
       ],
     }),
-  }), [t]);
+  }), [t, isUnnamed]);
 };

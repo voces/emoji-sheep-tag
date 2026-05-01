@@ -1,5 +1,8 @@
 import type { z } from "zod";
-import type { zServerToShardMessage } from "@/shared/shard.ts";
+import type {
+  Round as SharedRound,
+  zServerToShardMessage,
+} from "@/shared/shard.ts";
 import type { GameClient } from "./gameClient.ts";
 import type { CaptainsDraft, Round } from "../lobby.ts";
 import { buildLoadedMap, type PackedMap } from "@/shared/map.ts";
@@ -46,11 +49,11 @@ export class ShardLobby {
     return this.hostId ? this.clients.get(this.hostId) : undefined;
   }
   status: "lobby" | "playing" = "playing";
-  rounds: { sheep: string[]; wolves: string[]; duration: number }[] = [];
+  rounds: SharedRound[] = [];
 
   round?: Round;
   onEnd?: (
-    round?: { sheep: string[]; wolves: string[]; duration: number },
+    round?: SharedRound,
     canceled?: boolean,
     practice?: boolean,
     sheepWon?: boolean,
@@ -278,6 +281,7 @@ export class ShardLobby {
         practice: this.practice,
         editor: this.editor,
         onSheepWin: () => this.endRound(false, true),
+        onWolvesWin: () => this.endRound(false, false),
       }));
   }
 
@@ -291,7 +295,11 @@ export class ShardLobby {
     );
 
     lobbyContext.with(this, () => {
-      const round = createRoundSummary();
+      const round = !canceled &&
+          this.settings.mode !== "switch" &&
+          this.settings.mode !== "vamp"
+        ? createRoundSummary()
+        : undefined;
       // Collect start locations from all clients
       const startLocations: Record<
         string,
@@ -302,13 +310,20 @@ export class ShardLobby {
           startLocations[client.id] = client.startLocation;
         }
       }
-      this.cleanup(round, canceled, sheepWon, notifyPrimary, startLocations);
+
+      this.cleanup(
+        round,
+        canceled,
+        sheepWon,
+        notifyPrimary,
+        startLocations,
+      );
     });
   }
 
   /** Clean up lobby resources */
   cleanup(
-    round?: ReturnType<typeof createRoundSummary>,
+    round?: SharedRound,
     canceled = false,
     sheepWon = false,
     notifyPrimary = true,
@@ -325,7 +340,13 @@ export class ShardLobby {
     if (!this.notifiedPrimary) {
       this.notifiedPrimary = true;
       if (notifyPrimary) {
-        this.onEnd?.(round, canceled, this.practice, sheepWon, startLocations);
+        this.onEnd?.(
+          round,
+          canceled,
+          this.practice,
+          sheepWon,
+          startLocations,
+        );
       }
     }
   }

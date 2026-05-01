@@ -12,6 +12,8 @@ import {
 import { spawnPracticeUnits } from "../st/gameStartHelpers.ts";
 import { getPlayerUnits } from "../systems/playerEntities.ts";
 import { appContext } from "@/shared/context.ts";
+import { getSheep } from "../systems/collections.ts";
+import { distributeEquitably } from "../util/equitableDistribution.ts";
 
 /**
  * Get the gold available to a player (considering team gold)
@@ -150,6 +152,35 @@ export const addPlayerToPracticeGame = (client: Client) => {
   });
 
   spawnPracticeUnits(client.id);
+};
+
+/**
+ * Distribute a sheep's individual gold to surviving sheep allies, equitably.
+ * Used on death and when a sheep reaches the end in bulldog mode.
+ */
+export const redistributeSheepGold = (sheepOwnerId: string): void => {
+  const player = getPlayer(sheepOwnerId);
+  const remaining = player?.gold ?? 0;
+  if (remaining <= 0) return;
+
+  const survivingAllies = Array.from(getSheep())
+    .filter((s) => s.health && s.health > 0 && s.owner !== sheepOwnerId);
+  if (survivingAllies.length === 0) return;
+
+  const currentGold = survivingAllies.map((ally) =>
+    getPlayer(ally.owner)?.gold ?? 0
+  );
+  const shares = distributeEquitably(remaining, currentGold);
+
+  for (let i = 0; i < survivingAllies.length; i++) {
+    const ally = survivingAllies[i];
+    const share = shares[i];
+    if (!ally.owner || share === 0) continue;
+
+    // Directly transfer individual gold to avoid team gold deduction logic
+    if (player) player.gold = (player.gold ?? 0) - share;
+    grantPlayerGold(ally.owner, share);
+  }
 };
 
 /**

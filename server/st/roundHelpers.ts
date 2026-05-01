@@ -2,12 +2,21 @@ import { Client } from "../client.ts";
 import type { Lobby } from "../lobby.ts";
 import { smart } from "../util/smart.ts";
 import { lobbyContext } from "../contexts.ts";
+import type { Mode } from "@/shared/round.ts";
+export { getDefaultIncome, getDefaultStartingGold } from "@/shared/round.ts";
+
+const BULLDOG_TIME = 90;
 
 // Ideal sheep for N vs N+1 pattern: 1v3, 2v3, 2v4, 3v4, 3v5, 4v5, 4v6, etc.
-export const getIdealSheep = (players: number) =>
-  Math.max(Math.ceil((players - 2) / 2), 1);
+// Bulldog skews to a higher sheep:wolf ratio (~1:0.75) since rounds are short
+// and a sheep team needs to outnumber wolves to escape.
+export const getIdealSheep = (players: number, mode?: Mode) => {
+  if (mode === "bulldog") return Math.max(Math.round(players / 1.75), 1);
+  return Math.max(Math.ceil((players - 2) / 2), 1);
+};
 
-export const getIdealTime = (players: number, sheep: number) => {
+export const getIdealTime = (players: number, sheep: number, mode?: Mode) => {
+  if (mode === "bulldog") return BULLDOG_TIME;
   const delta = sheep - (players - sheep) + 2; // deviation from the "n vs (n+2)" standard
 
   // 1) Baseline vs total players (smoothly saturating).
@@ -109,7 +118,7 @@ export const autoAssignSheepOrWolf = (
   const currentSheep = nonObservers.filter((p) => p.team === "sheep").length;
   const totalParticipants = nonObservers.length + additionalParticipants;
   const desiredSheep = lobby.settings.sheep === "auto"
-    ? getIdealSheep(totalParticipants)
+    ? getIdealSheep(totalParticipants, lobby.settings.mode)
     : lobby.settings.sheep;
 
   return currentSheep < desiredSheep ? "sheep" : "wolf";

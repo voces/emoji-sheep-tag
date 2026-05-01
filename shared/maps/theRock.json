@@ -1,0 +1,24 @@
+{
+  "name": "The Rock",
+  "center": {
+    "x": 24,
+    "y": 14
+  },
+  "bounds": {
+    "min": {
+      "x": 7.5,
+      "y": 7.5
+    },
+    "max": {
+      "x": 35.5,
+      "y": 21.5
+    }
+  },
+  "terrain": "KwAdAARGFARhBAwMDAwMjLgFhcCGGkRGRERERERERERERESHCGwJBJKUQQAIBJGTQFAZGQSEQABpKUSQkEAAGESVkEEUCESUlUA0CXyYBYiGQCB6uDWGwMDAwMDA",
+  "cliffs": "KwAdAANHEyMwMDAwMDDw4ca2bdu2bdu2bdu2GgIDAwMDUwKRkhJolMDAwMDAiFo0PNySITAwMDAwMA==",
+  "water": "KwAdAAVqFBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBg=",
+  "tags": [
+    "bulldog"
+  ],
+  "entities": "AiUAAAAGBnByZWZhYgMBAAAIcG9zaXRpb24AAOgDBmZhY2luZwEAAQAKbW9kZWxTY2FsZQEAZAALdmVydGV4Q29sb3IBAAEAC3BsYXllckNvbG9yAwAAAP/////fgIBOrqyM4K6MjY3g7u2NrMCszG2sLGFuLEyubEzu7c5ALExOrowNAAAAAKJt27Zt27ZtY/v/////AfuAcQUAnh8Anh8Anh8Anh8Anh8Anh8Anh8Anh8Anh8Anh8Anh/gVwMAoB/mB9azwLvODwDODwDODwBAPwAAzg8AoB8A0A+AdwM+P84Pzg/OD84PcC9wL9AP0A/QD9AP0A/QD9AP0A/OD24vzg/OD84Pzg/OD84P5gfYs6AfoB+eHwAAAAAAAAAAAAAxDgAAAAAAAAAAAORgpMysjMYGBg=="
+}

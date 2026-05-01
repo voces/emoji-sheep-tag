@@ -1293,6 +1293,22 @@ export const tileDefs = [
     noiseFreq: 3,
     noiseAmp: 0.15,
   },
+  {
+    name: "Start",
+    pathing: PATHING_BUILDABLE,
+    color: 0xb497d6,
+    strength: 0.5,
+    noiseFreq: 2.5,
+    noiseAmp: 0.04,
+  },
+  {
+    name: "End",
+    pathing: PATHING_BUILDABLE,
+    color: 0xff7f6e,
+    strength: 0.5,
+    noiseFreq: 2.5,
+    noiseAmp: 0.04,
+  },
 ];
 
 export const cliffDefs = [

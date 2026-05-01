@@ -6,7 +6,6 @@ import { connect } from "../../connection.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { openEditor } from "../util/openEditor.ts";
 import { playerNameVar } from "@/vars/playerName.ts";
-import { draftModeVar } from "@/vars/draftMode.ts";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { setStoredPlayerName } from "../../util/playerPrefs.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
@@ -365,21 +364,18 @@ const items = [
     key: "play" as const,
     labelKey: "menu.play",
     subKey: "menu.playDescription",
-    primary: true,
     icon: Play,
   },
   {
     key: "practice" as const,
     labelKey: "menu.offline",
     subKey: "menu.offlineDescription",
-    primary: false,
     icon: WifiOff,
   },
   {
     key: "editor" as const,
     labelKey: "menu.editor",
     subKey: "menu.editorDescription",
-    primary: false,
     icon: PencilRuler,
   },
 ];
@@ -391,7 +387,6 @@ const handleNavigate = (key: "play" | "practice" | "editor") => {
       break;
     case "practice":
       loadLocal();
-      draftModeVar("manual");
       connect();
       break;
     case "editor":
@@ -406,6 +401,7 @@ export const Menu = () => {
   const playerName = useReactiveVar(playerNameVar);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(playerName);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -414,6 +410,35 @@ export const Menu = () => {
       inputRef.current.select();
     }
   }, [editing]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement
+      ) return;
+
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (active instanceof HTMLElement && active !== document.body) {
+          active.blur();
+        }
+        setSelectedIndex((i) =>
+          e.key === "ArrowDown"
+            ? (i + 1) % items.length
+            : (i - 1 + items.length) % items.length
+        );
+      } else if (e.key === "Enter") {
+        if (active instanceof HTMLButtonElement) return;
+        e.preventDefault();
+        handleNavigate(items[selectedIndex].key);
+      }
+    };
+    globalThis.addEventListener("keydown", handler);
+    return () => globalThis.removeEventListener("keydown", handler);
+  }, [selectedIndex]);
 
   const startEdit = () => {
     setDraft(playerName);
@@ -455,13 +480,14 @@ export const Menu = () => {
       </Header>
 
       <Nav aria-label={t("menu.title")}>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <MenuItem
             key={item.key}
-            $primary={item.primary}
+            $primary={index === selectedIndex}
             onClick={() => handleNavigate(item.key)}
+            onMouseEnter={() => setSelectedIndex(index)}
           >
-            <MenuItemIcon $primary={item.primary} aria-hidden>
+            <MenuItemIcon $primary={index === selectedIndex} aria-hidden>
               <item.icon size={20} strokeWidth={1.75} />
             </MenuItemIcon>
             <MenuItemBody>

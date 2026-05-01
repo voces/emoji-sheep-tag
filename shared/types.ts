@@ -118,6 +118,12 @@ export type Buff = {
   readonly particleMinOffsetRange?: number;
   readonly particleScaleRange?: number;
   readonly particleLifetime?: number;
+  /** Min radial speed of spawned particles, in tiles/sec. When >0, particles fly outward along their spawn angle instead of the default upward drift. */
+  readonly particleMinSpeed?: number;
+  /** Max radial speed of spawned particles, in tiles/sec. */
+  readonly particleMaxSpeed?: number;
+  /** When true, spawned particles take their tint from the owning player's color rather than the model SVG fill. */
+  readonly particleUseOwnerColor?: boolean;
   readonly preventsBuffs?: ReadonlyArray<string>;
   readonly invisible?: boolean;
 };

@@ -74,6 +74,7 @@ export const getPathingMaskFromTerrainMasks = (
   cliffMask: (number | "r")[][],
   waterMask?: number[][],
   bounds?: { min: { x: number; y: number }; max: { x: number; y: number } },
+  mask?: number[][],
 ) => {
   const parsedTiles = double(tileMask);
   const cliffMap = getCliffMapFromCliffMask(cliffMask);
@@ -88,6 +89,9 @@ export const getPathingMaskFromTerrainMasks = (
           worldY < bounds.min.y || worldY >= bounds.max.y
         ) return 0xFF;
       }
+      if (mask && bounds && isMasked(x, y, parsedTiles.length, mask, bounds)) {
+        return 0xFF;
+      }
       let pathing = tileDefs[tileIndex].pathing | (cliffMap[y][x] ? 3 : 0);
       if (waterMask) {
         const depth = getWaterDepth(x, y, cliffMask, waterMask);
@@ -99,6 +103,64 @@ export const getPathingMaskFromTerrainMasks = (
       return pathing;
     })
   );
+};
+
+type MaskBounds = {
+  min: { x: number; y: number };
+  max: { x: number; y: number };
+};
+
+/**
+ * Maps a pathing cell to the cliff vertex closest to its center, i.e., the
+ * vertex whose ±0.5 neighbourhood contains that pathing cell. Pathing cells
+ * are 0.5 world units wide; vertices sit at integer world coords; each
+ * pathing cell falls cleanly inside exactly one vertex's neighbourhood.
+ *
+ * `(px, py)` are doubled-grid (parsedTiles) coords with `py=0` at the top of
+ * the map; `terrainHeight` is `parsedTiles.length` (= 2 * cliffHeight).
+ *
+ * Returns the world-space integer vertex (vx, vy) — `vy` uses world-space Y
+ * (0 at bottom, increases upward) consistent with `bounds`.
+ */
+const pathingCellToMaskVertex = (
+  px: number,
+  py: number,
+  terrainHeight: number,
+): { vx: number; vy: number } => {
+  // px=0 → 0, px=1 → 1, px=2 → 1, px=3 → 2, ... (closest integer vertex).
+  const vx = (px + 1) >> 1;
+  // unreversed py=0 is at the top: worldY runs from H (top) to 0 (bottom).
+  // terrainHeight = 2H, so cliff height H = terrainHeight / 2.
+  const H = terrainHeight >> 1;
+  const vy = H - ((py + 1) >> 1);
+  return { vx, vy };
+};
+
+/**
+ * The manual mask grid is anchored to the boundary region (see
+ * `getMaskShapeForBounds`). Each mask cell sits on a cliff vertex strictly
+ * inside the boundary; nothing exists outside the boundary because the
+ * boundary itself is already permanently dark + blocked.
+ */
+const isMasked = (
+  px: number,
+  py: number,
+  terrainHeight: number,
+  mask: number[][],
+  bounds: MaskBounds,
+): boolean => {
+  const height = mask.length;
+  if (height === 0) return false;
+  const width = mask[0]?.length ?? 0;
+  if (width === 0) return false;
+
+  const { vx, vy } = pathingCellToMaskVertex(px, py, terrainHeight);
+  const firstVertexX = Math.ceil(bounds.min.x);
+  const topVertexY = Math.ceil(bounds.max.y) - 1;
+  const mapX = vx - firstVertexX;
+  const mapY = topVertexY - vy;
+  if (mapX < 0 || mapX >= width || mapY < 0 || mapY >= height) return false;
+  return mask[mapY][mapX] !== 0;
 };
 
 /** Returns the water level (in cliff units) at a doubled-grid coordinate. 0 = no water. */

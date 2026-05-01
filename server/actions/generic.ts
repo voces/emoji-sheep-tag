@@ -230,7 +230,10 @@ const handleTeamChange = (client: Client, event: TeamChangeEvent) => {
     ).length;
   const sheepCount =
     Array.from(client.lobby.players).filter((p) => p.team === "sheep").length;
-  const idealSheep = getIdealSheep(nonObserverCount);
+  const idealSheep = getIdealSheep(
+    nonObserverCount,
+    client.lobby.settings.mode,
+  );
   const matchesIdeal = sheepCount === idealSheep;
 
   // Update sheep count setting based on whether result matches ideal

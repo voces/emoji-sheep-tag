@@ -163,6 +163,7 @@ describe("shard connection via message handlers", () => {
           sheep: ["player-0"],
           wolves: ["player-1"],
           duration: 120000,
+          mode: "survival",
         },
       });
 

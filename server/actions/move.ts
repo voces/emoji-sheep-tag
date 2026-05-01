@@ -3,43 +3,9 @@ import { Entity } from "@/shared/types.ts";
 import { orderMove } from "../api/unit.ts";
 import { lookup } from "../systems/lookup.ts";
 import { isPractice } from "../api/st.ts";
-import { getPenAreas } from "@/shared/penAreas.ts";
 import { lobbyContext } from "../contexts.ts";
 import { getMap } from "@/shared/map.ts";
-
-const MAX_DISTANCE_FROM_PEN = 1.5;
-
-/** Clamp a point to be within valid sheep spawn areas (near pen edges) */
-const clampToSpawnArea = (x: number, y: number): { x: number; y: number } => {
-  const penAreas = getPenAreas();
-  if (penAreas.length === 0) return { x, y };
-
-  // Find the closest point on any pen's expanded boundary
-  let closestPoint = { x, y };
-  let closestDistance = Infinity;
-
-  for (const pen of penAreas) {
-    // Expand pen by MAX_DISTANCE_FROM_PEN to get valid spawn area
-    const expandedPen = {
-      minX: pen.x - MAX_DISTANCE_FROM_PEN,
-      maxX: pen.x + pen.width + MAX_DISTANCE_FROM_PEN,
-      minY: pen.y - MAX_DISTANCE_FROM_PEN,
-      maxY: pen.y + pen.height + MAX_DISTANCE_FROM_PEN,
-    };
-
-    // Clamp point to expanded pen bounds
-    const clampedX = Math.max(expandedPen.minX, Math.min(expandedPen.maxX, x));
-    const clampedY = Math.max(expandedPen.minY, Math.min(expandedPen.maxY, y));
-
-    const dist = (clampedX - x) ** 2 + (clampedY - y) ** 2;
-    if (dist < closestDistance) {
-      closestDistance = dist;
-      closestPoint = { x: clampedX, y: clampedY };
-    }
-  }
-
-  return closestPoint;
-};
+import { clampToSheepSpawnArea } from "../st/getSheepSpawn.ts";
 
 export const handleMove = (
   unit: Entity,
@@ -63,7 +29,10 @@ export const handleMove = (
   if (unit.prefab === "startLocation" && !queue) {
     const targetPosition = "x" in target ? target : target.position;
     if (targetPosition) {
-      const clampedPos = clampToSpawnArea(targetPosition.x, targetPosition.y);
+      const clampedPos = clampToSheepSpawnArea(
+        targetPosition.x,
+        targetPosition.y,
+      );
       unit.position = clampedPos;
 
       // Persist position to the owning client for next round

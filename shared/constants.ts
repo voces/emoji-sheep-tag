@@ -22,6 +22,14 @@ export const BUILD_REFUND_RATE = 0.8;
 
 export const DEFAULT_VIP_HANDICAP = 0.8;
 
+/** Gold awarded to the wolf who landed the killing blow on a sheep. */
+export const SURVIVAL_KILLER_BOUNTY = 40;
+/** Gold awarded to non-killing wolves on the same team. */
+export const SURVIVAL_ASSIST_BOUNTY = 15;
+/** Bulldog rounds are short and run on smaller economies; bounty is 1/5 of survival. */
+export const BULLDOG_KILLER_BOUNTY = 8;
+export const BULLDOG_ASSIST_BOUNTY = 3;
+
 export const PATHING_NONE = 0;
 export const PATHING_WALKABLE = 1;
 export const PATHING_BUILDABLE = 2;

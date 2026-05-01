@@ -125,7 +125,13 @@ const connectToPrimary = () => {
         shardLobbies.set(message.lobbyId, lobby);
 
         // When lobby ends, notify primary and clean up
-        lobby.onEnd = (round, canceled, practice, sheepWon, startLocations) => {
+        lobby.onEnd = (
+          round,
+          canceled,
+          practice,
+          sheepWon,
+          startLocations,
+        ) => {
           sendToPrimary({
             type: "lobbyEnded",
             lobbyId: message.lobbyId,

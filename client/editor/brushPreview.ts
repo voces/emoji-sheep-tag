@@ -17,6 +17,7 @@ import {
   editorVar,
 } from "@/vars/editor.ts";
 import { clipCellsToSelection } from "./selection.ts";
+import { getMap, getMaskShapeForBounds } from "@/shared/map.ts";
 
 const CLIFF_SENTINELS = new Set([0xff01ff, 0xff02ff, 0xff03ff, 0xff04ff]);
 const WATER_FILL_COLOR = 0x385670;
@@ -143,6 +144,110 @@ const refresh = () => {
     cachedCellSet = null;
     cachedCenter = "";
     return preview.hide();
+  }
+  // Mask paint: cells live on cliff vertices, anchored to the bounds. Compute
+  // the brush in mask-grid space and translate into BrushPreview's cell-quad
+  // space (which draws unit squares from [x,y] to [x+1,y+1]). A mask cell at
+  // world vertex (vx, vy) covers world (vx-0.5, vy-0.5) → (vx+0.5, vy+0.5),
+  // so we pass [vx-0.5, vy-0.5] as the quad anchor.
+  if (activeKind === "mask" || activeKind === "unmask") {
+    const map = getMap();
+    const blueprint = getBlueprint();
+    if (
+      !blueprint || blueprint.prefab !== "tile" || blueprint.owner ||
+      !blueprint.position
+    ) {
+      cachedKey = "";
+      cachedCellSet = null;
+      cachedCenter = "";
+      return preview.hide();
+    }
+    const shape = getMaskShapeForBounds(map.bounds);
+    if (shape.width === 0 || shape.height === 0) {
+      cachedKey = "";
+      cachedCellSet = null;
+      cachedCenter = "";
+      return preview.hide();
+    }
+    // blueprint.position is normalized to the nearest tile cell center
+    // (so e.g. 2.3 and 2.7 both snap to 2.5), which loses the vertex
+    // information we need. Use the raw mouse world position — the same
+    // input the click handler uses — to find the nearest vertex.
+    const vx = Math.round(mouse.world.x);
+    const vy = Math.round(mouse.world.y);
+    const centerMapX = vx - shape.firstVertexX;
+    const centerMapY = shape.topVertexY - vy;
+    const size = editorBrushSizeVar();
+    const shapeKey = editorBrushShapeVar();
+    let mapCells: Cell[];
+    if (size === "all") {
+      mapCells = getAllCells(shape.width, shape.height);
+    } else if (size === "fill") {
+      if (
+        centerMapX < 0 || centerMapX >= shape.width ||
+        centerMapY < 0 || centerMapY >= shape.height
+      ) {
+        cachedKey = "";
+        cachedCellSet = null;
+        cachedCenter = "";
+        return preview.hide();
+      }
+      const value = map.mask[centerMapY]?.[centerMapX] ?? 0;
+      mapCells = getFloodFillCells(
+        centerMapX,
+        centerMapY,
+        shape.width,
+        shape.height,
+        (x, y) => map.mask[y]?.[x] ?? 0,
+      );
+      // Cache key includes the source value so moving inside the same flood
+      // region doesn't rebuild the geometry.
+      const newKey = `mask-fill|${centerMapX}|${centerMapY}|${value}`;
+      if (newKey === cachedKey) {
+        // Just refresh the center crosshair.
+        const centerKey = `${vx - 0.5}|${vy - 0.5}`;
+        if (centerKey !== cachedCenter) {
+          preview.setCenter([vx - 0.5, vy - 0.5]);
+          cachedCenter = centerKey;
+        }
+        preview.visible = true;
+        return;
+      }
+      cachedKey = newKey;
+    } else {
+      const brushSize = typeof size === "number" ? size : 1;
+      mapCells = getBrushCells(
+        centerMapX,
+        centerMapY,
+        brushSize,
+        shapeKey,
+        shape.width,
+        shape.height,
+      );
+    }
+
+    const fill = activeKind === "mask" ? 0x000000 : 0xffffff;
+    const cells: Cell[] = mapCells.map(([mx, my]) => [
+      shape.firstVertexX + mx - 0.5,
+      shape.topVertexY - my - 0.5,
+    ]);
+    // Key includes the brush center for sized brushes (cells move with the
+    // cursor); the "all" branch is cursor-independent so it stays stable.
+    const newKey = size === "all"
+      ? `mask|${activeKind}|all`
+      : `mask|${activeKind}|${size}|${shapeKey}|${centerMapX}|${centerMapY}`;
+    if (newKey !== cachedKey) {
+      preview.setArea(cells, fill);
+      cachedKey = newKey;
+      cachedCellSet = null;
+    }
+    const centerKey = `${vx - 0.5}|${vy - 0.5}`;
+    if (centerKey !== cachedCenter) {
+      preview.setCenter([vx - 0.5, vy - 0.5]);
+      cachedCenter = centerKey;
+    }
+    preview.visible = true;
+    return;
   }
 
   const cx = Math.round(blueprint.position.x - 0.5);

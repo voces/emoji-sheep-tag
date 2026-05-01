@@ -207,12 +207,18 @@ export const resizeMap = (
     Math.min(newBounds.max.y, newHeight - 0.5),
   );
 
+  // The mask is anchored to the bounds region. Bounds may shift during a
+  // terrain resize but their span is unchanged, so the mask data carries over
+  // unchanged.
+  const newMask = map.mask.map((row) => [...row]);
+
   // Rebuild terrain pathing and layers (these will be recalculated)
   const rawPathing = getPathingMaskFromTerrainMasks(
     newTiles,
     newCliffs,
     newWater,
     newBounds,
+    newMask,
   );
   const terrainPathingMap = rawPathing.toReversed();
   const terrainLayers = rawPathing.map((row, y) =>
@@ -224,6 +230,7 @@ export const resizeMap = (
     tiles: newTiles,
     cliffs: newCliffs,
     water: newWater,
+    mask: newMask,
     width: newWidth,
     height: newHeight,
     bounds: newBounds,

@@ -104,6 +104,7 @@ export const Minimap = (
     // Reset inline size so CSS rules apply in the new container
     canvas.style.width = "";
     canvas.style.height = "";
+    canvas.style.aspectRatio = "";
     container.appendChild(canvas);
 
     renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
@@ -111,12 +112,15 @@ export const Minimap = (
     const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
     const updateCamera = () => {
       const map = getMap();
-      camera.position.z = Math.max(
-        map.bounds.max.x - map.bounds.min.x,
-        map.bounds.max.y - map.bounds.min.y,
-      ) * 0.65;
+      const bx = map.bounds.max.x - map.bounds.min.x;
+      const by = map.bounds.max.y - map.bounds.min.y;
+      const aspect = by > 0 ? Math.max(1, bx / by) : 1;
+      camera.aspect = aspect;
+      camera.position.z = Math.max(bx, by) / aspect * 0.65;
       camera.position.x = (map.bounds.max.x + map.bounds.min.x) / 2;
       camera.position.y = (map.bounds.max.y + map.bounds.min.y) / 2;
+      camera.updateProjectionMatrix();
+      canvas.style.aspectRatio = String(aspect);
     };
     updateCamera();
     const unsubscribeMapChange = onMapChange(updateCamera);

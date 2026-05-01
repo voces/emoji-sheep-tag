@@ -134,6 +134,7 @@ export class SelectionOverlay extends Group {
       obj.renderOrder = order;
       obj.frustumCulled = false;
       obj.visible = false;
+      obj.raycast = () => {};
       this.add(obj);
     }
   }

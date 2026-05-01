@@ -357,6 +357,7 @@ describe("stop", () => {
         sheep: ["old-sheep"],
         wolves: ["old-wolf"],
         duration: 30000,
+        mode: "survival",
       }],
       lobbySettings: EMPTY_LOBBY_SETTINGS,
     }));
@@ -367,6 +368,7 @@ describe("stop", () => {
         sheep: ["sheep-1"],
         wolves: ["wolf-1"],
         duration: 60000,
+        mode: "survival",
       },
     });
 

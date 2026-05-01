@@ -4,10 +4,8 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { editorCurrentMapVar, editorMapModifiedVar } from "@/vars/editor.ts";
 import { buildPackedMapFromEditor } from "../../../util/mapExport.ts";
 import { saveLocalMap } from "../../../storage/localMaps.ts";
-import {
-  formatValidationError,
-  validatePackedMap,
-} from "@/shared/map/validation.ts";
+import { validatePackedMap } from "@/shared/map/validation.ts";
+import { translateValidationError } from "@/util/mapValidationMessages.ts";
 import { addChatMessage } from "@/vars/chat.ts";
 import { triggerLocalMapsRefresh } from "@/vars/localMapsRefresh.ts";
 
@@ -28,9 +26,10 @@ export const useQuickSaveMap = () => {
       const validation = validatePackedMap(packed);
 
       if (!validation.valid) {
-        const errorMessages = validation.errors.map(formatValidationError).join(
-          ", ",
-        );
+        const errorMessages = validation.errors.map(translateValidationError)
+          .join(
+            ", ",
+          );
         addChatMessage(`Map validation failed: ${errorMessages}`);
         return;
       }

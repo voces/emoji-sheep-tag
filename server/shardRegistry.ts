@@ -1,5 +1,6 @@
 import type { Socket } from "./client.ts";
 import type {
+  Round as SharedRound,
   ServerToShardMessage,
   ShardInfo,
   ShardToServerMessage,
@@ -189,7 +190,7 @@ export const endShardRound = (
     canceled?: boolean;
     practice?: boolean;
     sheepWon?: boolean;
-    round?: { sheep: string[]; wolves: string[]; duration: number };
+    round?: SharedRound;
     cancelMessage?: string;
     startLocations?: Record<string, { x: number; y: number; map: string }>;
   },

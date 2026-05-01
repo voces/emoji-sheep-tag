@@ -25,6 +25,8 @@ import {
   ArrowDownFromLine,
   ArrowUpFromLine,
   Droplet,
+  Eye,
+  EyeOff,
   Minus,
   SquareDashed,
   TriangleRight,
@@ -290,6 +292,50 @@ export const TerrainPanel = () => {
             >
               <ToolIcon>
                 <Droplet />
+              </ToolIcon>
+            </Command>
+            <Command
+              name={t("editor.addMask")}
+              description={t("editor.addMaskDescription")}
+              pressed={activeAction?.kind === "mask"}
+              onClick={() => {
+                editorTileModeVar("paintMask");
+                const blueprint = createBlueprint(
+                  "tile",
+                  mouse.world.x,
+                  mouse.world.y,
+                );
+                if (!blueprint) return;
+                blueprint.vertexColor = 0xff07ff;
+                blueprint.isDoodad = true;
+                blueprint.alpha = 0;
+                editorActiveActionVar({ kind: "mask" });
+              }}
+            >
+              <ToolIcon>
+                <EyeOff />
+              </ToolIcon>
+            </Command>
+            <Command
+              name={t("editor.removeMask")}
+              description={t("editor.removeMaskDescription")}
+              pressed={activeAction?.kind === "unmask"}
+              onClick={() => {
+                editorTileModeVar("paintMask");
+                const blueprint = createBlueprint(
+                  "tile",
+                  mouse.world.x,
+                  mouse.world.y,
+                );
+                if (!blueprint) return;
+                blueprint.vertexColor = 0xff08ff;
+                blueprint.isDoodad = true;
+                blueprint.alpha = 0;
+                editorActiveActionVar({ kind: "unmask" });
+              }}
+            >
+              <ToolIcon>
+                <Eye />
               </ToolIcon>
             </Command>
             <Command

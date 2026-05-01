@@ -1,11 +1,11 @@
-import { Order } from "@/shared/types.ts";
+import { Entity, Order } from "@/shared/types.ts";
 import { OrderDefinition } from "./types.ts";
 import { damageEntity, newUnit } from "../api/unit.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 import { distanceBetweenEntities } from "@/shared/pathing/math.ts";
-import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
+import { getSpiritSpawn, spawnSheep } from "../st/getSheepSpawn.ts";
 import { isPractice } from "../api/st.ts";
 import { grantPlayerGold } from "../api/player.ts";
 import { newGoldText } from "../api/floatingText.ts";
@@ -59,23 +59,22 @@ export const biteOrder = {
 
       if (target.owner) {
         const [spiritX, spiritY, spiritPenAreaIndex] = getSpiritSpawn();
-        const spawn = isPractice()
-          ? newUnit(target.owner, "spirit", spiritX, spiritY, {
+        let spawn: Entity;
+        if (isPractice()) {
+          spawn = newUnit(target.owner, "spirit", spiritX, spiritY, {
             penAreaIndex: spiritPenAreaIndex,
-          })
-          : newUnit(
+          });
+        } else if (lobbyContext.current.settings.mode === "vip") {
+          spawn = newUnit(
             target.owner,
             "sheep",
-            ...(lobbyContext.current.settings.mode === "vip"
-              ? [target.position?.x ?? 0, target.position?.y ?? 0] as [
-                number,
-                number,
-              ]
-              : getSheepSpawn()),
-            lobbyContext.current.settings.mode === "vip"
-              ? { facing: target.facing }
-              : undefined,
+            target.position?.x ?? 0,
+            target.position?.y ?? 0,
+            { facing: target.facing },
           );
+        } else {
+          spawn = spawnSheep(target.owner);
+        }
 
         grantPlayerGold(target.owner, 20);
         if (spawn.position) {

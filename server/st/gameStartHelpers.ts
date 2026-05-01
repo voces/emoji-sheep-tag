@@ -6,10 +6,17 @@ import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { generateDoodads, getMapCenter } from "@/shared/map.ts";
 import { newUnit } from "../api/unit.ts";
 import { playSoundAt } from "../api/sound.ts";
-import { getSheepSpawn, getSpiritSpawn } from "./getSheepSpawn.ts";
+import {
+  getSheepSpawn,
+  getSpiritSpawn,
+  isInSheepSpawnArea,
+  spawnSheep,
+  spawnSheepAt,
+} from "./getSheepSpawn.ts";
 import { getIdealTime } from "./roundHelpers.ts";
+import type { Mode } from "@/shared/round.ts";
 import { colorName, getPlayer } from "@/shared/api/player.ts";
-import { TICK_RATE } from "@/shared/constants.ts";
+import { PATHING_WALKABLE, TICK_RATE } from "@/shared/constants.ts";
 import { clearUpdatesCache, flushUpdates } from "../updates.ts";
 import { appContext } from "@/shared/context.ts";
 import { practiceModeActions } from "@/shared/data.ts";
@@ -90,7 +97,7 @@ type PlayerLike = {
 };
 
 type LobbySettingsLike = {
-  mode: string;
+  mode: Mode;
   teamGold: boolean;
   startingGold: { sheep: number; wolves: number };
   vipHandicap: number;
@@ -184,7 +191,7 @@ const spawnSheepUnits = <T extends { id: string }>(
 ): Entity[] => {
   const sheepPool: Entity[] = [];
   for (const owner of sheep) {
-    sheepPool.push(newUnit(owner.id, "sheep", ...getSheepSpawn()));
+    sheepPool.push(spawnSheep(owner.id));
   }
   return sheepPool;
 };
@@ -193,11 +200,21 @@ const spawnStartLocations = <T extends PlayerLike>(
   sheep: T[],
   mapId: string,
 ): Entity[] => {
+  const isBulldog = lobbyContext.current.settings.mode === "bulldog";
+  // Bulldog start locations live on blight (Start tiles), so drop the
+  // PATHING_BLIGHT exclusion the prefab uses to keep survival start locations
+  // off the pen.
+  const extra: Partial<Entity> | undefined = isBulldog
+    ? { pathing: PATHING_WALKABLE }
+    : undefined;
   const startLocations: Entity[] = [];
   for (const owner of sheep) {
-    // Only use saved position if it's from the same map
-    const pos = owner.startLocation?.map === mapId
+    // Only use saved position if it's from the same map and still in a valid spawn area
+    const saved = owner.startLocation?.map === mapId
       ? owner.startLocation
+      : undefined;
+    const pos = saved && isInSheepSpawnArea(saved.x, saved.y)
+      ? saved
       : undefined;
     const [defaultX, defaultY] = getSheepSpawn();
     startLocations.push(
@@ -206,6 +223,7 @@ const spawnStartLocations = <T extends PlayerLike>(
         "startLocation",
         pos?.x ?? defaultX,
         pos?.y ?? defaultY,
+        extra,
       ),
     );
   }
@@ -220,9 +238,8 @@ const convertStartLocationsToSheep = <T extends PlayerLike>(
   const sheepPool: Entity[] = [];
   for (const startLocation of startLocations) {
     if (!startLocation.owner || !startLocation.position) continue;
-    const sheep = newUnit(
+    const sheep = spawnSheepAt(
       startLocation.owner,
-      "sheep",
       startLocation.position.x,
       startLocation.position.y,
     );
@@ -242,7 +259,7 @@ const convertStartLocationsToSheep = <T extends PlayerLike>(
 };
 
 export const spawnPracticeUnits = (playerId: string): Entity => {
-  const sheep = newUnit(playerId, "sheep", ...getSheepSpawn());
+  const sheep = spawnSheep(playerId);
   const [spiritX, spiritY, spiritPenAreaIndex] = getSpiritSpawn();
   newUnit(playerId, "spirit", spiritX, spiritY, {
     penAreaIndex: spiritPenAreaIndex,
@@ -264,7 +281,7 @@ export const spawnPracticeUnits = (playerId: string): Entity => {
   return sheep;
 };
 
-const spawnSheep = <T extends { id: string }>(
+const spawnSheepForPlayers = <T extends { id: string }>(
   sheep: T[],
   practice: boolean,
 ): Entity[] => {
@@ -307,18 +324,23 @@ const spawnWolves = <T extends { id: string }>(wolves: T[]) => {
   playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
 };
 
-const broadcastCountdown = () => {
+const broadcastCountdown = (duration: number) => {
   addEntity({
     isTimer: true,
     buffs: [{
       expiration: "Time until sheep spawn:",
-      remainingDuration: 3,
-      totalDuration: 3,
+      remainingDuration: duration,
+      totalDuration: duration,
     }],
   });
-  send({ type: "chat", message: "Starting in 3…" });
-  timeout(() => send({ type: "chat", message: "Starting in 2…" }), 1);
-  timeout(() => send({ type: "chat", message: "Starting in 1…" }), 2);
+  for (let i = duration; i >= 1; i--) {
+    const remaining = i;
+    const delay = duration - i;
+    if (delay === 0) {
+      send({ type: "chat", message: `Starting in ${remaining}…` });
+    } else {timeout(() =>
+        send({ type: "chat", message: `Starting in ${remaining}…` }), delay);}
+  }
 };
 
 const broadcastTeamAnnouncement = <T extends PlayerLike>(
@@ -342,7 +364,7 @@ const setupSurvivalTimer = (
   onSheepWin: () => void,
 ) => {
   round.duration = settings.time === "auto"
-    ? getIdealTime(playerCount, sheepCount)
+    ? getIdealTime(playerCount, sheepCount, settings.mode)
     : settings.time;
 
   addEntity({
@@ -355,6 +377,29 @@ const setupSurvivalTimer = (
   });
 
   timeout(onSheepWin, round.duration);
+};
+
+const setupBulldogTimer = (
+  round: RoundLike,
+  settings: LobbySettingsLike,
+  playerCount: number,
+  sheepCount: number,
+  onWolvesWin: () => void,
+) => {
+  round.duration = settings.time === "auto"
+    ? getIdealTime(playerCount, sheepCount, "bulldog")
+    : settings.time;
+
+  addEntity({
+    isTimer: true,
+    buffs: [{
+      expiration: "Time until wolves win:",
+      remainingDuration: round.duration,
+      totalDuration: round.duration,
+    }],
+  });
+
+  timeout(onWolvesWin, round.duration);
 };
 
 const addWolfSpawnTimer = (duration: number) => {
@@ -376,6 +421,7 @@ type InitializeGameOptions<T extends PlayerLike> = {
   practice: boolean;
   editor: boolean;
   onSheepWin: () => void;
+  onWolvesWin: () => void;
   sheepCaptainId?: string;
 };
 
@@ -390,6 +436,7 @@ export const initializeGame = <T extends PlayerLike>(
     practice,
     editor,
     onSheepWin,
+    onWolvesWin,
     sheepCaptainId,
   } = options;
 
@@ -436,6 +483,9 @@ export const initializeGame = <T extends PlayerLike>(
       createPlayerEntities(ecs, settings, sheep, wolves, practice);
       send({ type: "start", updates: flushUpdates(false), practice });
 
+      const isBulldog = settings.mode === "bulldog";
+      const countdownDuration = isBulldog ? 2 : 3;
+
       // For non-practice rounds, spawn start locations immediately
       let startLocations: Entity[] = [];
       if (!practice) {
@@ -443,14 +493,14 @@ export const initializeGame = <T extends PlayerLike>(
         if (settings.mode !== "switch") {
           broadcastTeamAnnouncement(sheep, wolves);
         }
-        broadcastCountdown();
+        broadcastCountdown(countdownDuration);
       }
 
       timeout(() => {
         if (!round.active) return;
         // Convert start locations to sheep, or spawn sheep directly in practice
         const sheepPool = practice
-          ? spawnSheep(sheep, practice)
+          ? spawnSheepForPlayers(sheep, practice)
           : convertStartLocationsToSheep(startLocations, sheep, map.id);
 
         if (!practice) {
@@ -463,28 +513,43 @@ export const initializeGame = <T extends PlayerLike>(
               sheepCaptainId,
             );
           }
-          addWolfSpawnTimer(settings.mode === "switch" ? 2 : 18);
-        }
-      }, practice ? 0 : 3);
-
-      timeout(() => {
-        if (!round.active) return;
-
-        if (!practice) {
-          round.start = Date.now();
-          spawnWolves(wolves);
-
-          if (settings.mode !== "switch") {
-            setupSurvivalTimer(
+          if (isBulldog) {
+            // Wolves spawn alongside sheep in bulldog; bulldog timer starts immediately.
+            round.start = Date.now();
+            spawnWolves(wolves);
+            setupBulldogTimer(
               round,
               settings,
               sheep.length + wolves.length,
               sheep.length,
-              onSheepWin,
+              onWolvesWin,
             );
+          } else {
+            addWolfSpawnTimer(settings.mode === "switch" ? 2 : 18);
           }
         }
-      }, practice ? 0 : settings.mode === "switch" ? 5 : 21);
+      }, practice ? 0 : countdownDuration);
+
+      if (!isBulldog) {
+        timeout(() => {
+          if (!round.active) return;
+
+          if (!practice) {
+            round.start = Date.now();
+            spawnWolves(wolves);
+
+            if (settings.mode !== "switch") {
+              setupSurvivalTimer(
+                round,
+                settings,
+                sheep.length + wolves.length,
+                sheep.length,
+                onSheepWin,
+              );
+            }
+          }
+        }, practice ? 0 : settings.mode === "switch" ? 5 : 21);
+      }
     }));
 
   return round;

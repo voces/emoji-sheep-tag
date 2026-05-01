@@ -36,6 +36,7 @@
 - Monolith needs new model
 - Mobile: observe+chat friendly
 - Share lobby link
+- Add a water level picker in editor
 
 # Bugs
 

@@ -84,6 +84,7 @@ export const updatePathingForCliffs = (
   water: number[][],
   cells: ReadonlyArray<readonly [number, number]>,
   bounds?: Bounds,
+  mask?: number[][],
 ) => {
   if (cells.length === 0) return;
   const newPathing = getPathingMaskFromTerrainMasks(
@@ -91,6 +92,7 @@ export const updatePathingForCliffs = (
     cliffs,
     water,
     bounds,
+    mask,
   );
   const newLayers = pathingMap.layers
     ? newPathing.map((r, y) =>
@@ -114,6 +116,7 @@ export const updatePathingForCliff = (
   worldX: number,
   worldY: number,
   bounds?: Bounds,
+  mask?: number[][],
 ) =>
   updatePathingForCliffs(
     pathingMap,
@@ -122,4 +125,5 @@ export const updatePathingForCliff = (
     water,
     [[worldX, worldY]],
     bounds,
+    mask,
   );

@@ -1,4 +1,5 @@
 import { getMap, onMapChange } from "@/shared/map.ts";
+import { END_TILE, PEN_TILE, START_TILE } from "@/shared/maps/tags.ts";
 
 type Rectangle = {
   x: number;
@@ -7,50 +8,20 @@ type Rectangle = {
   height: number;
 };
 
-const PEN_TILE_INDEX = 1;
-
-let cachedPenAreas: Rectangle[] | null = null;
+const cache = new Map<number, Rectangle[]>();
 let cachedMapId: string | null = null;
 
 onMapChange(() => {
-  cachedPenAreas = null;
+  cache.clear();
   cachedMapId = null;
 });
 
-export const getPenAreas = (): Rectangle[] => {
-  const map = getMap();
-
-  if (cachedMapId === map.id && cachedPenAreas) {
-    return cachedPenAreas;
-  }
-
-  const visited = Array.from(
-    { length: map.tiles.length },
-    () => Array(map.tiles[0].length).fill(false),
-  );
-
-  const areas: Rectangle[] = [];
-
-  for (let y = 0; y < map.tiles.length; y++) {
-    for (let x = 0; x < map.tiles[y].length; x++) {
-      if (map.tiles[y][x] === PEN_TILE_INDEX && !visited[y][x]) {
-        const area = findPenArea(map.tiles, visited, x, y);
-        if (area) areas.push(area);
-      }
-    }
-  }
-
-  cachedMapId = map.id;
-  cachedPenAreas = areas;
-
-  return areas;
-};
-
-const findPenArea = (
+const findArea = (
   tiles: number[][],
   visited: boolean[][],
   startX: number,
   startY: number,
+  tileIndex: number,
 ): Rectangle | null => {
   let minX = startX;
   let maxX = startX;
@@ -81,7 +52,7 @@ const findPenArea = (
         neighbor.y < tiles.length &&
         neighbor.x >= 0 &&
         neighbor.x < tiles[neighbor.y].length &&
-        tiles[neighbor.y][neighbor.x] === PEN_TILE_INDEX &&
+        tiles[neighbor.y][neighbor.x] === tileIndex &&
         !visited[neighbor.y][neighbor.x]
       ) {
         visited[neighbor.y][neighbor.x] = true;
@@ -100,8 +71,43 @@ const findPenArea = (
   };
 };
 
+const getAreasForTile = (tileIndex: number): Rectangle[] => {
+  const map = getMap();
+
+  if (cachedMapId === map.id) {
+    const cached = cache.get(tileIndex);
+    if (cached) return cached;
+  } else {
+    cache.clear();
+    cachedMapId = map.id;
+  }
+
+  const visited = Array.from(
+    { length: map.tiles.length },
+    () => Array(map.tiles[0].length).fill(false),
+  );
+
+  const areas: Rectangle[] = [];
+
+  for (let y = 0; y < map.tiles.length; y++) {
+    for (let x = 0; x < map.tiles[y].length; x++) {
+      if (map.tiles[y][x] === tileIndex && !visited[y][x]) {
+        const area = findArea(map.tiles, visited, x, y, tileIndex);
+        if (area) areas.push(area);
+      }
+    }
+  }
+
+  cache.set(tileIndex, areas);
+  return areas;
+};
+
+export const getPenAreas = (): Rectangle[] => getAreasForTile(PEN_TILE);
+export const getStartAreas = (): Rectangle[] => getAreasForTile(START_TILE);
+export const getEndAreas = (): Rectangle[] => getAreasForTile(END_TILE);
+
 export const clearPenAreasCache = () => {
-  cachedPenAreas = null;
+  cache.clear();
   cachedMapId = null;
 };
 

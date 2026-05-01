@@ -307,6 +307,85 @@ it("getWaterDepthAtWorld flips Y so worldY=0 is the bottom row", () => {
   expect(getWaterDepthAtWorld(0, 2.5, cliffMask, water)).toBeCloseTo(-0.5);
 });
 
+it("manual mask blocks pathing on the cliff vertex 2x2 patch", () => {
+  // 4x4 grass map, no bounds clamp. Mask is bounds-anchored (W+1)×(H+1) sized
+  // on full extents, so width 5, height 5. Mark the vertex at world (2, 2).
+  const tiles = [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ];
+  const cliffs: (number | "r")[][] = [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ];
+  const water = tiles.map((r) => r.map(() => 0));
+  const bounds = { min: { x: 0, y: 0 }, max: { x: 4, y: 4 } };
+  const mask = Array.from({ length: 5 }, () => new Array(5).fill(0));
+  // Vertex (2, 2): worldY 2, with topVertexY = ceil(4)-1 = 3, mapY=1.
+  // worldX 2, firstVertexX = 0, mapX = 2.
+  mask[1][2] = 1;
+  const pathing = getPathingMaskFromTerrainMasks(
+    tiles,
+    cliffs,
+    water,
+    bounds,
+    mask,
+  );
+  // The 2x2 pathing block touched is the four pathing cells whose worldX ∈
+  // [1.5, 2.5) and worldY ∈ [1.5, 2.5). In unreversed pathing coords (py=0
+  // top, py=2H-1 bottom): py corresponds to worldY = (2H-1-py)/2.
+  // For worldY=1.5 → py=4, worldY=2 → py=3. So py ∈ {3, 4}, px ∈ {3, 4}.
+  for (let py = 0; py < 8; py++) {
+    for (let px = 0; px < 8; px++) {
+      const isMaskedCell = (py === 3 || py === 4) && (px === 3 || px === 4);
+      expect(pathing[py][px]).toBe(isMaskedCell ? 0xFF : 0);
+    }
+  }
+});
+
+it("manual mask is a noop when the boundary excludes the vertex", () => {
+  const tiles = [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ];
+  const cliffs: (number | "r")[][] = tiles.map((r) =>
+    r.map(() => 0 as number | "r")
+  );
+  const water = tiles.map((r) => r.map(() => 0));
+  // Boundary excludes the outermost vertex layer.
+  const bounds = { min: { x: 0.5, y: 0.5 }, max: { x: 3.5, y: 3.5 } };
+  // Mask shape: ceil(3.5)-ceil(0.5) = 3 in each axis.
+  const mask = [
+    [1, 0, 0],
+    [0, 0, 0],
+    [0, 0, 0],
+  ];
+  const pathing = getPathingMaskFromTerrainMasks(
+    tiles,
+    cliffs,
+    water,
+    bounds,
+    mask,
+  );
+  // mapY=0, mapX=0 ⇒ vertex (firstVertexX=1, topVertexY=3) ⇒ world (1, 3).
+  // 2x2 pathing block: worldX ∈ [0.5, 1.5), worldY ∈ [2.5, 3.5).
+  // unreversed py: worldY=2.5 → py=1, worldY=3 → py=0; px: worldX=0.5 → px=1,
+  // worldX=1 → px=2.
+  expect(pathing[0][1]).toBe(0xFF);
+  expect(pathing[0][2]).toBe(0xFF);
+  expect(pathing[1][1]).toBe(0xFF);
+  expect(pathing[1][2]).toBe(0xFF);
+  // Cells outside the boundary are blocked too (via the bounds rule), but
+  // strictly-interior cells away from the masked vertex remain walkable.
+  expect(pathing[3][3]).toBe(0);
+});
+
 it("getWaterDepthAtWorld interpolates symmetrically across cell boundaries", () => {
   // 2x1 map: left cell wet (cliff 0, water 1.5, depth 1.5),
   // right cell dry (cliff 0, no water, depth 0). Shore is at worldX=1.0,

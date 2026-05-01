@@ -146,6 +146,7 @@ export class BrushPreview extends Group {
       obj.position.z = z;
       obj.renderOrder = order;
       obj.frustumCulled = false;
+      obj.raycast = () => {};
       this.add(obj);
     }
   }

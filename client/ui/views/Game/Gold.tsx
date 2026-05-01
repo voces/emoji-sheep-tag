@@ -10,6 +10,7 @@ import { editorVar } from "@/vars/editor.ts";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { getDistanceMultiplier } from "@/shared/penAreas.ts";
+import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import {
   getEffectivePlayerGold,
   isTeamGoldEnabled,
@@ -52,16 +53,21 @@ const TooltipContent = styled.div`
 
 const SheepTooltip = () => {
   const { t } = useTranslation();
+  const lobbySettings = useReactiveVar(lobbySettingsVar);
+  const isBulldog = lobbySettings.mode === "bulldog";
   const primaryUnit = useReactiveVar(primaryUnitVar);
   const multiplier = useListenToEntityProp(
     primaryUnit,
     "position",
-    (p) => p ? getDistanceMultiplier(p.x, p.y).toFixed(2) : undefined,
+    (p) =>
+      p && !isBulldog ? getDistanceMultiplier(p.x, p.y).toFixed(2) : undefined,
   );
 
   return (
     <TooltipContent>
-      <div>{t("hud.goldSheepTooltip")}</div>
+      <div>
+        {t(isBulldog ? "hud.goldSheepTooltipBulldog" : "hud.goldSheepTooltip")}
+      </div>
       {multiplier && <div>{t("hud.goldSheepMultiplier", { multiplier })}</div>}
     </TooltipContent>
   );

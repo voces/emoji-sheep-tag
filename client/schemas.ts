@@ -1,6 +1,7 @@
 import z from "zod";
 import { Entity } from "@/shared/types.ts";
 import { zShardInfo } from "@/shared/shard.ts";
+import { zMode, zRound } from "@/shared/round.ts";
 export type { ShardInfo } from "@/shared/shard.ts";
 
 const zPoint = z.object({ x: z.number(), y: z.number() }).readonly();
@@ -240,6 +241,9 @@ const zBuff = z.object({
   particleMinOffsetRange: z.number().optional(),
   particleScaleRange: z.number().optional(),
   particleLifetime: z.number().optional(),
+  particleMinSpeed: z.number().optional(),
+  particleMaxSpeed: z.number().optional(),
+  particleUseOwnerColor: z.boolean().optional(),
   preventsBuffs: z.string().array().readonly().optional(),
   invisible: z.boolean().optional(),
 });
@@ -420,21 +424,10 @@ const zStart = z.object({
   practice: z.boolean().optional(),
 });
 
-const zRound = z.object({
-  sheep: z.string().array().readonly(),
-  wolves: z.string().array().readonly(),
-  duration: z.number(),
-});
-
 const zLobbySettings = z.object({
   host: z.string().nullable(),
   map: z.string(),
-  mode: z.union([
-    z.literal("survival"),
-    z.literal("vip"),
-    z.literal("switch"),
-    z.literal("vamp"),
-  ]),
+  mode: zMode,
   vipHandicap: z.number(),
   sheep: z.number(),
   autoSheep: z.boolean(),
@@ -569,6 +562,7 @@ const zMapUpdate = z.object({
   terrain: z.string(),
   cliffs: z.string(),
   water: z.string().optional(),
+  mask: z.string().optional(),
   width: z.number(),
   height: z.number(),
   bounds: z.object({

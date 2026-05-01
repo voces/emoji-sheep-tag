@@ -704,7 +704,12 @@ const createFogPass = () => {
     visibilityGrid.fogTexture,
     renderTarget.depthTexture,
     camera,
-    { width: map.width, height: map.height, bounds: map.bounds },
+    {
+      width: map.width,
+      height: map.height,
+      bounds: map.bounds,
+      mask: map.mask,
+    },
   );
   pass.renderToScreen = true;
   setFogPass(pass);

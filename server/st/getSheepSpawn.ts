@@ -1,13 +1,149 @@
-import { getPenAreas } from "@/shared/penAreas.ts";
+import { getEndAreas, getPenAreas, getStartAreas } from "@/shared/penAreas.ts";
 import { pathable, pathingMap } from "../systems/pathing.ts";
 import { mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { Entity } from "@/shared/types.ts";
-import { getMap } from "@/shared/map.ts";
+import { getMap, getMapCenter } from "@/shared/map.ts";
+import { lobbyContext } from "../contexts.ts";
+import { newUnit } from "../api/unit.ts";
+import { START_TILE } from "@/shared/maps/tags.ts";
 
 const MAX_ATTEMPTS = 50;
 const MIN_DISTANCE_FROM_PEN = 1;
 const MAX_DISTANCE_FROM_PEN = 1.5;
 const MIN_DISTANCE_FROM_PEN_EDGE = 0.25;
+
+type Rect = { x: number; y: number; width: number; height: number };
+
+const isInRect = (rect: Rect, x: number, y: number): boolean =>
+  x >= rect.x && x <= rect.x + rect.width &&
+  y >= rect.y && y <= rect.y + rect.height;
+
+const clampToRect = (
+  rect: Rect,
+  x: number,
+  y: number,
+): { x: number; y: number } => ({
+  x: Math.max(rect.x, Math.min(rect.x + rect.width, x)),
+  y: Math.max(rect.y, Math.min(rect.y + rect.height, y)),
+});
+
+const startTileCellsCache = new WeakMap<object, Rect[]>();
+
+/** Returns each START tile as a unit-square rect in world coords. */
+const getStartTileCells = (): Rect[] => {
+  const map = getMap();
+  const cached = startTileCellsCache.get(map);
+  if (cached) return cached;
+  const cells: Rect[] = [];
+  const h = map.tiles.length;
+  for (let ty = 0; ty < h; ty++) {
+    const row = map.tiles[ty];
+    for (let tx = 0; tx < row.length; tx++) {
+      if (row[tx] === START_TILE) {
+        cells.push({ x: tx, y: h - 1 - ty, width: 1, height: 1 });
+      }
+    }
+  }
+  startTileCellsCache.set(map, cells);
+  return cells;
+};
+
+const expandedPenRects = (): Rect[] =>
+  getPenAreas().map((p) => ({
+    x: p.x - MAX_DISTANCE_FROM_PEN,
+    y: p.y - MAX_DISTANCE_FROM_PEN,
+    width: p.width + MAX_DISTANCE_FROM_PEN * 2,
+    height: p.height + MAX_DISTANCE_FROM_PEN * 2,
+  }));
+
+/** Rectangles that bound the sheep spawn area for the current mode. */
+const getSpawnAreaRects = (): Rect[] => {
+  if (lobbyContext.current?.settings.mode === "bulldog") {
+    return getStartTileCells();
+  }
+  return expandedPenRects();
+};
+
+const closestPointOnRects = (
+  rects: Rect[],
+  x: number,
+  y: number,
+): { x: number; y: number } => {
+  let best = clampToRect(rects[0], x, y);
+  let bestDist = (best.x - x) ** 2 + (best.y - y) ** 2;
+  for (let i = 1; i < rects.length; i++) {
+    const candidate = clampToRect(rects[i], x, y);
+    const dist = (candidate.x - x) ** 2 + (candidate.y - y) ** 2;
+    if (dist < bestDist) {
+      best = candidate;
+      bestDist = dist;
+    }
+  }
+  return best;
+};
+
+/** Push a point out of the nearest pen interior by MIN_DISTANCE_FROM_PEN. */
+const pushOutOfPenInteriors = (
+  x: number,
+  y: number,
+): { x: number; y: number } => {
+  const pens = getPenAreas();
+  for (const pen of pens) {
+    if (
+      x > pen.x && x < pen.x + pen.width &&
+      y > pen.y && y < pen.y + pen.height
+    ) {
+      // Find which edge to push to, choose the closest
+      const distLeft = x - pen.x;
+      const distRight = pen.x + pen.width - x;
+      const distBottom = y - pen.y;
+      const distTop = pen.y + pen.height - y;
+      const minDist = Math.min(distLeft, distRight, distBottom, distTop);
+      if (minDist === distLeft) return { x: pen.x - MIN_DISTANCE_FROM_PEN, y };
+      if (minDist === distRight) {
+        return { x: pen.x + pen.width + MIN_DISTANCE_FROM_PEN, y };
+      }
+      if (minDist === distBottom) {
+        return { x, y: pen.y - MIN_DISTANCE_FROM_PEN };
+      }
+      return { x, y: pen.y + pen.height + MIN_DISTANCE_FROM_PEN };
+    }
+  }
+  return { x, y };
+};
+
+/** True when the point is inside any valid sheep spawn area for the current mode. */
+export const isInSheepSpawnArea = (x: number, y: number): boolean => {
+  const rects = getSpawnAreaRects();
+  if (rects.length === 0) {
+    return lobbyContext.current?.settings.mode !== "bulldog";
+  }
+  if (!rects.some((r) => isInRect(r, x, y))) return false;
+  // For survival, the inner pen interior is also excluded.
+  if (lobbyContext.current?.settings.mode !== "bulldog") {
+    return getPenAreas().every((pen) =>
+      x <= pen.x || x >= pen.x + pen.width ||
+      y <= pen.y || y >= pen.y + pen.height
+    );
+  }
+  return true;
+};
+
+/** Clamp a point to the nearest valid sheep spawn area for the current mode. */
+export const clampToSheepSpawnArea = (
+  x: number,
+  y: number,
+): { x: number; y: number } => {
+  const rects = getSpawnAreaRects();
+  if (rects.length === 0) return { x, y };
+
+  // Step 1: clamp into the outer area.
+  const clamped = closestPointOnRects(rects, x, y);
+
+  // Step 2 (survival only): push out of the inner pen interior so the result lies in the strip.
+  if (lobbyContext.current?.settings.mode === "bulldog") return clamped;
+  return pushOutOfPenInteriors(clamped.x, clamped.y);
+};
 
 const isPathable = (x: number, y: number, prefab: string): boolean => {
   const testEntity = mergeEntityWithPrefab({
@@ -116,7 +252,97 @@ const getRandomPointInRectangle = (
   return [x, y];
 };
 
+const getBulldogSheepSpawn = (): [x: number, y: number] | null => {
+  const startAreas = getStartAreas();
+  if (startAreas.length === 0) return null;
+
+  const totalArea = startAreas.reduce(
+    (sum, area) => sum + area.width * area.height,
+    0,
+  );
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    let random = Math.random() * totalArea;
+    let selectedArea = startAreas[0];
+
+    for (const area of startAreas) {
+      const areaSize = area.width * area.height;
+      if (random < areaSize) {
+        selectedArea = area;
+        break;
+      }
+      random -= areaSize;
+    }
+
+    const [x, y] = getRandomPointInRectangle(
+      selectedArea,
+      MIN_DISTANCE_FROM_PEN_EDGE,
+    );
+
+    if (isPathable(x, y, "sheep")) return [x, y];
+  }
+
+  const fallback = startAreas[0];
+  return [
+    fallback.x + fallback.width / 2,
+    fallback.y + fallback.height / 2,
+  ];
+};
+
+export const spawnSheepAt = (
+  ownerId: string,
+  x: number,
+  y: number,
+  extra?: Partial<Entity>,
+): Entity => {
+  const facing = getSheepSpawnFacing(x, y);
+  return newUnit(ownerId, "sheep", x, y, {
+    ...(facing != null ? { facing } : {}),
+    ...extra,
+  });
+};
+
+export const spawnSheep = (
+  ownerId: string,
+  extra?: Partial<Entity>,
+): Entity => {
+  const [x, y] = getSheepSpawn();
+  return spawnSheepAt(ownerId, x, y, extra);
+};
+
+export const getSheepSpawnFacing = (
+  x: number,
+  y: number,
+): number | undefined => {
+  if (lobbyContext.current?.settings.mode !== "bulldog") return undefined;
+
+  const endAreas = getEndAreas();
+  if (endAreas.length === 0) return undefined;
+
+  let nearest = endAreas[0];
+  let nearestDistSq = Infinity;
+  for (const area of endAreas) {
+    const cx = area.x + area.width / 2;
+    const cy = area.y + area.height / 2;
+    const distSq = (cx - x) ** 2 + (cy - y) ** 2;
+    if (distSq < nearestDistSq) {
+      nearestDistSq = distSq;
+      nearest = area;
+    }
+  }
+
+  const targetX = nearest.x + nearest.width / 2;
+  const targetY = nearest.y + nearest.height / 2;
+  return Math.atan2(targetY - y, targetX - x);
+};
+
 export const getSheepSpawn = (): [x: number, y: number] => {
+  const lobby = lobbyContext.current;
+  if (lobby?.settings.mode === "bulldog") {
+    const spawn = getBulldogSheepSpawn();
+    if (spawn) return spawn;
+  }
+
   const penAreas = getPenAreas();
 
   if (penAreas.length === 0) return [0, 0];
@@ -162,7 +388,10 @@ export const getSpiritSpawn = (): [
   const penAreas = getPenAreas();
 
   if (penAreas.length === 0) {
-    return [0, 0, -1];
+    // No pen on this map (e.g. bulldog-only): fall back to the wolf spawn
+    // point at map center.
+    const { x, y } = getMapCenter();
+    return [x, y, -1];
   }
 
   const totalArea = penAreas.reduce((sum, area) => {

@@ -6,8 +6,11 @@ import { pathingMap } from "../systems/pathing.ts";
 import {
   getCliffs,
   getMap,
+  getMask,
   getTiles,
   getWater,
+  isMaskEmpty,
+  reanchorMask,
   setCurrentMap,
 } from "@/shared/map.ts";
 import {
@@ -123,6 +126,7 @@ export const editorSetCliff = (
   const cliffs = getCliffs();
   const tiles = getTiles();
   const water = getWater();
+  const mask = getMask();
   const { bounds } = getMap();
 
   // Convert from world coordinates (y=0 is bottom) to map coordinates (map[0] = top)
@@ -132,7 +136,16 @@ export const editorSetCliff = (
   if (cliffs[mapY]?.[x] !== undefined) cliffs[mapY][x] = cliff;
 
   // Update pathing map for the changed cliff (updatePathingForCliff expects world coordinates)
-  updatePathingForCliff(pathingMap(), tiles, cliffs, water, x, y, bounds);
+  updatePathingForCliff(
+    pathingMap(),
+    tiles,
+    cliffs,
+    water,
+    x,
+    y,
+    bounds,
+    mask,
+  );
 };
 
 export const editorSetWater = (
@@ -142,6 +155,7 @@ export const editorSetWater = (
   const cliffs = getCliffs();
   const tiles = getTiles();
   const water = getWater();
+  const mask = getMask();
   const { bounds } = getMap();
 
   // Convert from world coordinates (y=0 is bottom) to map coordinates (map[0] = top)
@@ -150,7 +164,16 @@ export const editorSetWater = (
   if (water[mapY]?.[x] === undefined) return;
   water[mapY][x] = value;
 
-  updatePathingForCliff(pathingMap(), tiles, cliffs, water, x, y, bounds);
+  updatePathingForCliff(
+    pathingMap(),
+    tiles,
+    cliffs,
+    water,
+    x,
+    y,
+    bounds,
+    mask,
+  );
 };
 
 export const zEditorBulkSetCliffs = z.object({
@@ -169,6 +192,7 @@ export const editorBulkSetCliffs = (
   const cliffs = getCliffs();
   const tiles = getTiles();
   const water = getWater();
+  const mask = getMask();
   const { bounds } = getMap();
   for (const { x, y, cliff } of cells) {
     const mapY = cliffs.length - 1 - y;
@@ -181,6 +205,7 @@ export const editorBulkSetCliffs = (
     water,
     cells.map(({ x, y }) => [x, y] as const),
     bounds,
+    mask,
   );
 };
 
@@ -193,6 +218,27 @@ export const zEditorBulkSetWaters = z.object({
   })),
 });
 
+/**
+ * `mapX` / `mapY` are mask-array indices (mask cells are anchored to the
+ * boundary, not to terrain). Cells outside the mask grid are silently
+ * ignored — that's the documented "noop outside boundary" behavior.
+ */
+export const zEditorSetMask = z.object({
+  type: z.literal("editorSetMask"),
+  mapX: z.number().int().nonnegative(),
+  mapY: z.number().int().nonnegative(),
+  value: z.number().int().nonnegative(),
+});
+
+export const zEditorBulkSetMasks = z.object({
+  type: z.literal("editorBulkSetMasks"),
+  cells: z.array(z.object({
+    mapX: z.number().int().nonnegative(),
+    mapY: z.number().int().nonnegative(),
+    value: z.number().int().nonnegative(),
+  })),
+});
+
 export const editorBulkSetWaters = (
   _: unknown,
   { cells }: z.output<typeof zEditorBulkSetWaters>,
@@ -200,6 +246,7 @@ export const editorBulkSetWaters = (
   const cliffs = getCliffs();
   const tiles = getTiles();
   const water = getWater();
+  const mask = getMask();
   const { bounds } = getMap();
   const updated: Array<readonly [number, number]> = [];
   for (const { x, y, water: value } of cells) {
@@ -208,7 +255,102 @@ export const editorBulkSetWaters = (
     water[mapY][x] = value;
     updated.push([x, y]);
   }
-  updatePathingForCliffs(pathingMap(), tiles, cliffs, water, updated, bounds);
+  updatePathingForCliffs(
+    pathingMap(),
+    tiles,
+    cliffs,
+    water,
+    updated,
+    bounds,
+    mask,
+  );
+};
+
+/**
+ * Mask cell (mapY, mapX) sits on the cliff vertex at world (vx, vy) and
+ * affects the up-to-four cliff cells sharing that vertex. Returned as
+ * (worldX, worldY) tile coords for `updatePathingForCliffs`.
+ */
+const maskCellAffectedCliffCells = (
+  mapY: number,
+  mapX: number,
+  bounds: { min: { x: number; y: number }; max: { x: number; y: number } },
+  mapWidth: number,
+  mapHeight: number,
+): Array<readonly [number, number]> => {
+  const firstVertexX = Math.ceil(bounds.min.x);
+  const topVertexY = Math.ceil(bounds.max.y) - 1;
+  const vx = firstVertexX + mapX;
+  const vy = topVertexY - mapY;
+  const out: Array<readonly [number, number]> = [];
+  for (const cx of [vx - 1, vx]) {
+    if (cx < 0 || cx >= mapWidth) continue;
+    for (const cy of [vy - 1, vy]) {
+      if (cy < 0 || cy >= mapHeight) continue;
+      out.push([cx, cy] as const);
+    }
+  }
+  return out;
+};
+
+export const editorSetMask = (
+  _: unknown,
+  { mapX, mapY, value }: z.output<typeof zEditorSetMask>,
+) => {
+  const map = getMap();
+  if (mapY < 0 || mapY >= map.mask.length) return;
+  const row = map.mask[mapY];
+  if (!row || mapX < 0 || mapX >= row.length) return;
+  row[mapX] = value;
+  const affected = maskCellAffectedCliffCells(
+    mapY,
+    mapX,
+    map.bounds,
+    map.width,
+    map.height,
+  );
+  updatePathingForCliffs(
+    pathingMap(),
+    map.tiles,
+    map.cliffs,
+    map.water,
+    affected,
+    map.bounds,
+    map.mask,
+  );
+};
+
+export const editorBulkSetMasks = (
+  _: unknown,
+  { cells }: z.output<typeof zEditorBulkSetMasks>,
+) => {
+  const map = getMap();
+  const affected: Array<readonly [number, number]> = [];
+  for (const { mapX, mapY, value } of cells) {
+    if (mapY < 0 || mapY >= map.mask.length) continue;
+    const row = map.mask[mapY];
+    if (!row || mapX < 0 || mapX >= row.length) continue;
+    row[mapX] = value;
+    affected.push(
+      ...maskCellAffectedCliffCells(
+        mapY,
+        mapX,
+        map.bounds,
+        map.width,
+        map.height,
+      ),
+    );
+  }
+  if (affected.length === 0) return;
+  updatePathingForCliffs(
+    pathingMap(),
+    map.tiles,
+    map.cliffs,
+    map.water,
+    affected,
+    map.bounds,
+    map.mask,
+  );
 };
 
 export const zEditorResizeMap = z.object({
@@ -296,6 +438,7 @@ export const editorResizeMap = (
     terrain: packedTerrain,
     cliffs: packedCliffs,
     water: packedWater,
+    mask: isMaskEmpty(newMap.mask) ? undefined : packMap2DAuto(newMap.mask),
     width: newMap.width,
     height: newMap.height,
     bounds: newMap.bounds,
@@ -316,7 +459,10 @@ export const editorAdjustBounds = (
   const currentMap = getMap();
 
   // Adjust bounds without changing terrain
-  const newBounds = { ...currentMap.bounds };
+  const newBounds = {
+    min: { x: currentMap.bounds.min.x, y: currentMap.bounds.min.y },
+    max: { x: currentMap.bounds.max.x, y: currentMap.bounds.max.y },
+  };
 
   switch (direction) {
     case "top":
@@ -333,12 +479,18 @@ export const editorAdjustBounds = (
       break;
   }
 
+  // Re-anchor the manual mask to the new bounds. Cells outside the new bounds
+  // are dropped (so shrinking the boundary clears the manual masking that's
+  // now out-of-bounds), new cells from expansion start unset.
+  const newMask = reanchorMask(currentMap.mask, currentMap.bounds, newBounds);
+
   // Rebuild terrain pathing and layers (these will be recalculated)
   const rawPathing = getPathingMaskFromTerrainMasks(
     currentMap.tiles,
     currentMap.cliffs,
     currentMap.water,
     newBounds,
+    newMask,
   );
   const terrainPathingMap = rawPathing.toReversed();
 
@@ -346,6 +498,7 @@ export const editorAdjustBounds = (
     ...currentMap,
     id: `${currentMap.id}-bounds-${Date.now()}`,
     bounds: newBounds,
+    mask: newMask,
     terrainPathingMap,
   };
 
@@ -377,6 +530,7 @@ export const editorAdjustBounds = (
       })(),
     ),
     water: packMap2DAuto(currentMap.water),
+    mask: isMaskEmpty(newMask) ? undefined : packMap2DAuto(newMask),
     width: currentMap.width,
     height: currentMap.height,
     bounds: newBounds,

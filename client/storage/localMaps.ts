@@ -1,4 +1,5 @@
 import { type PackedMap } from "@/shared/map.ts";
+import { DEFAULT_MAP_TAGS } from "@/shared/maps/tags.ts";
 import { getStoredPlayerName } from "../util/playerPrefs.ts";
 
 const DB_NAME = "emoji-sheep-tag";
@@ -10,6 +11,7 @@ export type LocalMapMetadata = {
   name: string;
   author: string;
   timestamp: number;
+  tags: readonly string[];
 };
 
 export type LocalMapEntry = LocalMapMetadata & {
@@ -62,6 +64,9 @@ const openDB = (): Promise<IDBDatabase> =>
               name: oldEntry.name,
               author: getStoredPlayerName() || "Unknown",
               timestamp: oldEntry.updatedAt || oldEntry.createdAt || Date.now(),
+              tags: oldEntry.data?.tags?.length
+                ? [...oldEntry.data.tags]
+                : [...DEFAULT_MAP_TAGS],
               data: oldEntry.data,
             };
             cursor.update(newEntry);
@@ -88,6 +93,7 @@ export const saveLocalMap = async (
       name,
       author: getStoredPlayerName() || "Unknown",
       timestamp: Date.now(),
+      tags: data.tags?.length ? [...data.tags] : [...DEFAULT_MAP_TAGS],
       data,
     };
 
@@ -144,12 +150,18 @@ export const listLocalMaps = async (): Promise<LocalMapMetadata[]> => {
       const cursor = request.result;
       if (cursor) {
         const entry = cursor.value as LocalMapEntry;
+        const tags = entry.tags?.length
+          ? entry.tags
+          : entry.data?.tags?.length
+          ? entry.data.tags
+          : [...DEFAULT_MAP_TAGS];
         // Only return metadata, not the full data
         results.push({
           id: entry.id,
           name: entry.name,
           author: entry.author,
           timestamp: entry.timestamp,
+          tags,
         });
         cursor.continue();
       } else {

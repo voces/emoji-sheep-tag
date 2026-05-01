@@ -3,8 +3,14 @@ import { terrain } from "../graphics/three.ts";
 import { tileDefs } from "@/shared/data.ts";
 import { packMap2D, packMap2DAuto } from "@/shared/util/2dPacking.ts";
 import { packEntities } from "@/shared/util/entityPacking.ts";
-import { getMapBounds, getMapCenter, type PackedMap } from "@/shared/map.ts";
-import { editorCurrentMapVar } from "@/vars/editor.ts";
+import {
+  getMapBounds,
+  getMapCenter,
+  getMask,
+  isMaskEmpty,
+  type PackedMap,
+} from "@/shared/map.ts";
+import { editorCurrentMapVar, editorMapTagsVar } from "@/vars/editor.ts";
 import { rad2deg } from "@/shared/util/math.ts";
 
 export const buildPackedMapFromEditor = (): PackedMap => {
@@ -20,6 +26,7 @@ export const buildPackedMapFromEditor = (): PackedMap => {
   const center = getMapCenter();
   const bounds = getMapBounds();
   const currentMap = editorCurrentMapVar();
+  const mask = getMask();
 
   return {
     name: currentMap?.name,
@@ -31,6 +38,8 @@ export const buildPackedMapFromEditor = (): PackedMap => {
     ),
     cliffs: packMap2D(cliffs, maxCliff + 1),
     water: packMap2DAuto(terrain.masks.water.toReversed()),
+    mask: isMaskEmpty(mask) ? undefined : packMap2DAuto(mask),
+    tags: [...editorMapTagsVar()],
     entities: packEntities(
       Array.from(app.entities)
         .filter((e) =>

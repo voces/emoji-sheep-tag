@@ -22,6 +22,7 @@ import {
 } from "./actions/captains.ts";
 import { broadcastShards } from "./shardRegistry.ts";
 import { emitRoundEnded, notifyStatusChange } from "./statusStream.ts";
+import type { Round as SharedRound } from "@/shared/shard.ts";
 
 export const convertPendingPlayersToTeams = (lobby: Lobby) => {
   const pendingPlayers = Array.from(lobby.players).filter((p) =>
@@ -132,7 +133,7 @@ export const createRoundSummary = () => {
     Date.now() - (lobby.round?.start ?? Date.now()),
   );
   if (duration <= 0) return undefined;
-  return {
+  const summary: SharedRound = {
     sheep: Array.from(lobby.players).filter((p) => p.team === "sheep").map((
       p,
     ) => p.id),
@@ -140,7 +141,11 @@ export const createRoundSummary = () => {
       p,
     ) => p.id),
     duration,
+    mode: lobby.settings.mode,
   };
+  const events = lobby.round?.events;
+  if (events && events.length > 0) summary.events = [...events];
+  return summary;
 };
 
 export const endRound = (canceled = false) => {
@@ -163,11 +168,12 @@ export const endRound = (canceled = false) => {
     wasPractice,
   );
 
-  // Sync sheepCount from ECS entities back to Client objects (before clearing round)
+  // Sync per-player stats from ECS entities back to Client objects (before clearing round)
   if (!canceled) {
     for (const player of lobby.players) {
       const ecsPlayer = getPlayer(player.id);
-      if (ecsPlayer?.sheepCount !== undefined) {
+      if (!ecsPlayer) continue;
+      if (ecsPlayer.sheepCount !== undefined) {
         player.sheepCount = ecsPlayer.sheepCount;
       }
     }

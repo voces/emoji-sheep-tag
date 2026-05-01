@@ -13,11 +13,24 @@ import {
 } from "./pathing/terrainHelpers.ts";
 import { appContext } from "./context.ts";
 import { getMapMeta } from "./maps/manifest.ts";
+import { DEFAULT_MAP_TAGS } from "./maps/tags.ts";
 
 export type PackedMap = Omit<typeof defaultPackedMap, "name" | "water"> & {
   name?: string;
   /** Packed water mask (same dims as cliffs). Cells store water height * WATER_LEVEL_SCALE (0 = no water). */
   water?: string;
+  /**
+   * Packed manual black mask. Indexed at cliff vertices anchored to the
+   * boundary region — dimensions are `ceil(bounds.max) - ceil(bounds.min)` in
+   * each axis. `mask[mapY][mapX]` corresponds to the cliff vertex at world
+   * position (ceil(bounds.min.x) + mapX, ceil(bounds.max.y) - 1 - mapY). The
+   * mask only covers cells inside the boundary; everything outside is already
+   * permanently blocked + dark by virtue of the boundary itself. 0 = no manual
+   * mask, non-zero = blocked + permanently dark. Omitted when fully empty.
+   */
+  mask?: string;
+  /** Search tags. Auto-generated at serialize time; defaults to ["survival"] when missing. */
+  tags?: readonly string[];
 };
 
 export type LoadedMap = {
@@ -29,11 +42,18 @@ export type LoadedMap = {
   cliffs: (number | "r")[][];
   /** Per-cell water height stored as integer * WATER_LEVEL_SCALE (0 = no water). */
   water: number[][];
+  /**
+   * Per-vertex manual black mask, anchored to the boundary region. See
+   * `PackedMap.mask`. Always present — empty (zero-row or all-zero) when
+   * no manual mask is set.
+   */
+  mask: number[][];
   terrainPathingMap: number[][];
   terrainLayers: number[][];
   width: number;
   height: number;
   entities: ReturnType<typeof unpackEntities>;
+  tags: readonly string[];
 };
 
 type Listener = (map: LoadedMap) => void;
@@ -104,6 +124,90 @@ const trackGeneratedEntity = (
   set.add(entity);
 };
 
+type Bounds = NonNullable<PackedMap["bounds"]>;
+
+/**
+ * Computes the mask grid dimensions for a given boundary. Mask cells live on
+ * cliff vertices that are strictly inside the boundary (`worldX < bounds.max.x`,
+ * `worldY < bounds.max.y` — both exclusive on max, inclusive on min).
+ */
+export const getMaskShapeForBounds = (
+  bounds: Bounds,
+): {
+  width: number;
+  height: number;
+  firstVertexX: number;
+  topVertexY: number;
+} => {
+  const firstVertexX = Math.ceil(bounds.min.x);
+  const lastVertexX = Math.ceil(bounds.max.x) - 1;
+  const firstVertexY = Math.ceil(bounds.min.y);
+  const lastVertexY = Math.ceil(bounds.max.y) - 1;
+  const width = Math.max(0, lastVertexX - firstVertexX + 1);
+  const height = Math.max(0, lastVertexY - firstVertexY + 1);
+  return { width, height, firstVertexX, topVertexY: lastVertexY };
+};
+
+const emptyMaskForBounds = (bounds: Bounds): number[][] => {
+  const { width, height } = getMaskShapeForBounds(bounds);
+  return Array.from({ length: height }, () => new Array<number>(width).fill(0));
+};
+
+/**
+ * Re-anchors a mask grid when bounds change shape. Mask cells at vertices
+ * still inside the new bounds keep their values. For vertices that are inside
+ * the new bounds but outside the old grid (i.e. boundary expansion), the
+ * value is clamped from the nearest edge cell of the old mask — same
+ * "extrude the edge" behavior tiles and cliffs use during a terrain resize,
+ * so a masked strip flush against the old boundary stays flush against the
+ * new boundary instead of vanishing into a fresh strip of unmasked cells.
+ * Vertices outside the new bounds (boundary shrink) are dropped, which is the
+ * documented "shrinking the boundary clears the now-outside masking" rule.
+ */
+export const reanchorMask = (
+  mask: number[][],
+  oldBounds: Bounds,
+  newBounds: Bounds,
+): number[][] => {
+  const oldShape = getMaskShapeForBounds(oldBounds);
+  const newShape = getMaskShapeForBounds(newBounds);
+  const out: number[][] = Array.from(
+    { length: newShape.height },
+    () => new Array<number>(newShape.width).fill(0),
+  );
+  if (oldShape.width === 0 || oldShape.height === 0) return out;
+  const clamp = (v: number, lo: number, hi: number) =>
+    v < lo ? lo : v > hi ? hi : v;
+  for (let mapY = 0; mapY < newShape.height; mapY++) {
+    const vy = newShape.topVertexY - mapY;
+    const oldMapY = clamp(
+      oldShape.topVertexY - vy,
+      0,
+      oldShape.height - 1,
+    );
+    const oldRow = mask[oldMapY];
+    if (!oldRow) continue;
+    const outRow = out[mapY];
+    for (let mapX = 0; mapX < newShape.width; mapX++) {
+      const vx = newShape.firstVertexX + mapX;
+      const oldMapX = clamp(
+        vx - oldShape.firstVertexX,
+        0,
+        oldShape.width - 1,
+      );
+      outRow[mapX] = oldRow[oldMapX] ?? 0;
+    }
+  }
+  return out;
+};
+
+export const isMaskEmpty = (mask: number[][]): boolean => {
+  for (const row of mask) {
+    for (const v of row) if (v) return false;
+  }
+  return true;
+};
+
 export const buildLoadedMap = (
   map: string,
   packed: PackedMap,
@@ -127,6 +231,10 @@ export const buildLoadedMap = (
       max: { x: tiles[0]?.length ?? 0, y: tiles.length },
     };
 
+  const mask = packed.mask
+    ? unpackMap2D(packed.mask)
+    : emptyMaskForBounds(bounds);
+
   const center = { x: packed.center.x, y: packed.center.y };
 
   const rawPathing = getPathingMaskFromTerrainMasks(
@@ -134,6 +242,7 @@ export const buildLoadedMap = (
     cliffs,
     water,
     bounds,
+    mask,
   );
   const terrainPathingMap = rawPathing.toReversed();
   const terrainLayers = rawPathing.map((row, y) =>
@@ -150,11 +259,13 @@ export const buildLoadedMap = (
     tiles,
     cliffs,
     water,
+    mask,
     terrainPathingMap,
     terrainLayers,
     height: tiles.length,
     width: tiles[0]?.length ?? 0,
     entities: unpackEntities(packed.entities),
+    tags: packed.tags?.length ? [...packed.tags] : [...DEFAULT_MAP_TAGS],
   };
 };
 
@@ -216,6 +327,7 @@ export const getMapBounds = () => getMap().bounds;
 export const getTiles = () => getMap().tiles;
 export const getCliffs = () => getMap().cliffs;
 export const getWater = () => getMap().water;
+export const getMask = () => getMap().mask;
 export const getTerrainPathingMap = () => getMap().terrainPathingMap;
 export const getTerrainLayers = () => getMap().terrainLayers;
 export const getMapWidth = () => getMap().width;

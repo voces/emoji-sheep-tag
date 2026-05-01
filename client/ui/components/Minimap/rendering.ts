@@ -51,7 +51,12 @@ export const createMinimapRenderer = (
       visibilityGrid.fogTexture,
       sceneRenderTarget.depthTexture!,
       camera,
-      { width: map.width, height: map.height, bounds: map.bounds },
+      {
+        width: map.width,
+        height: map.height,
+        bounds: map.bounds,
+        mask: map.mask,
+      },
     );
   };
 

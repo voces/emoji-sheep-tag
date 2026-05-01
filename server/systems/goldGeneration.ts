@@ -18,15 +18,19 @@ addSystem({
 
     if (team !== "sheep" && team !== "wolf") return;
 
-    // Sheep players only generate gold if they have a living sheep
+    // Sheep players only generate gold if they have a living sheep. Distance
+    // scaling reinforces the survival meta of staying near the pen; bulldog
+    // is short and the goal is *leaving*, so income is flat there.
     let distanceMultiplier = 1;
     if (team === "sheep") {
       const sheep = getSheep(entity.id);
       if (!sheep || !sheep.health || sheep.health <= 0) return;
-      distanceMultiplier = getDistanceMultiplier(
-        sheep.position?.x ?? 0,
-        sheep.position?.y ?? 0,
-      );
+      if (lobbyContext.current.settings.mode !== "bulldog") {
+        distanceMultiplier = getDistanceMultiplier(
+          sheep.position?.x ?? 0,
+          sheep.position?.y ?? 0,
+        );
+      }
     }
 
     // Determine gold generation rate based on team

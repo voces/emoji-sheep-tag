@@ -12,7 +12,8 @@ import { Toggle } from "@/components/forms/Toggle.tsx";
 import { TimeInput } from "@/components/forms/TimeInput.tsx";
 import { PercentInput } from "@/components/forms/PercentInput.tsx";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
-import { MAPS } from "@/shared/maps/manifest.ts";
+import { getMapManifestTags, MAPS } from "@/shared/maps/manifest.ts";
+import { mapMatchesMode } from "@/shared/maps/tags.ts";
 import {
   listLocalMaps,
   type LocalMapMetadata,
@@ -27,6 +28,7 @@ import {
 } from "@/components/forms/SegmentedControl.tsx";
 import { Tag } from "@/components/Tag.tsx";
 import { DEFAULT_VIP_HANDICAP } from "@/shared/constants.ts";
+import { getDefaultIncome, getDefaultStartingGold } from "@/shared/round.ts";
 import { Check, ChevronDown, ChevronRight, Map, RotateCcw } from "lucide-react";
 import { Minimap } from "@/components/Minimap/index.tsx";
 
@@ -138,6 +140,13 @@ const MapDropdownItem = styled.button<{ $selected: boolean }>`
 
 const MapDropdownLabel = styled.span`
   flex: 1;
+`;
+
+const MapTags = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-shrink: 0;
 `;
 
 const HostPanel = styled(Panel)<{ $expanded: boolean }>`
@@ -366,14 +375,20 @@ export const LobbySettings = () => {
   }, [refreshTrigger]);
 
   const mapOptions = useMemo(
-    () => [
-      ...MAPS.map((map) => ({ value: map.id, label: map.name })),
-      ...localMaps.map((map) => ({
-        value: `local:${map.id}`,
-        label: `${map.name} - ${map.author}, ${formatDate(map.timestamp)}`,
-      })),
-    ],
-    [localMaps],
+    () =>
+      [
+        ...MAPS.map((map) => ({
+          value: map.id,
+          label: map.name,
+          tags: getMapManifestTags(map),
+        })),
+        ...localMaps.map((map) => ({
+          value: `local:${map.id}`,
+          label: `${map.name} - ${map.author}, ${formatDate(map.timestamp)}`,
+          tags: map.tags,
+        })),
+      ].filter((opt) => mapMatchesMode(opt.tags, lobbySettings.mode)),
+    [localMaps, lobbySettings.mode],
   );
 
   const shardOptions = useMemo(() => {
@@ -404,6 +419,19 @@ export const LobbySettings = () => {
   );
   const maxSheep = Math.max(nonObservers.length - 1, 1);
   const settingsDisabled = !isHost || isShardLaunching;
+
+  // Mode-aware defaults for gold/income — bulldog scales with team sizes.
+  const wolfCount = Math.max(nonObservers.length - lobbySettings.sheep, 1);
+  const defaultGold = getDefaultStartingGold(
+    lobbySettings.mode,
+    lobbySettings.sheep,
+    wolfCount,
+  );
+  const defaultIncome = getDefaultIncome(
+    lobbySettings.mode,
+    lobbySettings.sheep,
+    wolfCount,
+  );
 
   const selectedMap = MAPS.find((m) => m.id === lobbySettings.map) ??
     (lobbySettings.map?.startsWith("local:")
@@ -466,6 +494,15 @@ export const LobbySettings = () => {
                     >
                       {opt.value === lobbySettings.map && <Check size={14} />}
                       <MapDropdownLabel>{opt.label}</MapDropdownLabel>
+                      {opt.tags.length > 0 && (
+                        <MapTags>
+                          {opt.tags.map((tag) => (
+                            <Tag key={tag}>
+                              {t(`mapTag.${tag}`, { defaultValue: tag })}
+                            </Tag>
+                          ))}
+                        </MapTags>
+                      )}
                     </MapDropdownItem>
                   ))}
                 </MapDropdown>
@@ -524,22 +561,23 @@ export const LobbySettings = () => {
               <SegmentedControl
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gridTemplateColumns: "repeat(5, 1fr)",
                   width: "100%",
                 }}
               >
-                {(["survival", "vip", "switch", "vamp"] as const).map((m) => (
-                  <Segment
-                    key={m}
-                    $active={lobbySettings.mode === m}
-                    onClick={() => send({ type: "lobbySettings", mode: m })}
-                    disabled={settingsDisabled}
-                    style={{ padding: "7px 6px" }}
-                    title={t(`lobby.${m}Tooltip`)}
-                  >
-                    {t(`lobby.${m}`)}
-                  </Segment>
-                ))}
+                {(["survival", "vip", "switch", "vamp", "bulldog"] as const)
+                  .map((m) => (
+                    <Segment
+                      key={m}
+                      $active={lobbySettings.mode === m}
+                      onClick={() => send({ type: "lobbySettings", mode: m })}
+                      disabled={settingsDisabled}
+                      style={{ padding: "7px 6px" }}
+                      title={t(`lobby.${m}Tooltip`)}
+                    >
+                      {t(`lobby.${m}`)}
+                    </Segment>
+                  ))}
               </SegmentedControl>
             </HostRow>
 
@@ -620,15 +658,15 @@ export const LobbySettings = () => {
                 min={0}
                 max={100000}
                 step={1}
-                defaultValue="0"
+                defaultValue={String(defaultGold.sheep)}
                 disabled={settingsDisabled}
-                isAuto={lobbySettings.startingGold.sheep === 0}
+                isAuto={lobbySettings.startingGold.sheep === defaultGold.sheep}
                 onResetToAuto={() =>
                   send({
                     type: "lobbySettings",
                     startingGold: {
                       ...lobbySettings.startingGold,
-                      sheep: 0,
+                      sheep: defaultGold.sheep,
                     },
                   })}
                 onChange={(value) =>
@@ -647,15 +685,16 @@ export const LobbySettings = () => {
                 min={0}
                 max={100000}
                 step={1}
-                defaultValue="0"
+                defaultValue={String(defaultGold.wolves)}
                 disabled={settingsDisabled}
-                isAuto={lobbySettings.startingGold.wolves === 0}
+                isAuto={lobbySettings.startingGold.wolves ===
+                  defaultGold.wolves}
                 onResetToAuto={() =>
                   send({
                     type: "lobbySettings",
                     startingGold: {
                       ...lobbySettings.startingGold,
-                      wolves: 0,
+                      wolves: defaultGold.wolves,
                     },
                   })}
                 onChange={(value) =>
@@ -674,7 +713,7 @@ export const LobbySettings = () => {
                 id="sheep-income"
                 label={t("lobby.incomeRateSheep")}
                 value={lobbySettings.income.sheep}
-                defaultValue={1}
+                defaultValue={defaultIncome.sheep}
                 min={0}
                 max={100}
                 disabled={settingsDisabled}
@@ -689,7 +728,7 @@ export const LobbySettings = () => {
                 id="wolves-income"
                 label={t("lobby.incomeRateWolf")}
                 value={lobbySettings.income.wolves}
-                defaultValue={1}
+                defaultValue={defaultIncome.wolves}
                 min={0}
                 max={100}
                 disabled={settingsDisabled}

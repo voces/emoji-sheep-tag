@@ -1,16 +1,15 @@
 import { endRound, send } from "../lobbyApi.ts";
 import { lobbyContext } from "../contexts.ts";
 import { timeout } from "../api/timing.ts";
-import { grantPlayerGold } from "../api/player.ts";
+import { grantPlayerGold, redistributeSheepGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getSheep } from "./collections.ts";
-import { distributeEquitably } from "../util/equitableDistribution.ts";
 import { newUnit, orderAttack } from "../api/unit.ts";
 import { Entity } from "@/shared/types.ts";
 import { debouncedGoldText } from "../api/floatingText.ts";
 import { findPlayerUnit, getPlayerUnits } from "./playerEntities.ts";
-import { getSheepSpawn, getSpiritSpawn } from "../st/getSheepSpawn.ts";
+import { getSpiritSpawn, spawnSheep } from "../st/getSheepSpawn.ts";
 import { isPractice } from "../api/st.ts";
 import { getTeams } from "@/shared/systems/teams.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
@@ -19,23 +18,33 @@ import { isEnemy, isStructure, iterateBuffs } from "@/shared/api/unit.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
 import { colorName, getPlayer } from "@/shared/api/player.ts";
 import { getMapCenter } from "@/shared/map.ts";
-import { PATHING_NONE } from "@/shared/constants.ts";
+import {
+  BULLDOG_ASSIST_BOUNTY,
+  BULLDOG_KILLER_BOUNTY,
+  PATHING_NONE,
+  SURVIVAL_ASSIST_BOUNTY,
+  SURVIVAL_KILLER_BOUNTY,
+} from "@/shared/constants.ts";
 import { isTeamGoldEnabled } from "../api/teamGold.ts";
 
 const onLose = () =>
   timeout(() => {
     const lobby = lobbyContext.current;
 
-    send({
-      type: "chat",
-      message: `${
-        new Intl.ListFormat().format(
-          Array.from(getTeams().sheep).map((s) => colorName(s)),
-        )
-      } lasted ${
-        formatDuration(Date.now() - (lobby.round?.start ?? Date.now()))
-      }!`,
-    });
+    if (lobby.settings.mode === "bulldog") {
+      send({ type: "chat", message: "Wolves win!" });
+    } else {
+      send({
+        type: "chat",
+        message: `${
+          new Intl.ListFormat().format(
+            Array.from(getTeams().sheep).map((s) => colorName(s)),
+          )
+        } lasted ${
+          formatDuration(Date.now() - (lobby.round?.start ?? Date.now()))
+        }!`,
+      });
+    }
     endRound();
   }, 0.05);
 
@@ -153,9 +162,13 @@ const onSheepDeath = (sheep: Entity) => {
   const wolves = Array.from(getTeams().wolves);
   const incomeMultiplier = lobbyContext.current.settings.income.wolves;
 
-  // Calculate total bounty (40 for killer + 15 for each other wolf)
-  const killerBounty = 40 * incomeMultiplier;
-  const assistBounty = 15 * incomeMultiplier;
+  const isBulldog = lobbyContext.current.settings.mode === "bulldog";
+  const killerBounty =
+    (isBulldog ? BULLDOG_KILLER_BOUNTY : SURVIVAL_KILLER_BOUNTY) *
+    incomeMultiplier;
+  const assistBounty =
+    (isBulldog ? BULLDOG_ASSIST_BOUNTY : SURVIVAL_ASSIST_BOUNTY) *
+    incomeMultiplier;
   const totalBounty = killerBounty + assistBounty * (wolves.length - 1);
 
   for (const wolf of wolves) {
@@ -178,7 +191,7 @@ const onSheepDeath = (sheep: Entity) => {
   }
 
   if (isPractice()) {
-    const newSheep = newUnit(sheep.owner, "sheep", ...getSheepSpawn());
+    const newSheep = spawnSheep(sheep.owner);
     if (sheep.lastAttacker) {
       const attacker = lookup(sheep.lastAttacker);
       if (attacker) orderAttack(attacker, newSheep);
@@ -196,37 +209,12 @@ const onSheepDeath = (sheep: Entity) => {
           facing: sheep.facing,
         },
       );
-    } else {
+    } else if (lobby.settings.mode !== "bulldog") {
       const [x, y, penAreaIndex] = getSpiritSpawn();
       newUnit(sheep.owner, "spirit", x, y, { penAreaIndex });
     }
 
-    // Redistribute the dying sheep's individual gold to surviving allies
-    const dyingSheepPlayer = getPlayer(sheep.owner);
-    const dyingSheepGold = dyingSheepPlayer?.gold ?? 0;
-    if (dyingSheepGold > 0) {
-      const survivingAllies = Array.from(getSheep())
-        .filter((s) => s.health && s.health > 0 && s.owner !== sheep.owner);
-
-      if (survivingAllies.length > 0) {
-        const currentGold = survivingAllies.map((ally) =>
-          getPlayer(ally.owner)?.gold ?? 0
-        );
-        const shares = distributeEquitably(dyingSheepGold, currentGold);
-
-        for (let i = 0; i < survivingAllies.length; i++) {
-          const ally = survivingAllies[i];
-          const share = shares[i];
-          if (!ally.owner || share === 0) continue;
-
-          // Directly transfer individual gold to avoid team gold deduction logic
-          if (dyingSheepPlayer) {
-            dyingSheepPlayer.gold = (dyingSheepPlayer.gold ?? 0) - share;
-          }
-          grantPlayerGold(ally.owner, share);
-        }
-      }
-    }
+    redistributeSheepGold(sheep.owner);
   }
 };
 

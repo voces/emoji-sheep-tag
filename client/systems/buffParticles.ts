@@ -4,6 +4,7 @@ import { iterateBuffs } from "@/shared/api/unit.ts";
 import { Buff } from "@/shared/types.ts";
 import { ParticleEmitter, svgToTexture } from "../graphics/ParticleEmitter.ts";
 import { getModelScale, svgs } from "./models.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 
 const readyEmitters = new Map<string, ParticleEmitter>();
 const pendingEmitters = new Set<string>();
@@ -72,7 +73,7 @@ const updateParticles = (e: Entity, delta: number, time: number) => {
 
     const key = `${buff.model}-${buff.particleRate}-${buff.particleLifetime}-${
       JSON.stringify(buff.modelOffset)
-    }-${buff.modelScale}-${buff.particleOffsetRange}-${buff.particleMinOffsetRange}-${buff.particleScaleRange}`;
+    }-${buff.modelScale}-${buff.particleOffsetRange}-${buff.particleMinOffsetRange}-${buff.particleScaleRange}-${buff.particleMinSpeed}-${buff.particleMaxSpeed}`;
     const existing = uniqueBuffs.get(key);
     if (existing) existing.count++;
     else uniqueBuffs.set(key, { buff, count: 1 });
@@ -82,7 +83,15 @@ const updateParticles = (e: Entity, delta: number, time: number) => {
     const emitter = getEmitter(buff.model!);
     if (!emitter) continue;
     const svg = svgs[buff.model!];
-    const color = svg
+    // Opt-in: a buff with particleUseOwnerColor inherits the owner's player
+    // color (used for bulldog reach-the-end sparkles); otherwise we fall back
+    // to the SVG fill so existing buffs (e.g. crimsonArc) stay their natural color.
+    const ownerColor = buff.particleUseOwnerColor && e.owner
+      ? getPlayer(e.owner)?.playerColor ?? e.playerColor
+      : undefined;
+    const color = ownerColor
+      ? hexToLinearRgb(ownerColor)
+      : svg
       ? hexToLinearRgb(extractFill(svg))
       : [1, 1, 1] as [number, number, number];
 
@@ -112,18 +121,30 @@ const updateParticles = (e: Entity, delta: number, time: number) => {
         svgScales.get(buff.model!)!;
       const startScale = baseScale + (Math.random() * 2 - 1) * scaleRange;
 
+      const minSpeed = buff.particleMinSpeed ?? 0;
+      const maxSpeed = buff.particleMaxSpeed ?? minSpeed;
+      const radial = minSpeed > 0 || maxSpeed > 0;
+      const speed = radial
+        ? minSpeed + Math.random() * (maxSpeed - minSpeed)
+        : 0;
+      const vx = radial ? Math.cos(randomAngle) * speed : 0;
+      const vy = radial
+        ? Math.sin(randomAngle) * speed
+        : 0.4 + Math.random() * 0.2;
+      const rotation = radial ? randomAngle : Math.PI / 2;
+
       emitter.emit({
         time,
         x,
         y,
-        vx: 0,
-        vy: 0.4 + Math.random() * 0.2,
+        vx,
+        vy,
         startScale,
         endScale: startScale,
         lifetime: buff.particleLifetime!,
         color,
         alpha: 1,
-        rotation: Math.PI / 2,
+        rotation,
       });
     }
   }

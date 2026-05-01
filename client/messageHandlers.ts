@@ -7,6 +7,7 @@ import {
   generateDoodads,
   getMap,
   getMapCenter,
+  getMaskShapeForBounds,
   type PackedMap,
   setMapForApp,
 } from "@/shared/map.ts";
@@ -318,12 +319,18 @@ export const handlers = {
     const water = data.water
       ? unpackMap2D(data.water)
       : tiles.map((row) => row.map(() => 0));
+    const maskShape = getMaskShapeForBounds(data.bounds);
+    const mask = data.mask ? unpackMap2D(data.mask) : Array.from(
+      { length: maskShape.height },
+      () => new Array<number>(maskShape.width).fill(0),
+    );
 
     const rawPathing = getPathingMaskFromTerrainMasks(
       tiles,
       cliffs,
       water,
       data.bounds,
+      mask,
     );
     const terrainPathingMap = rawPathing.toReversed();
     const terrainLayers = rawPathing.map((row, y) =>
@@ -336,6 +343,7 @@ export const handlers = {
       tiles,
       cliffs,
       water,
+      mask,
       width: data.width,
       height: data.height,
       bounds: data.bounds,

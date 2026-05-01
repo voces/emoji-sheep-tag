@@ -392,6 +392,10 @@ export const start = async (
       send({ type: "chat", message: "Sheep win!" });
       endRound();
     },
+    onWolvesWin: () => {
+      send({ type: "chat", message: "Wolves win!" });
+      endRound();
+    },
     sheepCaptainId,
   });
 };

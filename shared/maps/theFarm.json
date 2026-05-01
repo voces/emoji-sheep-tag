@@ -1,0 +1,25 @@
+{
+  "name": "The Farm",
+  "center": {
+    "x": 28,
+    "y": 16.5
+  },
+  "bounds": {
+    "min": {
+      "x": 7.5,
+      "y": 7.5
+    },
+    "max": {
+      "x": 35.5,
+      "y": 24.5
+    }
+  },
+  "terrain": "KwAgAARhJARFBAwMDAx8mAWIhkAgCoyIYURERERERFVFREREdIiVQBQIVJCWQTQYVIuYQBQIVIBAtLgJRI2TQWUIRIySQAUIRJSQQXXZaASViwEFhkBAuQgEiEAwqQhUggRFVWS5KFSAQBUIVJaISiCoBIjAhkD0qESBRXD4RJKiRwQMDAwMDA==",
+  "cliffs": "KwAgAANiBLBRgYGBgYGBEbVqeLixbdu2bdu2bdu2jYbAwMDAwMDAwMCOQQAMgmWjESsZgWAIBEpgSqBRHgJxUGArYIAGGDACLvEQ0YiAQQQEIiAQJ0eNCAwMDAwMDA==",
+  "water": "KwAgAAVqFBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgSiGBCAlFMYGBgYGBgYA==",
+  "mask": "HAARAAFbgIGBgYGBgYGBgYGBgYGBgTouBQ==",
+  "tags": [
+    "bulldog"
+  ],
+  "entities": "AhQAAAAGBnByZWZhYgMBAAAIcG9zaXRpb24AAOgDBmZhY2luZwEAAQAKbW9kZWxTY2FsZQEAZAALdmVydGV4Q29sb3IBAAEAC3BsYXllckNvbG9yAwAAAP//X0BAJ1dWVmBW5jZW1kBWJlfGljZGh/RWN1eGcJfmRtaWxsZ2gBaWJxTGVgYASJIkEcYk//8Pfi0AuRwA/YB+cEsZgEsZgHtxe3Ft8+tDGjc/gH4AgH4AgH4AgF+FfgCAfgCAfgCAfgDsc36wvbCYd2rEfBvAr/K7G4B7cX4AcH5wfgAAABCzAQAAAAAAAAAA"
+}

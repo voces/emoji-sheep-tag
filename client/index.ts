@@ -3,6 +3,7 @@ import "./suppressReactDevtools.ts";
 import { startPing } from "./ping.ts";
 import "./ui/root.tsx";
 import "./controls.ts";
+import "./systems/tilemapRotation.ts";
 import "./systems/lookup.ts";
 import "./systems/selection.ts";
 import "./systems/three.ts";

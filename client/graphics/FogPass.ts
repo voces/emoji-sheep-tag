@@ -5,23 +5,76 @@ import {
   LinearFilter,
   Matrix4,
   Mesh,
+  NearestFilter,
   OrthographicCamera,
   PerspectiveCamera,
   PlaneGeometry,
   RedFormat,
   Scene,
   ShaderMaterial,
+  UnsignedByteType,
   Vector2,
+  Vector4,
   WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
 
-import type { LoadedMap } from "@/shared/map.ts";
+import { getMaskShapeForBounds, type LoadedMap } from "@/shared/map.ts";
 
 type MapDimensions = {
   width: number;
   height: number;
   bounds: LoadedMap["bounds"];
+  mask: LoadedMap["mask"];
+};
+
+const buildMaskTexture = (
+  mask: number[][] | undefined,
+): { texture: DataTexture; width: number; height: number } => {
+  // Pad with 1 ring of "always masked" cells: this represents the boundary
+  // line itself as part of the mask, so the same Chebyshev-distance fade
+  // handles both mask edges and the boundary in one mechanism (no separate
+  // boundary fade needed). The padding ring sits one cell outside the
+  // user-paintable grid; with bounds at half-integer coords (the editor
+  // default), the inner edge of the padding ring lands exactly on the bounds
+  // line, so a user-painted mask flush with the boundary forms a contiguous
+  // dark region with the boundary itself.
+  const rows = mask ?? [];
+  const innerW = rows[0]?.length ?? 0;
+  const innerH = rows.length;
+  const width = innerW + 2;
+  const height = innerH + 2;
+  const data = new Uint8Array(width * height);
+  // Top and bottom padding rows: all masked.
+  for (let x = 0; x < width; x++) {
+    data[x] = 255;
+    data[(height - 1) * width + x] = 255;
+  }
+  for (let y = 0; y < innerH; y++) {
+    const row = rows[y];
+    const base = (y + 1) * width;
+    // Left and right padding columns: always masked.
+    data[base] = 255;
+    data[base + width - 1] = 255;
+    if (!row) continue;
+    for (let x = 0; x < innerW; x++) {
+      data[base + x + 1] = row[x] ? 255 : 0;
+    }
+  }
+  const texture = new DataTexture(
+    data,
+    width,
+    height,
+    RedFormat,
+    UnsignedByteType,
+  );
+  // Nearest filter: the shader uses 9-sample neighbor lookups to compute a
+  // signed Chebyshev distance to the masked-region edge, which gives sharp
+  // square edges (matching axis-aligned mask cells).
+  texture.minFilter = NearestFilter;
+  texture.magFilter = NearestFilter;
+  texture.needsUpdate = true;
+  return { texture, width, height };
 };
 
 export class FogPass {
@@ -58,12 +111,25 @@ export class FogPass {
       magFilter: LinearFilter,
       format: RedFormat,
     });
+    const maskTex = buildMaskTexture(mapDimensions.mask);
+    const maskShape = getMaskShapeForBounds(mapDimensions.bounds);
+    // Anchor points at the world center of texel (0, 0) — the top-left of the
+    // padding ring. With 1 cell of padding, that's one cell outside the
+    // user-paintable grid in each direction.
+    const maskAnchor = new Vector4(
+      maskShape.firstVertexX - 1,
+      maskShape.topVertexY + 1,
+      maskTex.width,
+      maskTex.height,
+    );
     const shader = {
       uniforms: {
         tDiffuse: { value: null },
         tDepth: { value: depthTexture },
         fogTex: { value: fogTexture },
         prevFogTex: { value: this.previousFogTarget.texture },
+        maskMap: { value: maskTex.texture },
+        maskAnchor: { value: maskAnchor },
         cameraNear: { value: camera.near },
         cameraFar: { value: camera.far },
         worldMin: { value: new Vector2(0, 0) },
@@ -104,6 +170,12 @@ export class FogPass {
         uniform sampler2D tDepth;
         uniform sampler2D fogTex;
         uniform sampler2D prevFogTex;
+        uniform sampler2D maskMap;
+        // x = firstVertexX (mask col 0 worldX), y = topVertexY (mask row 0
+        // worldY), z = mask width (cells), w = mask height (cells). The
+        // texture is always at least 1x1; an empty mask leaves that single
+        // texel zero, so the mask check naturally falls through.
+        uniform vec4 maskAnchor;
         uniform vec3 fogColor;
         uniform float fogOpacity;
         uniform float cameraNear;
@@ -187,11 +259,84 @@ export class FogPass {
           // Apply fog only in hidden areas (unless fog of war is disabled)
           float alpha = disableFogOfWar ? 0.0 : fogOpacity * (1.0 - vis);
 
-          // Apply boundary fade if near or outside bounds
-          if (distToEdge < fadeInset) {
-            // Calculate fade: -fadeOutset (outside) to +fadeInset (inside)
-            float fadeAmount = smoothstep(-fadeOutset, fadeInset, distToEdge);
-            // Mix from deeper fog (0.99) outside to normal alpha inside
+          // Manual mask + boundary edges. The mask texture has been padded
+          // with one ring of "always masked" cells representing the bounds,
+          // so this single 9-sample lookup handles both the user-painted
+          // mask and the boundary fade in a unified way (no separate
+          // boundary code). Coordinates: mapXf/mapYf are positions in the
+          // padded cell grid (each cell = 1 world unit, axis-aligned).
+          //
+          // Signed Chebyshev distance to the union of masked cells:
+          //   - If the current cell is masked, distance to nearest unmasked
+          //     cardinal neighbor's near edge (negative = inside).
+          //   - Otherwise, Chebyshev distance to the nearest masked
+          //     neighbor's box (positive = outside, square corners).
+          //
+          // Clamp-to-edge sampling means fragments well outside the texture
+          // sample only "padding" texels (all masked) and read as deep
+          // inside the masked region — so out-of-bounds is fully dark
+          // automatically.
+          float mapXf = worldXY.x - maskAnchor.x + 0.5;
+          float mapYf = maskAnchor.y - worldXY.y + 0.5;
+          float fx = fract(mapXf);
+          float fy = fract(mapYf);
+          vec2 texelSize = vec2(1.0 / maskAnchor.z, 1.0 / maskAnchor.w);
+          vec2 maskUV = vec2(mapXf * texelSize.x, mapYf * texelSize.y);
+          float c  = texture2D(maskMap, maskUV).r;
+          float rN = texture2D(maskMap, maskUV + vec2( texelSize.x, 0.0)).r;
+          float lN = texture2D(maskMap, maskUV + vec2(-texelSize.x, 0.0)).r;
+          float uN = texture2D(maskMap, maskUV + vec2(0.0, -texelSize.y)).r;
+          float dN = texture2D(maskMap, maskUV + vec2(0.0,  texelSize.y)).r;
+          float tl = texture2D(maskMap, maskUV + vec2(-texelSize.x, -texelSize.y)).r;
+          float tr = texture2D(maskMap, maskUV + vec2( texelSize.x, -texelSize.y)).r;
+          float bl = texture2D(maskMap, maskUV + vec2(-texelSize.x,  texelSize.y)).r;
+          float br = texture2D(maskMap, maskUV + vec2( texelSize.x,  texelSize.y)).r;
+          float maskEdgeDist;
+          if (c > 0.5) {
+            // Inside the masked region. Cardinals = perpendicular edge
+            // distance; diagonals = Manhattan corner distance (overshoots
+            // the geometric Euclidean value at 45°, intentionally — pushes
+            // concave inside corners deeper into "fully dark" so they
+            // don't look perceptibly lighter than the surrounding edges.
+            // On cardinal axes the two metrics coincide, so straight
+            // edges are unchanged.
+            float dr = rN > 0.5 ? 1.0 : (1.0 - fx);
+            float dl = lN > 0.5 ? 1.0 : fx;
+            float du = uN > 0.5 ? 1.0 : fy;
+            float dd = dN > 0.5 ? 1.0 : (1.0 - fy);
+            float minDist = min(min(dr, dl), min(du, dd));
+            if (tl < 0.5) minDist = min(minDist, fx + fy);
+            if (tr < 0.5) minDist = min(minDist, (1.0 - fx) + fy);
+            if (bl < 0.5) minDist = min(minDist, fx + (1.0 - fy));
+            if (br < 0.5) minDist = min(minDist, (1.0 - fx) + (1.0 - fy));
+            maskEdgeDist = -minDist;
+          } else {
+            // Outside the masked region. Cardinals = perpendicular edge
+            // distance; diagonals = Manhattan corner distance (same
+            // perceptual reason — pulls convex outer corners further from
+            // the masked region so they don't read perceptibly darker
+            // than the surrounding edges).
+            float dr = rN > 0.5 ? (1.0 - fx) : 1.0;
+            float dl = lN > 0.5 ? fx : 1.0;
+            float du = uN > 0.5 ? fy : 1.0;
+            float dd = dN > 0.5 ? (1.0 - fy) : 1.0;
+            float minDist = min(min(dr, dl), min(du, dd));
+            if (tl > 0.5) minDist = min(minDist, fx + fy);
+            if (tr > 0.5) minDist = min(minDist, (1.0 - fx) + fy);
+            if (bl > 0.5) minDist = min(minDist, fx + (1.0 - fy));
+            if (br > 0.5) minDist = min(minDist, (1.0 - fx) + (1.0 - fy));
+            maskEdgeDist = minDist;
+          }
+
+          float effectiveDistToEdge = min(distToEdge, maskEdgeDist);
+
+          // Apply boundary/mask fade
+          if (effectiveDistToEdge < fadeInset) {
+            float fadeAmount = smoothstep(
+              -fadeOutset,
+              fadeInset,
+              effectiveDistToEdge
+            );
             alpha = mix(0.99, alpha, fadeAmount);
           }
 
@@ -354,6 +499,21 @@ export class FogPass {
   setFogTexture(texture: DataTexture) {
     this.material.uniforms.fogTex.value = texture;
     this.smoothMaterial.uniforms.fogTex.value = texture;
+  }
+
+  /** Replace the manual mask layer (e.g. after editor edits or map updates). */
+  setMask(mask: number[][], bounds: LoadedMap["bounds"]) {
+    const next = buildMaskTexture(mask);
+    const shape = getMaskShapeForBounds(bounds);
+    const old = this.material.uniforms.maskMap.value as DataTexture | null;
+    old?.dispose();
+    this.material.uniforms.maskMap.value = next.texture;
+    (this.material.uniforms.maskAnchor.value as Vector4).set(
+      shape.firstVertexX - 1,
+      shape.topVertexY + 1,
+      next.width,
+      next.height,
+    );
   }
 
   setDisableFogOfWar(disable: boolean) {

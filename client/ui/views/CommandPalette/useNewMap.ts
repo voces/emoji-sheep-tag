@@ -22,10 +22,9 @@ export const useNewMap = () => {
       if (!confirmEditorExit()) return;
 
       const timestamp = Date.now();
-      const name = `Untitled ${new Date(timestamp).toLocaleString()}`;
       const id = `untitled-${timestamp}`;
       const mapId = `local:${id}`;
-      const packed = buildBlankPackedMap(name);
+      const packed = buildBlankPackedMap("");
 
       storeReceivedMap(mapId, packed);
 
@@ -42,7 +41,7 @@ export const useNewMap = () => {
             cancelLobbySettingsVarSubscription();
             send({ type: "start", practice: true, editor: true });
             editorMapModifiedVar(true);
-            editorCurrentMapVar({ id, name });
+            editorCurrentMapVar(undefined);
           });
       });
     },

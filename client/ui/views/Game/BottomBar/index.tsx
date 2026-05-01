@@ -73,7 +73,7 @@ export const BottomBar = () => {
     >
       {!editor && (
         <HudPanel>
-          <Minimap style={{ width: 180, height: 180 }} />
+          <Minimap style={{ width: 180 }} />
         </HudPanel>
       )}
 

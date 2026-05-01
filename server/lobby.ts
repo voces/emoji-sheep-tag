@@ -7,6 +7,7 @@ import { cleanupSmartDrafter } from "./st/roundHelpers.ts";
 import { cleanupShardForDeletedLobby } from "./shardRegistry.ts";
 import { notifyStatusChange } from "./statusStream.ts";
 import type { Game } from "./ecs.ts";
+import type { Round as SharedRound, RoundEvent } from "@/shared/shard.ts";
 
 export type LobbyPlayer = Client | ComputerPlayer;
 
@@ -26,7 +27,7 @@ type LobbySettings = {
    * - `"bulldog"`: sheep must reach the end
    * - `"katma"`: all sheep must reach the end
    */
-  mode: "survival" | "vip" | "switch" | "vamp";
+  mode: "survival" | "vip" | "switch" | "vamp" | "bulldog";
   /**
    * Health multiplier for sheep structures in VIP mode (0.01-10)
    */
@@ -78,6 +79,8 @@ export type Round = {
   vip?: string;
   start?: number;
   duration?: number;
+  /** Per-round events recorded as the round plays out (goals, etc.). */
+  events?: RoundEvent[];
 };
 
 export type Lobby = {
@@ -87,7 +90,7 @@ export type Lobby = {
   settings: LobbySettings;
   status: LobbyStatus;
   round?: Round;
-  rounds: { sheep: string[]; wolves: string[]; duration: number }[];
+  rounds: SharedRound[];
   captainsDraft?: CaptainsDraft;
   /** Shard ID where the current game is running (if any). */
   activeShard?: string;

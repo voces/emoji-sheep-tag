@@ -9,13 +9,44 @@ import { ChevronDown, ChevronRight, Minus, Plus } from "lucide-react";
 import Collapse from "@/components/layout/Collapse.tsx";
 import { camera } from "../../../../graphics/three.ts";
 import { getEntityShiftForResize } from "@/shared/map/resizeMap.ts";
+import { editorMapTagsVar } from "@/vars/editor.ts";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
 
 const MinimapContainer = styled.div`
+  position: relative;
+
   & > canvas {
     border-radius: ${({ theme }) => theme.radius.md} ${({ theme }) =>
       theme.radius.md} 0 0;
     display: block;
   }
+`;
+
+const TagOverlay = styled.div`
+  position: absolute;
+  top: ${({ theme }) => theme.space[1]};
+  right: ${({ theme }) => theme.space[1]};
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  pointer-events: none;
+`;
+
+const TagPill = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: ${({ theme }) => theme.radius.pill ?? theme.radius.sm};
+  font-size: ${({ theme }) => theme.text.xs};
+  border: 1px solid ${({ theme }) => theme.border.DEFAULT};
+  background: color-mix(
+    in oklab,
+    ${({ theme }) => theme.surface[2]} 80%,
+    transparent
+  );
+  color: ${({ theme }) => theme.ink.hi};
+  pointer-events: auto;
+  backdrop-filter: blur(2px);
 `;
 
 const InfoDisplay = styled.div`
@@ -119,6 +150,7 @@ export const AreaPanel = () => {
   const [resizeOpen, setResizeOpen] = useState(false);
   const hasBeenOpened = useRef(false);
   if (resizeOpen) hasBeenOpened.current = true;
+  const tags = useReactiveVar(editorMapTagsVar);
 
   useEffect(() => {
     const unsubscribe = onMapChange((map) => {
@@ -149,6 +181,20 @@ export const AreaPanel = () => {
     <Panel style={{ padding: 0 }}>
       <MinimapContainer>
         <Minimap />
+        {tags.length > 0 && (
+          <TagOverlay>
+            {tags.map((tag) => (
+              <TagPill
+                key={tag}
+                title={t("editor.tagQualifies", {
+                  tag: t(`mapTag.${tag}`, { defaultValue: tag }),
+                })}
+              >
+                {t(`mapTag.${tag}`, { defaultValue: tag })}
+              </TagPill>
+            ))}
+          </TagOverlay>
+        )}
       </MinimapContainer>
       <InfoDisplay>
         {t("editor.mapSize", { w: mapSize.width, h: mapSize.height })}

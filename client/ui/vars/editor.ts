@@ -2,6 +2,8 @@ import { makeVar } from "@/hooks/useVar.tsx";
 
 export const editorVar = makeVar<boolean>(false);
 export const editorMapModifiedVar = makeVar<boolean>(false);
+/** Live tags for the currently-edited map, derived from tile counts. */
+export const editorMapTagsVar = makeVar<readonly string[]>([]);
 export const editorCurrentMapVar = makeVar<
   { id: string; name: string } | undefined
 >(undefined);
@@ -14,8 +16,8 @@ export type EditorWaterView = "hide" | "normal" | "level";
 /** How water is visualized in the editor. "level" shows masked cells even where the ground is above water. */
 export const editorWaterViewVar = makeVar<EditorWaterView>("normal");
 
-/** Routes tile-blueprint clicks: "tile" = paint tile or route via vertexColor sentinels (cliffs), "paintWater" = set water mask. */
-export type EditorTileMode = "tile" | "paintWater";
+/** Routes tile-blueprint clicks: "tile" = paint tile or route via vertexColor sentinels (cliffs), "paintWater" = set water mask, "paintMask" = toggle the manual black-mask vertex grid. */
+export type EditorTileMode = "tile" | "paintWater" | "paintMask";
 export const editorTileModeVar = makeVar<EditorTileMode>("tile");
 
 /**
@@ -39,6 +41,7 @@ export const editorBrushShapeVar = makeVar<EditorBrushShape>("square");
 export type EditorActiveAction =
   | { kind: "tile"; color: number }
   | { kind: "raise" | "lower" | "ramp" | "plateau" | "water" }
+  | { kind: "mask" | "unmask" }
   | { kind: "select" | "paste" }
   | { kind: "doodad"; prefab: string };
 

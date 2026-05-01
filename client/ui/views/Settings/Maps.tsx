@@ -13,10 +13,9 @@ import {
 } from "../../../storage/localMaps.ts";
 import { Button } from "@/components/forms/Button.tsx";
 import { addChatMessage } from "@/vars/chat.ts";
-import {
-  formatValidationError,
-  validatePackedMap,
-} from "@/shared/map/validation.ts";
+import { validatePackedMap } from "@/shared/map/validation.ts";
+import { translateValidationError } from "@/util/mapValidationMessages.ts";
+import { Tag } from "@/components/Tag.tsx";
 import { SettingsPanelContainer, SettingsPanelTitle } from "./commonStyles.tsx";
 
 const MapsHeader = styled.div`
@@ -66,6 +65,13 @@ const MapInfo = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2px;
+`;
+
+const MapTagList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
 `;
 
 const MapName = styled.span`
@@ -215,7 +221,7 @@ export const Maps = () => {
 
       const validation = validatePackedMap(data);
       if (!validation.valid) {
-        const errorMessages = validation.errors.map(formatValidationError)
+        const errorMessages = validation.errors.map(translateValidationError)
           .join(", ");
         addChatMessage(`Map validation failed: ${errorMessages}`);
         return;
@@ -280,6 +286,15 @@ export const Maps = () => {
                       <MapMeta>
                         {map.author} · {formatTimestamp(map.timestamp)}
                       </MapMeta>
+                      {map.tags.length > 0 && (
+                        <MapTagList>
+                          {map.tags.map((tag) => (
+                            <Tag key={tag}>
+                              {t(`mapTag.${tag}`, { defaultValue: tag })}
+                            </Tag>
+                          ))}
+                        </MapTagList>
+                      )}
                     </MapInfo>
                     <MapActions>
                       <ActionButton

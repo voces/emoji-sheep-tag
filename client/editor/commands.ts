@@ -1,12 +1,20 @@
 import { send } from "../messaging.ts";
-import { terrain } from "../graphics/three.ts";
+import { fogPass, terrain } from "../graphics/three.ts";
 import { pathingMap } from "../systems/pathing.ts";
 import {
   updatePathingForCliff,
   updatePathingForCliffs,
 } from "@/shared/pathing/updatePathingForCliff.ts";
-import { getCliffs, getMapBounds, getTiles, getWater } from "@/shared/map.ts";
+import {
+  getCliffs,
+  getMap,
+  getMapBounds,
+  getMask,
+  getTiles,
+  getWater,
+} from "@/shared/map.ts";
 import { id as generateId } from "@/shared/util/id.ts";
+import { recordBulkTileChanges, recordTileChange } from "./mapTags.ts";
 
 // Command interface - all editor commands must implement execute and undo
 export type EditorCommand =
@@ -19,6 +27,8 @@ export type EditorCommand =
   | BulkSetCliffsCommand
   | SetWaterCommand
   | BulkSetWatersCommand
+  | SetMaskCommand
+  | BulkSetMasksCommand
   | KeyboardMoveCommand
   | BatchCommand;
 
@@ -97,6 +107,26 @@ export type BulkSetWatersCommand = {
   cells: Array<{ x: number; y: number; oldWater: number; newWater: number }>;
 };
 
+/**
+ * Mask edits use mask-array indices (`mapX`, `mapY`) since the mask is
+ * anchored to the boundary, not to terrain. Out-of-array indices are silently
+ * dropped server-side — see `editorSetMask` in `server/actions/editor.ts`.
+ */
+export type SetMaskCommand = {
+  type: "setMask";
+  mapX: number;
+  mapY: number;
+  oldValue: number;
+  newValue: number;
+};
+
+export type BulkSetMasksCommand = {
+  type: "bulkSetMasks";
+  cells: Array<
+    { mapX: number; mapY: number; oldValue: number; newValue: number }
+  >;
+};
+
 export type KeyboardMoveCommand = {
   type: "keyboardMove";
   entityId: string;
@@ -152,7 +182,51 @@ const updateClientPathingForCells = (
     getWater(),
     cells,
     getMapBounds(),
+    getMask(),
   );
+};
+
+/**
+ * Mask cell (mapY, mapX) sits on a cliff vertex inside the boundary; up to
+ * four surrounding cliff cells need their pathing rebuilt to reflect the new
+ * mask state. Returns world (x, y) tile coords (y=0 at bottom).
+ */
+const maskCellAffectedCliffCells = (
+  mapY: number,
+  mapX: number,
+): Array<readonly [number, number]> => {
+  const map = getMap();
+  const firstVertexX = Math.ceil(map.bounds.min.x);
+  const topVertexY = Math.ceil(map.bounds.max.y) - 1;
+  const vx = firstVertexX + mapX;
+  const vy = topVertexY - mapY;
+  const out: Array<readonly [number, number]> = [];
+  for (const cx of [vx - 1, vx]) {
+    if (cx < 0 || cx >= map.width) continue;
+    for (const cy of [vy - 1, vy]) {
+      if (cy < 0 || cy >= map.height) continue;
+      out.push([cx, cy] as const);
+    }
+  }
+  return out;
+};
+
+const writeMaskCell = (mapY: number, mapX: number, value: number) => {
+  const mask = getMask();
+  if (mapY < 0 || mapY >= mask.length) return false;
+  const row = mask[mapY];
+  if (!row || mapX < 0 || mapX >= row.length) return false;
+  row[mapX] = value;
+  return true;
+};
+
+/**
+ * Push the current mask into the fog shader so painted cells render black
+ * immediately. Map-id changes already rebuild the FogPass; this covers
+ * in-place edits that don't change the id.
+ */
+const pushMaskToFog = () => {
+  fogPass?.setMask(getMask(), getMapBounds());
 };
 
 // Execute a command and push it to undo stack
@@ -340,6 +414,7 @@ export const doExecute = (command: EditorCommand) => {
       break;
 
     case "setPathing": {
+      recordTileChange(command.oldTile, command.newTile);
       terrain.setGroundTile(command.x, command.y, command.newTile);
       pathingMap.setPathing(command.x, command.y, command.newPathing);
       send({
@@ -353,6 +428,9 @@ export const doExecute = (command: EditorCommand) => {
     }
 
     case "fillTiles": {
+      recordBulkTileChanges(
+        command.cells.map(() => [command.oldTile, command.newTile] as const),
+      );
       terrain.setGroundTiles(
         command.cells.map(([x, y]) => [x, y, command.newTile]),
       );
@@ -442,6 +520,42 @@ export const doExecute = (command: EditorCommand) => {
       break;
     }
 
+    case "setMask": {
+      if (writeMaskCell(command.mapY, command.mapX, command.newValue)) {
+        updateClientPathingForCells(
+          maskCellAffectedCliffCells(command.mapY, command.mapX),
+        );
+        pushMaskToFog();
+      }
+      send({
+        type: "editorSetMask",
+        mapX: command.mapX,
+        mapY: command.mapY,
+        value: command.newValue,
+      });
+      break;
+    }
+
+    case "bulkSetMasks": {
+      const affected: Array<readonly [number, number]> = [];
+      for (const { mapX, mapY, newValue } of command.cells) {
+        if (writeMaskCell(mapY, mapX, newValue)) {
+          affected.push(...maskCellAffectedCliffCells(mapY, mapX));
+        }
+      }
+      updateClientPathingForCells(affected);
+      if (affected.length) pushMaskToFog();
+      send({
+        type: "editorBulkSetMasks",
+        cells: command.cells.map(({ mapX, mapY, newValue }) => ({
+          mapX,
+          mapY,
+          value: newValue,
+        })),
+      });
+      break;
+    }
+
     case "keyboardMove":
       send({
         type: "editorUpdateEntities",
@@ -492,6 +606,7 @@ const doUndo = (command: EditorCommand) => {
       break;
 
     case "setPathing": {
+      recordTileChange(command.newTile, command.oldTile);
       terrain.setGroundTile(command.x, command.y, command.oldTile);
       pathingMap.setPathing(command.x, command.y, command.oldPathing);
       send({
@@ -505,6 +620,9 @@ const doUndo = (command: EditorCommand) => {
     }
 
     case "fillTiles": {
+      recordBulkTileChanges(
+        command.cells.map(() => [command.newTile, command.oldTile] as const),
+      );
       terrain.setGroundTiles(
         command.cells.map(([x, y]) => [x, y, command.oldTile]),
       );
@@ -589,6 +707,42 @@ const doUndo = (command: EditorCommand) => {
           x,
           y,
           water: oldWater,
+        })),
+      });
+      break;
+    }
+
+    case "setMask": {
+      if (writeMaskCell(command.mapY, command.mapX, command.oldValue)) {
+        updateClientPathingForCells(
+          maskCellAffectedCliffCells(command.mapY, command.mapX),
+        );
+        pushMaskToFog();
+      }
+      send({
+        type: "editorSetMask",
+        mapX: command.mapX,
+        mapY: command.mapY,
+        value: command.oldValue,
+      });
+      break;
+    }
+
+    case "bulkSetMasks": {
+      const affected: Array<readonly [number, number]> = [];
+      for (const { mapX, mapY, oldValue } of command.cells) {
+        if (writeMaskCell(mapY, mapX, oldValue)) {
+          affected.push(...maskCellAffectedCliffCells(mapY, mapX));
+        }
+      }
+      updateClientPathingForCells(affected);
+      if (affected.length) pushMaskToFog();
+      send({
+        type: "editorBulkSetMasks",
+        cells: command.cells.map(({ mapX, mapY, oldValue }) => ({
+          mapX,
+          mapY,
+          value: oldValue,
         })),
       });
       break;
@@ -754,6 +908,26 @@ export const bulkSetWatersCommand = (
   cells: BulkSetWatersCommand["cells"],
 ): BulkSetWatersCommand => ({
   type: "bulkSetWaters",
+  cells,
+});
+
+export const setMaskCommand = (
+  mapX: number,
+  mapY: number,
+  oldValue: number,
+  newValue: number,
+): SetMaskCommand => ({
+  type: "setMask",
+  mapX,
+  mapY,
+  oldValue,
+  newValue,
+});
+
+export const bulkSetMasksCommand = (
+  cells: BulkSetMasksCommand["cells"],
+): BulkSetMasksCommand => ({
+  type: "bulkSetMasks",
   cells,
 });
 

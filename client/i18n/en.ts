@@ -61,6 +61,7 @@ export const en = {
     vip: "VIP",
     switch: "Switch",
     vamp: "Vamp",
+    bulldog: "Bulldog",
 
     sheepCount: "Sheep count",
     auto: "Auto",
@@ -81,6 +82,14 @@ export const en = {
     vipTooltip: "Wolves win by capturing the VIP sheep.",
     switchTooltip: "Capturing swaps both players' teams.",
     vampTooltip: "Captured sheep become wolves.",
+    bulldogTooltip: "Sheep must reach the End tile to score.",
+    bulldogSolo: "Solo",
+    bulldogTeam: "Team",
+    bulldogLeaks: "Leaks",
+    bulldogSoloTooltip: "Times this player has personally reached the End.",
+    bulldogTeamTooltip: "Reach-the-end events scored while on the sheep team.",
+    bulldogLeaksTooltip:
+      "Reach-the-end events conceded while on the wolf team.",
 
     swapTeam: "Swap team",
     startGame: "Start game",
@@ -146,6 +155,7 @@ export const en = {
     quickActions: "Quick actions",
     goldSheepTooltip:
       "Gold is generated over time based on distance from the pen.",
+    goldSheepTooltipBulldog: "Gold is generated over time.",
     goldSheepMultiplier: "Current multiplier: {{multiplier}}x",
     goldWolfTooltip:
       "Gold is generated over time and from destroying structures.",
@@ -410,6 +420,12 @@ export const en = {
       "Click to stamp the previously copied terrain. Esc cancels.",
     paintWater: "Paint water ({{level}})",
     clearWater: "Clear water",
+    addMask: "Add black mask",
+    addMaskDescription:
+      "Paint permanent black mask on cliff vertices inside the boundary. Masked cells are unwalkable and stay dark for both teams. Click outside the boundary is a noop.",
+    removeMask: "Remove black mask",
+    removeMaskDescription:
+      "Erase manual black mask cells. Anything outside the boundary is masked unconditionally and can't be cleared this way.",
     waterLevel: "Water level",
     brushSize: "Brush size",
     brushSizeFill: "Fill",
@@ -435,5 +451,22 @@ export const en = {
     right: "Right",
     mapSize: "Map: {{w}} × {{h}}",
     boundsSize: "Bounds: {{bw}} × {{bh}}",
+    tagQualifies: "Qualifies for {{tag}}",
+  },
+  mapTag: {
+    survival: "Survival",
+    bulldog: "Bulldog",
+  },
+  mapValidation: {
+    invalidStructure: "{{message}}",
+    widthTooSmall: "Map width too small: {{actual}} (minimum: {{min}})",
+    widthTooLarge: "Map width too large: {{actual}} (maximum: {{max}})",
+    heightTooSmall: "Map height too small: {{actual}} (minimum: {{min}})",
+    heightTooLarge: "Map height too large: {{actual}} (maximum: {{max}})",
+    entityCountExceeded: "Too many entities: {{actual}} (maximum: {{max}})",
+    terrainSizeMismatch:
+      "Terrain size mismatch: expected {{expected}}, got {{actual}}",
+    noTags:
+      "Map does not qualify for any game mode. Add a Pen tile (Survival) or both a Start and End tile (Bulldog) before saving.",
   },
 } as const;

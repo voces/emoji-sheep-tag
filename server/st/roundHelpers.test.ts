@@ -1,6 +1,12 @@
 import { afterEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { autoAssignSheepOrWolf, getIdealSheep } from "./roundHelpers.ts";
+import {
+  autoAssignSheepOrWolf,
+  getDefaultIncome,
+  getDefaultStartingGold,
+  getIdealSheep,
+  getIdealTime,
+} from "./roundHelpers.ts";
 import { newLobby } from "../lobby.ts";
 import { Client } from "../client.ts";
 import { lobbyContext } from "../contexts.ts";
@@ -28,6 +34,46 @@ describe("getIdealSheep", () => {
     expect(getIdealSheep(1)).toBe(1);
     expect(getIdealSheep(2)).toBe(1);
     expect(getIdealSheep(3)).toBe(1);
+  });
+
+  it("uses a higher sheep ratio for bulldog", () => {
+    expect(getIdealSheep(4, "bulldog")).toBe(2); // 2v2
+    expect(getIdealSheep(6, "bulldog")).toBe(3); // 3v3
+    expect(getIdealSheep(8, "bulldog")).toBe(5); // 5v3
+    expect(getIdealSheep(10, "bulldog")).toBe(6); // 6v4
+    expect(getIdealSheep(1, "bulldog")).toBe(1);
+  });
+});
+
+describe("bulldog defaults", () => {
+  it("getIdealTime returns 90s flat for bulldog regardless of size", () => {
+    expect(getIdealTime(4, 2, "bulldog")).toBe(90);
+    expect(getIdealTime(12, 6, "bulldog")).toBe(90);
+  });
+
+  it("survival time still scales with players", () => {
+    expect(getIdealTime(4, 1)).toBeGreaterThan(120);
+  });
+
+  it("getDefaultStartingGold scales sheep gold with wolf:sheep ratio", () => {
+    expect(getDefaultStartingGold("survival", 2, 4)).toEqual({
+      sheep: 0,
+      wolves: 0,
+    });
+    const bd = getDefaultStartingGold("bulldog", 2, 4);
+    expect(bd.wolves).toBe(0);
+    // 50 * 2^1.25 ≈ 119
+    expect(bd.sheep).toBeGreaterThan(100);
+    expect(bd.sheep).toBeLessThan(140);
+  });
+
+  it("getDefaultIncome boosts wolves to 2 and scales sheep for bulldog", () => {
+    expect(getDefaultIncome("survival", 3, 5)).toEqual({ sheep: 1, wolves: 1 });
+    const bd = getDefaultIncome("bulldog", 3, 5);
+    expect(bd.wolves).toBe(2);
+    // 20 * (5/3)^1.25 / 10 ≈ 3.78 → rounded then /10 = 3.8
+    expect(bd.sheep).toBeGreaterThan(3);
+    expect(bd.sheep).toBeLessThan(5);
   });
 });
 

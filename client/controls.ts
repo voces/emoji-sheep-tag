@@ -76,7 +76,12 @@ import {
   setPendingEntityClick,
   updateSelectionRectangle,
 } from "./controls/selection.ts";
-import { getCliffs, getMap } from "@/shared/map.ts";
+import {
+  getCliffs,
+  getMap,
+  getMask,
+  getMaskShapeForBounds,
+} from "@/shared/map.ts";
 import { SystemEntity } from "./ecs.ts";
 import { actionToShortcutKey } from "./util/actionToShortcutKey.ts";
 import {
@@ -110,6 +115,8 @@ import {
   batchCommand,
   type BulkSetCliffsCommand,
   bulkSetCliffsCommand,
+  type BulkSetMasksCommand,
+  bulkSetMasksCommand,
   type BulkSetWatersCommand,
   bulkSetWatersCommand,
   createEntityCommand,
@@ -561,6 +568,10 @@ const applyEditorTileChange = (
 ): EditorCommand | null => {
   if (!blueprint || blueprint.prefab !== "tile" || blueprint.owner) return null;
 
+  if (editorTileModeVar() === "paintMask") {
+    return applyEditorMaskChange(blueprint, worldX, worldY);
+  }
+
   const [normX, normY] = normalizeBuildPosition(worldX, worldY, "tile");
   const cx = normX - 0.5;
   const cy = normY - 0.5;
@@ -596,6 +607,74 @@ const applyEditorTileChange = (
   return cmd;
 };
 
+/**
+ * Mask paint mode is special: cells live on cliff vertices anchored to the
+ * boundary, not on tile centers. World (worldX, worldY) maps to the nearest
+ * vertex (round to integer), then to mask-array indices via the bounds anchor.
+ * Brush sizes paint in mask-grid space; out-of-array cells (outside the
+ * boundary) are silently dropped — that's the documented "noop outside
+ * boundary" rule.
+ */
+const applyEditorMaskChange = (
+  blueprint: ReturnType<typeof getBlueprint>,
+  worldX: number,
+  worldY: number,
+): EditorCommand | null => {
+  const map = getMap();
+  const shape = getMaskShapeForBounds(map.bounds);
+  if (shape.width === 0 || shape.height === 0) return null;
+
+  const vx = Math.round(worldX);
+  const vy = Math.round(worldY);
+  const centerMapX = vx - shape.firstVertexX;
+  const centerMapY = shape.topVertexY - vy;
+
+  const size = editorBrushSizeVar();
+  const newValue = blueprint?.vertexColor === 0xff07ff ? 1 : 0;
+  const mask = getMask();
+
+  let cells: Cell[];
+  if (size === "all") {
+    cells = getAllCells(shape.width, shape.height);
+  } else if (size === "fill") {
+    if (
+      centerMapX < 0 || centerMapX >= shape.width ||
+      centerMapY < 0 || centerMapY >= shape.height
+    ) return null;
+    cells = getFloodFillCells(
+      centerMapX,
+      centerMapY,
+      shape.width,
+      shape.height,
+      (x, y) => mask[y]?.[x] ?? 0,
+    );
+  } else {
+    const brushSize = typeof size === "number" ? size : 1;
+    cells = getBrushCells(
+      centerMapX,
+      centerMapY,
+      brushSize,
+      editorBrushShapeVar(),
+      shape.width,
+      shape.height,
+    );
+  }
+
+  const updates: BulkSetMasksCommand["cells"] = [];
+  for (const [mapX, mapY] of cells) {
+    const key = `${mapX},${mapY}`;
+    if (editorTileDrag?.visited.has(key)) continue;
+    editorTileDrag?.visited.add(key);
+    const old = mask[mapY]?.[mapX] ?? 0;
+    if (old === newValue) continue;
+    updates.push({ mapX, mapY, oldValue: old, newValue });
+  }
+  if (!updates.length) return null;
+  const cmd = bulkSetMasksCommand(updates);
+  doExecute(cmd);
+  return cmd;
+};
+
 const handleBlueprintClick = (e: MouseButtonEvent) => {
   const blueprint = getBlueprint();
   if (!blueprint) return;
@@ -607,7 +686,8 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   }
 
   if (editorVar() && !blueprint.owner) {
-    const { id: _, position, isEffect: _e, ...entity } = blueprint;
+    const { id: _, position, isEffect: _e, preserveCursor: _p, ...entity } =
+      blueprint;
     if (blueprint.prefab !== "tile") {
       const command = createEntityCommand(
         {
@@ -649,21 +729,28 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
     }
 
     const brushSize = editorBrushSizeVar();
-    if (brushSize === "fill" || brushSize === "all") {
+    const isMaskPaint = editorTileModeVar() === "paintMask";
+
+    // Mask paint handles its own fill/all (it operates in vertex/mask-grid
+    // space, not tile-cell space) so don't route through buildRegionCommand.
+    if (!isMaskPaint && (brushSize === "fill" || brushSize === "all")) {
       const command = buildRegionCommand(blueprint, x, y, brushSize);
       if (command) executeCommand(command);
       return;
     }
 
     // Plateau target for raise/lower/plateau brushes (ramp drag toggles per
-    // cell, so it intentionally leaves targetCliff undefined).
+    // cell, so it intentionally leaves targetCliff undefined). Irrelevant for
+    // mask paint.
     let targetCliff: number | undefined;
-    if (blueprint.vertexColor === 0xff01ff) {
-      targetCliff = terrain.getCliff(x, y) + 1;
-    } else if (blueprint.vertexColor === 0xff02ff) {
-      targetCliff = terrain.getCliff(x, y) - 1;
-    } else if (blueprint.vertexColor === 0xff04ff) {
-      targetCliff = terrain.getCliff(x, y);
+    if (!isMaskPaint) {
+      if (blueprint.vertexColor === 0xff01ff) {
+        targetCliff = terrain.getCliff(x, y) + 1;
+      } else if (blueprint.vertexColor === 0xff02ff) {
+        targetCliff = terrain.getCliff(x, y) - 1;
+      } else if (blueprint.vertexColor === 0xff04ff) {
+        targetCliff = terrain.getCliff(x, y);
+      }
     }
 
     editorTileDrag = {
