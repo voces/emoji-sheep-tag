@@ -85,6 +85,9 @@ import startLocation from "../assets/startLocation.estb" with { type: "bytes" };
 import eye from "../assets/eye.svg" with { type: "text" };
 import monolith from "../assets/monolith.svg" with { type: "text" };
 import circle from "../assets/circle.svg" with { type: "text" };
+import crate from "../assets/crate.svg" with { type: "text" };
+import cart from "../assets/cart.svg" with { type: "text" };
+import wagon from "../assets/wagon.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   // units
@@ -158,6 +161,9 @@ export const svgs: Record<string, string> = {
   bird1: estbToSvg(bird1.buffer),
   bird2: estbToSvg(bird2.buffer),
   bee,
+  crate,
+  cart,
+  wagon,
 
   // effects (buffs + sfx)
   crimsonArc,
@@ -229,6 +235,9 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   barrel: svg(barrel, 0.14, { layer: 2 }),
   hayBale: svg(hayBale, 0.31, { layer: 2, xOffset: -0.05, yOffset: -0.1 }),
   wood: svg(wood, 0.12, { layer: 2 }),
+  crate: svg(crate, 0.6, { layer: 2 }),
+  cart: svg(cart, 0.13, { layer: 2, yOffset: 0.2 }),
+  wagon: svg(wagon, 0.13, { layer: 2 }),
   glow,
 
   // Units that can hide behind things

@@ -25,7 +25,7 @@ const fetchPackedMap = (map: string): Promise<PackedMap> => {
   let promise = inflightFetches.get(map);
   if (promise) return promise;
 
-  promise = fetch(`/maps/${meta.file}.json`).then((res) => {
+  promise = fetch(`/maps/${meta.id}.json`).then((res) => {
     if (!res.ok) throw new Error(`Failed to load map ${map}`);
     return res.json() as Promise<PackedMap>;
   }).then((packed) => {

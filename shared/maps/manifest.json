@@ -1,0 +1,35 @@
+[
+  {
+    "id": "compact",
+    "name": "Compact"
+  },
+  {
+    "id": "revo",
+    "name": "Revolution"
+  },
+  {
+    "id": "theFarm",
+    "name": "The Farm",
+    "tags": [
+      "bulldog"
+    ]
+  },
+  {
+    "id": "theRamps",
+    "name": "The Ramps",
+    "tags": [
+      "bulldog"
+    ]
+  },
+  {
+    "id": "theRock",
+    "name": "The Rock",
+    "tags": [
+      "bulldog"
+    ]
+  },
+  {
+    "id": "ultimate",
+    "name": "Ultimate"
+  }
+]

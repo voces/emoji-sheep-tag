@@ -233,7 +233,7 @@ export class ShardLobby {
   private readPackedMap(mapId: string): PackedMap {
     const meta = getMapMeta(mapId);
     if (!meta) throw new Error(`Unknown map id "${mapId}"`);
-    const url = new URL(`../../shared/maps/${meta.file}.json`, import.meta.url);
+    const url = new URL(`../../shared/maps/${meta.id}.json`, import.meta.url);
     const text = Deno.readTextFileSync(url);
     return JSON.parse(text) as PackedMap;
   }

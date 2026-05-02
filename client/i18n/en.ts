@@ -427,6 +427,8 @@ export const en = {
     removeMaskDescription:
       "Erase manual black mask cells. Anything outside the boundary is masked unconditionally and can't be cleared this way.",
     waterLevel: "Water level",
+    pickWaterLevel:
+      "Pick water level from map (left-click to set, right-click to cancel)",
     brushSize: "Brush size",
     brushSizeFill: "Fill",
     brushSizeAll: "All",

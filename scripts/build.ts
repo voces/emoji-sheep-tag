@@ -2,6 +2,7 @@ import { ensureDir } from "@std/fs";
 import esbuild, { type BuildOptions, type Plugin } from "esbuild";
 import { join, relative } from "@std/path";
 import { processSoundAssets } from "./processSoundAssets.ts";
+import { buildMapManifest } from "./buildMapManifest.ts";
 
 const assetInlinePlugin = {
   name: "asset-inline",
@@ -234,6 +235,7 @@ export const build = async (env: "dev" | "prod") => {
   try {
     await ensureDir("dist");
     await cleanOldBundles();
+    await buildMapManifest();
 
     const result = await esbuild.build(await buildOptions(env));
     const filenames = extractFilenames(result.metafile!.outputs);

@@ -10,6 +10,7 @@ import {
   editorBrushShapeVar,
   type EditorBrushSize,
   editorBrushSizeVar,
+  editorPickWaterLevelVar,
   editorTerrainSelectionVar,
   editorTileModeVar,
   editorWaterLevelVar,
@@ -28,6 +29,7 @@ import {
   Eye,
   EyeOff,
   Minus,
+  Pipette,
   SquareDashed,
   TriangleRight,
 } from "lucide-react";
@@ -47,6 +49,36 @@ const ToolIcon = styled.span`
   svg {
     width: 60%;
     height: 60%;
+  }
+`;
+
+const PickerButton = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  border: 1px solid ${({ $active, theme }) =>
+    $active ? theme.accent.DEFAULT : theme.border.DEFAULT};
+  background: ${({ $active, theme }) =>
+    $active ? theme.accent.bg : theme.surface[2]};
+  color: ${({ $active, theme }) =>
+    $active ? theme.accent.DEFAULT : theme.ink.mid};
+  cursor: pointer;
+  padding: 0;
+  transition:
+    color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    background ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut};
+
+  &.hover {
+    color: ${({ theme }) => theme.ink.hi};
+    border-color: ${({ theme }) => theme.border.hi};
   }
 `;
 
@@ -95,6 +127,7 @@ export const TerrainPanel = () => {
   const brushShape = useReactiveVar(editorBrushShapeVar);
   const activeAction = useReactiveVar(editorActiveActionVar);
   const terrainSelection = useReactiveVar(editorTerrainSelectionVar);
+  const pickingWater = useReactiveVar(editorPickWaterLevelVar);
   const waterPaintLabel = waterLevel > 0
     ? t("editor.paintWater", {
       level: waterLevel.toFixed(4).replace(/\.?0+$/, ""),
@@ -383,6 +416,17 @@ export const TerrainPanel = () => {
           defaultValue="1.25"
           disabled={false}
           onChange={editorWaterLevelVar}
+          leftAdornment={
+            <PickerButton
+              type="button"
+              $active={pickingWater}
+              aria-pressed={pickingWater}
+              title={t("editor.pickWaterLevel")}
+              onClick={() => editorPickWaterLevelVar(!pickingWater)}
+            >
+              <Pipette size={14} />
+            </PickerButton>
+          }
         />
         <SegmentedControlWide
           role="radiogroup"

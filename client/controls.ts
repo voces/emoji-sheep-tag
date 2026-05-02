@@ -88,6 +88,7 @@ import {
   editorActiveActionVar,
   editorBrushShapeVar,
   editorBrushSizeVar,
+  editorPickWaterLevelVar,
   editorTerrainClipboardVar,
   editorTerrainSelectionVar,
   editorTileModeVar,
@@ -141,6 +142,7 @@ import {
   startPaste,
   updatePasteBlueprints,
 } from "./editor/clipboard.ts";
+import { sampleWaterLevelAtWorld } from "./editor/waterPicker.ts";
 
 // Re-export for external use
 export const clearBlueprint = clearBlueprintHandler;
@@ -285,6 +287,11 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   }
 
   if (e.button === "right") {
+    // Cancel water-level picker on right click
+    if (editorVar() && editorPickWaterLevelVar()) {
+      editorPickWaterLevelVar(false);
+      return;
+    }
     // Cancel paste on right click
     if (editorVar() && isPasting()) {
       cancelPaste();
@@ -317,6 +324,13 @@ mouse.addEventListener("mouseButtonDown", (e) => {
 });
 
 const handleLeftClick = (e: MouseButtonEvent) => {
+  // Water-level picker: sample under cursor, commit, exit picker.
+  if (editorVar() && editorPickWaterLevelVar()) {
+    editorWaterLevelVar(sampleWaterLevelAtWorld(e.world.x, e.world.y));
+    editorPickWaterLevelVar(false);
+    return;
+  }
+
   // Handle editor paste confirmation
   if (editorVar() && isPasting()) {
     confirmPaste();
@@ -1135,6 +1149,11 @@ document.addEventListener("keydown", (e) => {
   if (!action) {
     // Handle cancel
     if (checkShortcut(shortcuts.misc, "cancel", e.code)) {
+      // Cancel water-level picker if active
+      if (editorVar() && editorPickWaterLevelVar()) {
+        editorPickWaterLevelVar(false);
+        return false;
+      }
       // Cancel paste mode if active
       if (editorVar() && isPasting()) {
         cancelPaste();

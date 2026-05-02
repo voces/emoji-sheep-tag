@@ -21,7 +21,7 @@ if (typeof Deno === "undefined" && typeof globalThis.fetch === "function") {
       if (packedCache.has(entry.id)) continue;
       try {
         const response = await globalThis.fetch(
-          `${base}/maps/${entry.file}.json`,
+          `${base}/maps/${entry.id}.json`,
         );
         if (!response.ok) {
           console.error(
@@ -51,7 +51,7 @@ const readPackedMap = (map: string): PackedMap => {
     throw new Error("Packed maps can only be loaded on the server");
   }
 
-  const url = new URL(`../shared/maps/${meta.file}.json`, import.meta.url);
+  const url = new URL(`../shared/maps/${meta.id}.json`, import.meta.url);
   const text = Deno.readTextFileSync(url);
   const packed = JSON.parse(text) as PackedMap;
   packedCache.set(map, packed);

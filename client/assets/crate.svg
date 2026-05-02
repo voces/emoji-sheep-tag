@@ -1,0 +1,37 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  xml:space="preserve"
+  viewBox="0 0 58 58"
+>
+  <path d="M10 10h38v38H10z" fill="#8f6127" />
+  <path d="M10 0h48v10H10z" fill="#ad7e4e" />
+  <path d="M48 10h10v48H48z" fill="#ca965a" />
+  <path d="M0 48h48v10H0z" fill="#ad7e4e" />
+  <path d="M0 0h10v48H0z" fill="#ca965a" />
+  <circle cx="54" cy="3" r="1" fill="#e6e7e8" />
+  <circle cx="50" cy="3" r="1" fill="#e6e7e8" />
+  <circle cx="54" cy="7" r="1" fill="#e6e7e8" />
+  <circle cx="50" cy="7" r="1" fill="#e6e7e8" />
+  <circle cx="55" cy="54" r="1" fill="#e6e7e8" />
+  <circle cx="55" cy="50" r="1" fill="#e6e7e8" />
+  <circle cx="51" cy="54" r="1" fill="#e6e7e8" />
+  <circle cx="51" cy="50" r="1" fill="#e6e7e8" />
+  <circle cx="4" cy="55" r="1" fill="#e6e7e8" />
+  <circle cx="8" cy="55" r="1" fill="#e6e7e8" />
+  <circle cx="4" cy="51" r="1" fill="#e6e7e8" />
+  <circle cx="8" cy="51" r="1" fill="#e6e7e8" />
+  <circle cx="3" cy="4" r="1" fill="#e6e7e8" />
+  <circle cx="3" cy="8" r="1" fill="#e6e7e8" />
+  <circle cx="7" cy="4" r="1" fill="#e6e7e8" />
+  <circle cx="7" cy="8" r="1" fill="#e6e7e8" />
+  <path d="M3 36h2v12H3zM6 42h2v6H6z" fill="#ad7e4e" />
+  <path
+    d="M10 3h8v2h-8zM10 6h7v2h-7zM40 54h8v2h-8zM38 51h10v2H38z"
+    fill="#8f6127"
+  />
+  <path d="M54 10h2v7h-2zM51 10h2v9h-2z" fill="#ad7e4e" />
+  <path
+    d="M43 10h2v38h-2zM33 10h2v38h-2zM13 10h2v38h-2zM23 10h2v38h-2z"
+    fill="#70491e"
+  />
+</svg>

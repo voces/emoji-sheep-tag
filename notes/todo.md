@@ -16,7 +16,6 @@
   - Crystal Ball
 - When changing zoom, blueprints
 - Modes
-  - Bulldog
   - Kat'ma
 - Matchmaking
   - 2v4 - 15 rounds
@@ -35,8 +34,6 @@
 - Death animation (sheep)
 - Monolith needs new model
 - Mobile: observe+chat friendly
-- Share lobby link
-- Add a water level picker in editor
 
 # Bugs
 

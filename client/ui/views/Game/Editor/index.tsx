@@ -5,6 +5,7 @@ import { DoodadsPanel } from "./DoodadsPanel.tsx";
 import { PropertiesPanel } from "./PropertiesPanel.tsx";
 import { TerrainPanel } from "./TerrainPanel.tsx";
 import { AreaPanel } from "./AreaPanel.tsx";
+import { WaterLevelPickerHint } from "./WaterLevelPickerHint.tsx";
 import { styled } from "styled-components";
 
 const Container = styled(VStack)`
@@ -19,11 +20,14 @@ export const Editor = () => {
   if (!editor) return null;
 
   return (
-    <Container>
-      <AreaPanel />
-      <TerrainPanel />
-      <DoodadsPanel />
-      <PropertiesPanel />
-    </Container>
+    <>
+      <Container>
+        <AreaPanel />
+        <TerrainPanel />
+        <DoodadsPanel />
+        <PropertiesPanel />
+      </Container>
+      <WaterLevelPickerHint />
+    </>
   );
 };

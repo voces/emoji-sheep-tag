@@ -476,6 +476,18 @@ const tilemap4x4Blight = {
   height: 4,
 };
 
+const tilemapCart = {
+  map: [
+    [b, b, b, b, b, b],
+    [0, 0, b, b, b, b],
+    [0, 0, b, b, b, b],
+  ].flat(),
+  top: -1,
+  left: -3,
+  width: 6,
+  height: 3,
+};
+
 const tilemap6x6 = {
   map: Array(36).fill(b),
   top: -3,
@@ -1069,6 +1081,13 @@ export const prefabs: Record<string, DataEntity> = {
     isDoodad: true,
     type: "static",
   },
+  crate: {
+    name: "Crate",
+    radius: 0.25,
+    tilemap: tilemap2x2,
+    isDoodad: true,
+    type: "static",
+  },
   meteor: {
     name: "Meteor",
     maxHealth: 1,
@@ -1117,8 +1136,8 @@ export const prefabs: Record<string, DataEntity> = {
     buffs: [{
       damageMultiplier: 4,
       targetsAllowed: [["structure"]],
-      name: "TODO",
-      description: "TODO",
+      name: "Sapper",
+      description: "Deals 4x damage to structures.",
       icon: "sparkle",
     }, {
       trigger: "death",
@@ -1178,6 +1197,20 @@ export const prefabs: Record<string, DataEntity> = {
     name: "Barrel",
     radius: 0.5,
     tilemap: tilemap4x4,
+    isDoodad: true,
+    type: "static",
+  },
+  wagon: {
+    name: "Wagon",
+    radius: 0.375,
+    tilemap: tilemap2x4,
+    isDoodad: true,
+    type: "static",
+  },
+  cart: {
+    name: "Cart",
+    radius: 0.625,
+    tilemap: tilemapCart,
     isDoodad: true,
     type: "static",
   },

@@ -1,0 +1,25 @@
+{
+  "name": "The Ramps",
+  "center": {
+    "x": 21,
+    "y": 15
+  },
+  "bounds": {
+    "min": {
+      "x": 7.5,
+      "y": 7.5
+    },
+    "max": {
+      "x": 23.5,
+      "y": 30.5
+    }
+  },
+  "terrain": "HwAmAAReBAwMDAwMbMgEipNAkIiIdIJAgIiYRIJAcCgJRIJAYDgJRImUQIQIDDkEicDAiUMAiQgEg0DwCKwYUBQIBIBDlKgIRJKMQuQIjBhEk8DAiEyGiMgEiMCGUGQIDAwMDAwM",
+  "cliffs": "HwAmAANeBAYGBgYGBj5U2qIk0BQngZZICTTESqAdAgMDRwZBMTKIisCKQSAMgmLiEAeDpgjcCITHxCFAJhLtERgYGBj40ImHwMDAwMDAwA==",
+  "water": "HwAmAAVeFBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBg=",
+  "mask": "EAAXAAFLhi4CEWQEEtgIBNARCDAwMDAwMDAwMDAwMDAwMDAwMA==",
+  "tags": [
+    "bulldog"
+  ],
+  "entities": "AgQAAAAGBnByZWZhYgMBAAAIcG9zaXRpb24AAOgDBmZhY2luZwEAAQAKbW9kZWxTY2FsZQEAZAALdmVydGV4Q29sb3IBAAEAC3BsYXllckNvbG9yAwAAAB9AQCdXVvaQyAL40gG3F7cXt5QBwLsBuBe4FwAA"
+}
