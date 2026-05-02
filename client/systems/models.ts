@@ -37,7 +37,7 @@ import rock from "../assets/rock.svg" with { type: "text" };
 import house from "../assets/house.svg" with { type: "text" };
 import location from "../assets/location.svg" with { type: "text" };
 import well from "../assets/well.svg" with { type: "text" };
-import windmill from "../assets/windmill.svg" with { type: "text" };
+import windmill from "../assets/windmill.estb" with { type: "bytes" };
 import scarecrow from "../assets/scarecrow.svg" with { type: "text" };
 import derelictHouse from "../assets/derelictHouse.svg" with { type: "text" };
 import barrel from "../assets/barrel.svg" with { type: "text" };
@@ -148,7 +148,7 @@ export const svgs: Record<string, string> = {
   flowers,
   rock,
   well,
-  windmill,
+  windmill: estbToSvg(windmill.buffer),
   scarecrow,
   derelictHouse,
   barrel,
@@ -254,7 +254,11 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   startLocation: estme(startLocation.buffer, 0.25),
 
   // Trees (should render in front of structures)
-  windmill: svg(windmill, 0.24, { layer: 2, yOffset: 0.1, xOffset: -0.1 }),
+  windmill: estme(windmill.buffer, 0.0033, {
+    layer: 2,
+    yOffset: 0.1,
+    xOffset: -0.1,
+  }),
   tree: svg(tree, 0.11, { layer: 2, yOffset: 0.2 }),
   totem: svg(totem, 0.18, { yOffset: 0.12 }),
   crystal: estme(crystal.buffer, 0.014, { yOffset: 0.2 }),

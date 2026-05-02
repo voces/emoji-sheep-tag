@@ -60,11 +60,14 @@ export const tweenSwing = (e: Entity, delta: number): number => {
       addEntity({
         position: { x: e.position.x, y: e.position.y },
         isDoodad: true,
+        isEffect: true,
         model: e.attack.model,
+        modelScale: e.attack.modelScale,
         buffs: e.buffs, // TODO: No? Apply buffs from attackerId, though
         sounds: e.sounds?.projectileHit
           ? { death: e.sounds.projectileHit }
           : undefined,
+        owner: e.owner,
         projectile: {
           attackerId: e.id,
           target: { x: targetPosition.x, y: targetPosition.y },

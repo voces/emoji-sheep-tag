@@ -92,9 +92,11 @@ export type Buff = {
   readonly bountyBonus?: number;
   readonly consumeOnAttack?: boolean;
   readonly impartedBuffOnAttack?: string;
-  readonly splashDamage?: number;
-  readonly splashRadius?: number;
-  readonly splashTargets?: ReadonlyArray<ReadonlyArray<Classification>>;
+  // in the future if we want: hurt, kill
+  readonly trigger?: "hit" | "death" | "tick";
+  readonly damage?: number;
+  /** When firing area damage from this buff, attribute the damage to source.lastAttacker instead of source. */
+  readonly creditLastAttacker?: boolean;
   readonly expiration?: string;
   readonly spawnPrefab?: string;
   readonly totalDuration?: number;
@@ -105,7 +107,6 @@ export type Buff = {
   readonly radius?: number;
   readonly auraBuff?: string;
   readonly targetsAllowed?: ReadonlyArray<ReadonlyArray<Classification>>;
-  readonly tickDamage?: number;
   readonly tickInterval?: number;
   readonly icon?: string;
   readonly model?: string;
@@ -251,8 +252,16 @@ export type Entity = {
    */
   type?: "cosmetic" | "static" | "dynamic";
   /**
-   * Runtime visual effects (glows, particles, indicators, fire, etc.) that should never be exported.
-   * These are dynamically created visual effects, not static map decorations.
+   * Marks the entity as a transient runtime visual (glows, particles, indicators, fire, projectiles, etc.).
+   *
+   * Concretely, this disables behavior that only makes sense for "world objects":
+   * - Excluded from map export ([client/util/mapExport.ts](../client/util/mapExport.ts))
+   * - Skipped by water-ripple emission ([client/systems/waterRipples.ts](../client/systems/waterRipples.ts))
+   * - Forced to zero submergence in the renderer so it doesn't sink into water ([client/systems/three.ts](../client/systems/three.ts))
+   *
+   * Often paired with `isDoodad: true` since visuals are also non-clickable, but the two flags are independent:
+   * `isDoodad` is about *interaction* (can the player click it?), `isEffect` is about *world presence*
+   * (does it persist on the map and integrate with terrain?).
    */
   isEffect?: boolean;
 
@@ -303,7 +312,12 @@ export type Entity = {
   completionTime?: number | null;
   progress?: number | null;
   // Maybe replace with selectable?
-  /** A doodad cannot be clicked */
+  /**
+   * Marks the entity as non-interactive: it cannot be clicked or selected
+   * (see [client/mouse.ts](../client/mouse.ts)). Independent of `isEffect` —
+   * a doodad can be a permanent map decoration (trees, rocks, fences) that
+   * still participates in the world (pathing, water, export).
+   */
   isDoodad?: boolean | null;
   isTimer?: boolean;
   isFloatingText?: boolean;
@@ -326,6 +340,7 @@ export type Entity = {
     readonly damagePoint: number;
     readonly projectileSpeed?: number;
     readonly model?: string;
+    readonly modelScale?: number;
     readonly targetsAllowed?: ReadonlyArray<ReadonlyArray<Classification>>;
   } | null;
   swing?: {

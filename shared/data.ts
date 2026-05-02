@@ -125,9 +125,11 @@ export const items: Record<string, Item> = {
     unique: true,
     buffs: [{
       damageBonus: 6,
-      splashDamage: 15,
-      splashRadius: 2,
-      splashTargets: [["enemy", "structure"]],
+    }, {
+      trigger: "hit",
+      damage: 15,
+      radius: 2,
+      targetsAllowed: [["enemy", "structure"]],
     }],
   },
   direCollar: {
@@ -138,8 +140,9 @@ export const items: Record<string, Item> = {
     gold: 200,
     binding: ["KeyD"],
     buffs: [{
+      trigger: "tick",
       radius: 1.75,
-      tickDamage: 15,
+      damage: 15,
       tickInterval: 1,
       targetsAllowed: [["enemy", "structure"]],
       model: "crimsonArc",
@@ -630,6 +633,7 @@ export const prefabs: Record<string, DataEntity> = {
       },
     ],
     maxHealth: 20,
+    healthRegen: 1,
     sounds: { what: ["sheep1", "sheep2", "sheep3"], death: ["splat1"] },
   },
   wolf: {
@@ -1086,6 +1090,43 @@ export const prefabs: Record<string, DataEntity> = {
     targetedAs: ["ward"],
     bounty: 4,
     sounds: { birth: ["splat1"], death: ["splat1"] },
+    actions: [
+      {
+        name: "Attack",
+        type: "target",
+        order: "attack",
+        icon: "sword",
+        targeting: [["unit", "structure", "tree"]],
+        binding: ["KeyA"],
+        smart: { enemy: 0 },
+      },
+      stop,
+    ],
+    attack: {
+      damage: 1,
+      range: 0.75,
+      rangeMotionBuffer: 0.375,
+      cooldown: 2,
+      backswing: 0.1,
+      damagePoint: 0.2,
+      projectileSpeed: 8,
+      model: "sparkle",
+      modelScale: 0.6,
+      targetsAllowed: [["unit", "structure", "tree"]],
+    },
+    buffs: [{
+      damageMultiplier: 4,
+      targetsAllowed: [["structure"]],
+      name: "TODO",
+      description: "TODO",
+      icon: "sparkle",
+    }, {
+      trigger: "death",
+      damage: 2.5,
+      radius: 1,
+      targetsAllowed: [["ward"]],
+      creditLastAttacker: true,
+    }],
   },
   startLocation: {
     name: "Start Location",

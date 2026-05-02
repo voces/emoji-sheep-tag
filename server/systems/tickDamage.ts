@@ -24,7 +24,8 @@ const updateEntity = (entity: Entity) => {
 
   for (const buff of iterateBuffs(entity)) {
     if (
-      !buff.tickDamage ||
+      buff.trigger !== "tick" ||
+      !buff.damage ||
       !buff.tickInterval ||
       !buff.radius ||
       !buff.targetsAllowed
@@ -37,15 +38,14 @@ const updateEntity = (entity: Entity) => {
 
     if ((appContext.current as Game).tick % ticksPerInterval !== 0) continue;
 
-    // Group by radius and targetsAllowed
     const key = `${buff.radius}-${JSON.stringify(buff.targetsAllowed)}`;
     const existing = buffGroups.get(key);
     if (existing) {
-      existing.totalDamage += buff.tickDamage;
+      existing.totalDamage += buff.damage;
     } else {
       buffGroups.set(key, {
         radius: buff.radius,
-        totalDamage: buff.tickDamage,
+        totalDamage: buff.damage,
         targetsAllowed: buff.targetsAllowed,
       });
     }

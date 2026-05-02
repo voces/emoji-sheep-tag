@@ -5,6 +5,7 @@ import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { closeMenusForUnit } from "@/vars/menuState.ts";
 import { focusGroup } from "./camera.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
+import { editorVar } from "@/vars/editor.ts";
 
 export const DOUBLE_CLICK_SELECTION_RADIUS = 6;
 
@@ -25,7 +26,9 @@ export const selectEntitiesByPrefabInRadius = (
     !!entity.position &&
     entity.prefab === origin.prefab &&
     entity.owner === origin.owner &&
-    !entity.hiddenByFog
+    !entity.hiddenByFog &&
+    !entity.isEffect &&
+    (editorVar() || !entity.isDoodad)
   );
 
   if (!nearbyMatchingEntities.length) return;

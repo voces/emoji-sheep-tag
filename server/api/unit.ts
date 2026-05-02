@@ -12,7 +12,7 @@ import {
   Point,
 } from "@/shared/pathing/math.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
-import { Entity, Item, Order, SystemEntity } from "@/shared/types.ts";
+import { Buff, Entity, Item, Order, SystemEntity } from "@/shared/types.ts";
 import { computeUnitSightRadius } from "@/shared/api/unit.ts";
 import {
   calcPath,
@@ -564,12 +564,49 @@ export const applyDamageModifiers = (
     (typeof target.progress === "number" ? 2 : 1) *
     (attacker.isMirror ? target.tilemap ? 0.24 : 0.001 : 1);
 
-  // Apply damage mitigation from buffs (including item buffs)
+  for (const buff of iterateBuffs(attacker)) {
+    if (
+      buff.damageMultiplier && buff.targetsAllowed &&
+      testClassification(attacker, target, buff.targetsAllowed)
+    ) finalDamage *= buff.damageMultiplier;
+  }
+
   for (const buff of iterateBuffs(target)) {
     if (buff.damageMitigation) finalDamage *= 1 - buff.damageMitigation;
   }
 
   return finalDamage;
+};
+
+/**
+ * Apply a buff's `damage` field as area damage centered on `center`, filtered by
+ * the buff's `targetsAllowed`. Used by hit/death/tick triggers.
+ */
+export const applyBuffAreaDamage = (
+  source: Entity,
+  buff: Buff,
+  center: { x: number; y: number },
+): void => {
+  if (!buff.damage || !buff.radius || !buff.targetsAllowed) return;
+
+  let attacker: Entity = source;
+  if (buff.creditLastAttacker) {
+    const lastAttacker = lookup(source.lastAttacker);
+    if (!lastAttacker) {
+      console.warn(
+        `applyBuffAreaDamage: creditLastAttacker set but no lastAttacker found for source ${source.id}; skipping`,
+      );
+      return;
+    }
+    attacker = lastAttacker;
+  }
+
+  const nearby = getEntitiesInRange(center.x, center.y, buff.radius);
+  for (const target of nearby) {
+    if (target.id === source.id || !target.health) continue;
+    if (!testClassification(attacker, target, buff.targetsAllowed)) continue;
+    damageEntity(attacker, target, buff.damage, false);
+  }
 };
 
 /**
@@ -581,26 +618,10 @@ export const applyAndConsumeBuffs = (
   source: Entity,
   target: Entity,
 ): void => {
-  // Apply splash damage from buffs (including item buffs)
-  for (const buff of iterateBuffs(source)) {
-    if (
-      buff.splashDamage && buff.splashRadius && buff.splashTargets &&
-      target.position
-    ) {
-      const nearbyEntities = getEntitiesInRange(
-        target.position.x,
-        target.position.y,
-        buff.splashRadius,
-      );
-
-      for (const splashTarget of nearbyEntities) {
-        if (!testClassification(source, splashTarget, buff.splashTargets)) {
-          continue;
-        }
-
-        if (splashTarget.health) {
-          damageEntity(source, splashTarget, buff.splashDamage, false);
-        }
+  if (target.position) {
+    for (const buff of iterateBuffs(source)) {
+      if (buff.trigger === "hit") {
+        applyBuffAreaDamage(source, buff, target.position);
       }
     }
   }

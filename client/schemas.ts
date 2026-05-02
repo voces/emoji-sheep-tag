@@ -210,10 +210,9 @@ const zBuff = z.object({
   bountyBonus: z.number().optional(),
   consumeOnAttack: z.boolean().optional(),
   impartedBuffOnAttack: z.string().optional(),
-  splashDamage: z.number().optional(),
-  splashRadius: z.number().optional(),
-  splashTargets: zClassification.array().readonly().array().readonly()
-    .optional(),
+  trigger: z.enum(["hit", "death", "tick"]).optional(),
+  damage: z.number().optional(),
+  creditLastAttacker: z.boolean().optional(),
   expiration: z.string().optional(),
   spawnPrefab: z.string().optional(),
   totalDuration: z.number().optional(),
@@ -225,7 +224,6 @@ const zBuff = z.object({
   auraBuff: z.string().optional(),
   targetsAllowed: zClassification.array().readonly().array().readonly()
     .optional(),
-  tickDamage: z.number().optional(),
   tickInterval: z.number().optional(),
   icon: z.string().optional(),
   model: z.string().optional(),
@@ -318,6 +316,7 @@ export const zUpdate = z.object({
   completionTime: z.number().nullable().optional(),
   progress: z.number().nullable().optional(),
   isDoodad: z.boolean().nullable().optional(),
+  isEffect: z.boolean().optional(),
   isTimer: z.boolean().optional(),
   isFloatingText: z.boolean().optional(),
   teamScoped: z.boolean().optional(),
@@ -332,6 +331,7 @@ export const zUpdate = z.object({
     backswing: z.number(),
     projectileSpeed: z.number().optional(),
     model: z.string().optional(),
+    modelScale: z.number().optional(),
     targetsAllowed: z.array(z.array(zClassification).readonly()).readonly()
       .optional(),
   }).nullable().optional(),

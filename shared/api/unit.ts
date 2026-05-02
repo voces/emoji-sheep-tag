@@ -189,9 +189,10 @@ export const computeUnitDamage = (unit: Entity): number => {
 
   let totalDamage = unit.attack.damage;
 
-  // Apply multipliers first, then add bonuses from buffs (including item buffs)
+  // Apply multipliers first, then add bonuses from buffs (including item buffs).
+  // Multipliers gated by targetsAllowed are deferred to applyDamageModifiers.
   for (const buff of iterateBuffs(unit)) {
-    if (buff.damageMultiplier) {
+    if (buff.damageMultiplier && !buff.targetsAllowed) {
       totalDamage *= buff.damageMultiplier;
     }
   }

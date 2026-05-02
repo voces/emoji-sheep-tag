@@ -5,7 +5,7 @@ import { grantPlayerGold, redistributeSheepGold } from "../api/player.ts";
 import { lookup } from "./lookup.ts";
 import { addSystem } from "@/shared/context.ts";
 import { getSheep } from "./collections.ts";
-import { newUnit, orderAttack } from "../api/unit.ts";
+import { applyBuffAreaDamage, newUnit, orderAttack } from "../api/unit.ts";
 import { Entity } from "@/shared/types.ts";
 import { debouncedGoldText } from "../api/floatingText.ts";
 import { findPlayerUnit, getPlayerUnits } from "./playerEntities.ts";
@@ -252,6 +252,14 @@ addSystem((app) => ({
 
         grantPlayerGold(killer.owner, bounty);
         debouncedGoldText(killer, bounty);
+      }
+    }
+
+    if (unit.position) {
+      for (const buff of iterateBuffs(unit)) {
+        if (buff.trigger === "death") {
+          applyBuffAreaDamage(unit, buff, unit.position);
+        }
       }
     }
 

@@ -450,10 +450,17 @@ export const loadEstb = (
   const yOffset = options?.yOffset ?? 0;
 
   // Build geometry
-  const geometry = buildGeometry(paths, scale, xOffset, yOffset);
+  const geometry = buildGeometry(paths, scale, 0, 0);
 
   // Build animation data
-  const animationData = buildAnimationData(paths, groups, clips, scale);
+  const animationData = buildAnimationData(
+    paths,
+    groups,
+    clips,
+    scale,
+    xOffset,
+    yOffset,
+  );
 
   return {
     geometry,
@@ -639,6 +646,8 @@ const buildAnimationData = (
   groups: ParsedGroup[],
   clips: ParsedClip[],
   scale: number,
+  xOffset: number,
+  yOffset: number,
 ): AnimationData => {
   const partCount = paths.length;
 
@@ -664,13 +673,17 @@ const buildAnimationData = (
 
   const getPathTransformPoint = (path: ParsedPath): Point => {
     if (path.transformPoint) return path.transformPoint;
-    let sumX = 0, sumY = 0, count = 0;
+    if (path.segments.length === 0) return { x: 0, y: 0 };
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const seg of path.segments) {
-      sumX += seg.p0.x;
-      sumY += seg.p0.y;
-      count++;
+      for (const pt of [seg.p0, seg.c0, seg.c1, seg.p1]) {
+        if (pt.x < minX) minX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y > maxY) maxY = pt.y;
+      }
     }
-    return count > 0 ? { x: sumX / count, y: sumY / count } : { x: 0, y: 0 };
+    return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
   };
 
   const totalSamples = sampleCount * partCount * clipCount;
@@ -681,8 +694,8 @@ const buildAnimationData = (
   for (let sampleIdx = 0; sampleIdx < sampleCount; sampleIdx++) {
     for (let partIdx = 0; partIdx < partCount; partIdx++) {
       const dataIdx = partIdx * sampleCount + sampleIdx;
-      transformData[dataIdx * 4 + 0] = 0; // tx
-      transformData[dataIdx * 4 + 1] = 0; // ty
+      transformData[dataIdx * 4 + 0] = xOffset;
+      transformData[dataIdx * 4 + 1] = yOffset;
       transformData[dataIdx * 4 + 2] = 0; // rot
       transformData[dataIdx * 4 + 3] = 1; // scale
       // Use base path opacity for default clip
@@ -788,8 +801,10 @@ const buildAnimationData = (
         const rotatedPathTy = (pathTx + pathPivotOffset.x) * sin +
           (pathTy + pathPivotOffset.y) * cos;
 
-        const finalTx = (combinedTx + rotatedPathTx * combinedScale) * scale;
-        const finalTy = (combinedTy + rotatedPathTy * combinedScale) * scale;
+        const finalTx = (combinedTx + rotatedPathTx * combinedScale) * scale +
+          xOffset;
+        const finalTy = (combinedTy + rotatedPathTy * combinedScale) * scale +
+          yOffset;
         const finalRot = combinedRot + pathRot;
         const finalScale = combinedScale * pathScale;
         const finalOpacity = combinedOpacity * pathOpacity;

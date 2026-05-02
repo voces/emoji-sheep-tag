@@ -163,7 +163,6 @@ describe("damageEntity", () => {
       yield;
 
       damageEntity(attacker, target, undefined, false);
-      yield;
 
       expect(target.health).toBe(19.93); // 20 - (70 * 0.001) = 19.93
     },
@@ -256,5 +255,26 @@ describe("damageEntity", () => {
     yield;
 
     expect(target.health).toBe(30); // 120 - (70 + 20) = 30
+  });
+
+  it("sentry deals 4x damage to structures", function* () {
+    const attacker = newUnit("attacker-owner", "sentry", 10, 10);
+    const target = newUnit("target-owner", "hut", 20, 20);
+    yield;
+
+    damageEntity(attacker, target, undefined, false);
+    yield;
+
+    expect(target.health).toBe(116); // 120 - (1 * 4)
+  });
+
+  it("sentry deals base damage to non-structures", function* () {
+    const attacker = newUnit("attacker-owner", "sentry", 10, 10);
+    const target = newUnit("target-owner", "sheep", 20, 20);
+    yield;
+
+    damageEntity(attacker, target, undefined, false);
+
+    expect(target.health).toBe(19); // 20 - 1
   });
 });
