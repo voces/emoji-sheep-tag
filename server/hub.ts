@@ -27,6 +27,7 @@ export const serializeLobbyList = () =>
       isOpen: lobby.players.size < colors.length,
       shard: shard?.region ?? shard?.name,
       host: lobby.host?.name,
+      mode: lobby.settings.mode,
     };
   }).sort((a, b) => b.playerCount - a.playerCount);
 

@@ -1,6 +1,7 @@
 import "./i18n/index.ts";
 import "./suppressReactDevtools.ts";
-import { startPing } from "./ping.ts";
+import "./ping.ts";
+import "./autoJoin.ts";
 import "./ui/root.tsx";
 import "./controls.ts";
 import "./systems/tilemapRotation.ts";
@@ -29,6 +30,3 @@ import "@/shared/systems/kd.ts";
 import "@/shared/systems/vision.ts";
 import "@/shared/systems/mapCenterMarker.ts";
 import "./graphics/cursor.ts";
-
-// Start the ping system
-startPing();

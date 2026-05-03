@@ -23,6 +23,9 @@ export const en = {
     multiplayer: "Multiplayer",
     offline: "Offline",
     settings: "Settings",
+    copyShareLink: "Copy invite link",
+    linkCopied: "Link copied!",
+    copyShareLinkFailed: "Couldn't copy link. Share this URL: {{url}}",
 
     players: "Players",
     playersCount: "{{current}} of {{max}}",
@@ -384,6 +387,9 @@ export const en = {
     playersOnline: "{{count}} online",
     games: "{{count}} game",
     games_plural: "{{count}} games",
+    joinLinkFull: 'Lobby "{{name}}" is full.',
+    joinLinkMissing: 'Lobby "{{name}}" is no longer available.',
+    dismissNotice: "Dismiss",
   },
   gpu: {
     title: "Software Rendering Detected",

@@ -419,6 +419,7 @@ export const LobbySettings = () => {
   );
   const maxSheep = Math.max(nonObservers.length - 1, 1);
   const settingsDisabled = !isHost || isShardLaunching;
+  const sheepConfigurable = nonObservers.length > 0;
 
   // Mode-aware defaults for gold/income — bulldog scales with team sizes.
   const wolfCount = Math.max(nonObservers.length - lobbySettings.sheep, 1);
@@ -518,7 +519,7 @@ export const LobbySettings = () => {
           <HostTitle>{t("lobby.hostControls")}</HostTitle>
           <HostHint>
             <Tag>{t(`lobby.${lobbySettings.mode}`)}</Tag>
-            {!lobbySettings.autoSheep && (
+            {!lobbySettings.autoSheep && sheepConfigurable && (
               <Tag>
                 {lobbySettings.sheep}v{nonObservers.length -
                   lobbySettings.sheep}
@@ -632,7 +633,7 @@ export const LobbySettings = () => {
                 step={1}
                 defaultValue="1"
                 disabled={settingsDisabled}
-                isAuto={lobbySettings.autoSheep}
+                isAuto={lobbySettings.autoSheep || !sheepConfigurable}
                 onResetToAuto={() =>
                   send({ type: "lobbySettings", sheep: "auto" })}
                 onChange={(value) =>

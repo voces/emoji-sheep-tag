@@ -543,6 +543,7 @@ const zLobby = z.object({
   isOpen: z.boolean(),
   shard: z.string().optional(),
   host: z.string().optional(),
+  mode: zMode,
 });
 
 export type Lobby = z.infer<typeof zLobby>;

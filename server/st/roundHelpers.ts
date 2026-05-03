@@ -7,9 +7,6 @@ export { getDefaultIncome, getDefaultStartingGold } from "@/shared/round.ts";
 
 const BULLDOG_TIME = 90;
 
-// Ideal sheep for N vs N+1 pattern: 1v3, 2v3, 2v4, 3v4, 3v5, 4v5, 4v6, etc.
-// Bulldog skews to a higher sheep:wolf ratio (~1:0.75) since rounds are short
-// and a sheep team needs to outnumber wolves to escape.
 export const getIdealSheep = (players: number, mode?: Mode) => {
   if (mode === "bulldog") return Math.max(Math.round(players / 1.75), 1);
   return Math.max(Math.ceil((players - 2) / 2), 1);

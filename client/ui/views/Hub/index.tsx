@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
-import { ChevronLeft, Globe, Users } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Globe, Users, X } from "lucide-react";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { lobbiesVar } from "@/vars/lobbies.ts";
 import { playerNameVar } from "@/vars/playerName.ts";
 import { stateVar } from "@/vars/state.ts";
+import { hubNoticeVar } from "@/vars/hubNotice.ts";
 import {
   ActionButton,
   PrimaryButton,
@@ -203,10 +204,52 @@ const EmptyText = styled.p`
   max-width: 260px;
 `;
 
+const Notice = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: ${({ theme }) => theme.space[2]};
+  padding: 10px ${({ theme }) => theme.space[3]};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.danger.bg};
+  border: 1px solid
+    color-mix(
+      in oklab,
+      ${({ theme }) => theme.danger.DEFAULT} 35%,
+      ${({ theme }) => theme.border.DEFAULT}
+    );
+  color: ${({ theme }) => theme.danger.DEFAULT};
+  font-size: ${({ theme }) => theme.text.sm};
+`;
+
+const NoticeText = styled.span`
+  flex: 1;
+  line-height: 1.4;
+`;
+
+const NoticeDismiss = styled.button`
+  background: transparent;
+  border: none;
+  padding: 2px;
+  margin: -2px;
+  color: inherit;
+  cursor: pointer;
+  border-radius: ${({ theme }) => theme.radius.xs};
+  display: inline-flex;
+
+  &.hover {
+    background: color-mix(
+      in oklab,
+      ${({ theme }) => theme.danger.DEFAULT} 15%,
+      transparent
+    );
+  }
+`;
+
 export const Hub = () => {
   const { t } = useTranslation();
   const lobbies = useReactiveVar(lobbiesVar);
   const playerName = useReactiveVar(playerNameVar);
+  const notice = useReactiveVar(hubNoticeVar);
   const [draft, setDraft] = useState(playerName);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -264,6 +307,20 @@ export const Hub = () => {
           />
         </NameRow>
 
+        {notice && (
+          <Notice role="alert">
+            <AlertTriangle size={16} />
+            <NoticeText>{notice}</NoticeText>
+            <NoticeDismiss
+              type="button"
+              aria-label={t("hub.dismissNotice")}
+              onClick={() => hubNoticeVar(undefined)}
+            >
+              <X size={14} />
+            </NoticeDismiss>
+          </Notice>
+        )}
+
         <PrimaryButton
           type="button"
           onClick={() => send({ type: "createLobby" })}
@@ -288,6 +345,7 @@ export const Hub = () => {
                         : l.status === "playing"
                         ? t("hub.playing")
                         : t("hub.full")}
+                      <span>{t(`lobby.${l.mode}`)}</span>
                       <span>
                         {t("hub.playerCount", {
                           current: l.playerCount,

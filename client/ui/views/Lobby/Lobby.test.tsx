@@ -81,6 +81,28 @@ describe("Lobby Settings UI", () => {
     expect((wolvesInput as HTMLInputElement).disabled).toBe(true);
   });
 
+  it("should copy a share link with the lobby name as a query param", async () => {
+    addEntity(createTestPlayer({ id: "player-1" }));
+    localPlayerIdVar("player-1");
+    lobbySettingsVar({ ...lobbySettingsVar(), name: "alpha" });
+
+    let copied = "";
+    Object.defineProperty(globalThis.navigator, "clipboard", {
+      value: { writeText: (t: string) => Promise.resolve(void (copied = t)) },
+      configurable: true,
+    });
+
+    render(<Lobby />, { wrapper: TestWrapper });
+
+    const button = await screen.findByRole("button", {
+      name: /copy invite link/i,
+    });
+    await userEvent.click(button);
+
+    expect(copied).toContain("lobby=alpha");
+    await screen.findByRole("button", { name: /link copied/i });
+  });
+
   it("should update display when lobby settings change", async () => {
     addEntity(createTestPlayer());
     localPlayerIdVar("player-0");

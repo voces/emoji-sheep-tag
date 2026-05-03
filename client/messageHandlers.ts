@@ -43,6 +43,9 @@ import {
   storePendingServerValues,
 } from "./systems/fog.ts";
 import { isStructure } from "@/shared/api/unit.ts";
+import { consumePendingJoinLobby } from "./autoJoin.ts";
+import i18next from "i18next";
+import { hubNoticeVar } from "@/vars/hubNotice.ts";
 
 const processUpdates = (updates: ReadonlyArray<Update>) => {
   const players = updates.filter((u) => u.isPlayer || map[u.id]?.isPlayer);
@@ -363,6 +366,23 @@ export const handlers = {
     if (ws instanceof LocalWebSocket && lobbies.length > 0) {
       send({ type: "joinLobby", lobbyName: lobbies[0].name });
       return;
+    }
+
+    const pendingJoin = consumePendingJoinLobby();
+    if (pendingJoin) {
+      const target = lobbies.find((l) => l.name === pendingJoin);
+      if (target?.isOpen) {
+        send({ type: "joinLobby", lobbyName: pendingJoin });
+        return;
+      }
+      hubNoticeVar(
+        i18next.t(
+          target ? "hub.joinLinkFull" : "hub.joinLinkMissing",
+          { name: pendingJoin },
+        ),
+      );
+    } else {
+      hubNoticeVar(undefined);
     }
 
     // Switch to hub view and clean up game state from previous lobby

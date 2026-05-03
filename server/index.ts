@@ -8,6 +8,7 @@ import { handleStatusRoute, isPageLoad } from "./status/handlers.ts";
 import { getPlayerCount } from "./status/sse.ts";
 import { incrementPageLoads } from "./status/storage.ts";
 import { startFlyReconciliation } from "./flyMachines.ts";
+import { buildLobbyMetaTags } from "./lobbyMeta.ts";
 
 const isDev = Deno.args.includes("--dev");
 
@@ -72,9 +73,11 @@ Deno.serve({
       response.headers.set("cache-control", "no-cache");
       if (response.status === 200) {
         const html = await response.text();
+        const lobbyParam = url.searchParams.get("lobby");
+        const meta = buildLobbyMetaTags(url, lobbyParam);
         const injected = html.replace(
           "</head>",
-          `<meta name="player-count" content="${getPlayerCount()}">\n</head>`,
+          `<meta name="player-count" content="${getPlayerCount()}">\n    ${meta}\n</head>`,
         );
         return new Response(injected, {
           status: response.status,

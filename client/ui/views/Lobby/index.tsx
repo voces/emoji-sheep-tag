@@ -10,7 +10,9 @@ import { AccentTag, Tag } from "@/components/Tag.tsx";
 import { SmallGhostButton } from "@/components/forms/ActionButton.tsx";
 import { showSettingsVar } from "@/vars/showSettings.ts";
 import { send } from "../../../messaging.ts";
-import { ChevronLeft, Settings } from "lucide-react";
+import { disconnect } from "../../../connection.ts";
+import { stateVar } from "@/vars/state.ts";
+import { Check, ChevronLeft, Link2, Settings } from "lucide-react";
 import { Players } from "./Players.tsx";
 import { LobbySettings } from "./LobbySettings.tsx";
 import { CaptainsDraft } from "./CaptainsDraft/index.tsx";
@@ -19,6 +21,8 @@ import { MAPS } from "@/shared/maps/manifest.ts";
 import { isMultiplayer } from "../../../connection.ts";
 import { getCurrentPingTarget, getSelectedPing } from "../../../ping.ts";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
+import { buildLobbyShareUrl } from "../../../autoJoin.ts";
+import { addChatMessage } from "@/vars/chat.ts";
 
 const LobbyShell = styled.div`
   position: absolute;
@@ -70,6 +74,40 @@ const Crumb = styled.span`
 const CrumbCurrent = styled(Crumb)`
   color: ${({ theme }) => theme.ink.hi};
   font-weight: 500;
+`;
+
+const ShareLobbyButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: 2px 6px;
+  margin: -2px 0;
+  color: ${({ theme }) => theme.ink.hi};
+  font: inherit;
+  font-size: ${({ theme }) => theme.text.sm};
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut},
+    border-color ${({ theme }) => theme.motion.fast} ${({ theme }) =>
+      theme.motion.easeOut};
+
+  &.hover {
+    background: ${({ theme }) => theme.surface[2]};
+    border-color: ${({ theme }) => theme.border.soft};
+  }
+
+  & svg {
+    color: ${({ theme }) => theme.ink.lo};
+  }
+
+  &.hover svg {
+    color: ${({ theme }) => theme.ink.mid};
+  }
 `;
 
 const PingDot = styled.span<{ $ping: number | null }>`
@@ -137,6 +175,44 @@ const PingTag = (
   );
 };
 
+const LobbyNameShare = ({ name }: { name: string }) => {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  const tooltipText = copied ? t("lobby.linkCopied") : t("lobby.copyShareLink");
+  const { tooltipContainerProps, tooltip } = useTooltip<HTMLButtonElement>(
+    tooltipText,
+  );
+
+  useEffect(() => {
+    if (!copied) return;
+    const id = setTimeout(() => setCopied(false), 1800);
+    return () => clearTimeout(id);
+  }, [copied]);
+
+  const handleCopy = async () => {
+    const url = buildLobbyShareUrl(name);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+    } catch {
+      addChatMessage(t("lobby.copyShareLinkFailed", { url }));
+    }
+  };
+
+  return (
+    <ShareLobbyButton
+      type="button"
+      onClick={handleCopy}
+      aria-label={tooltipText}
+      {...tooltipContainerProps}
+    >
+      {name}
+      {copied ? <Check size={12} /> : <Link2 size={12} />}
+      {tooltip}
+    </ShareLobbyButton>
+  );
+};
+
 export const Lobby = () => {
   const { t } = useTranslation();
   const captainsDraft = useReactiveVar(captainsDraftVar);
@@ -163,7 +239,16 @@ export const Lobby = () => {
     <LobbyShell>
       <TopBar>
         <TopLeft>
-          <SmallGhostButton onClick={() => send({ type: "leaveLobby" })}>
+          <SmallGhostButton
+            onClick={() => {
+              if (isMultiplayer()) {
+                send({ type: "leaveLobby" });
+              } else {
+                disconnect();
+                stateVar("menu");
+              }
+            }}
+          >
             <ChevronLeft size={14} /> {t("lobby.leave")}
           </SmallGhostButton>
           <CrumbSep>/</CrumbSep>
@@ -171,9 +256,13 @@ export const Lobby = () => {
             {t(isMultiplayer() ? "lobby.multiplayer" : "lobby.offline")}
           </Crumb>
           <CrumbSep>/</CrumbSep>
-          <CrumbCurrent>
-            {lobbySettings.name ?? selectedMap?.name ?? lobbySettings.map}
-          </CrumbCurrent>
+          {isMultiplayer() && lobbySettings.name
+            ? <LobbyNameShare name={lobbySettings.name} />
+            : (
+              <CrumbCurrent>
+                {lobbySettings.name ?? selectedMap?.name ?? lobbySettings.map}
+              </CrumbCurrent>
+            )}
           <AccentTag>
             {sheepCount}v{wolfCount}
           </AccentTag>

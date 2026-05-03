@@ -50,16 +50,16 @@ export const LobbyFooter = () => {
 
   const isHost = localPlayer?.id === lobbySettings.host;
 
-  if (!isHost) return null;
-
-  const nonObserversCount = players.filter((p) => p.team !== "observer").length;
-
   const {
     ref: startRef,
     showError,
     errorBubble,
     Wrapper: ShakeWrapper,
   } = useShakeError();
+
+  if (!isHost) return null;
+
+  const nonObserversCount = players.filter((p) => p.team !== "observer").length;
 
   const isCaptainsPhase = captainsDraft?.phase === "drafted" ||
     captainsDraft?.phase === "reversed";

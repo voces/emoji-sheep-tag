@@ -93,6 +93,10 @@ export const startPing = () => {
   }, PING_INTERVAL_MS);
 };
 
+if (typeof document !== "undefined" && document.querySelector("div#ui")) {
+  startPing();
+}
+
 export const stopPing = () => {
   if (pingInterval !== undefined) {
     clearInterval(pingInterval);
