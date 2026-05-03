@@ -141,6 +141,7 @@ const PingTag = (
     selectedShardId: string | null | undefined;
   },
 ) => {
+  const { t } = useTranslation();
   const [ping, setPing] = useState<number | null>(null);
   const [target, setTarget] = useState(getCurrentPingTarget());
   useEffect(() => {
@@ -153,16 +154,17 @@ const PingTag = (
     return () => clearInterval(id);
   }, [selectedShardId]);
 
-  const label = shardLabel ?? primaryLabel;
+  const label = shardLabel ?? primaryLabel ?? "";
+  const ms = ping !== null ? Math.round(ping) : 0;
   const tooltipText = ping === null
     ? selectedShardId
-      ? `${label} has no machine running — no ping available until a round starts.`
-      : "Measuring…"
+      ? t("lobby.pingNotConnected", { label })
+      : t("lobby.pingMeasuring")
     : target === "shard-game"
-    ? `Round shard · ${Math.round(ping)}ms`
+    ? t("lobby.pingGameServer", { ms })
     : selectedShardId
-    ? `Selected shard · ${Math.round(ping)}ms`
-    : `Primary server · ${Math.round(ping)}ms`;
+    ? t("lobby.pingSelectedServer", { label, ms })
+    : t("lobby.pingPrimaryServer", { ms });
   const { tooltipContainerProps, tooltip } = useTooltip(tooltipText);
 
   return (

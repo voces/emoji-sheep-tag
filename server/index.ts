@@ -79,6 +79,7 @@ Deno.serve({
           "</head>",
           `<meta name="player-count" content="${getPlayerCount()}">\n    ${meta}\n</head>`,
         );
+        response.headers.delete("content-length");
         return new Response(injected, {
           status: response.status,
           headers: response.headers,

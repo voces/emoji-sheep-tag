@@ -701,6 +701,20 @@ export const getShardOrFlyRegion = (
   return undefined;
 };
 
+/**
+ * Friendly label for a shard ID, including pre-launch Fly regions.
+ * Matches what the lobby header shows (region ?? name), but also resolves
+ * `fly:<code>` selections that don't yet have a registered shard.
+ */
+export const getShardLabel = (id: string): string | undefined => {
+  const resolved = getShardOrFlyRegion(id);
+  if (!resolved) return undefined;
+  if ("flyRegion" in resolved) {
+    return getFlyRegionDisplayName(resolved.flyRegion);
+  }
+  return resolved.shard.region ?? resolved.shard.name;
+};
+
 /** Get a shard by its Fly machine ID */
 export const getShardByMachineId = (
   machineId: string,

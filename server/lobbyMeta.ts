@@ -1,6 +1,7 @@
 import { lobbies, type Lobby } from "./lobby.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
 import type { Mode } from "@/shared/round.ts";
+import { getShardLabel } from "./shardRegistry.ts";
 
 const SITE_NAME = "Emoji Sheep Tag";
 const DEFAULT_DESCRIPTION =
@@ -43,7 +44,10 @@ const buildLobbyDescription = (lobby: Lobby): string => {
   const map = getMapMeta(lobby.settings.map)?.name ?? lobby.settings.map;
   const host = lobby.host?.name;
   const lead = host ? `${host}'s lobby` : "Open lobby";
-  return `${lead} · ${mode} on ${map}`;
+  const shardId = lobby.activeShard ?? lobby.settings.shard;
+  const shardLabel = shardId ? getShardLabel(shardId) : undefined;
+  const tail = shardLabel ? ` · ${shardLabel}` : "";
+  return `${lead} · ${mode} on ${map}${tail}`;
 };
 
 export const buildLobbyMetaTags = (

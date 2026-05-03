@@ -26,6 +26,12 @@ export const en = {
     copyShareLink: "Copy invite link",
     linkCopied: "Link copied!",
     copyShareLinkFailed: "Couldn't copy link. Share this URL: {{url}}",
+    pingNotConnected:
+      "Not connected to {{label}}. Ping appears once a game starts.",
+    pingMeasuring: "Measuring connection…",
+    pingGameServer: "Game server · {{ms}}ms",
+    pingSelectedServer: "{{label}} · {{ms}}ms",
+    pingPrimaryServer: "Primary server · {{ms}}ms",
 
     players: "Players",
     playersCount: "{{current}} of {{max}}",
