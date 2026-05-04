@@ -249,7 +249,7 @@ export const Chat = () => {
           }}
           onBlur={() =>
             setTimeout(() => {
-              if (showChatBoxVar() === "open") return;
+              if (showChatBoxVar() !== "open") return;
               showChatBoxVar("dismissed");
             })}
         />

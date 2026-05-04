@@ -19,10 +19,9 @@ export const buildMapManifest = async () => {
     entries.push(manifestEntry);
   }
   entries.sort((a, b) => a.id.localeCompare(b.id));
-  await Deno.writeTextFile(
-    OUTPUT,
-    JSON.stringify(entries, null, 2) + "\n",
-  );
+  const next = JSON.stringify(entries, null, 2) + "\n";
+  const current = await Deno.readTextFile(OUTPUT).catch(() => null);
+  if (current !== next) await Deno.writeTextFile(OUTPUT, next);
   return entries;
 };
 
