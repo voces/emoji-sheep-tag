@@ -29,6 +29,10 @@ export const Audio = () => {
     audioSettingsVar({ ...audioSettingsVar(), ambience: value });
   }, []);
 
+  const handleMusicChange = useCallback((value: number) => {
+    audioSettingsVar({ ...audioSettingsVar(), music: value });
+  }, []);
+
   const formatPercent = useCallback(
     (value: number) => `${Math.round(value * 100)}%`,
     [],
@@ -60,6 +64,12 @@ export const Audio = () => {
           label={t("settings.ambience")}
           value={audioSettings.ambience}
           onChange={handleAmbienceChange}
+          formatValue={formatPercent}
+        />
+        <Slider
+          label={t("settings.music")}
+          value={audioSettings.music}
+          onChange={handleMusicChange}
           formatValue={formatPercent}
         />
       </FieldGroup>

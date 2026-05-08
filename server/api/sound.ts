@@ -16,4 +16,9 @@ export const playSoundAt = (
       expiration: "Sound",
     }],
     isDoodad: true,
+    // Audio-only phantom — bypass fog so the birth sound plays regardless
+    // of whether the local player can see the source position. Without
+    // this, a sheep can't hear the wolf-spawn howl when the map center is
+    // outside their vision.
+    visibleInFog: true,
   });

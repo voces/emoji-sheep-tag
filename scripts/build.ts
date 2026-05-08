@@ -186,6 +186,27 @@ export const copyMaps = async () => {
   }
 };
 
+export const copyPublic = async () => {
+  const srcDir = "client/public";
+  await ensureDir("dist");
+  try {
+    for await (const entry of Deno.readDir(srcDir)) {
+      if (!entry.isFile) continue;
+      const dest = `dist/${entry.name}`;
+      try {
+        const [src, existing] = await Promise.all([
+          Deno.stat(`${srcDir}/${entry.name}`),
+          Deno.stat(dest),
+        ]);
+        if (src.mtime && existing.mtime && src.mtime <= existing.mtime) {
+          continue;
+        }
+      } catch { /* dest missing — fall through to copy */ }
+      await Deno.copyFile(`${srcDir}/${entry.name}`, dest);
+    }
+  } catch { /* client/public missing */ }
+};
+
 export const cleanOldBundles = async () => {
   try {
     for await (const entry of Deno.readDir("dist")) {
@@ -244,6 +265,7 @@ export const build = async (env: "dev" | "prod") => {
       copyHtml(filenames),
       processSoundAssets(),
       copyMaps(),
+      copyPublic(),
     ]);
 
     console.log(

@@ -30,3 +30,4 @@ import "@/shared/systems/kd.ts";
 import "@/shared/systems/vision.ts";
 import "@/shared/systems/mapCenterMarker.ts";
 import "./graphics/cursor.ts";
+import "./audio/v3.ts";

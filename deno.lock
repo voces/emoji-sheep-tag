@@ -33,6 +33,7 @@
     "npm:esbuild@*": "0.27.4",
     "npm:global-jsdom@*": "28.0.0_jsdom@28.1.0",
     "npm:i18next@*": "26.0.5",
+    "npm:js-synthesizer@1.11.0": "1.11.0",
     "npm:jsdom@*": "28.1.0",
     "npm:lucide-react@*": "1.8.0_react@19.2.4",
     "npm:react-dom@*": "19.2.4_react@19.2.4",
@@ -635,6 +636,9 @@
     "is-potential-custom-element-name@1.0.1": {
       "integrity": "sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ=="
     },
+    "js-synthesizer@1.11.0": {
+      "integrity": "sha512-ROQth4Ozf9a7sV+8gXDdzkQsrxbvYw35/piPCBlnwCu5X4TzUh5QejT1AKtmyeHjOZJHY0PjS+tDAvL7hPAk1g=="
+    },
     "js-tokens@4.0.0": {
       "integrity": "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="
     },
@@ -922,6 +926,7 @@
       "npm:esbuild@*",
       "npm:global-jsdom@*",
       "npm:i18next@*",
+      "npm:js-synthesizer@1.11.0",
       "npm:jsdom@*",
       "npm:lucide-react@*",
       "npm:react-dom@*",

@@ -4,6 +4,7 @@ import {
   cleanOldBundles,
   copyHtml,
   copyMaps,
+  copyPublic,
   extractFilenames,
 } from "./build.ts";
 import { processSoundAssets } from "./processSoundAssets.ts";
@@ -46,6 +47,7 @@ const rebuild = async () => {
     copyHtml(filenames),
     processSoundAssets(),
     copyMaps(),
+    copyPublic(),
   ]);
 
   console.log(

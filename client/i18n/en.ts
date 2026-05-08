@@ -308,6 +308,7 @@ export const en = {
     soundEffects: "Sound Effects",
     userInterface: "User Interface",
     ambience: "Ambience",
+    music: "Music",
 
     uiTitle: "UI Settings",
     preferredActionsPerRow: "Preferred actions per row",

@@ -321,6 +321,7 @@ const spawnWolves = <T extends { id: string }>(wolves: T[]) => {
   for (const owner of wolves) {
     newUnit(owner.id, "wolf", center.x, center.y);
   }
+  console.log("playing howl!");
   playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
 };
 

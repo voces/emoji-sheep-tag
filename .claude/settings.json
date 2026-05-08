@@ -12,7 +12,12 @@
       "Bash(tar -tzf /tmp/est-handoff.tar.gz)",
       "Bash(tar -xzf /tmp/est-handoff.tar.gz -C /tmp/)",
       "Read(//home/verit/.local/share/**)",
-      "Bash(git log *)"
+      "Bash(git log *)",
+      "Read(//home/verit/estune/src/audio/v3/**)",
+      "Read(//home/verit/estune/src/audio/**)",
+      "Read(//home/verit/estune/**)",
+      "Bash(rm -rf /home/verit/emoji-sheep-tag/client/estune)",
+      "Bash(cp -r /home/verit/estune/vendor/estune /home/verit/emoji-sheep-tag/client/estune)"
     ],
     "additionalDirectories": [
       "/tmp"

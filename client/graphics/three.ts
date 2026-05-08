@@ -102,7 +102,7 @@ export const listener = "AudioListener" in globalThis
   ? new AudioListener()
   : undefined;
 
-export type Channel = "master" | "sfx" | "ui" | "ambience";
+export type Channel = "master" | "sfx" | "ui" | "ambience" | "music";
 export const channels: { [K in Channel]?: GainNode } = {};
 
 if (listener) {
@@ -156,6 +156,9 @@ if (listener) {
 
   channels.ambience = ctx.createGain();
   channels.ambience.connect(channels.master);
+
+  channels.music = ctx.createGain();
+  channels.music.connect(channels.master);
 
   channels.master.connect(preGain);
 
