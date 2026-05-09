@@ -22,6 +22,7 @@ import { practiceVar } from "@/vars/practice.ts";
 import { roundsVar } from "@/vars/rounds.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { isStructure } from "@/shared/api/unit.ts";
+import { isNight } from "@/shared/dayNight.ts";
 import {
   fireGameEvent,
   type FullGameState,
@@ -209,8 +210,11 @@ const computeSheepFacets = (
 ): SheepFacets => {
   const livingSheep = liveUnits.sheep.size;
   const threat = softProximity(unit, liveUnits.wolves, SHEEP_DANGER_RADIUS);
+  // 1v1 / last-sheep: no peers to measure distance from. The engine's
+  // density modulator thins arp/pad/counter at higher isolation; a flat
+  // 0.4 starts thinning (arp gates at 0.35) without bottoming out the bed.
   const isolation = liveUnits.sheep.size <= 1
-    ? 0
+    ? 0.4
     : clamp01(nearestOtherDistance(unit, liveUnits.sheep) / 50);
   if (unit.owner) {
     recordProximity(agencyEvents, unit.owner, threat, ctx.now);
@@ -236,7 +240,6 @@ const computeSheepFacets = (
     agency,
     isolation,
     lastAlive: alive && livingSheep === 1,
-    roundProgress: ctx.roundProgress,
   };
 };
 
@@ -246,8 +249,10 @@ const computeWolfFacets = (
 ): WolfFacets => {
   const livingSheep = liveUnits.sheep.size;
   const proximity = softProximity(unit, liveUnits.sheep, WOLF_DANGER_RADIUS);
+  // Lone wolf: same rationale as sheep — engage the engine's solo texture
+  // path rather than reading as a packed lobby bed.
   const isolation = liveUnits.wolves.size <= 1
-    ? 0
+    ? 0.4
     : clamp01(nearestOtherDistance(unit, liveUnits.wolves) / PACK_RADIUS);
   if (unit.owner) {
     recordProximity(agencyEvents, unit.owner, proximity, ctx.now);
@@ -267,7 +272,6 @@ const computeWolfFacets = (
     proximity,
     agency,
     isolation,
-    roundProgress: ctx.roundProgress,
   };
 };
 
@@ -280,10 +284,29 @@ const getStructuralState = (): StructuralState => {
   return liveUnits.wolves.size > 0 ? "active" : "build";
 };
 
-const getRoundDurationSeconds = (): number => {
-  const t = lobbySettingsVar().time;
-  return typeof t === "number" && t > 0 ? t : 120;
+/** Round duration for the engine's urgency / endgame derivations. Vamp has
+ *  no time-based win condition (round ends when all sheep are converted),
+ *  so we report null and the engine skips endgame routing. */
+const getRoundDurationSeconds = (): number | null => {
+  const settings = lobbySettingsVar();
+  if (settings.mode === "vamp") return null;
+  const t = settings.time;
+  return typeof t === "number" && t > 0 ? t : null;
 };
+
+/** Roundprogress fallback for agency math. Falls back to 120s when the
+ *  game gives us no duration (vamp / unset) so urgency-style weighting in
+ *  agency.ts still has a sensible denominator. */
+const getRoundProgressDenominator = (): number => {
+  const d = getRoundDurationSeconds();
+  return d ?? 120;
+};
+
+// Mirror the visual day/night cycle (shared/dayNight.ts) into the engine's
+// daylight/darkness bleed sources so layers tagged with those gates fade
+// in lockstep with the world. Lobby has no timer entry → forced to day.
+const computeDaylight = (structuralState: StructuralState): number =>
+  structuralState === "lobby" ? 1 : isNight() ? 0 : 1;
 
 const driveTick = () => {
   if (!started || !engine) return;
@@ -301,7 +324,8 @@ const driveTick = () => {
   const elapsed = roundStartMs === 0
     ? 0
     : (performance.now() - roundStartMs) / 1000;
-  const roundProgress = clamp01(elapsed / getRoundDurationSeconds());
+  const roundDuration = getRoundDurationSeconds();
+  const roundProgress = clamp01(elapsed / getRoundProgressDenominator());
   const totalSheep = liveUnits.sheep.size + liveUnits.spirits.size;
   const structuralState = getStructuralState();
 
@@ -347,6 +371,14 @@ const driveTick = () => {
     wolf,
     roundHook: null,
     mode: lobbySettingsVar().mode,
+    daylight: computeDaylight(structuralState),
+    // Engine derives urgency, roundFinal, and roundCountdown from these
+    // (see types.ts:420). Lobby leaves them undefined so the engine's
+    // endgame routing stays dormant outside playing rounds.
+    roundElapsedSeconds: structuralState === "lobby" ? undefined : elapsed,
+    roundDurationSeconds: structuralState === "lobby"
+      ? undefined
+      : roundDuration,
   };
   setGameState(engine, state);
 };

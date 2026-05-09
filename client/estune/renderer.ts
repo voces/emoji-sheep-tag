@@ -103,6 +103,10 @@ const ROLE_BASE_VELOCITY: Record<string, number> = {
   perc: 0.45,
   drone: 0.40,
   sparkle: 0.55,
+  nocturne: 0.45, // night-only color, sits below melody/counter
+  stab: 0.85,     // per-bar harmonic punctuation, foreground
+  bell: 0.55,     // stinger ornament
+  hit: 0.85,      // stinger downbeat strike
 };
 
 function computeVelocity(
@@ -129,11 +133,66 @@ function computeVelocity(
  *  the wolf is losing). The per-bed `floor` is the minimum gain the layer
  *  retains regardless of source — used so beds like `hero` keep a baseline
  *  pulse even at low tension. */
-export function computeBleedGain(bleed: BleedSpec | undefined, mood: MoodParams): number {
+/** Mood subset bleed resolution depends on. Lets the renderer pass a smoothed
+ *  copy without paying for full MoodParams construction. */
+export interface BleedMood {
+  tension: number;
+  daylight: number;
+  roundFinal: number;
+  roundCountdown: number;
+}
+
+export function computeBleedGain(bleed: BleedSpec | undefined, mood: BleedMood): number {
   if (!bleed) return 1.0;
-  const t = Math.max(0, Math.min(1, mood.tension));
-  const sourceValue = bleed.source === "inverse-tension" ? 1 - t : t;
+  const sourceValue = resolveBleedSource(bleed.source, mood);
   return Math.max(bleed.floor, sourceValue);
+}
+
+/** Resolve a BleedSource against a mood snapshot, clamped to [0, 1]. */
+export function resolveBleedSource(source: BleedSpec["source"], mood: BleedMood): number {
+  switch (source) {
+    case "tension":          return clamp01(mood.tension);
+    case "inverse-tension":  return 1 - clamp01(mood.tension);
+    case "daylight":         return clamp01(mood.daylight);
+    case "darkness":         return 1 - clamp01(mood.daylight);
+    case "round-final":      return clamp01(mood.roundFinal);
+    case "round-countdown":  return clamp01(mood.roundCountdown);
+  }
+}
+
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
+
+/** Time constant (in beats) for the bleed-source smoothing. ~1 beat ≈ 0.5s
+ *  at 120 BPM, giving a 99% settle time of ~3 beats (≈1.5s). Beat-based dt
+ *  avoids plumbing tempo through the renderer tick. */
+const BLEED_SMOOTH_TAU_BEATS = 1;
+
+/** Step the bleed-smoothed values toward the current mood. Called from
+ *  rendererTick. `dtBeats` is the beats elapsed since the prior tick; on
+ *  the first tick (or when invalidated) `bleedSmoothed` is initialized
+ *  directly to the mood (no fade — there's nothing to fade from). */
+function stepBleedSmoothing(renderer: RendererState, dtBeats: number): void {
+  const tgtTension = clamp01(renderer.mood.tension);
+  const tgtDaylight = clamp01(renderer.mood.daylight);
+  const tgtRoundFinal = clamp01(renderer.mood.roundFinal);
+  const tgtRoundCountdown = clamp01(renderer.mood.roundCountdown);
+  if (renderer.bleedSmoothed === null || dtBeats <= 0) {
+    renderer.bleedSmoothed = {
+      tension: tgtTension,
+      daylight: tgtDaylight,
+      roundFinal: tgtRoundFinal,
+      roundCountdown: tgtRoundCountdown,
+    };
+    return;
+  }
+  const alpha = 1 - Math.exp(-dtBeats / BLEED_SMOOTH_TAU_BEATS);
+  const s = renderer.bleedSmoothed;
+  s.tension += (tgtTension - s.tension) * alpha;
+  s.daylight += (tgtDaylight - s.daylight) * alpha;
+  s.roundFinal += (tgtRoundFinal - s.roundFinal) * alpha;
+  s.roundCountdown += (tgtRoundCountdown - s.roundCountdown) * alpha;
 }
 
 /** Compute the breath-pattern gain (1.0 or 0.0) for a layer at a given dwell.
@@ -178,6 +237,11 @@ export interface RendererState {
   pendingOffs: Map<string, PendingOff>;
   /** Current mood for velocity/layer decisions. */
   mood: MoodParams;
+  /** Smoothed mood values used by `computeBleedGain` so a bed change doesn't
+   *  apply the previous bed's tension residue to the new bed's first bars.
+   *  Each tick these approach the corresponding `mood` field exponentially.
+   *  Null until the first rendererTick — initialized then to current mood. */
+  bleedSmoothed: BleedMood | null;
   /** Global beat counter (advances with time). */
   currentBeat: number;
   /** Audio context sample rate for timing. */
@@ -204,7 +268,8 @@ export function createRenderer(sampleRate: number = 44100): RendererState {
     secondary: null,
     channels: new ChannelAllocator(),
     pendingOffs: new Map(),
-    mood: { tension: 0, energy: 0.5, urgency: 0 },
+    mood: { tension: 0, energy: 0.5, urgency: 0, daylight: 1, roundFinal: 0, roundCountdown: 0 },
+    bleedSmoothed: null,
     currentBeat: 0,
     sampleRate,
     lookaheadBeats: 4,
@@ -309,12 +374,21 @@ function tileLayerToSegment(
   notes: NoteEvent[],
   totalBeats: number,
   beatsPerBar: number,
+  authoredBeats?: number,
 ): NoteEvent[] {
   if (notes.length === 0) return notes;
-  let lastEnd = 0;
-  for (const n of notes) lastEnd = Math.max(lastEnd, n.beat + n.duration);
-  // Round up to bar boundary; this is the layer's natural period.
-  const layerPeriod = Math.max(beatsPerBar, Math.ceil(lastEnd / beatsPerBar) * beatsPerBar);
+  // Prefer the parser-tracked authored extent (counts trailing rest bars).
+  // Without it, "one ff stab on bar 1, rests on bars 2-12" looks like a
+  // 1-bar pattern by lastNote.end and the renderer tiles the stab onto
+  // every bar — observed as a runaway stab in desperate-frustrated.
+  let layerPeriod: number;
+  if (authoredBeats !== undefined && authoredBeats > 0) {
+    layerPeriod = Math.max(beatsPerBar, Math.ceil(authoredBeats / beatsPerBar) * beatsPerBar);
+  } else {
+    let lastEnd = 0;
+    for (const n of notes) lastEnd = Math.max(lastEnd, n.beat + n.duration);
+    layerPeriod = Math.max(beatsPerBar, Math.ceil(lastEnd / beatsPerBar) * beatsPerBar);
+  }
   if (layerPeriod >= totalBeats) return notes;
   const tiled: NoteEvent[] = [];
   for (let offset = 0; offset < totalBeats; offset += layerPeriod) {
@@ -342,7 +416,7 @@ export function createSegmentPlayer(
 ): SegmentPlayer {
   const beatsPerBar = segment.meter[0];
   const layers: LayerPlayer[] = segment.layers.map(layer => {
-    const tiled = tileLayerToSegment(layer.notes, segment.totalBeats, beatsPerBar);
+    const tiled = tileLayerToSegment(layer.notes, segment.totalBeats, beatsPerBar, layer.authoredBeats);
     const transform = pickLayerTransform(sessionSeed, segment.id, layer.role, layer.id);
     return {
       layer,
@@ -422,7 +496,16 @@ export function scheduleNotes(
     // (or its inverse for wolf-side sheep-color bleed). At zero effective
     // gain the layer's notes are suppressed by the velocity audibility
     // floor downstream — we don't have to skip them here.
-    const bleedGain = computeBleedGain(lp.layer.bleed, renderer.mood);
+    // Use the smoothed bleed mood so bed transitions don't apply the prior
+    // bed's residue to the new bed's first bars. Falls back to current mood
+    // before the first tick has run.
+    const bleedMood: BleedMood = renderer.bleedSmoothed ?? {
+      tension: renderer.mood.tension,
+      daylight: renderer.mood.daylight,
+      roundFinal: renderer.mood.roundFinal,
+      roundCountdown: renderer.mood.roundCountdown,
+    };
+    const bleedGain = computeBleedGain(lp.layer.bleed, bleedMood);
     // Note: breath gain is per-note, not per-tick — see inside the note loop.
     const baseGain = lp.gain * priorityGain * bleedGain;
     const isBaseShed = baseGain < 0.05;
@@ -514,12 +597,12 @@ export function scheduleNotes(
       const offsetBeats = halfRotateBars * beatsPerBar * player.loopIndex;
       const useRotation = halfRotateBars > 0 && offsetBeats % totalBeats !== 0;
       for (const lp of player.layers) {
-        const tiled = tileLayerToSegment(lp.layer.notes, totalBeats, beatsPerBar);
+        const tiled = tileLayerToSegment(lp.layer.notes, totalBeats, beatsPerBar, lp.layer.authoredBeats);
         const transform = pickLayerTransform(
           renderer.sessionSeed, player.segment.id, lp.layer.role, lp.layer.id,
         );
         const transformed = applyLayerTransform(tiled, transform);
-        lp.notes = useRotation
+        lp.notes = useRotation && !lp.layer.norotate
           ? rotateNotes(transformed, offsetBeats, totalBeats)
           : transformed;
         lp.cursor = 0;
@@ -561,7 +644,13 @@ export function processNoteOffs(renderer: RendererState, currentBeat: number): v
  * Advances the beat counter, schedules upcoming notes, processes note-offs.
  */
 export function rendererTick(renderer: RendererState, currentBeat: number): void {
+  const dtBeats = Math.max(0, currentBeat - renderer.currentBeat);
   renderer.currentBeat = currentBeat;
+  // Smooth bleed-source values toward the current mood. Time constant is
+  // beat-based (~1 beat → 0.5s at 120 BPM), so a bed change reads the
+  // *prior* bed's last bleed value momentarily and converges to the new
+  // mood over ~1.5s rather than snapping to the prior bed's tension residue.
+  stepBleedSmoothing(renderer, dtBeats);
   const windowStart = currentBeat;
   const windowEnd = currentBeat + renderer.lookaheadBeats;
 

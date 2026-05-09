@@ -72,9 +72,15 @@ export function fireGameEvent(engine: V3EngineState, event: GameEvent): void {
 
   let stingerId = EVENT_STINGER[event.type];
 
-  // round-end has a winner field — pick stinger by winner
+  // round-end picks per (winner × perspective). Spirit perspective tracks
+  // sheep audio — same stingers as the live sheep player.
   if (event.type === "round-end") {
-    stingerId = event.winner === "sheep" ? "rescue" : "sheep-loss-fade";
+    const isSheepView = engine.director.perspective !== "wolf";
+    if (event.winner === "sheep") {
+      stingerId = isSheepView ? "rescue" : "wolf-loss-fade";
+    } else {
+      stingerId = isSheepView ? "sheep-loss-fade" : "wolf-win";
+    }
   }
 
   if (stingerId) fireStingerById(engine, stingerId);

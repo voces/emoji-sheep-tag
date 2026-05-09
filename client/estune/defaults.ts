@@ -19,11 +19,13 @@ const SHEEP_BEDS = [
   "building", "cautious", "terror", "hero", "spirit",
   "lobby",
   "build-sheep-bulldog", "build-sheep-switch", "build-sheep-survival",
+  "endgame-sheep-survival",
 ] as const;
 
 const WOLF_BEDS = [
   "patrolling", "stalking", "attack", "desperate", "desperate-frustrated",
   "build-wolf-bulldog", "build-wolf-switch", "build-wolf-survival",
+  "endgame-wolf-survival",
 ] as const;
 
 const SHEEP_ROOT = "G";
@@ -110,6 +112,8 @@ const DEFAULT_STINGERS: Record<string, { trigger: string; gain: number }> = {
   capture: { trigger: "capture", gain: 0.5 },
   rescue: { trigger: "rescue", gain: 0.6 },
   "sheep-loss-fade": { trigger: "round-end", gain: 0.6 },
+  "wolf-win": { trigger: "round-end", gain: 0.6 },
+  "wolf-loss-fade": { trigger: "round-end", gain: 0.6 },
 };
 
 /** Compile and register the canonical stinger set. Stingers without source

@@ -78,6 +78,14 @@ const RESCUE_DECAY_TAU_S = 35;
 const EVENT_FRESH_S = 120;
 const PROXIMITY_HISTORY_S = 60;
 
+const WOLF_FRUSTRATION_WEIGHT = 0.30;
+const WOLF_FRUSTRATION_GRACE_S = 15;
+const WOLF_FRUSTRATION_RAMP_S = 45;
+
+const SHEEP_DREAD_WEIGHT = 0.20;
+const SHEEP_DREAD_GRACE_S = 20;
+const SHEEP_DREAD_RAMP_S = 60;
+
 const KILL_SHEEP_KILLED_OWN = 0.50;
 const KILL_SHEEP_KILLED_ALLY = 0.18;
 const KILL_WOLF_KILLER = 0.50;
@@ -155,6 +163,44 @@ const peakProximity = (
   return Math.cbrt(sum / count);
 };
 
+/** Pressure that builds when an actor is engaged (high proximity peak)
+ *  but the relieving event channel hasn't fired in a while — captures the
+ *  "I keep almost catching them" wolf frustration and the "no rescue is
+ *  coming" sheep dread. Both are the only signals that move agency in
+ *  eventless 1v1 rounds.
+ *
+ *  Returns a non-negative pressure in [0, 1]: peak gate × dry-time ramp.
+ *  Subtracted (× weight) from agency by the caller. */
+const engagedDryPressure = (
+  events: AgencyEvents,
+  unitId: string,
+  lastReliefTime: number,
+  now: number,
+  graceSeconds: number,
+  rampSeconds: number,
+): number => {
+  const drySec = Math.max(0, (now - lastReliefTime) / 1000);
+  const dryRamp = Math.max(
+    0,
+    Math.min(1, (drySec - graceSeconds) / rampSeconds),
+  );
+  if (dryRamp === 0) return 0;
+  // peakProximity returns 0.5 (neutral) when no samples — actively gate so
+  // an idle / unengaged actor accrues no pressure.
+  const peak = peakProximity(events.proximityHistory.get(unitId), now);
+  const peakGate = Math.max(0, 2 * peak - 1);
+  return peakGate * dryRamp;
+};
+
+const lastEventTime = (
+  times: number[],
+  fallback: number,
+): number => {
+  let best = fallback;
+  for (const t of times) if (t > best) best = t;
+  return best;
+};
+
 /** Drop events older than `EVENT_FRESH_S`; cheap O(n) sweep. */
 export const pruneAgencyEvents = (e: AgencyEvents, now: number): void => {
   const cutoff = now - EVENT_FRESH_S * 1000;
@@ -204,6 +250,22 @@ export const computeSheepAgencyValue = (
     const isSelf = r.rescuedId === p.unitId;
     a += (isSelf ? RESCUE_SHEEP_OWN : RESCUE_SHEEP_ALLY) * decay;
   }
+
+  // Sheep dread — for eventless rounds (notably 1v1) where rescue is the
+  // only positive event and may never fire. Round-start is the floor for
+  // the dry timer so a fresh round doesn't bottom out at peak threat.
+  const lastRescue = lastEventTime(
+    events.rescues.map((r) => r.time),
+    p.now - p.elapsedSeconds * 1000,
+  );
+  a -= SHEEP_DREAD_WEIGHT * engagedDryPressure(
+    events,
+    p.unitId,
+    lastRescue,
+    p.now,
+    SHEEP_DREAD_GRACE_S,
+    SHEEP_DREAD_RAMP_S,
+  );
 
   const unitExpected = expectedStructuresPerSheep(p.elapsedSeconds);
   a += STRUCTURE_PER_UNIT_WEIGHT *
@@ -257,6 +319,23 @@ export const computeWolfAgencyValue = (
     const decay = Math.exp(-dt / RESCUE_DECAY_TAU_S);
     a -= RESCUE_WOLF_UNIFORM * decay;
   }
+
+  // Wolf frustration — engaged but dry. Team-level: any sheep death (by
+  // any wolf) resets the timer, mirroring how rescue is team-level for
+  // sheep dread. Captures sustained close-but-failing chases that the
+  // proximity term alone treats as positive (close = good).
+  const lastKill = lastEventTime(
+    events.kills.map((k) => k.time),
+    p.now - p.elapsedSeconds * 1000,
+  );
+  a -= WOLF_FRUSTRATION_WEIGHT * engagedDryPressure(
+    events,
+    p.unitId,
+    lastKill,
+    p.now,
+    WOLF_FRUSTRATION_GRACE_S,
+    WOLF_FRUSTRATION_RAMP_S,
+  );
 
   const teamExpected = expectedStructuresPerSheep(p.elapsedSeconds) *
     Math.max(0, p.livingSheep);

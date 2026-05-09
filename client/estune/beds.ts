@@ -69,9 +69,11 @@ export function selectSheepBedWithBlend(facets: SheepFacets): BedSelection {
 }
 
 /** Wolf priority: failing → desperate (split by proximity into resigned vs
- *  frustrated), else proximity-crossfade across patrolling/stalking/attack. */
-export function selectWolfBed(facets: WolfFacets): WolfBed {
-  if (isWolfFailing(facets)) {
+ *  frustrated), else proximity-crossfade across patrolling/stalking/attack.
+ *  `progress` is the engine-derived round progress (0..1); the harness no
+ *  longer carries it on facets. */
+export function selectWolfBed(facets: WolfFacets, progress: number): WolfBed {
+  if (isWolfFailing(facets, progress)) {
     return facets.proximity < WOLF_DESPERATE_PROXIMITY
       ? "desperate"
       : "desperate-frustrated";
@@ -81,8 +83,8 @@ export function selectWolfBed(facets: WolfFacets): WolfBed {
   return "attack";
 }
 
-export function selectWolfBedWithBlend(facets: WolfFacets): BedSelection {
-  if (isWolfFailing(facets)) {
+export function selectWolfBedWithBlend(facets: WolfFacets, progress: number): BedSelection {
+  if (isWolfFailing(facets, progress)) {
     // Crossfade between desperate (low prox) and desperate-frustrated
     // (high prox) within a ±BLEND_WIDTH band around WOLF_DESPERATE_PROXIMITY.
     // hardSwitch stays true so the entry into the failing branch (from

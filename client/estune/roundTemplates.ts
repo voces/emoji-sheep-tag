@@ -197,16 +197,16 @@ export function generateScenario(template: RoundTemplate): FacetScenario {
   }
 
   // Active phase — delegated per outcome.
-  // We post-process to (a) overwrite roundProgress with elapsed/idealActive,
-  // (b) inject a peak-threat waypoint immediately before each capture so
-  // threat doesn't sag while the sheep is still alive, and (c) back-fill
-  // anticipation events ahead of rescue stingers so the engine pre-swells.
+  // We post-process to (a) inject a peak-threat waypoint immediately before
+  // each capture so threat doesn't sag while the sheep is still alive, and
+  // (b) back-fill anticipation events ahead of rescue stingers so the
+  // engine pre-swells. Round-progress no longer needs per-waypoint
+  // assignment — the engine derives it from scenario.roundDurationSeconds
+  // + scenario.roundStartT (set on the returned FacetScenario).
   const rawActive = generateActivePhase(template, tActiveStart, tActiveEnd);
   const idealActive = getIdealRoundSeconds(template.format, mode);
   const activeWaypoints = injectAnticipations(
-    injectPreCapturePeaks(
-      overwriteRoundProgress(rawActive, tActiveStart, idealActive),
-    ),
+    injectPreCapturePeaks(rawActive),
   );
   waypoints.push(...activeWaypoints);
 
@@ -222,31 +222,9 @@ export function generateScenario(template: RoundTemplate): FacetScenario {
     name: `${template.format} ${template.outcome} (${template.perspective})`,
     mode,
     waypoints,
+    roundStartT: tActiveStart,
+    roundDurationSeconds: idealActive,
   };
-}
-
-/** Replace each waypoint's roundProgress with elapsed/idealActive (capped 0..1). */
-function overwriteRoundProgress(
-  waypoints: FacetWaypoint[],
-  tActiveStart: number,
-  idealActive: number,
-): FacetWaypoint[] {
-  return waypoints.map(w => {
-    const prog = Math.max(0, Math.min(1, (w.t - tActiveStart) / idealActive));
-    if (w.sheep) {
-      return { ...w, sheep: { ...w.sheep, roundProgress: prog } };
-    }
-    if (w.wolf) {
-      return {
-        ...w,
-        wolf: {
-          ...w.wolf,
-          roundProgress: prog,
-        },
-      };
-    }
-    return w;
-  });
 }
 
 /** Back-fill anticipation events upstream of rescue stinger waypoints so the
@@ -353,12 +331,15 @@ function generateActivePhase(
   }
 }
 
-/** Helper: build a sheep or wolf waypoint based on perspective. */
+/** Helper: build a sheep or wolf waypoint based on perspective. Round
+ *  progress is no longer carried on facets — the engine derives it from
+ *  scenario.roundDurationSeconds + scenario.roundStartT (set by the caller
+ *  on the returned FacetScenario). */
 function wp(
   t: number, label: string | undefined, perspective: Perspective,
   sheep: Partial<{
     alive: boolean; threat: number; agency: number; isolation: number;
-    lastAlive: boolean; roundProgress: number;
+    lastAlive: boolean;
   }>,
   stinger?: string,
 ): FacetWaypoint {
@@ -370,14 +351,12 @@ function wp(
   if (perspective === "wolf") {
     const sheepThreat = sheep.threat ?? 0;
     const sheepAgency = sheep.agency ?? 0;
-    const roundProgress = sheep.roundProgress ?? 0;
     return {
       t, label, state: "active", perspective: "wolf",
       wolf: {
         proximity: sheepThreat,
         agency: -sheepAgency,
         isolation: 0,
-        roundProgress,
       },
       stinger,
     };
@@ -390,7 +369,6 @@ function wp(
       agency: sheep.agency ?? 0,
       isolation: sheep.isolation ?? 0,
       lastAlive: sheep.lastAlive ?? false,
-      roundProgress: sheep.roundProgress ?? 0,
     },
     stinger,
   };
@@ -422,34 +400,34 @@ function instantLoss(t: RoundTemplate, t0: number, t1: number): FacetWaypoint[] 
   if (isSolo) {
     return [
       wp(t0, "wolves spawn", t.perspective,
-        { threat: 0.2, roundProgress: 0.05, isolation: isolationFor(t.format, 0), lastAlive: true }),
+        { threat: 0.2, isolation: isolationFor(t.format, 0), lastAlive: true }),
       wp(t0 + span * 0.4, "panic", t.perspective,
-        { threat: 0.7, agency: -0.4, roundProgress: 0.3,
+        { threat: 0.7, agency: -0.4,
           isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.75, "captured", t.perspective,
-        { alive: false, threat: 0, agency: -0.9, roundProgress: 0.8, isolation: 1 },
+        { alive: false, threat: 0, agency: -0.9, isolation: 1 },
         "capture"),
       wp(t1, "round end", t.perspective,
-        { alive: false, agency: -1, roundProgress: 1 },
+        { alive: false, agency: -1 },
         "sheep-loss-fade"),
     ];
   }
   return [
     wp(t0, "wolves spawn", t.perspective,
-      { threat: 0.2, roundProgress: 0.05, isolation: isolationFor(t.format, 0) }),
+      { threat: 0.2, isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.3, "panic", t.perspective,
-      { threat: 0.55, agency: -0.2, roundProgress: 0.2,
+      { threat: 0.55, agency: -0.2,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.55, "ally captured", t.perspective,
-      { threat: 0.8, agency: -0.5, roundProgress: 0.4,
+      { threat: 0.8, agency: -0.5,
         isolation: isolationFor(t.format, 1),
         lastAlive: lastAliveFor(t.format, 1) },
       "capture"),
     wp(t0 + span * 0.85, "captured", t.perspective,
-      { alive: false, threat: 0, agency: -0.9, roundProgress: 0.85, isolation: 1 },
+      { alive: false, threat: 0, agency: -0.9, isolation: 1 },
       "capture"),
     wp(t1, "round end", t.perspective,
-      { alive: false, agency: -1, roundProgress: 1 },
+      { alive: false, agency: -1 },
       "sheep-loss-fade"),
   ];
 }
@@ -460,40 +438,40 @@ function quickLoss(t: RoundTemplate, t0: number, t1: number): FacetWaypoint[] {
   if (isSolo) {
     return [
       wp(t0, "wolves spawn", t.perspective,
-        { threat: 0.15, roundProgress: 0.05, isolation: isolationFor(t.format, 0), lastAlive: true }),
+        { threat: 0.15, isolation: isolationFor(t.format, 0), lastAlive: true }),
       wp(t0 + span * 0.3, "tug of war", t.perspective,
-        { threat: 0.5, agency: -0.2, roundProgress: 0.25,
+        { threat: 0.5, agency: -0.2,
           isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.65, "last stand", t.perspective,
-        { threat: 0.85, agency: -0.6, roundProgress: 0.6,
+        { threat: 0.85, agency: -0.6,
           isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.93, "captured", t.perspective,
-        { alive: false, threat: 0, agency: -0.8, roundProgress: 0.9, isolation: 1 },
+        { alive: false, threat: 0, agency: -0.8, isolation: 1 },
         "capture"),
       wp(t1, "round end", t.perspective,
-        { alive: false, agency: -1, roundProgress: 1 },
+        { alive: false, agency: -1 },
         "sheep-loss-fade"),
     ];
   }
   return [
     wp(t0, "wolves spawn", t.perspective,
-      { threat: 0.15, roundProgress: 0.05, isolation: isolationFor(t.format, 0) }),
+      { threat: 0.15, isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.25, "tug of war", t.perspective,
-      { threat: 0.45, agency: -0.1, roundProgress: 0.2,
+      { threat: 0.45, agency: -0.1,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.5, "ally captured", t.perspective,
-      { threat: 0.7, agency: -0.4, roundProgress: 0.4,
+      { threat: 0.7, agency: -0.4,
         isolation: isolationFor(t.format, 1),
         lastAlive: lastAliveFor(t.format, 1) },
       "capture"),
     wp(t0 + span * 0.7, "last stand", t.perspective,
-      { threat: 0.85, agency: -0.6, roundProgress: 0.6,
+      { threat: 0.85, agency: -0.6,
         isolation: 0.95, lastAlive: true }),
     wp(t0 + span * 0.93, "captured", t.perspective,
-      { alive: false, threat: 0, agency: -0.8, roundProgress: 0.9, isolation: 1 },
+      { alive: false, threat: 0, agency: -0.8, isolation: 1 },
       "capture"),
     wp(t1, "round end", t.perspective,
-      { alive: false, agency: -1, roundProgress: 1 },
+      { alive: false, agency: -1 },
       "sheep-loss-fade"),
   ];
 }
@@ -504,52 +482,52 @@ function standardLoss(t: RoundTemplate, t0: number, t1: number): FacetWaypoint[]
   if (isSolo) {
     return [
       wp(t0, "wolves spawn", t.perspective,
-        { threat: 0.15, roundProgress: 0.05, isolation: isolationFor(t.format, 0), lastAlive: true }),
+        { threat: 0.15, isolation: isolationFor(t.format, 0), lastAlive: true }),
       wp(t0 + span * 0.25, "settling in", t.perspective,
-        { threat: 0.35, agency: 0.1, roundProgress: 0.2,
+        { threat: 0.35, agency: 0.1,
           isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.5, "intensifying", t.perspective,
-        { threat: 0.55, agency: -0.2, roundProgress: 0.45,
+        { threat: 0.55, agency: -0.2,
           isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.75, "wearing down", t.perspective,
-        { threat: 0.8, agency: -0.5, roundProgress: 0.7,
+        { threat: 0.8, agency: -0.5,
           isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.92, "last stand", t.perspective,
-        { threat: 0.9, agency: -0.7, roundProgress: 0.85,
+        { threat: 0.9, agency: -0.7,
           isolation: 0.95, lastAlive: true }),
       wp(t1 - 4, "captured", t.perspective,
-        { alive: false, threat: 0, agency: -0.9, roundProgress: 0.95, isolation: 1 },
+        { alive: false, threat: 0, agency: -0.9, isolation: 1 },
         "capture"),
       wp(t1, "round end", t.perspective,
-        { alive: false, agency: -1, roundProgress: 1 },
+        { alive: false, agency: -1 },
         "sheep-loss-fade"),
     ];
   }
   return [
     wp(t0, "wolves spawn", t.perspective,
-      { threat: 0.15, roundProgress: 0.05, isolation: isolationFor(t.format, 0) }),
+      { threat: 0.15, isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.2, "settling in", t.perspective,
-      { threat: 0.35, agency: 0.1, roundProgress: 0.15,
+      { threat: 0.35, agency: 0.1,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.4, "intensifying", t.perspective,
-      { threat: 0.5, agency: -0.1, roundProgress: 0.3,
+      { threat: 0.5, agency: -0.1,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.55, "fragmenting", t.perspective,
-      { threat: 0.65, agency: -0.3, roundProgress: 0.45,
+      { threat: 0.65, agency: -0.3,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.7, "ally captured", t.perspective,
-      { threat: 0.7, agency: -0.5, roundProgress: 0.6,
+      { threat: 0.7, agency: -0.5,
         isolation: isolationFor(t.format, 1),
         lastAlive: lastAliveFor(t.format, 1) },
       "capture"),
     wp(t0 + span * 0.85, "last stand", t.perspective,
-      { threat: 0.9, agency: -0.7, roundProgress: 0.8,
+      { threat: 0.9, agency: -0.7,
         isolation: 0.95, lastAlive: true }),
     wp(t1 - 4, "captured", t.perspective,
-      { alive: false, threat: 0, agency: -0.9, roundProgress: 0.95, isolation: 1 },
+      { alive: false, threat: 0, agency: -0.9, isolation: 1 },
       "capture"),
     wp(t1, "round end", t.perspective,
-      { alive: false, agency: -1, roundProgress: 1 },
+      { alive: false, agency: -1 },
       "sheep-loss-fade"),
   ];
 }
@@ -561,29 +539,29 @@ function rescueLoss(t: RoundTemplate, t0: number, t1: number): FacetWaypoint[] {
   if (isSolo) return standardLoss(t, t0, t1);
   return [
     wp(t0, "wolves spawn", t.perspective,
-      { threat: 0.15, roundProgress: 0.05, isolation: isolationFor(t.format, 0) }),
+      { threat: 0.15, isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.2, "mid-game", t.perspective,
-      { threat: 0.4, agency: 0, roundProgress: 0.15,
+      { threat: 0.4, agency: 0,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.35, "captured", t.perspective,
-      { alive: false, threat: 0, agency: -0.4, isolation: 1, roundProgress: 0.3 },
+      { alive: false, threat: 0, agency: -0.4, isolation: 1 },
       "capture"),
     wp(t0 + span * 0.5, "spirit watching", t.perspective,
-      { alive: false, threat: 0, agency: -0.2, isolation: 1, roundProgress: 0.4 }),
+      { alive: false, threat: 0, agency: -0.2, isolation: 1 }),
     wp(t0 + span * 0.6, "rescued!", t.perspective,
-      { alive: true, threat: 0.4, agency: 0.2, isolation: 0.3, roundProgress: 0.5 },
+      { alive: true, threat: 0.4, agency: 0.2, isolation: 0.3 },
       "rescue"),
     wp(t0 + span * 0.75, "back in fight", t.perspective,
-      { threat: 0.6, agency: 0, isolation: 0.2, roundProgress: 0.65 }),
+      { threat: 0.6, agency: 0, isolation: 0.2 }),
     wp(t0 + span * 0.88, "ally captured", t.perspective,
-      { threat: 0.85, agency: -0.6, roundProgress: 0.85,
+      { threat: 0.85, agency: -0.6,
         isolation: 0.9, lastAlive: lastAliveFor(t.format, 1) },
       "capture"),
     wp(t1 - 3, "captured again", t.perspective,
-      { alive: false, threat: 0, agency: -0.9, roundProgress: 0.95, isolation: 1 },
+      { alive: false, threat: 0, agency: -0.9, isolation: 1 },
       "capture"),
     wp(t1, "round end", t.perspective,
-      { alive: false, agency: -1, roundProgress: 1 },
+      { alive: false, agency: -1 },
       "sheep-loss-fade"),
   ];
 }
@@ -594,53 +572,53 @@ function lateLoss(t: RoundTemplate, t0: number, t1: number): FacetWaypoint[] {
   if (isSolo) {
     return [
       wp(t0, "wolves spawn", t.perspective,
-        { threat: 0.15, roundProgress: 0.03, isolation: isolationFor(t.format, 0), lastAlive: true }),
+        { threat: 0.15, isolation: isolationFor(t.format, 0), lastAlive: true }),
       wp(t0 + span * 0.2, "long mid-game", t.perspective,
-        { threat: 0.4, agency: 0.05, roundProgress: 0.18, isolation: 0.95, lastAlive: true }),
+        { threat: 0.4, agency: 0.05, isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.45, "near miss", t.perspective,
-        { threat: 0.6, agency: 0, roundProgress: 0.4, isolation: 0.95, lastAlive: true }),
+        { threat: 0.6, agency: 0, isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.65, "grinding", t.perspective,
-        { threat: 0.65, agency: -0.2, roundProgress: 0.6, isolation: 0.95, lastAlive: true }),
+        { threat: 0.65, agency: -0.2, isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.85, "wearing down", t.perspective,
-        { threat: 0.85, agency: -0.6, roundProgress: 0.85, isolation: 0.95, lastAlive: true }),
+        { threat: 0.85, agency: -0.6, isolation: 0.95, lastAlive: true }),
       wp(t1 - 4, "captured", t.perspective,
-        { alive: false, threat: 0, agency: -0.95, roundProgress: 0.97, isolation: 1 },
+        { alive: false, threat: 0, agency: -0.95, isolation: 1 },
         "capture"),
       wp(t1, "round end", t.perspective,
-        { alive: false, agency: -1, roundProgress: 1 },
+        { alive: false, agency: -1 },
         "sheep-loss-fade"),
     ];
   }
   return [
     wp(t0, "wolves spawn", t.perspective,
-      { threat: 0.15, roundProgress: 0.03, isolation: isolationFor(t.format, 0) }),
+      { threat: 0.15, isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.15, "long mid-game", t.perspective,
-      { threat: 0.35, agency: 0.05, roundProgress: 0.1,
+      { threat: 0.35, agency: 0.05,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.3, "ally captured", t.perspective,
-      { threat: 0.55, agency: -0.3, roundProgress: 0.25,
+      { threat: 0.55, agency: -0.3,
         isolation: isolationFor(t.format, 1),
         lastAlive: lastAliveFor(t.format, 1) },
       "capture"),
     wp(t0 + span * 0.4, "rescued", t.perspective,
-      { threat: 0.4, agency: 0, isolation: isolationFor(t.format, 0), roundProgress: 0.35 },
+      { threat: 0.4, agency: 0, isolation: isolationFor(t.format, 0) },
       "rescue"),
     wp(t0 + span * 0.55, "grinding", t.perspective,
-      { threat: 0.55, agency: -0.2, roundProgress: 0.5,
+      { threat: 0.55, agency: -0.2,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.7, "ally captured again", t.perspective,
-      { threat: 0.7, agency: -0.5, roundProgress: 0.65,
+      { threat: 0.7, agency: -0.5,
         isolation: isolationFor(t.format, 1),
         lastAlive: lastAliveFor(t.format, 1) },
       "capture"),
     wp(t0 + span * 0.85, "wearing down", t.perspective,
-      { threat: 0.85, agency: -0.7, roundProgress: 0.85,
+      { threat: 0.85, agency: -0.7,
         isolation: 0.9, lastAlive: lastAliveFor(t.format, 1) }),
     wp(t1 - 4, "captured", t.perspective,
-      { alive: false, threat: 0, agency: -0.95, roundProgress: 0.97, isolation: 1 },
+      { alive: false, threat: 0, agency: -0.95, isolation: 1 },
       "capture"),
     wp(t1, "round end", t.perspective,
-      { alive: false, agency: -1, roundProgress: 1 },
+      { alive: false, agency: -1 },
       "sheep-loss-fade"),
   ];
 }
@@ -651,54 +629,54 @@ function win(t: RoundTemplate, t0: number, t1: number): FacetWaypoint[] {
   if (isSolo) {
     return [
       wp(t0, "wolves spawn", t.perspective,
-        { threat: 0.15, roundProgress: 0.03, isolation: isolationFor(t.format, 0), lastAlive: true }),
+        { threat: 0.15, isolation: isolationFor(t.format, 0), lastAlive: true }),
       wp(t0 + span * 0.15, "evading", t.perspective,
-        { threat: 0.4, agency: 0.1, roundProgress: 0.15, isolation: 0.95, lastAlive: true }),
+        { threat: 0.4, agency: 0.1, isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.4, "near miss", t.perspective,
-        { threat: 0.65, agency: 0, roundProgress: 0.4, isolation: 0.95, lastAlive: true }),
+        { threat: 0.65, agency: 0, isolation: 0.95, lastAlive: true }),
       wp(t0 + span * 0.6, "outlasting", t.perspective,
-        { threat: 0.5, agency: 0.3, roundProgress: 0.6, isolation: 0.9, lastAlive: true }),
+        { threat: 0.5, agency: 0.3, isolation: 0.9, lastAlive: true }),
       wp(t0 + span * 0.8, "winning", t.perspective,
-        { threat: 0.35, agency: 0.6, roundProgress: 0.8, isolation: 0.8, lastAlive: true }),
+        { threat: 0.35, agency: 0.6, isolation: 0.8, lastAlive: true }),
       wp(t0 + span * 0.93, "victory crescendo", t.perspective,
-        { threat: 0.2, agency: 0.9, roundProgress: 0.93, isolation: 0.7, lastAlive: true }),
+        { threat: 0.2, agency: 0.9, isolation: 0.7, lastAlive: true }),
       wp(t1 - 2, "SHEEP WIN", t.perspective,
-        { threat: 0, agency: 1, roundProgress: 1, lastAlive: true },
+        { threat: 0, agency: 1, lastAlive: true },
         "rescue"),
       wp(t1, "round end", t.perspective,
-        { agency: 1, roundProgress: 1 }),
+        { agency: 1 }),
     ];
   }
   return [
     wp(t0, "wolves spawn", t.perspective,
-      { threat: 0.15, roundProgress: 0.03, isolation: isolationFor(t.format, 0) }),
+      { threat: 0.15, isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.1, "confident mid-game", t.perspective,
-      { threat: 0.3, agency: 0.2, roundProgress: 0.08,
+      { threat: 0.3, agency: 0.2,
         isolation: isolationFor(t.format, 0) }),
     wp(t0 + span * 0.25, "ally captured", t.perspective,
-      { threat: 0.55, agency: -0.2, roundProgress: 0.22,
+      { threat: 0.55, agency: -0.2,
         isolation: isolationFor(t.format, 1),
         lastAlive: lastAliveFor(t.format, 1) },
       "capture"),
     wp(t0 + span * 0.32, "rescued!", t.perspective,
-      { threat: 0.4, agency: 0.1, isolation: isolationFor(t.format, 0), roundProgress: 0.3 },
+      { threat: 0.4, agency: 0.1, isolation: isolationFor(t.format, 0) },
       "rescue"),
     wp(t0 + span * 0.42, "you captured", t.perspective,
-      { alive: false, threat: 0, agency: -0.3, isolation: 1, roundProgress: 0.4 },
+      { alive: false, threat: 0, agency: -0.3, isolation: 1 },
       "capture"),
     wp(t0 + span * 0.55, "rescued again!", t.perspective,
-      { alive: true, threat: 0.4, agency: 0.2, isolation: 0.2, roundProgress: 0.52 },
+      { alive: true, threat: 0.4, agency: 0.2, isolation: 0.2 },
       "rescue"),
     wp(t0 + span * 0.7, "winning", t.perspective,
-      { threat: 0.4, agency: 0.5, isolation: 0.1, roundProgress: 0.68 }),
+      { threat: 0.4, agency: 0.5, isolation: 0.1 }),
     wp(t0 + span * 0.82, "playful", t.perspective,
-      { threat: 0.3, agency: 0.7, isolation: 0.1, roundProgress: 0.8 }),
+      { threat: 0.3, agency: 0.7, isolation: 0.1 }),
     wp(t0 + span * 0.93, "victory crescendo", t.perspective,
-      { threat: 0.2, agency: 0.9, isolation: 0.05, roundProgress: 0.93 }),
+      { threat: 0.2, agency: 0.9, isolation: 0.05 }),
     wp(t1 - 2, "SHEEP WIN", t.perspective,
-      { threat: 0, agency: 1, roundProgress: 1 },
+      { threat: 0, agency: 1 },
       "rescue"),
     wp(t1, "round end", t.perspective,
-      { agency: 1, roundProgress: 1 }),
+      { agency: 1 }),
   ];
 }

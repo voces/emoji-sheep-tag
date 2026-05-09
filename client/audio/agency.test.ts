@@ -512,6 +512,128 @@ describe("proximity history", () => {
   });
 });
 
+describe("wolf frustration (engaged but dry)", () => {
+  const sampleAt = (
+    events: AgencyEvents,
+    unitId: string,
+    values: number[],
+    now: number,
+  ) =>
+    values.forEach((v, i) =>
+      recordProximity(events, unitId, v, now - i * 1000)
+    );
+
+  it("kicks in after the grace period when engaged with no kills", () => {
+    const events = createAgencyEvents();
+    sampleAt(events, WOLF_ID, Array(30).fill(0.85), NOW);
+    const fresh = computeWolfAgencyValue(
+      events,
+      wolfParams({ elapsedSeconds: 5 }),
+    );
+    const dry = computeWolfAgencyValue(
+      events,
+      wolfParams({ elapsedSeconds: 80 }),
+    );
+    expect(dry).toBeLessThan(fresh);
+    expect(fresh - dry).toBeGreaterThan(0.15);
+  });
+
+  it("is gated to zero when the wolf is not engaged (low peak)", () => {
+    const events = createAgencyEvents();
+    sampleAt(events, WOLF_ID, Array(30).fill(0.1), NOW);
+    const idleEarly = computeWolfAgencyValue(
+      events,
+      wolfParams({ elapsedSeconds: 5 }),
+    );
+    const idleLate = computeWolfAgencyValue(
+      events,
+      wolfParams({ elapsedSeconds: 80 }),
+    );
+    // Low peak gates frustration to zero — and roundProgress is held at 0
+    // by the helper, so no other term moves either.
+    expect(idleEarly).toBeCloseTo(idleLate, 6);
+  });
+
+  it("resets when any wolf gets a kill (team-level relief)", () => {
+    const dryEvents = createAgencyEvents();
+    sampleAt(dryEvents, WOLF_ID, Array(30).fill(0.85), NOW);
+    const dry = computeWolfAgencyValue(
+      dryEvents,
+      wolfParams({ unitId: "wolf-B", elapsedSeconds: 80 }),
+    );
+
+    const reliefEvents = createAgencyEvents();
+    sampleAt(reliefEvents, WOLF_ID, Array(30).fill(0.85), NOW);
+    // Different wolf (wolf-A) just got a kill — wolf-B's frustration resets.
+    recordKill(reliefEvents, SHEEP_ID, NOW - 5_000, "wolf-A");
+    const relieved = computeWolfAgencyValue(
+      reliefEvents,
+      wolfParams({ unitId: "wolf-B", elapsedSeconds: 80 }),
+    );
+    expect(relieved).toBeGreaterThan(dry);
+  });
+});
+
+describe("sheep dread (threatened but no rescue)", () => {
+  const sampleAt = (
+    events: AgencyEvents,
+    unitId: string,
+    values: number[],
+    now: number,
+  ) =>
+    values.forEach((v, i) =>
+      recordProximity(events, unitId, v, now - i * 1000)
+    );
+
+  it("kicks in after the grace period when threatened with no rescue", () => {
+    const events = createAgencyEvents();
+    sampleAt(events, SHEEP_ID, Array(30).fill(0.85), NOW);
+    const fresh = computeSheepAgencyValue(
+      events,
+      sheepParams({ elapsedSeconds: 5 }),
+    );
+    const dread = computeSheepAgencyValue(
+      events,
+      sheepParams({ elapsedSeconds: 100 }),
+    );
+    expect(dread).toBeLessThan(fresh);
+    expect(fresh - dread).toBeGreaterThan(0.10);
+  });
+
+  it("is gated to zero when the sheep is not threatened (low peak)", () => {
+    const events = createAgencyEvents();
+    sampleAt(events, SHEEP_ID, Array(30).fill(0.1), NOW);
+    const safeEarly = computeSheepAgencyValue(
+      events,
+      sheepParams({ elapsedSeconds: 5 }),
+    );
+    const safeLate = computeSheepAgencyValue(
+      events,
+      sheepParams({ elapsedSeconds: 100 }),
+    );
+    expect(safeEarly).toBeCloseTo(safeLate, 6);
+  });
+
+  it("resets when any sheep gets rescued (team-level relief)", () => {
+    const dreadEvents = createAgencyEvents();
+    sampleAt(dreadEvents, SHEEP_ID, Array(30).fill(0.85), NOW);
+    const dreaded = computeSheepAgencyValue(
+      dreadEvents,
+      sheepParams({ elapsedSeconds: 100 }),
+    );
+
+    const reliefEvents = createAgencyEvents();
+    sampleAt(reliefEvents, SHEEP_ID, Array(30).fill(0.85), NOW);
+    // Ally got rescued — local sheep's dread resets.
+    recordRescue(reliefEvents, ALLY_ID, NOW - 5_000);
+    const relieved = computeSheepAgencyValue(
+      reliefEvents,
+      sheepParams({ elapsedSeconds: 100 }),
+    );
+    expect(relieved).toBeGreaterThan(dreaded);
+  });
+});
+
 describe("event pruning", () => {
   it("drops kill / rescue / proximity entries past their windows", () => {
     const events = createAgencyEvents();

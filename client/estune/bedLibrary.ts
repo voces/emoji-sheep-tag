@@ -57,6 +57,7 @@ export function buildBedLibrary(sources: BedSource[], hook: HookSpec): BedLibrar
 const WOLF_BEDS = new Set([
   "patrolling", "stalking", "attack", "desperate", "desperate-frustrated",
   "build-wolf-bulldog", "build-wolf-switch", "build-wolf-survival",
+  "endgame-wolf-survival", "endgame-wolf-bulldog",
 ]);
 
 export function buildBedLibraryFromText(

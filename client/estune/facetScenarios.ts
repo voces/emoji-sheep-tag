@@ -33,14 +33,23 @@ export interface FacetScenario {
   /** Optional game mode; runner attaches it to every emitted FullGameState. */
   mode?: GameMode;
   waypoints: FacetWaypoint[];
+  /** Round length passed to the engine for derived progress + endgame
+   *  signals. Null/undefined defaults to the last waypoint's t (so legacy
+   *  scenarios behave as if the scenario clock IS the round clock). */
+  roundDurationSeconds?: number | null;
+  /** Scenario timestamp at which the round timer starts. Defaults to 0
+   *  (the scenario clock IS the round clock). roundTemplates sets this to
+   *  the active-phase start so build/lobby seconds aren't billed against
+   *  the round duration. */
+  roundStartT?: number;
 }
 
 const DEFAULT_SHEEP: SheepFacets = {
   alive: true, threat: 0, agency: 0, isolation: 0,
-  lastAlive: false, roundProgress: 0,
+  lastAlive: false,
 };
 const DEFAULT_WOLF: WolfFacets = {
-  proximity: 0, agency: 0, isolation: 0, roundProgress: 0,
+  proximity: 0, agency: 0, isolation: 0,
 };
 
 function lerp(a: number, b: number, t: number): number {
@@ -54,7 +63,6 @@ function lerpSheep(a: SheepFacets, b: SheepFacets, t: number): SheepFacets {
     agency: lerp(a.agency, b.agency, t),
     isolation: lerp(a.isolation, b.isolation, t),
     lastAlive: t < 1 ? a.lastAlive : b.lastAlive,
-    roundProgress: lerp(a.roundProgress, b.roundProgress, t),
   };
 }
 
@@ -63,7 +71,6 @@ function lerpWolf(a: WolfFacets, b: WolfFacets, t: number): WolfFacets {
     proximity: lerp(a.proximity, b.proximity, t),
     agency: lerp(a.agency, b.agency, t),
     isolation: lerp(a.isolation, b.isolation, t),
-    roundProgress: lerp(a.roundProgress, b.roundProgress, t),
   };
 }
 
@@ -108,6 +115,20 @@ export function evalScenario(scenario: FacetScenario, secondsFromStart: number):
   // It's not interpolated — the game-side foreknowledge is binary per-window.
   const anticipation = prev.anticipation;
 
+  // Round timing derived from scenario clock: last waypoint's t is the
+  // implicit round duration unless the scenario set one explicitly. The
+  // round timer starts at scenario.roundStartT (defaults to 0). Engine
+  // skips endgame routing when state==="lobby" via its own state check, so
+  // emitting elapsed/duration during lobby is a no-op for routing.
+  const lastT = scenario.waypoints[scenario.waypoints.length - 1].t;
+  const duration = scenario.roundDurationSeconds === undefined
+    ? lastT
+    : scenario.roundDurationSeconds;
+  const startT = scenario.roundStartT ?? 0;
+  const elapsed = state === "lobby"
+    ? undefined
+    : Math.max(0, secondsFromStart - startT);
+
   return {
     state, perspective,
     mode: scenario.mode,
@@ -115,6 +136,8 @@ export function evalScenario(scenario: FacetScenario, secondsFromStart: number):
     wolf: perspective === "wolf" ? lerpWolf(prevWolf, nextWolf, tNorm) : undefined,
     roundHook: null,
     anticipation,
+    roundElapsedSeconds: elapsed,
+    roundDurationSeconds: duration,
   };
 }
 
@@ -126,19 +149,19 @@ export const SHEEP_QUICK_LOSS: FacetScenario = {
     { t: 0,   label: "lobby",         state: "lobby", perspective: "sheep" },
     { t: 4,   label: "build phase",   state: "build", perspective: "sheep" },
     { t: 25,  label: "wolves spawn",  state: "active", perspective: "sheep",
-      sheep: { threat: 0.15, roundProgress: 0.05 } },
+      sheep: { threat: 0.15 } },
     { t: 40,  label: "tug of war",    state: "active", perspective: "sheep",
-      sheep: { threat: 0.45, agency: -0.1, roundProgress: 0.25 } },
+      sheep: { threat: 0.45, agency: -0.1 } },
     { t: 55,  label: "ally captured", state: "active", perspective: "sheep",
-      sheep: { threat: 0.7, agency: -0.4, isolation: 0.6, roundProgress: 0.45 },
+      sheep: { threat: 0.7, agency: -0.4, isolation: 0.6 },
       stinger: "capture" },
     { t: 60,  label: "last alive",    state: "active", perspective: "sheep",
-      sheep: { threat: 0.85, agency: -0.6, isolation: 0.9, lastAlive: true, roundProgress: 0.55 } },
+      sheep: { threat: 0.85, agency: -0.6, isolation: 0.9, lastAlive: true } },
     { t: 75,  label: "captured",      state: "active", perspective: "sheep",
-      sheep: { alive: false, threat: 0, agency: -0.8, isolation: 1, roundProgress: 0.7 },
+      sheep: { alive: false, threat: 0, agency: -0.8, isolation: 1 },
       stinger: "capture" },
     { t: 90,  label: "round end",     state: "active", perspective: "sheep",
-      sheep: { alive: false, threat: 0, agency: -1, isolation: 1, roundProgress: 1 },
+      sheep: { alive: false, threat: 0, agency: -1, isolation: 1 },
       stinger: "sheep-loss-fade" },
     { t: 95,  label: "lobby",         state: "lobby", perspective: "sheep" },
   ],
@@ -150,17 +173,17 @@ export const SHEEP_RESCUED: FacetScenario = {
     { t: 0,   state: "lobby", perspective: "sheep" },
     { t: 4,   state: "build", perspective: "sheep" },
     { t: 25,  state: "active", perspective: "sheep",
-      sheep: { threat: 0.15, roundProgress: 0.1 } },
+      sheep: { threat: 0.15 } },
     { t: 50,  state: "active", perspective: "sheep",
-      sheep: { threat: 0.5, agency: 0, roundProgress: 0.3 } },
+      sheep: { threat: 0.5, agency: 0 } },
     { t: 65,  label: "captured",  state: "active", perspective: "sheep",
-      sheep: { alive: false, threat: 0, isolation: 1, roundProgress: 0.45 },
+      sheep: { alive: false, threat: 0, isolation: 1 },
       stinger: "capture" },
     { t: 85,  label: "rescued",   state: "active", perspective: "sheep",
-      sheep: { alive: true, threat: 0.4, agency: 0.2, isolation: 0.2, roundProgress: 0.6 },
+      sheep: { alive: true, threat: 0.4, agency: 0.2, isolation: 0.2 },
       stinger: "rescue" },
     { t: 110, state: "active", perspective: "sheep",
-      sheep: { threat: 0.3, agency: 0.4, roundProgress: 0.85 } },
+      sheep: { threat: 0.3, agency: 0.4 } },
     { t: 120, state: "lobby", perspective: "sheep" },
   ],
 };
@@ -171,13 +194,13 @@ export const WOLF_HUNT: FacetScenario = {
     { t: 0,   state: "lobby", perspective: "wolf" },
     { t: 4,   state: "build", perspective: "wolf" },
     { t: 25,  state: "active", perspective: "wolf",
-      wolf: { proximity: 0.1, agency: 0.2, roundProgress: 0.1 } },
+      wolf: { proximity: 0.1, agency: 0.2 } },
     { t: 50,  state: "active", perspective: "wolf",
-      wolf: { proximity: 0.5, agency: 0.4, roundProgress: 0.4 } },
+      wolf: { proximity: 0.5, agency: 0.4 } },
     { t: 70,  state: "active", perspective: "wolf",
-      wolf: { proximity: 0.9, agency: 0.7, roundProgress: 0.6 } },
+      wolf: { proximity: 0.9, agency: 0.7 } },
     { t: 80,  state: "active", perspective: "wolf",
-      wolf: { proximity: 0.4, agency: 0.5, roundProgress: 0.7 } },
+      wolf: { proximity: 0.4, agency: 0.5 } },
     { t: 95,  state: "lobby", perspective: "wolf" },
   ],
 };

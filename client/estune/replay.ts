@@ -26,8 +26,8 @@
  * stays constant.
  */
 
-import { type V3EngineState } from "./engine.ts";
-import { setGameState, fireGameEvent } from "./api.ts";
+import { type V3EngineState, setFullGameState } from "./engine.ts";
+import { fireGameEvent } from "./api.ts";
 import { setSessionSeed, rendererTick } from "./renderer.ts";
 import { stingerTick } from "./stingers.ts";
 import {
@@ -184,7 +184,12 @@ export async function replayRecording(
     }
 
     if (entry.kind === "input") {
-      setGameState(engine, entry.payload);
+      // Pass the recorded timestamp so smoothing dt matches live cadence.
+      // In offline mode, performance.now() between successive setGameState
+      // calls is microseconds apart, so dt collapses to the 0.001s floor
+      // and smoothed facets never converge to raw — bed selection diverges
+      // from the live recording. Threading entry.ms keeps replay faithful.
+      setFullGameState(engine, entry.payload, entry.ms);
     } else {
       fireGameEvent(engine, entry.payload);
     }

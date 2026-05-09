@@ -27,10 +27,10 @@ import {
 
 const DEFAULT_SHEEP: SheepFacets = {
   alive: true, threat: 0, agency: 0, isolation: 0,
-  lastAlive: false, roundProgress: 0,
+  lastAlive: false,
 };
 const DEFAULT_WOLF: WolfFacets = {
-  proximity: 0, agency: 0, isolation: 0, roundProgress: 0,
+  proximity: 0, agency: 0, isolation: 0,
 };
 
 interface BedBlock {
@@ -50,7 +50,13 @@ function pickBed(state: FullGameState, lib: BedLibrary): Segment | null {
     id = `build-${persp}-${modeKey}`;
   }
   else if (state.perspective === "wolf" && state.wolf) {
-    id = selectWolfBedWithBlend(state.wolf).primary;
+    // Engine derives progress from elapsed/duration; pass that through here
+    // so wolf-failing routing matches the live engine.
+    const e = state.roundElapsedSeconds;
+    const d = state.roundDurationSeconds;
+    const progress = (typeof e === "number" && typeof d === "number" && d > 0)
+      ? Math.max(0, Math.min(1, e / d)) : 0;
+    id = selectWolfBedWithBlend(state.wolf, progress).primary;
   } else if (state.sheep) {
     id = selectSheepBedWithBlend(state.sheep).primary;
   } else {

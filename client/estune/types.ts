@@ -25,16 +25,35 @@ export interface NoteEvent {
 /** Layer roles. Map directly to the V1–V8 voice architecture in
  *  [musical-foundation.md §2]. `sparkle` is the V7 color voice — celesta
  *  on the sheep side (magic/spirit/victory), and the taunting celesta
- *  bleed on the wolf side. */
-export type LayerRole = "melody" | "counter" | "bass" | "arp" | "pad" | "perc" | "drone" | "sparkle";
+ *  bleed on the wolf side. `nocturne` is night-only color (bleed on
+ *  `darkness`), `stab` is per-bar harmonic punctuation (e.g.
+ *  desperate-frustrated's V7 chord on bar 1), `bell` is single-note
+ *  punctuation in stingers (e.g. wolf-loss-fade's distant taunt). */
+export type LayerRole =
+  | "melody" | "counter" | "bass" | "arp" | "pad" | "perc" | "drone"
+  | "sparkle" | "nocturne" | "stab" | "bell" | "hit";
 
 /** Source parameter for a bleed-modulated layer's gain.
  *  - "tension":          gain ≈ mood.tension. Used for sheep-side palette
  *                        bleed (timpani enters as wolf proximity rises).
  *  - "inverse-tension":  gain ≈ 1 - mood.tension. Used for wolf-side
  *                        palette bleed (sheep-coded color creeps in when
- *                        the wolf is losing). */
-export type BleedSource = "tension" | "inverse-tension";
+ *                        the wolf is losing).
+ *  - "daylight":         gain ≈ mood.daylight. Day-only color (e.g. bright
+ *                        bell tones that fade out at night).
+ *  - "darkness":         gain ≈ 1 - mood.daylight. Night-only color (e.g.
+ *                        owl-call counter that creeps in after dusk).
+ *  - "round-final":      gain ≈ mood.roundFinal. End-of-round ramp; mode-
+ *                        aware window (longer for survival, tight for
+ *                        bulldog). Drives endgame-bed bulk content.
+ *  - "round-countdown":  gain ≈ mood.roundCountdown. Always the last 10
+ *                        seconds, mode-agnostic. Drives literal countdown
+ *                        layers (ticks, accelerating perc) inside endgame
+ *                        beds. */
+export type BleedSource =
+  | "tension" | "inverse-tension"
+  | "daylight" | "darkness"
+  | "round-final" | "round-countdown";
 
 /** Optional palette-bleed modulator on a layer. The layer's authored part
  *  is the *full-intensity* version; the engine multiplies its scheduled
@@ -61,8 +80,19 @@ export interface Layer {
   /** 0 = foundation (always on), 1 = core, 2 = color (shed first). */
   priority: number;
   notes: NoteEvent[];
+  /** Total authored extent in beats (= authored bars × beatsPerBar). The
+   *  renderer's tileLayerToSegment uses this to distinguish a sparse
+   *  multi-bar layer (one note + N bars of rests) from a 1-bar pattern
+   *  intended for tiling. Without it, the renderer infers period from
+   *  lastNote.end and silently tiles a single ff stab onto every bar.
+   *  Optional for backward-compat; absent ⇒ legacy lastNote.end heuristic. */
+  authoredBeats?: number;
   /** Optional palette-bleed modulator. See BleedSpec. */
   bleed?: BleedSpec;
+  /** When true, this layer opts out of the renderer's per-loop half-rotation.
+   *  Use for positional layers (e.g. sparkle ornaments authored at specific
+   *  bar boundaries) that read as scrambled when bars 1-8 swap with 9-16. */
+  norotate?: boolean;
 }
 
 // ── Segment ──
@@ -185,9 +215,12 @@ export type GamePhase =
  * surface honest about what the engine actually reads.
  */
 export interface MoodParams {
-  tension: number;     // 0 = peaceful, 1 = conflict (drives bleed)
-  energy: number;      // velocity scaling + color-layer shedding
-  urgency: number;     // tempo modulation
+  tension: number;        // 0 = peaceful, 1 = conflict (drives bleed)
+  energy: number;         // velocity scaling + color-layer shedding
+  urgency: number;        // tempo modulation
+  daylight: number;       // 0 = night, 1 = day (drives day/night bleed sources)
+  roundFinal: number;     // 0..1, ramps up over the mode-aware end-of-round window
+  roundCountdown: number; // 0..1, ramps up over the final 10s of any round
 }
 
 /**
@@ -246,7 +279,10 @@ export interface ReactiveOverlay {
 /** Top-level game flow. Three discrete states the engine follows; it doesn't choose between them. */
 export type StructuralState = "lobby" | "build" | "active";
 
-/** Situational facets within Active play, sheep perspective. All run in parallel. */
+/** Situational facets within Active play, sheep perspective. All run in parallel.
+ *  Round-progress is no longer carried here — it's derived in the engine from
+ *  FullGameState.roundElapsedSeconds / roundDurationSeconds and threaded into
+ *  bed-selection at the call site. */
 export interface SheepFacets {
   alive: boolean;
   /** 0-1, smoothed. Combined wolf-proximity / facing / recent damage / ally support. */
@@ -257,14 +293,14 @@ export interface SheepFacets {
   isolation: number;
   /** Only living sheep on field. */
   lastAlive: boolean;
-  /** 0-1, normalized time elapsed in round. */
-  roundProgress: number;
 }
 
 /** Situational facets within Active play, wolf perspective.
  *
- *  `failing` is derived internally from agency + roundProgress (see
- *  `isWolfFailing` in beds.ts) — the game doesn't compute it.
+ *  `failing` is derived internally from agency + round-progress (see
+ *  `isWolfFailing` in beds.ts) — the game doesn't compute it. Round-progress
+ *  comes from the engine-derived value (FullGameState.roundElapsedSeconds /
+ *  roundDurationSeconds), not from the facets themselves.
  *
  *  `isolation` is consumed by modulation for texture density (lone-wolf
  *  thinning). Optional: pass 0 if the game doesn't track pack scatter. */
@@ -276,12 +312,17 @@ export interface WolfFacets {
   agency: number;
   /** 0-1, smoothed. Pack scatter / lone-wolf feel. Pass 0 if not tracked. */
   isolation: number;
-  /** 0-1, normalized time elapsed in round. */
-  roundProgress: number;
 }
 
 /** Active-play beds, selected by facets. */
-export type SheepBed = "building" | "cautious" | "terror" | "hero" | "spirit";
+export type SheepBed =
+  | "building" | "cautious" | "terror" | "hero" | "spirit"
+  // Endgame-sheep variants (mode-keyed). Engine routes here when the engine-
+  // derived roundFinal > 0, overriding the threat-driven primary.
+  //   endgame-sheep-survival — sheep about to win on timer; hopeful lift.
+  //   endgame-sheep-bulldog  — sheep about to lose on timer (starvation);
+  //                            hail-mary burst.
+  | "endgame-sheep-survival" | "endgame-sheep-bulldog";
 export type WolfBed =
   | "patrolling" | "stalking" | "attack"
   // Wolf-failing splits by proximity:
@@ -290,7 +331,14 @@ export type WolfBed =
   //   desperate-frustrated — predator-failing but actively chasing
   //                          (proximity high), repetitive stabs, drives
   //                          the V7 perc, no resignation
-  | "desperate" | "desperate-frustrated";
+  | "desperate" | "desperate-frustrated"
+  // Endgame-wolf variants (mode-keyed). Engine routes here when the engine-
+  // derived roundFinal > 0, overriding the threat-driven primary.
+  //   endgame-wolf-survival — wolves about to lose on timer; tightening,
+  //                           frustrated chase.
+  //   endgame-wolf-bulldog  — wolves about to win on timer; lackadaisical
+  //                           victory wait, no urgency.
+  | "endgame-wolf-survival" | "endgame-wolf-bulldog";
 
 /** Structural beds, selected by `state` + `mode`. Lobby is shared between
  *  perspectives; build is mode-keyed and perspective-keyed. Practice mode
@@ -362,6 +410,22 @@ export interface FullGameState {
   /** Game mode. Defaults to "survival" if omitted. Drives bridge intensity and
    *  build-phase length in scenario generation. */
   mode?: GameMode;
+  /** 0 = night, 1 = day. Drives `daylight` / `darkness` bleed sources so
+   *  layers tagged with those gates fade in/out as the world cycles. The
+   *  engine smooths transitions internally (see bleed-source smoothing in
+   *  the renderer); games can pass a raw value each tick or a pre-smoothed
+   *  one. Omit (or omit changes to) to leave the bed agnostic to time of
+   *  day. */
+  daylight?: number;
+  /** Wall-clock seconds elapsed since round-start. Game pauses if needed
+   *  (i.e. excludes paused time). Undefined in lobby. Together with
+   *  roundDurationSeconds drives the engine-derived round progress (urgency
+   *  tempo lift) and the endgame bleed sources. */
+  roundElapsedSeconds?: number;
+  /** Total length of the current round in seconds. Null for sudden-death /
+   *  unknown-length rounds — engine then skips endgame routing. Undefined
+   *  in lobby. */
+  roundDurationSeconds?: number | null;
 }
 
 // (Raw inputs removed — the game now produces SheepFacets / WolfFacets

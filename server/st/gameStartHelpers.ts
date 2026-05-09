@@ -44,12 +44,25 @@ const realtimeInterval = (
   const client = tryGetClient();
   const clientRef = client ? new WeakRef(client) : undefined;
   let active = true;
+  // Deadline-based scheduling: each tick targets `nextDeadline` rather than
+  // "delay from now". Otherwise the per-tick work time (callback + flush)
+  // gets added on top of `delay`, and the tick clock drifts vs wall clock —
+  // a 120s `timeout(...)` ends up taking ~127s of real time at typical
+  // server load. With deadlines, transient overruns get caught up on the
+  // next tick (delay clamped to 0) instead of compounding indefinitely. If
+  // we fall more than 1s behind we reset rather than burst-fire 20+ ticks
+  // in quick succession.
+  let nextDeadline = performance.now();
   const schedule = () => {
     if (!active) return;
     const multiplier = lobby.settings.speedMultiplier;
-    const delay = multiplier > 0
+    const interval = multiplier > 0
       ? (seconds * 1000) / multiplier
       : seconds * 1000;
+    nextDeadline += interval;
+    const now = performance.now();
+    if (nextDeadline < now - 1000) nextDeadline = now + interval;
+    const delay = Math.max(0, nextDeadline - now);
     setTimeout(() => {
       if (!active) return;
       const lobby = lobbyRef.deref();

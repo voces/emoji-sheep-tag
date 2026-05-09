@@ -178,7 +178,7 @@ function parseNoteToken(
  *    `[sparkle] celesta(8) priority=1 bleed bleedSource=inverse-tension`
  *  Defaults: bleedSource=tension, bleedFloor=0. */
 function parseLayerHeader(line: string): {
-  id: string; role: LayerRole; instrument: number; priority: number; bleed?: BleedSpec;
+  id: string; role: LayerRole; instrument: number; priority: number; bleed?: BleedSpec; norotate?: boolean;
 } {
   const roleMatch = line.match(/^\[(\w+)\]/);
   if (!roleMatch) throw new Error(`Invalid layer header: "${line}"`);
@@ -195,8 +195,15 @@ function parseLayerHeader(line: string): {
   if (/(?:^|\s)bleed(?:\s|$)/.test(line)) {
     const sourceMatch = line.match(/bleedSource=([\w-]+)/);
     const rawSource = sourceMatch?.[1] ?? "tension";
-    if (rawSource !== "tension" && rawSource !== "inverse-tension") {
-      throw new Error(`Invalid bleedSource "${rawSource}" — use "tension" or "inverse-tension"`);
+    const validSources: readonly string[] = [
+      "tension", "inverse-tension",
+      "daylight", "darkness",
+      "round-final", "round-countdown",
+    ];
+    if (!validSources.includes(rawSource)) {
+      throw new Error(
+        `Invalid bleedSource "${rawSource}" — use one of ${validSources.join(", ")}`,
+      );
     }
     const source = rawSource as BleedSource;
     const floorMatch = line.match(/bleedFloor=([\d.]+)/);
@@ -207,12 +214,20 @@ function parseLayerHeader(line: string): {
     bleed = { source, floor };
   }
 
-  return { id: role, role, instrument, priority, bleed };
+  const norotate = /(?:^|\s)norotate(?:\s|$)/.test(line);
+
+  return { id: role, role, instrument, priority, bleed, norotate };
 }
 
 /** Parse note lines (everything between layer headers) into NoteEvents.
- *  Validates that total beats per bar match expected beatsPerBar. */
-function parseNoteLines(lines: string[], beatsPerBar: number, segId: string, layerId: string): NoteEvent[] {
+ *  Validates that total beats per bar match expected beatsPerBar. Returns
+ *  the parsed notes alongside the authored extent in beats — needed by the
+ *  renderer's tileLayerToSegment to distinguish a sparse 12-bar layer
+ *  (e.g. one ff stab on bar 1, rests on bars 2-12) from a 1-bar pattern
+ *  the engine should tile. Without this, lastNote.beat + duration is the
+ *  only signal, and the renderer mistakes the sparse layer for a 1-bar
+ *  loop and tiles the stab onto every bar. */
+function parseNoteLines(lines: string[], beatsPerBar: number, segId: string, layerId: string): { notes: NoteEvent[]; authoredBeats: number } {
   const joined = lines.join(" ");
   const barTexts = joined.split("|").map(s => s.trim()).filter(s => s.length > 0);
 
@@ -260,7 +275,7 @@ function parseNoteLines(lines: string[], beatsPerBar: number, segId: string, lay
     }
   }
 
-  return allNotes;
+  return { notes: allNotes, authoredBeats: globalBeat };
 }
 
 // ── Transition parsing ──
@@ -358,8 +373,8 @@ export function compileSegment(text: string): Segment {
         idx++;
       }
 
-      const notes = parseNoteLines(noteLines, beatsPerBar, id, header.id);
-      layers.push({ ...header, notes });
+      const { notes, authoredBeats } = parseNoteLines(noteLines, beatsPerBar, id, header.id);
+      layers.push({ ...header, notes, authoredBeats });
     } else {
       idx++;
     }

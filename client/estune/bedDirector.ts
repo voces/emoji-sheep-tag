@@ -39,6 +39,39 @@ export const STRUCTURAL_BED_IDS = {
   buildWolfSurvival: "build-wolf-survival",
 } as const;
 
+/** Compute the next authored transition-hint bar (in absolute beats) for the
+ *  outgoing primary segment, at or after `currentBeat`. Returns null if the
+ *  segment has no transitions or the next hint falls beyond `maxBeats` —
+ *  caller commits immediately in that case.
+ *
+ *  Hints are bar-indexed within the segment loop; we project them across the
+ *  current loop iteration first, then the next, picking the earliest whose
+ *  beat is >= currentBeat. */
+function nextTransitionBeat(
+  primary: { segment: Segment; startBeat: number } | null,
+  currentBeat: number,
+  maxBeats: number = CADENCE_DEFER_MAX_BEATS,
+): number | null {
+  if (!primary) return null;
+  const seg = primary.segment;
+  if (seg.transitions.length === 0) return null;
+  const bpb = seg.meter[0];
+  // Translate currentBeat into the segment's local beat frame, modulo the
+  // segment's loop length, then find the next transition-hint bar.
+  const elapsed = currentBeat - primary.startBeat;
+  const localBeat = ((elapsed % seg.totalBeats) + seg.totalBeats) % seg.totalBeats;
+  let bestDelta = Infinity;
+  for (const t of seg.transitions) {
+    const hintBeat = t.bar * bpb;
+    let delta = hintBeat - localBeat;
+    if (delta <= 0) delta += seg.totalBeats; // wrap into the next loop
+    if (delta < bestDelta) bestDelta = delta;
+  }
+  if (!isFinite(bestDelta)) return null;
+  if (bestDelta > maxBeats) return null;
+  return currentBeat + bestDelta;
+}
+
 /** Pick the build bed id for a given perspective + mode. vip/vamp/undefined fall
  *  through to the survival bed (same 21s timing). */
 function buildBedFor(perspective: "sheep" | "wolf", mode: GameMode | undefined): StructuralBedId {
@@ -50,6 +83,29 @@ function buildBedFor(perspective: "sheep" | "wolf", mode: GameMode | undefined):
     return perspective === "wolf" ? STRUCTURAL_BED_IDS.buildWolfSwitch : STRUCTURAL_BED_IDS.buildSheepSwitch;
   }
   return perspective === "wolf" ? STRUCTURAL_BED_IDS.buildWolfSurvival : STRUCTURAL_BED_IDS.buildSheepSurvival;
+}
+
+/** Pick the endgame bed id for a given perspective + mode, or null if no
+ *  endgame variant exists for that combination. vamp has no time-based win
+ *  and gets no endgame routing. All four returned ids are members of the
+ *  BedId union — the caller still checks `library.beds.has(...)` because
+ *  not every BedId is necessarily *registered* (e.g. bulldog endgame beds
+ *  aren't authored yet, so they're absent from the default library; the
+ *  caller falls through to threat-driven routing in that case). */
+function endgameBedFor(
+  perspective: "sheep" | "wolf" | "spirit",
+  mode: GameMode | undefined,
+): BedId | null {
+  const persp = perspective === "wolf" ? "wolf" : "sheep";
+  const m = mode ?? "survival";
+  if (m === "vamp") return null;
+  if (m === "bulldog") {
+    return persp === "wolf" ? "endgame-wolf-bulldog" : "endgame-sheep-bulldog";
+  }
+  // survival, vip, switch all share the survival endgame for now — they're
+  // all "sheep win on timer" modes (vip/switch ending conditions are early-
+  // out; the timer-expiry path is the survival path).
+  return persp === "wolf" ? "endgame-wolf-survival" : "endgame-sheep-survival";
 }
 
 /** Crossfade durations by transition type (in beats).
@@ -83,6 +139,46 @@ const CROSSFADE_STRUCTURAL = 2; // structural state change (was 4 — too slow w
  *  eligible to be replaced. */
 const MIN_DWELL_BEATS = 16;
 
+/** Max beats we'll defer a parametric bed switch waiting for the current
+ *  bed's next authored transition-hint bar (`bar N phrase-end ...`). If no
+ *  hint lands within this window, we commit immediately rather than smearing
+ *  reactivity. 4 beats ≈ 1 bar in 4/4 ≈ ~1.8s at 130 BPM — long enough to
+ *  catch an upcoming phrase-end, short enough that the bed change still
+ *  feels reactive to the underlying facet shift. */
+const CADENCE_DEFER_MAX_BEATS = 4;
+
+/** Max beats we'll defer the endgame override waiting for the source bed's
+ *  next authored transition-hint bar. Endgame opens at 30s remaining and
+ *  plays for the rest of the round, so trading a few beats of timing slack
+ *  to land the source bed's cadence is essentially free musically. 16 beats
+ *  ≈ 4 bars at 4/4 ≈ ~7s at 130 BPM — covers any source bed's next
+ *  phrase-end without delaying the endgame past audibility. */
+const ENDGAME_CADENCE_MAX_BEATS = 16;
+
+/** Suppress-imminent-override window (seconds): if the endgame window will
+ *  open within this many seconds, we hold the current bed instead of taking
+ *  a brief threat-driven detour that the override would steamroll. Without
+ *  this, an in-round threat dip a few seconds before the 30s-remaining mark
+ *  produces a ~5s cautious wedge between the previous bed and the endgame
+ *  bed — observed in pair-1 sheep recording. Picked to cover the case where
+ *  a parametric flip and the override coincide within ~MIN_DWELL_BEATS
+ *  worth of time at typical tempos. */
+const ENDGAME_IMMINENT_SECONDS = 8;
+
+/** Mode-aware end-of-round window (seconds), mirroring the engine.ts
+ *  helper of the same name. The bed director uses this both for the
+ *  endgame override (already gated on `mood.roundFinal > 0`) and the
+ *  suppress-imminent-override check below. Kept in sync with engine.ts;
+ *  duplicated rather than imported because engine.ts depends on this
+ *  module (avoid circular import). */
+function endgameWindowSeconds(mode: GameMode | undefined): number {
+  switch (mode) {
+    case "bulldog": return 10;
+    case "vamp":    return 0;
+    default:        return 30;
+  }
+}
+
 export interface BedDirectorState {
   library: BedLibrary | null;
   /** Currently playing bed id (BedId for active beds, structural id for lobby/build). */
@@ -105,6 +201,18 @@ export interface BedDirectorState {
    *  sessionSeed so different rounds in the same session pick different
    *  variants (cycling through alternatives across rounds). */
   roundIndex: number;
+  /** Pending facet-driven bed switch waiting to land on a phrase-end bar.
+   *  Set when an in-active parametric flip is requested within
+   *  CADENCE_DEFER_MAX_BEATS of the outgoing bed's next transition-hint
+   *  bar; cleared on commit, on structural transition, or when a later
+   *  selection overrides the deferred target. */
+  pendingBedSwitch: { targetBed: BedId; atBeat: number } | null;
+  /** Engine-derived round progress (0..1) computed from FullGameState's
+   *  roundElapsedSeconds / roundDurationSeconds. The harness no longer
+   *  carries roundProgress on facets; the engine writes this here each
+   *  setFullGameState call so applyGameState (and isWolfFailing
+   *  downstream) can read a single source of truth. */
+  derivedProgress: number;
 }
 
 export function createBedDirector(): BedDirectorState {
@@ -117,6 +225,8 @@ export function createBedDirector(): BedDirectorState {
     lastMix: null,
     variantCache: new Map(),
     roundIndex: 0,
+    pendingBedSwitch: null,
+    derivedProgress: 0,
   };
 }
 
@@ -177,10 +287,14 @@ export function pickVariant(
   const matching = variants.filter(v => v.song === targetSong);
   const pool = matching.length > 0 ? matching : variants;
 
-  // Within the pool, hash-pick deterministically. Including bedId in the
-  // hash means different beds in the same round can still pick different
-  // members of the pool (matters when multiple variants share a song).
-  const poolIdx = hashString(`${sessionSeed}/${director.roundIndex}/${bedId}`) % pool.length;
+  // Strict round-robin within the pool, offset per (session, bedId). The
+  // hash decides each session's starting variant per bed; +roundIndex
+  // walks one step per round so consecutive rounds always pick different
+  // pool members. Necessary for back-to-back-round lobby intermissions to
+  // feel fresh — a pure hash of (seed/round/bedId) clusters with 2-variant
+  // pools.
+  const startIdx = hashString(`${sessionSeed}/${bedId}`) % pool.length;
+  const poolIdx = (startIdx + director.roundIndex) % pool.length;
   const chosen = pool[poolIdx];
   // Cache the index in the original variants[] so re-entry hits the same.
   director.variantCache.set(bedId, variants.indexOf(chosen));
@@ -200,6 +314,7 @@ export function advanceRound(director: BedDirectorState): void {
   director.variantCache.clear();
   director.roundIndex++;
   director.currentBedSinceBeat = -Infinity;
+  director.pendingBedSwitch = null;
 }
 
 export function setBedLibrary(director: BedDirectorState, library: BedLibrary): void {
@@ -264,34 +379,115 @@ export function buildRescuePreswellSegment(
   };
 }
 
-/** Generate a 1-bar tonic+fifth pad segment in the target key/tempo. Used as
- *  a bed-boundary bridge: fired as a stinger when the bed director switches
- *  beds across a key change, providing a smooth harmonic landing for bar 1
- *  of the new bed. */
+/** Bed-bridge voicing selection.
+ *  - "pivot":    key-change transitions; voicing includes a source-tonic
+ *                pivot tone so the listener hears the modulation as a
+ *                resolution rather than a hard switch.
+ *  - "rising":   same-key escalation (e.g. cautious → terror); voicing
+ *                centred at tonic4-tonic5 lifts the register, anticipating
+ *                more intensity to come.
+ *  - "falling":  same-key de-escalation (e.g. terror → cautious); voicing
+ *                centred at tonic2-tonic3 settles the register.
+ *  - "standard": neutral / unknown; same-key with similar intensity.
+ *
+ *  Without this variation, all same-key bridges in a wolf-side round
+ *  (which is all-Em) used the identical [E2,E4,B4] halo and read as an
+ *  engine cue rather than a musical seam by the 4th-5th fire. */
+type BridgeVoicing = "pivot" | "rising" | "falling" | "standard";
+
+/** Pick the voicing for a bed-bridge given the source/destination beds.
+ *  - Different tonic or mode: pivot (key-change handling).
+ *  - Same key + escalation (destAvgVel > sourceAvgVel + threshold): rising.
+ *  - Same key + de-escalation (destAvgVel < sourceAvgVel - threshold): falling.
+ *  - Same key + similar intensity: standard. */
+function pickBridgeVoicing(
+  sourceRoot: string, sourceMode: string, sourceAvgVel: number,
+  destRoot: string,   destMode: string,   destAvgVel: number,
+): BridgeVoicing {
+  const sourcePc = ROOT_PC[sourceRoot] ?? 0;
+  const destPc = ROOT_PC[destRoot] ?? 0;
+  if (sourcePc !== destPc || sourceMode !== destMode) return "pivot";
+  const delta = destAvgVel - sourceAvgVel;
+  // 0.06 ≈ one dynamic step (mp→mf is roughly 0.10 in our authoring); keeps
+  // jitter from flipping the voicing on near-equal beds.
+  if (delta > 0.06) return "rising";
+  if (delta < -0.06) return "falling";
+  return "standard";
+}
+
+/** Generate a 1-bar pad segment in the target key/tempo, as a stinger that
+ *  cushions the seam between two beds. Voicing varies with transition
+ *  direction (see `pickBridgeVoicing`) so consecutive bridges in the same
+ *  round don't sound identical. */
 export function buildBedBridgeSegment(
-  root: string,
-  mode: string,
+  targetRoot: string,
+  targetMode: string,
   tempo: number,
+  sourceRoot: string = targetRoot,
+  sourceMode: string = targetMode,
+  sourceAvgVel: number = 0.43,
+  destAvgVel: number = 0.43,
 ): Segment {
-  const pc = ROOT_PC[root] ?? 0;
-  const tonic4 = 60 + pc;        // tonic at octave 4
-  const fifth4 = tonic4 + 7;     // perfect fifth above (works in major and minor)
-  const tonic3 = tonic4 - 12;    // sub-octave for body
+  const pc = ROOT_PC[targetRoot] ?? 0;
+  const sourcePc = ROOT_PC[sourceRoot] ?? pc;
+  const tonic4 = 60 + pc;
+  const fifth4 = tonic4 + 7;
+  const tonic3 = tonic4 - 12;
+  const tonic2 = tonic4 - 24;
+  const tonic5 = tonic4 + 12;
+  const fifth3 = fifth4 - 12;
+  const fifth2 = fifth4 - 24;
+
+  const voicing = pickBridgeVoicing(
+    sourceRoot, sourceMode, sourceAvgVel,
+    targetRoot, targetMode, destAvgVel,
+  );
+
+  let pitches: number[];
+  switch (voicing) {
+    case "pivot": {
+      // Two pivot cases:
+      //   - Different tonic (e.g. Em → Gmaj): voice includes source tonic
+      //     as a held pivot tone that the destination key recontextualizes.
+      //   - Same tonic, mode change (e.g. G → Gm): voice the new mode's
+      //     3rd (Bb for Gm vs B for Gmaj) so the listener hears the mode
+      //     shift in the bridge itself rather than only when the new bed
+      //     enters underneath.
+      const sourceTonic4 = 60 + sourcePc;
+      const newThird4 = tonic4 + (targetMode === "minor" ? 3 : 4);
+      pitches = sourcePc === pc
+        ? [tonic3, newThird4, fifth4]
+        : [tonic3, fifth3, sourceTonic4];
+      break;
+    }
+    case "rising":
+      pitches = [tonic4, fifth4, tonic5];
+      break;
+    case "falling":
+      pitches = [tonic2, fifth2, tonic3];
+      break;
+    case "standard":
+    default:
+      pitches = [tonic3, tonic4, fifth4];
+      break;
+  }
+
   const layer: Layer = {
     id: "bridge-pad",
     role: "pad",
     instrument: 48, // strings
     priority: 1,
-    notes: [
-      { beat: 0, midi: tonic3, duration: 4, velocity: 0.42 },
-      { beat: 0, midi: tonic4, duration: 4, velocity: 0.45 },
-      { beat: 0, midi: fifth4, duration: 4, velocity: 0.42 },
-    ],
+    notes: pitches.map((midi, i) => ({
+      // Centre note at slightly higher velocity so the voicing reads as
+      // a chord rather than three independent lines.
+      beat: 0, midi, duration: 4,
+      velocity: i === Math.floor(pitches.length / 2) ? 0.45 : 0.42,
+    })),
   };
   return {
     id: "bed-bridge",
     family: "stinger",
-    key: { root, mode },
+    key: { root: targetRoot, mode: targetMode },
     tempo,
     meter: [4, 4],
     bars: 1,
@@ -326,6 +522,7 @@ export function applyGameState(
     director.currentBed = STRUCTURAL_BED_IDS.lobby;
     director.currentBedSinceBeat = renderer.currentBeat;
     director.currentState = "lobby";
+    director.pendingBedSwitch = null;
     return seg;
   }
 
@@ -346,6 +543,7 @@ export function applyGameState(
     director.currentBed = buildId;
     director.currentBedSinceBeat = renderer.currentBeat;
     director.currentState = "build";
+    director.pendingBedSwitch = null;
     return seg;
   }
 
@@ -363,13 +561,63 @@ export function applyGameState(
   let selection: BedSelection;
   let mix: MixState;
   if (state.perspective === "wolf" && state.wolf) {
-    selection = selectWolfBedWithBlend(state.wolf);
+    selection = selectWolfBedWithBlend(state.wolf, director.derivedProgress);
     mix = computeWolfMix(state.wolf, state.mode);
   } else if ((state.perspective === "sheep" || state.perspective === "spirit") && state.sheep) {
     selection = selectSheepBedWithBlend(state.sheep);
     mix = computeSheepMix(state.sheep);
   } else {
     return null;
+  }
+
+  // Suppress-imminent-override: if a parametric flip would happen within
+  // ENDGAME_IMMINENT_SECONDS of the endgame override opening, hold the
+  // current bed instead. Without this, an in-round threat dip a few seconds
+  // before the 30s-remaining mark produces a brief threat-driven detour
+  // that the override steamrolls in seconds — observed in pair-1 sheep as
+  // a 5.5s cautious wedge between terror and endgame-sheep-survival. The
+  // override below still fires when `roundFinal > 0`, by which time
+  // `untilEndgame` is ≤ 0 so this branch is inert.
+  if (
+    state.state === "active" &&
+    !selection.hardSwitch &&
+    director.currentBed !== null &&
+    selection.primary !== director.currentBed
+  ) {
+    const elapsedSec = state.roundElapsedSeconds;
+    const durationSec = state.roundDurationSeconds;
+    const window = endgameWindowSeconds(state.mode);
+    if (
+      typeof elapsedSec === "number" &&
+      typeof durationSec === "number" &&
+      durationSec > 0 &&
+      window > 0
+    ) {
+      const untilEndgame = (durationSec - elapsedSec) - window;
+      if (untilEndgame > 0 && untilEndgame <= ENDGAME_IMMINENT_SECONDS) {
+        selection = {
+          primary: director.currentBed as BedId,
+          secondary: null,
+          blend: 0,
+          hardSwitch: false,
+        };
+      }
+    }
+  }
+
+  // Endgame override: when the engine-derived round-final bleed signal has
+  // begun ramping (mode-aware window), override the threat-driven primary
+  // with the perspective+mode-keyed endgame bed. Hard-switch so the swap
+  // lands at the window onset rather than waiting for dwell. The standard
+  // CROSSFADE_BLEND below ramps the new bed in over ~7s — that crossfade
+  // IS the audible build into the round's end. Only fires when the bed
+  // actually exists in the library; missing endgame variants (e.g. bulldog
+  // beds before they're authored) fall back to the threat-driven choice.
+  if (renderer.mood.roundFinal > 0) {
+    const endgameId = endgameBedFor(state.perspective, state.mode);
+    if (endgameId && director.library?.beds.has(endgameId)) {
+      selection = { primary: endgameId, secondary: null, blend: 0, hardSwitch: true };
+    }
   }
 
   director.lastSelection = selection;
@@ -416,9 +664,62 @@ export function applyGameState(
     }
   }
 
+  // Cadence-snap deferral: if a facet-driven flip is requested mid-active
+  // and the outgoing bed has an authored transition-hint bar within
+  // CADENCE_DEFER_MAX_BEATS, defer the commit to that bar so the change
+  // lands on a phrase-end instead of mid-cadence. Round-end (lobby) and
+  // build-end paths exited above and are never deferred. Hard switches
+  // (capture / lastAlive / wolf-failing) bypass — they're event-driven.
+  const pending = director.pendingBedSwitch;
+  let pendingFiring = false;
+  if (pending) {
+    if (pending.targetBed === targetBed && renderer.currentBeat < pending.atBeat) {
+      // Still waiting for the deferred commit; selection unchanged.
+      return null;
+    }
+    // Either the wait is up (targetBed still matches) or selection changed.
+    // Mark "firing" if the wait is up so we commit now without re-deferring.
+    pendingFiring = pending.targetBed === targetBed;
+    director.pendingBedSwitch = null;
+  }
+
   // Same bed? Nothing to do.
   if (targetBed === director.currentBed && director.currentState === "active") {
     return null;
+  }
+
+  // Defer the bed switch to the outgoing bed's next authored phrase end:
+  //   - Parametric flips: up to CADENCE_DEFER_MAX_BEATS (~4 beats / 1 bar).
+  //     Reactivity dominates; we only catch a phrase-end if it's right
+  //     there.
+  //   - Endgame override (hardSwitch + endgame target): up to
+  //     ENDGAME_CADENCE_MAX_BEATS (~16 beats / 4 bars). Endgame plays for
+  //     ≥30s after entry, so a few beats of slack to land the source's
+  //     cadence is essentially free musically — and prevents the source
+  //     bed (e.g. desperate-frustrated) from getting cropped just before
+  //     its authored climax.
+  //   - Other hard switches (capture / lastAlive / wolf-failing): no defer.
+  //     These are event-driven and the listener expects immediate response.
+  //   - First active entry, pending-firing, no primary: skipped above.
+  let cadenceMaxBeats = 0;
+  if (!selection.hardSwitch) {
+    cadenceMaxBeats = CADENCE_DEFER_MAX_BEATS;
+  } else if (typeof targetBed === "string" && targetBed.startsWith("endgame-")) {
+    cadenceMaxBeats = ENDGAME_CADENCE_MAX_BEATS;
+  }
+  if (
+    !pendingFiring &&
+    director.currentState === "active" &&
+    cadenceMaxBeats > 0 &&
+    renderer.primary
+  ) {
+    const atBeat = nextTransitionBeat(
+      renderer.primary, renderer.currentBeat, cadenceMaxBeats,
+    );
+    if (atBeat !== null) {
+      director.pendingBedSwitch = { targetBed, atBeat };
+      return null;
+    }
   }
 
   const seg = pickVariant(director, targetBed, renderer.sessionSeed);

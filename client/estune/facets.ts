@@ -10,6 +10,11 @@
  * for computing its own threat / proximity / isolation scalars from
  * gameplay-specific information (weapon range, terrain, hidden sheep,
  * mode-specific rules) the engine can't see.
+ *
+ * Round progress is no longer carried on facets. The harness reports
+ * roundElapsedSeconds + roundDurationSeconds at the FullGameState level;
+ * the engine derives progress and threads it through to isWolfFailing as
+ * a separate argument.
  */
 
 import { type SheepFacets, type WolfFacets } from "./types.ts";
@@ -36,7 +41,6 @@ export function smoothSheepFacets(
     agency: smooth(prev.agency, target.agency, TUNING.SLOW_TAU, dt),
     isolation: smooth(prev.isolation, target.isolation, TUNING.SLOW_TAU, dt),
     lastAlive: target.lastAlive,
-    roundProgress: target.roundProgress,
   };
 }
 
@@ -51,14 +55,14 @@ export function smoothWolfFacets(
     proximity: smooth(prev.proximity, target.proximity, TUNING.PROXIMITY_TAU, dt),
     agency: smooth(prev.agency, target.agency, TUNING.SLOW_TAU, dt),
     isolation: smooth(prev.isolation, target.isolation, TUNING.SLOW_TAU, dt),
-    roundProgress: target.roundProgress,
   };
 }
 
 /** Derived: is the wolf side losing late in the round? Drives the
- *  desperate bed switch. Computed internally from agency + roundProgress
- *  rather than asked of the game, since it's a renderer-policy decision. */
-export function isWolfFailing(facets: WolfFacets): boolean {
+ *  desperate bed switch. Computed internally from agency + engine-derived
+ *  round progress rather than asked of the game, since it's a renderer-
+ *  policy decision. */
+export function isWolfFailing(facets: WolfFacets, progress: number): boolean {
   return facets.agency < TUNING.WOLF_FAILING_AGENCY
-    && facets.roundProgress > TUNING.WOLF_FAILING_PROGRESS;
+    && progress > TUNING.WOLF_FAILING_PROGRESS;
 }

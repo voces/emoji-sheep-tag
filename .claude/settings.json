@@ -20,7 +20,8 @@
       "Bash(cp -r /home/verit/estune/vendor/estune /home/verit/emoji-sheep-tag/client/estune)"
     ],
     "additionalDirectories": [
-      "/tmp"
+      "/tmp",
+      "/home/verit/emoji-sheep-tag/client/estune"
     ]
   }
 }

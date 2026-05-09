@@ -23,7 +23,7 @@ import {
   buildBedBridgeSegment, buildRescuePreswellSegment, advanceRound,
 } from "./bedDirector.ts";
 import { type BedLibrary } from "./bedLibrary.ts";
-import { type FullGameState } from "./types.ts";
+import { type FullGameState, type GameMode } from "./types.ts";
 import {
   type StingerTrack, type Stinger,
   createStingerTrack, fireStinger, stingerTick, stopAllStingers,
@@ -34,6 +34,48 @@ import {
 
 /** Sub-beats per beat. 4 = sixteenth note resolution. */
 const SUBDIVISION = 4;
+
+/** Mode-aware end-of-round window (seconds). The roundFinal bleed source
+ *  ramps from 0 → 1 over this many seconds before duration. Tuned so:
+ *  - bulldog: 10s tight panic-button (sheep about to lose on starvation;
+ *             wolves about to win lazily). Endgame bed and countdown
+ *             arrive together.
+ *  - everything else: 30s lift (mostly survival's "almost made it").
+ *    Endgame bed fades in over the final 30s; countdown layer adds the
+ *    last 10s.
+ *  vamp's win condition isn't time-based so it gets 0 (engine skips
+ *  endgame routing entirely). */
+function endgameWindowSeconds(mode: GameMode | undefined): number {
+  switch (mode) {
+    case "bulldog": return 10;
+    case "vamp":    return 0;
+    default:        return 30;  // survival, vip, switch, undefined
+  }
+}
+
+/** Mode-agnostic "literal countdown" window (seconds). The roundCountdown
+ *  bleed source ramps over the final 10s of any round, regardless of mode.
+ *  Drives the in-bed countdown layer (ticking clock, accelerating perc). */
+const COUNTDOWN_WINDOW_SECONDS = 10;
+
+function clamp01(v: number): number {
+  return Math.max(0, Math.min(1, v));
+}
+
+/** Mean of authored note velocities across a segment's layers, ignoring
+ *  unset velocities. Used to size the bed-bridge stinger so its halo lands
+ *  at parity with the destination bed instead of a fixed (often-too-quiet)
+ *  level. Returns 0.43 (the bridge's own authored mean) when nothing is
+ *  authored, leaving the gain ratio at 1. */
+function avgAuthoredVelocity(seg: Segment): number {
+  let sum = 0, count = 0;
+  for (const layer of seg.layers) {
+    for (const note of layer.notes) {
+      if (note.velocity !== undefined) { sum += note.velocity; count++; }
+    }
+  }
+  return count > 0 ? sum / count : 0.43;
+}
 
 /** Pre-fade: we know a phase change is coming, start crossfade early. */
 interface PendingTransition {
@@ -149,17 +191,33 @@ export function installBedLibrary(engine: V3EngineState, library: BedLibrary): v
  * Phase-2 driver: hand the engine a full game state.
  * The bed director picks the right bed and crossfades the renderer.
  * Returns true if a bed change occurred this call.
+ *
+ * `tickMs` is an optional logical-time override. Live callers omit it and
+ * smoothing dt is read from `performance.now()`. Offline replay passes the
+ * recording's input timestamp so smoothing converges at the same rate it
+ * did during play — without it, replay's microsecond-spaced setGameState
+ * loop collapses dt to the 0.001s floor and smoothed facets never
+ * approach raw, producing a different bed selection than the live engine.
  */
-export function setFullGameState(engine: V3EngineState, state: FullGameState): boolean {
+export function setFullGameState(
+  engine: V3EngineState,
+  state: FullGameState,
+  tickMs?: number,
+): boolean {
   // Recorder hook: capture the raw input *before* smoothing so replay can
   // pump the same unsmoothed sequence and produce the same smoothed output.
   if (engine.recorder) recordInput(engine.recorder, engine, state);
+
+  // Mirror state.perspective onto engine.director so downstream consumers
+  // (round-end stinger dispatch, family routing) see the current view
+  // without the harness having to call setPerspective separately.
+  engine.director.perspective = state.perspective;
 
   // Apply temporal smoothing to game-supplied facets. The game tells us its
   // *target* state per tick; the music's reaction time is decoupled via
   // exponential smoothing in facets.ts. dt is wall-clock between ticks
   // (not beat-locked) since smoothing is musical-feel, not bar-aligned.
-  const nowMs = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  const nowMs = tickMs ?? (typeof performance !== "undefined" ? performance.now() : Date.now());
   const dt = engine.prevStateTickMs !== null
     ? Math.max(0.001, (nowMs - engine.prevStateTickMs) / 1000)
     : 0.05;
@@ -210,18 +268,71 @@ export function setFullGameState(engine: V3EngineState, state: FullGameState): b
     }
   }
 
+  // Engine-derived round progress: elapsed/duration when both known.
+  // The harness no longer puts roundProgress on facets; instead it reports
+  // wall-clock seconds (roundElapsedSeconds + roundDurationSeconds) and the
+  // engine derives progress + endgame signals here. duration=null is allowed
+  // for sudden-death/unknown-length rounds and skips endgame routing.
+  const elapsed = smoothedState.roundElapsedSeconds;
+  const duration = smoothedState.roundDurationSeconds;
+  const haveTime = typeof elapsed === "number" && typeof duration === "number" && duration > 0;
+  const progress = haveTime ? clamp01(elapsed / duration) : 0;
+
+  // Endgame bleed signals.
+  // - roundFinal ramps over a mode-aware window (longer for survival,
+  //   tight for bulldog). Drives endgame-bed selection (in bedDirector)
+  //   AND fades in endgame bulk content via the round-final bleed source.
+  // - roundCountdown is mode-agnostic — always the absolute last 10
+  //   seconds. Drives literal countdown layers (ticks, accelerating perc).
+  // Both are 0 outside active play; bulldog wraps both into the same 10s
+  // because their windows coincide.
+  const window = endgameWindowSeconds(smoothedState.mode);
+  const roundFinalRaw = haveTime && window > 0
+    ? clamp01(1 - (duration - elapsed) / window)
+    : 0;
+  const roundCountdownRaw = haveTime
+    ? clamp01(1 - (duration - elapsed) / COUNTDOWN_WINDOW_SECONDS)
+    : 0;
+
   // Drive renderer.mood from smoothed facets. tension feeds the per-layer
   // bleed mechanic (sheep timpani gain, wolf-side sparkle gain). urgency
   // accelerates tempo up to +15% as the round progresses. Energy is left
   // at neutral 0.5 — we have no APM signal, and bed authoring shapes
   // intensity directly via dynamics.
-  if (smoothedState.sheep) {
+  if (smoothedState.state === "lobby") {
+    // Lobby resets mood regardless of any stale facet payload — bleed-
+    // source smoothing converges to mood.tension, so leaving residue here
+    // suppresses lobby ornaments (e.g. sparkle with bleed inverse-tension)
+    // through the entire intermission. Reset takes priority over any
+    // sheep/wolf facets the caller may have inadvertently kept attached.
+    engine.renderer.mood.tension = 0;
+    engine.renderer.mood.urgency = 0;
+    engine.renderer.mood.roundFinal = 0;
+    engine.renderer.mood.roundCountdown = 0;
+  } else if (smoothedState.sheep) {
     engine.renderer.mood.tension = smoothedState.sheep.threat;
-    engine.renderer.mood.urgency = smoothedState.sheep.roundProgress;
+    engine.renderer.mood.urgency = progress;
+    engine.renderer.mood.roundFinal = roundFinalRaw;
+    engine.renderer.mood.roundCountdown = roundCountdownRaw;
   } else if (smoothedState.wolf) {
     engine.renderer.mood.tension = smoothedState.wolf.proximity;
-    engine.renderer.mood.urgency = smoothedState.wolf.roundProgress;
+    engine.renderer.mood.urgency = progress;
+    engine.renderer.mood.roundFinal = roundFinalRaw;
+    engine.renderer.mood.roundCountdown = roundCountdownRaw;
   }
+
+  // Daylight is independent of structural state (a round can start at
+  // dusk and finish at night). Take whatever the game sent; if absent,
+  // leave the prior value so a one-shot day/night ping doesn't get reset
+  // by a tick that omits the field.
+  if (smoothedState.daylight !== undefined) {
+    engine.renderer.mood.daylight = smoothedState.daylight;
+  }
+
+  // Stash derived progress on the director so applyGameState can thread
+  // it into bed-selection (isWolfFailing reads it; endgame routing reads
+  // mood.roundFinal directly).
+  engine.bedDirector.derivedProgress = progress;
 
   const oldSeg = engine.renderer.primary?.segment;
   const oldBed = engine.bedDirector.currentBed;
@@ -247,22 +358,56 @@ export function setFullGameState(engine: V3EngineState, state: FullGameState): b
   handleAnticipation(engine, state);
 
   if (seg) {
-    // Bed-boundary bridge: when crossing a key change, fire a 1-bar tonic+5th
-    // pad in the new key as a stinger so bar 1 of the new bed lands on a
-    // sustained harmonic halo instead of a bare crossfade seam.
+    // Bed-boundary bridge: fire a 1-bar tonic+5th pad in the new key as a
+    // stinger so bar 1 of the new bed lands on a sustained harmonic halo
+    // instead of a bare crossfade seam. Previously gated to key changes
+    // only, which meant wolf-side active-active flips (all E minor) and
+    // sheep-side same-key flips never got a bridge — observed as bare
+    // stalking→attack and terror↔cautious seams. Same-key bridges still
+    // serve as a sustained halo over the texture/rhythm shift even when
+    // harmony is unchanged.
     // Switch and bulldog modes get a softer halo since the wolf entrance
     // there is meant to feel less ceremonial than a standard round.
-    if (oldSeg && (oldSeg.key.root !== seg.key.root || oldSeg.key.mode !== seg.key.mode)) {
-      const bridge = buildBedBridgeSegment(seg.key.root, seg.key.mode, seg.tempo);
-      const bpb = oldSeg.meter[0];
-      const startBeat = Math.ceil(engine.beat / bpb) * bpb;
+    //
+    // Skip the bridge when the destination is lobby: the round-end stinger
+    // (rescue / sheep-loss-fade / wolf-win / wolf-loss-fade) lands on the
+    // same beat and already carries the emotional payload of the round
+    // resolution. Adding a 1-bar key-of-lobby halo on top of an Em-rooted
+    // wolf-win or sheep-loss-fade creates a cross-key crunch (Em vs G major)
+    // and a dynamic punch-through that obscures the loss/win cue. The
+    // round-end stinger is itself a sustained halo, so the bridge is
+    // redundant here.
+    if (oldSeg && smoothedState.state !== "lobby") {
+      // Scale the bridge to the destination bed's average authored note
+      // velocity so the halo sits at parity with the new bed instead of
+      // disappearing under loud beds (terror/attack at vel 0.5+) or
+      // overpowering quiet beds (lobby at vel 0.3). Floor 0.55 keeps the
+      // bridge audible even if the destination authored quietly. Source
+      // avg velocity is used (alongside dest) to pick a bridge voicing that
+      // matches the transition direction — see pickBridgeVoicing.
+      const destAvgVel = avgAuthoredVelocity(seg);
+      const sourceAvgVel = avgAuthoredVelocity(oldSeg);
+      const bridge = buildBedBridgeSegment(
+        seg.key.root, seg.key.mode, seg.tempo,
+        oldSeg.key.root, oldSeg.key.mode,
+        sourceAvgVel, destAvgVel,
+      );
+      // Anchor to the next beat after the bed-change moment so the halo
+      // overlaps the seam itself. The previous code used bar-snap
+      // (Math.ceil(engine.beat / bpb) * bpb), which lagged by up to a full
+      // bar (~3.25 beats / ~1.3s) past the actual switch — by then the
+      // destination bed was already at full velocity and swallowed the
+      // bridge. Adding lookahead before ceil avoids landing inside the
+      // scheduler window already emitted (mirrors fireStingerById).
+      const startBeat = Math.ceil(engine.beat + engine.renderer.lookaheadBeats);
       // Bulldog: wolves spawn together with sheep, no ceremony.
       // Switch: short head start, less dramatic entrance.
       // Vamp: full ceremony — captures = wolf-team-grows is dramatic.
       // Survival/vip: full ceremony.
-      const bridgeGain = state.mode === "bulldog" ? 0.25
-                       : state.mode === "switch" ? 0.35
-                       : 0.55;
+      const ceremony = state.mode === "bulldog" ? 0.5
+                     : state.mode === "switch" ? 0.7
+                     : 1.0;
+      const bridgeGain = Math.max(0.55, destAvgVel / 0.43) * ceremony;
       fireStinger(engine.stingerTrack, {
         id: "bed-bridge", trigger: "round-start", segment: bridge, gain: bridgeGain,
       }, startBeat);
@@ -328,14 +473,21 @@ export function registerStinger(engine: V3EngineState, stinger: Stinger): void {
  *  produced up to 2.4s of dead air at slow beds (e.g. desperate at 100 BPM,
  *  4/4), which kills the emotional payoff on round-end. Engine-fired
  *  stingers that *do* need bar alignment (bed-bridge, rescue-preswell)
- *  call fireStinger directly with their own bar-aligned startBeat. */
+ *  call fireStinger directly with their own bar-aligned startBeat.
+ *
+ *  Add the renderer's lookahead before ceiling so we never schedule
+ *  inside the window the scheduler has already emitted. When engine.beat
+ *  lands exactly on a beat (N.0), plain Math.ceil(N.0) returns N — the
+ *  scheduler has already passed it, and the stinger's first note is
+ *  silently dropped. Observed: wolf round-end at beat 316.00 dropped
+ *  sheep-loss-fade's G4; the second note (D4) played 1.4s late instead. */
 export function fireStingerById(engine: V3EngineState, id: string): void {
   const s = engine.stingerLibrary.get(id);
   if (!s) {
     console.warn(`fireStingerById: no stinger registered with id "${id}"`);
     return;
   }
-  const startBeat = Math.ceil(engine.beat);
+  const startBeat = Math.ceil(engine.beat + engine.renderer.lookaheadBeats);
   fireStinger(engine.stingerTrack, s, startBeat);
 }
 
