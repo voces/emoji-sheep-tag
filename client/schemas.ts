@@ -80,6 +80,48 @@ const zClassification = z.union([
 
 const zIconEffect = z.union([z.literal("mirror")]);
 
+const zPlacement = z.union([
+  z.object({ kind: z.literal("atTarget") }),
+  z.object({
+    kind: z.literal("selfOffset"),
+    distance: z.number(),
+  }),
+]);
+
+const zOrderEffect = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("applyBuff"),
+    to: z.union([z.literal("self"), z.literal("target")]),
+    buff: z.lazy(() => zBuff),
+    replaceByName: z.boolean().optional(),
+  }),
+  z.object({
+    type: z.literal("spawn"),
+    prefab: z.string(),
+    placement: zPlacement,
+    count: z.number().optional(),
+    lifetime: z.number().optional(),
+    inheritColor: z.boolean().optional(),
+  }),
+  z.object({
+    type: z.literal("damage"),
+    amount: z.number(),
+    aoe: z.number().optional(),
+    targeting: z.array(z.array(zClassification).readonly()).readonly()
+      .optional(),
+  }),
+  z.object({ type: z.literal("restoreMana"), amount: z.number() }),
+  z.object({ type: z.literal("removeSelf"), refund: z.boolean().optional() }),
+  z.object({
+    type: z.literal("sfx"),
+    model: z.string(),
+    at: z.union([z.literal("self"), z.literal("target")]).optional(),
+    duration: z.number().optional(),
+    facing: z.number().optional(),
+    sound: z.string().optional(),
+  }),
+]);
+
 // Define the base action types first (non-recursive)
 const zBaseAction = z.discriminatedUnion("type", [
   z.object({
@@ -119,11 +161,6 @@ const zBaseAction = z.discriminatedUnion("type", [
     castDuration: z.number().optional(),
     buffDuration: z.number().optional(),
     cooldown: z.number().optional(),
-    attackSpeedMultiplier: z.number().optional(),
-    movementSpeedBonus: z.number().optional(),
-    movementSpeedMultiplier: z.number().optional(),
-    damageMultiplier: z.number().optional(),
-    manaRestore: z.number().optional(),
     soundOnCastStart: z.string().optional(),
     allowAllies: z.boolean().optional(),
     canExecuteWhileConstructing: z.boolean().optional(),
@@ -132,6 +169,7 @@ const zBaseAction = z.discriminatedUnion("type", [
       .optional(),
     buffName: z.string().optional(),
     autocast: z.boolean().optional(),
+    effects: zOrderEffect.array().readonly().optional(),
   }),
   z.object({
     name: z.string(),
@@ -164,9 +202,9 @@ const zBaseAction = z.discriminatedUnion("type", [
     goldCost: z.number().optional(),
     castDuration: z.number().optional(),
     range: z.number().optional(),
-    damage: z.number().optional(),
     allowAllies: z.boolean().optional(),
     animation: z.string().optional(),
+    effects: zOrderEffect.array().readonly().optional(),
   }),
 ]);
 
@@ -242,6 +280,7 @@ const zBuff = z.object({
   particleMinSpeed: z.number().optional(),
   particleMaxSpeed: z.number().optional(),
   particleUseOwnerColor: z.boolean().optional(),
+  particleColor: z.string().optional(),
   preventsBuffs: z.string().array().readonly().optional(),
   invisible: z.boolean().optional(),
 });

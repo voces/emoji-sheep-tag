@@ -1,36 +1,11 @@
-import { Order } from "@/shared/types.ts";
-import { findActionByOrder } from "@/shared/util/actionLookup.ts";
-import { OrderDefinition } from "./types.ts";
+import { OrderOverride } from "./types.ts";
 import { getSheep } from "../systems/collections.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { timeout } from "../api/timing.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 
 export const locateSheepOrder = {
-  id: "locateSheep",
-
-  onIssue: (unit, _, queue) => {
-    const action = findActionByOrder(unit, "locateSheep");
-    if (!action || action.type !== "auto") return "failed";
-
-    const order: Order = {
-      type: "cast",
-      orderId: "locateSheep",
-      remaining: action.castDuration ?? 0,
-    };
-
-    if (queue) {
-      unit.queue = [...unit.queue ?? [], order];
-      return "ordered";
-    }
-
-    return "immediate";
-  },
-
   onCastComplete: (unit) => {
-    const action = findActionByOrder(unit, "locateSheep");
-    if (!action || action.type !== "auto") return false;
-
     // Get all sheep and ping their locations
     const sheep = getSheep();
 
@@ -57,4 +32,4 @@ export const locateSheepOrder = {
       timeout(() => removeEntity(pingEntity), 10);
     }
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;

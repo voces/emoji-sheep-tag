@@ -125,9 +125,63 @@ export type Buff = {
   readonly particleMaxSpeed?: number;
   /** When true, spawned particles take their tint from the owning player's color rather than the model SVG fill. */
   readonly particleUseOwnerColor?: boolean;
+  /** Explicit particle tint (hex). Takes precedence over particleUseOwnerColor and the model SVG fill. */
+  readonly particleColor?: string;
   readonly preventsBuffs?: ReadonlyArray<string>;
   readonly invisible?: boolean;
 };
+
+/** Where a spawned entity is placed relative to the caster or the order target. */
+export type Placement =
+  | { readonly kind: "atTarget" }
+  | {
+    /** Offset from the caster, along the caster's facing, by `distance` tiles. */
+    readonly kind: "selfOffset";
+    readonly distance: number;
+  };
+
+/**
+ * A declarative order effect. The generic order executor interprets these on
+ * cast completion, mirroring how the buff system interprets buff fields. The
+ * `custom` variant is the escape hatch for behavior that resists data.
+ */
+export type OrderEffect = Readonly<
+  | {
+    readonly type: "applyBuff";
+    readonly to: "self" | "target";
+    readonly buff: Buff;
+    /** Replace an existing buff with the same name instead of stacking. */
+    readonly replaceByName?: boolean;
+  }
+  | {
+    readonly type: "spawn";
+    readonly prefab: string;
+    readonly placement: Placement;
+    readonly count?: number;
+    /** Seconds the spawn lives before an expiration buff removes it. */
+    readonly lifetime?: number;
+    /** Copy the caster's trueOwner and player color onto the spawn. */
+    readonly inheritColor?: boolean;
+  }
+  | {
+    readonly type: "damage";
+    readonly amount: number;
+    /** Radius around the target point/entity; omit for single-target. */
+    readonly aoe?: number;
+    readonly targeting?: ReadonlyArray<ReadonlyArray<Classification>>;
+  }
+  | { readonly type: "restoreMana"; readonly amount: number }
+  | { readonly type: "removeSelf"; readonly refund?: boolean }
+  | {
+    /** Transient visual/audio effect (a short-lived model, optionally with a birth sound). */
+    readonly type: "sfx";
+    readonly model: string;
+    readonly at?: "self" | "target";
+    readonly duration?: number;
+    readonly facing?: number;
+    readonly sound?: string;
+  }
+>;
 
 type IconEffect = "mirror";
 
@@ -148,10 +202,11 @@ export type UnitDataActionTarget = {
   readonly goldCost?: number;
   readonly castDuration?: number;
   readonly range?: number;
-  readonly damage?: number;
   readonly allowAllies?: boolean;
   /** Animation to use instead of the default "cast" animation */
   readonly animation?: string;
+  /** Data-driven effects applied on cast completion. */
+  readonly effects?: ReadonlyArray<OrderEffect>;
 };
 
 export type UnitDataActionUpgrade = {
@@ -192,12 +247,8 @@ export type UnitDataAction =
     readonly manaCost?: number;
     readonly goldCost?: number;
     readonly castDuration?: number;
+    /** Buff duration read by the few custom orders (mirrorImage, dodge); data-driven orders carry durations in their effects. */
     readonly buffDuration?: number;
-    readonly attackSpeedMultiplier?: number;
-    readonly movementSpeedBonus?: number;
-    readonly movementSpeedMultiplier?: number;
-    readonly damageMultiplier?: number;
-    readonly manaRestore?: number;
     readonly soundOnCastStart?: string;
     readonly allowAllies?: boolean;
     readonly prefab?: string;
@@ -205,8 +256,11 @@ export type UnitDataAction =
     readonly cooldown?: number;
     readonly range?: number;
     readonly targeting?: ReadonlyArray<ReadonlyArray<Classification>>;
+    /** Buff name used by the autocast system to skip targets that already hold the buff. */
     readonly buffName?: string;
     readonly autocast?: boolean;
+    /** Data-driven effects applied on cast completion. */
+    readonly effects?: ReadonlyArray<OrderEffect>;
   }
   | {
     readonly name: string;

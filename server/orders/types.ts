@@ -27,3 +27,10 @@ export type OrderDefinition = {
   // Called when the cast completes (spawn units, create effects, etc)
   onCastComplete?: (unit: Entity) => boolean | void;
 };
+
+/**
+ * Partial order definition for orders whose lifecycle is mostly generic. Any
+ * callback omitted falls back to the data-driven default (generic onIssue that
+ * synthesizes the cast order, and an onCastComplete that runs action.effects).
+ */
+export type OrderOverride = Omit<Partial<OrderDefinition>, "id">;

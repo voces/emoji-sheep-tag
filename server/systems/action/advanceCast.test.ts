@@ -3,9 +3,8 @@ import { expect } from "@std/expect";
 import { addItem, newUnit } from "../../api/unit.ts";
 import { advanceCast } from "./advanceCast.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
-import { mirrorImageOrder } from "../../orders/mirrorImage.ts";
+import { getOrder } from "../../orders/index.ts";
 import { nonNull } from "@/shared/types.ts";
-import { biteOrder } from "../../orders/bite.ts";
 
 afterEach(cleanupTest);
 
@@ -18,7 +17,7 @@ describe("advanceCast mirror image", () => {
     yield;
 
     // First cast - create initial mirror using new order system
-    mirrorImageOrder.onIssue(wolf, undefined, false);
+    getOrder("mirrorImage")!.onIssue(wolf, undefined, false);
     advanceCast(wolf, 1.0); // Complete the cast
     yield;
 
@@ -30,7 +29,7 @@ describe("advanceCast mirror image", () => {
     const firstMirrorIds = firstMirrors.map((m) => m.id);
 
     // Second cast - should clear existing mirror and create new ones
-    mirrorImageOrder.onIssue(wolf, undefined, false); // This initiates the cast order
+    getOrder("mirrorImage")!.onIssue(wolf, undefined, false); // This initiates the cast order
     yield;
 
     // Advance cast slightly to trigger cast start (which clears old mirror)
@@ -259,7 +258,7 @@ describe("advanceCast bite", () => {
     const spirit = newUnit("sheep-player-2", "spirit", 10, 10);
     yield;
 
-    biteOrder.onIssue(sheep, spirit.id, false);
+    getOrder("bite")!.onIssue(sheep, spirit.id, false);
     yield;
 
     expect(sheep.order?.type).toBe("cast");

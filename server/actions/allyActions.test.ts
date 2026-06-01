@@ -1,6 +1,7 @@
 import { afterEach, describe } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { unitOrder } from "./unitOrder.ts";
+import { newUnit } from "../api/unit.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
 
 afterEach(cleanupTest);
@@ -9,35 +10,19 @@ describe("ally actions integration", () => {
   describe("selfDestruct ally action", () => {
     it("should verify ally permission system is working", {
       sheep: ["sheep-player1", "sheep-player2"],
-    }, function* ({ ecs, clients }) {
+    }, function* ({ clients }) {
       const sheepClient1 = clients.get("sheep-player1")!;
       const sheepClient2 = clients.get("sheep-player2")!;
 
-      // Create structure owned by sheep player 2 with ally actions
-      const potentialAllyStructure = ecs.addEntity({
-        id: "ally-hut",
-        prefab: "hut",
-        owner: sheepClient2.id,
-        position: { x: 5, y: 5 },
+      // Hut's built-in selfDestruct action has allowAllies: true
+      const potentialAllyStructure = newUnit(sheepClient2.id, "hut", 5, 5, {
         health: 100,
-        maxHealth: 120,
-        actions: [
-          {
-            name: "Self destruct",
-            type: "auto",
-            order: "selfDestruct",
-            icon: "collision",
-            binding: ["KeyX"],
-            allowAllies: true,
-          },
-        ],
       });
 
       yield;
       expect(potentialAllyStructure.health).toBe(100);
 
       // Ally sheep player can use selfDestruct on another sheep player's structure
-      // because allowAllies is true
       unitOrder(sheepClient1, {
         type: "unitOrder",
         units: [potentialAllyStructure.id],
@@ -46,34 +31,15 @@ describe("ally actions integration", () => {
       });
 
       yield;
-      // Allies can execute actions with allowAllies: true
       expect(potentialAllyStructure.health).toBe(0);
     });
 
     it("should allow owner to selfDestruct their own structure", {
       wolves: ["wolf-player"],
-    }, function* ({ ecs, clients }) {
+    }, function* ({ clients }) {
       const wolfClient = clients.get("wolf-player")!;
 
-      // Create structure owned by wolf player
-      const ownStructure = ecs.addEntity({
-        id: "own-hut",
-        prefab: "hut",
-        owner: wolfClient.id,
-        position: { x: 5, y: 5 },
-        health: 100,
-        maxHealth: 120,
-        actions: [
-          {
-            name: "Self destruct",
-            type: "auto",
-            order: "selfDestruct",
-            icon: "collision",
-            binding: ["KeyX"],
-            allowAllies: true,
-          },
-        ],
-      });
+      const ownStructure = newUnit(wolfClient.id, "hut", 5, 5, { health: 100 });
 
       yield;
       expect(ownStructure.health).toBe(100);
@@ -87,39 +53,26 @@ describe("ally actions integration", () => {
       });
 
       yield;
-      // Structure should be destroyed
       expect(ownStructure.health).toBe(0);
     });
 
     it("should handle actions without allowAllies property", {
       sheep: ["sheep-player"],
       wolves: ["wolf-player"],
-    }, function* ({ ecs, clients }) {
+    }, function* ({ clients }) {
       const sheepClient = clients.get("sheep-player")!;
       const wolfClient = clients.get("wolf-player")!;
 
-      // Create structure with action that doesn't allow allies
-      const restrictedStructure = ecs.addEntity({
-        id: "restricted-hut",
-        prefab: "hut",
-        owner: wolfClient.id,
-        position: { x: 6, y: 6 },
+      // Override the actions with one that doesn't opt into allowAllies
+      const restrictedStructure = newUnit(wolfClient.id, "hut", 6, 6, {
         health: 100,
-        maxHealth: 120,
-        actions: [
-          {
-            name: "Move",
-            type: "auto",
-            order: "move",
-            // No allowAllies property (defaults to false/undefined)
-          },
-        ],
+        actions: [{ name: "Move", type: "auto", order: "move" }],
       });
 
       yield;
       expect(restrictedStructure.health).toBe(100);
 
-      // Sheep player tries to execute restricted action
+      // Non-owner tries to execute the restricted action
       unitOrder(sheepClient, {
         type: "unitOrder",
         units: [restrictedStructure.id],
@@ -135,26 +88,13 @@ describe("ally actions integration", () => {
     it("should prevent enemies from using ally actions", {
       sheep: ["sheep-player"],
       wolves: ["wolf-player"],
-    }, function* ({ ecs, clients }) {
+    }, function* ({ clients }) {
       const sheepClient = clients.get("sheep-player")!;
       const wolfClient = clients.get("wolf-player")!;
 
-      // Create structure owned by wolf player with ally actions
-      const enemyStructure = ecs.addEntity({
-        id: "enemy-hut",
-        prefab: "hut",
-        owner: wolfClient.id,
-        position: { x: 6, y: 6 },
+      // allowAllies only grants access to allies; enemies are still blocked
+      const enemyStructure = newUnit(wolfClient.id, "hut", 6, 6, {
         health: 100,
-        maxHealth: 120,
-        actions: [
-          {
-            name: "Self destruct",
-            type: "auto",
-            order: "selfDestruct",
-            allowAllies: true,
-          },
-        ],
       });
 
       yield;
@@ -175,51 +115,18 @@ describe("ally actions integration", () => {
 
     it("should handle multiple structures with permission validation", {
       wolves: ["wolf-player1", "wolf-player2"],
-    }, function* ({ ecs, clients }) {
+    }, function* ({ clients }) {
       const wolfClient1 = clients.get("wolf-player1")!;
       const wolfClient2 = clients.get("wolf-player2")!;
 
-      // Create two structures owned by wolf player 2
-      const hut1 = ecs.addEntity({
-        id: "potential-ally-hut-1",
-        prefab: "hut",
-        owner: wolfClient2.id,
-        position: { x: 5, y: 5 },
-        health: 100,
-        maxHealth: 120,
-        actions: [
-          {
-            name: "Self destruct",
-            type: "auto",
-            order: "selfDestruct",
-            allowAllies: true,
-          },
-        ],
-      });
-
-      const hut2 = ecs.addEntity({
-        id: "potential-ally-hut-2",
-        prefab: "hut",
-        owner: wolfClient2.id,
-        position: { x: 7, y: 7 },
-        health: 100,
-        maxHealth: 120,
-        actions: [
-          {
-            name: "Self destruct",
-            type: "auto",
-            order: "selfDestruct",
-            allowAllies: true,
-          },
-        ],
-      });
+      const hut1 = newUnit(wolfClient2.id, "hut", 5, 5, { health: 100 });
+      const hut2 = newUnit(wolfClient2.id, "hut", 7, 7, { health: 100 });
 
       yield;
       expect(hut1.health).toBe(100);
       expect(hut2.health).toBe(100);
 
-      // Wolf player 1 can use selfDestruct on wolf player 2's structures
-      // because they're allies and allowAllies is true
+      // Wolf player 1 can use selfDestruct on ally wolf player 2's structures
       unitOrder(wolfClient1, {
         type: "unitOrder",
         units: [hut1.id, hut2.id],
@@ -228,7 +135,6 @@ describe("ally actions integration", () => {
       });
 
       yield;
-      // Allies can execute actions with allowAllies: true on multiple units
       expect(hut1.health).toBe(0);
       expect(hut2.health).toBe(0);
     });

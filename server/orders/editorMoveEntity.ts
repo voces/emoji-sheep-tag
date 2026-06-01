@@ -1,9 +1,7 @@
-import { OrderDefinition } from "./types.ts";
+import { OrderOverride } from "./types.ts";
 import { lobbyContext } from "../contexts.ts";
 
 export const editorMoveEntityDown = {
-  id: "editorMoveEntityDown",
-
   canExecute: () => lobbyContext.current.round?.editor ?? false,
 
   onIssue: (unit) => {
@@ -12,11 +10,9 @@ export const editorMoveEntityDown = {
     }
     return "immediate";
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;
 
 export const editorMoveEntityUp = {
-  id: "editorMoveEntityUp",
-
   canExecute: () => lobbyContext.current.round?.editor ?? false,
 
   onIssue: (unit) => {
@@ -25,11 +21,9 @@ export const editorMoveEntityUp = {
     }
     return "immediate";
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;
 
 export const editorMoveEntityLeft = {
-  id: "editorMoveEntityLeft",
-
   canExecute: () => lobbyContext.current.round?.editor ?? false,
 
   onIssue: (unit) => {
@@ -38,11 +32,9 @@ export const editorMoveEntityLeft = {
     }
     return "immediate";
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;
 
 export const editorMoveEntityRight = {
-  id: "editorMoveEntityRight",
-
   canExecute: () => lobbyContext.current.round?.editor ?? false,
 
   onIssue: (unit) => {
@@ -51,4 +43,4 @@ export const editorMoveEntityRight = {
     }
     return "immediate";
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;

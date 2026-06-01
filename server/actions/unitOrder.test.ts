@@ -587,7 +587,7 @@ describe("unitOrder timed entities", () => {
     expect(fox.buffs).toBeDefined();
     expect(fox.buffs!.length).toBe(1);
     expect(fox.buffs![0].remainingDuration).toBe(150);
-    expect(fox.buffs![0].expiration).toBe("Fox");
+    expect(fox.buffs![0].expiration).toBe("fox");
   });
 
   it("should remove fox after buff duration expires", {
@@ -621,7 +621,7 @@ describe("unitOrder timed entities", () => {
 
     // Verify fox has timed life buff
     expect(fox.buffs).toBeDefined();
-    expect(fox.buffs![0].expiration).toBe("Fox");
+    expect(fox.buffs![0].expiration).toBe("fox");
 
     // Manually set a very short expiration time
     fox.buffs = [{ remainingDuration: 0.1, expiration: "Fox" }];

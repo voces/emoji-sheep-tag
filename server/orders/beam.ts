@@ -1,9 +1,8 @@
-import { Order } from "@/shared/types.ts";
-import { OrderDefinition } from "./types.ts";
+import { Entity } from "@/shared/types.ts";
+import { OrderOverride } from "./types.ts";
 import { damageEntity } from "../api/unit.ts";
 import { getEntitiesInRect } from "@/shared/systems/kd.ts";
 import { lookup } from "../systems/lookup.ts";
-import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { canTeamSeePoint, testClassification } from "@/shared/api/unit.ts";
 import { newSfx } from "../api/sfx.ts";
 import { Point } from "@/shared/pathing/math.ts";
@@ -56,44 +55,24 @@ const isInFrustum = (
   return perpDistance <= widthAtPoint / 2;
 };
 
+const beamTarget = (unit: Entity): Point | undefined => {
+  if (unit.order?.type !== "cast") return undefined;
+  return unit.order.target ??
+    (unit.order.targetId ? lookup(unit.order.targetId)?.position : undefined);
+};
+
 export const beamOrder = {
-  id: "beam",
-
-  onIssue: (unit, target, queue) => {
-    if (typeof target === "string") target = lookup(target)?.position;
-    if (!target || !unit.position) return "failed";
-
-    const action = findActionByOrder(unit, "beam");
-    if (!action) return "failed";
-
-    const castDuration = "castDuration" in action
-      ? action.castDuration ?? 0
-      : 0;
-
-    const order: Order = {
-      type: "cast",
-      orderId: "beam",
-      remaining: castDuration,
-      target,
-    };
-
-    if (queue) unit.queue = [...unit.queue ?? [], order];
-    else {
-      delete unit.queue;
-      unit.order = order;
-    }
-
-    return "ordered";
-  },
-
   onCastStart: (unit) => {
     if (
       !unit.position || unit.order?.type !== "cast" ||
-      unit.order.orderId !== "beam" || !unit.order.target
+      unit.order.orderId !== "beam"
     ) return;
 
-    const dx = unit.position.x - unit.order.target.x;
-    const dy = unit.position.y - unit.order.target.y;
+    const target = beamTarget(unit);
+    if (!target) return;
+
+    const dx = unit.position.x - target.x;
+    const dy = unit.position.y - target.y;
     const angle = Math.atan2(dy, dx);
 
     newSfx(
@@ -113,13 +92,10 @@ export const beamOrder = {
   onCastComplete: (unit) => {
     if (unit.order?.type !== "cast" || unit.order.orderId !== "beam") return;
 
-    const target = unit.order.target;
+    const target = beamTarget(unit);
     if (!target || !unit.position) {
       return console.warn("Either no target or position for beam");
     }
-
-    const action = findActionByOrder(unit, "beam");
-    if (!action) return console.warn("No beam action");
 
     // Calculate facing angle
     const dx = target.x - unit.position.x;
@@ -155,7 +131,7 @@ export const beamOrder = {
       },
     );
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;
 
 const updateBeams = () => {
   const beamsToRemove: BeamState[] = [];

@@ -1,6 +1,6 @@
 import { DEFAULT_FACING, MIRROR_SEPARATION } from "@/shared/constants.ts";
-import { Entity, Order, SystemEntity } from "@/shared/types.ts";
-import { OrderDefinition } from "./types.ts";
+import { Entity, SystemEntity } from "@/shared/types.ts";
+import { OrderOverride } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { pathingMap, updatePathing } from "../systems/pathing.ts";
 import { lookup } from "../systems/lookup.ts";
@@ -10,32 +10,6 @@ import { appContext } from "@/shared/context.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 
 export const mirrorImageOrder = {
-  id: "mirrorImage",
-
-  onIssue: (unit, _, queue) => {
-    if (!unit.position) return "failed";
-
-    const action = findActionByOrder(unit, "mirrorImage");
-    const castDuration =
-      (action?.type === "auto" ? action.castDuration : undefined) ?? 1;
-
-    const order: Order = {
-      type: "cast",
-      orderId: "mirrorImage",
-      remaining: castDuration,
-    };
-
-    if (queue) {
-      unit.queue = [...unit.queue ?? [], order];
-      return "ordered";
-    }
-
-    delete unit.queue;
-    unit.order = order;
-
-    return "ordered";
-  },
-
   onCastStart: (unit) => {
     // Clear existing mirrors
     if (unit.mirrors) {
@@ -143,4 +117,4 @@ export const mirrorImageOrder = {
       unit.mirrors = [mirror.id];
     });
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;

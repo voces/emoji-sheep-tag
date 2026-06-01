@@ -1,5 +1,5 @@
-import { Entity, Order } from "@/shared/types.ts";
-import { OrderDefinition } from "./types.ts";
+import { Entity } from "@/shared/types.ts";
+import { OrderOverride } from "./types.ts";
 import { damageEntity, newUnit } from "../api/unit.ts";
 import { lookup } from "../systems/lookup.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
@@ -14,29 +14,7 @@ import { colorName, getPlayer } from "@/shared/api/player.ts";
 import { lobbyContext } from "../contexts.ts";
 
 export const biteOrder = {
-  id: "bite",
-
-  onIssue: (unit, target, queue) => {
-    if (typeof target !== "string") return "failed";
-
-    const action = findActionByOrder(unit, "bite");
-    if (!action) return "failed";
-
-    const order: Order = {
-      type: "cast",
-      orderId: "bite",
-      remaining: "castDuration" in action ? action.castDuration ?? 0 : 0,
-      targetId: target,
-    };
-
-    if (queue) unit.queue = [...unit.queue ?? [], order];
-    else {
-      delete unit.queue;
-      unit.order = order;
-    }
-
-    return "ordered";
-  },
+  canExecute: (_unit, target) => typeof target === "string",
 
   onCastComplete: (unit) => {
     if (unit.order?.type !== "cast") return;
@@ -103,4 +81,4 @@ export const biteOrder = {
       }
     } else damageEntity(unit, target, 1000);
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;

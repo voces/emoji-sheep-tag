@@ -1,63 +1,9 @@
-import { Order } from "@/shared/types.ts";
-import { findActionByOrder } from "@/shared/util/actionLookup.ts";
-import { OrderDefinition } from "./types.ts";
-import { newSfx } from "../api/sfx.ts";
-import { interval } from "../api/timing.ts";
+import { OrderOverride } from "./types.ts";
 
 export const manaPotionOrder = {
-  id: "manaPotion",
-
-  onIssue: (unit, _, queue) => {
-    const action = findActionByOrder(unit, "manaPotion");
-    if (!action || action.type !== "auto") return "failed";
-
-    // Don't use mana potion if already at full mana
-    if (typeof unit.mana === "number" && typeof unit.maxMana === "number") {
-      if (unit.mana >= unit.maxMana) return "failed";
-    }
-
-    const order: Order = { type: "cast", orderId: "manaPotion", remaining: 0 };
-
-    if (queue) {
-      unit.queue = [...unit.queue ?? [], order];
-      return "ordered";
-    }
-
-    return "immediate";
-  },
-
-  onCastComplete: (unit) => {
-    const action = findActionByOrder(unit, "manaPotion");
-    if (!action || action.type !== "auto" || !action.manaRestore) return false;
-
-    if (typeof unit.mana === "number" && typeof unit.maxMana === "number") {
-      unit.mana = Math.min(unit.mana + action.manaRestore, unit.maxMana);
-    }
-
-    if (unit.position) {
-      let ticks = 0;
-      const clear = interval(
-        () => {
-          if (!unit.position || ticks++ > 10) return clear();
-          newSfx(
-            {
-              x: unit.position.x + Math.random() - 0.5,
-              y: unit.position.y + Math.random() - 0.25,
-            },
-            "sparkle",
-            0,
-            0.5,
-            "ease-in-out",
-            0.5,
-            {
-              playerColor: "#34a5e9",
-              modelScale: 0.5 + Math.random() ** 2,
-              facing: Math.random() * Math.PI * 2,
-            },
-          );
-        },
-        0.1,
-      );
-    }
-  },
-} satisfies OrderDefinition;
+  // Don't waste the potion when already at full mana; the restore + sparkle are
+  // expressed as data effects (restoreMana + custom "manaSparkle").
+  canExecute: (unit) =>
+    !(typeof unit.mana === "number" && typeof unit.maxMana === "number" &&
+      unit.mana >= unit.maxMana),
+} satisfies OrderOverride;

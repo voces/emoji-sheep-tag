@@ -1,23 +1,19 @@
-import { OrderDefinition } from "./types.ts";
+import { Entity, Order } from "@/shared/types.ts";
+import { Point } from "@/shared/pathing/math.ts";
+import { findActionByOrder } from "@/shared/util/actionLookup.ts";
+import { OrderDefinition, OrderOverride } from "./types.ts";
+import { applyOrderEffects, resolveOrderTarget } from "./effects.ts";
 
 import { mirrorImageOrder } from "./mirrorImage.ts";
-import { foxOrder } from "./fox.ts";
 import { destroyLastFarmOrder } from "./destroyLastFarm.ts";
-import { speedPotOrder } from "./speedPot.ts";
-import { strengthPotionOrder } from "./strengthPotion.ts";
-import { meteorOrder } from "./meteor.ts";
 import { biteOrder } from "./bite.ts";
 import { manaPotionOrder } from "./manaPotion.ts";
-import { sentryOrder } from "./sentry.ts";
 import { locateSheepOrder } from "./locateSheep.ts";
 import { cancelUpgradeOrder } from "./cancelUpgrade.ts";
-import { selfDestructOrder } from "./selfDestruct.ts";
 import { swapOrder } from "./swap.ts";
 import { dodgeOrder } from "./dodge.ts";
 import { giveToEnemyOrder } from "./giveToEnemy.ts";
 import { reclaimFromEnemyOrder } from "./reclaimFromEnemy.ts";
-import { crystalSpeedOrder } from "./crystalSpeed.ts";
-import { crystalInvisibilityOrder } from "./crystalInvisibility.ts";
 import { hayTrapOrder } from "./hayTrap.ts";
 import { beamOrder } from "./beam.ts";
 import { translocateOrder } from "./translocate.ts";
@@ -29,36 +25,94 @@ import {
   editorMoveEntityUp,
 } from "./editorMoveEntity.ts";
 
-const orderRegistry = new Map<string, OrderDefinition>();
+/** Orders handled directly by the legacy switch in unitOrder.ts. */
+const LEGACY = new Set([
+  "move",
+  "attack",
+  "attack-ground",
+  "stop",
+  "hold",
+  "walk",
+]);
 
-export const getOrder = (orderId: string) => orderRegistry.get(orderId);
+const overrides = new Map<string, OrderOverride>();
+const registerOverride = (id: string, override: OrderOverride) =>
+  overrides.set(id, override);
 
-const registerOrder = (order: OrderDefinition) => {
-  orderRegistry.set(order.id, order);
+/** Synthesizes the cast order from the action's target shape and cast duration. */
+const genericOnIssue = (
+  unit: Entity,
+  orderId: string,
+  target: Point | string | undefined,
+  queue: boolean,
+): "immediate" | "ordered" | "failed" => {
+  const action = findActionByOrder(unit, orderId);
+  if (!action) return "failed";
+
+  const castDuration = "castDuration" in action ? action.castDuration ?? 0 : 0;
+  const hasTarget = target !== undefined;
+
+  if (!queue && !hasTarget && castDuration === 0) return "immediate";
+
+  const order: Order = {
+    type: "cast",
+    orderId,
+    remaining: castDuration,
+    ...(typeof target === "string"
+      ? { targetId: target }
+      : target
+      ? { target }
+      : {}),
+  };
+
+  if (queue) unit.queue = [...unit.queue ?? [], order];
+  else {
+    delete unit.queue;
+    unit.order = order;
+  }
+
+  return "ordered";
 };
-registerOrder(mirrorImageOrder);
-registerOrder(foxOrder);
-registerOrder(destroyLastFarmOrder);
-registerOrder(speedPotOrder);
-registerOrder(strengthPotionOrder);
-registerOrder(meteorOrder);
-registerOrder(biteOrder);
-registerOrder(manaPotionOrder);
-registerOrder(sentryOrder);
-registerOrder(locateSheepOrder);
-registerOrder(cancelUpgradeOrder);
-registerOrder(selfDestructOrder);
-registerOrder(swapOrder);
-registerOrder(dodgeOrder);
-registerOrder(giveToEnemyOrder);
-registerOrder(reclaimFromEnemyOrder);
-registerOrder(crystalSpeedOrder);
-registerOrder(crystalInvisibilityOrder);
-registerOrder(hayTrapOrder);
-registerOrder(beamOrder);
-registerOrder(translocateOrder);
-registerOrder(editorRemoveEntity);
-registerOrder(editorMoveEntityDown);
-registerOrder(editorMoveEntityLeft);
-registerOrder(editorMoveEntityRight);
-registerOrder(editorMoveEntityUp);
+
+/** Applies the action's data-driven effects against the order's target. */
+const genericOnCastComplete = (unit: Entity, orderId: string) => {
+  const action = findActionByOrder(unit, orderId);
+  const effects = action && "effects" in action ? action.effects : undefined;
+  if (!effects?.length) return;
+  applyOrderEffects(unit, resolveOrderTarget(unit), effects);
+};
+
+export const getOrder = (orderId: string): OrderDefinition | undefined => {
+  if (LEGACY.has(orderId)) return undefined;
+  const override = overrides.get(orderId);
+  return {
+    id: orderId,
+    canExecute: override?.canExecute,
+    onIssue: override?.onIssue ??
+      ((unit, target, queue) => genericOnIssue(unit, orderId, target, queue)),
+    onCastStart: override?.onCastStart,
+    onCastComplete: override?.onCastComplete ??
+      ((unit) => genericOnCastComplete(unit, orderId)),
+  };
+};
+
+// Custom orders: only the callbacks that resist a data-driven representation.
+// Any omitted callback falls back to the generic, effect-driven implementation.
+registerOverride("mirrorImage", mirrorImageOrder);
+registerOverride("destroyLastFarm", destroyLastFarmOrder);
+registerOverride("bite", biteOrder);
+registerOverride("manaPotion", manaPotionOrder);
+registerOverride("locateSheep", locateSheepOrder);
+registerOverride("cancel-upgrade", cancelUpgradeOrder);
+registerOverride("swap", swapOrder);
+registerOverride("dodge", dodgeOrder);
+registerOverride("giveToEnemy", giveToEnemyOrder);
+registerOverride("reclaimFromEnemy", reclaimFromEnemyOrder);
+registerOverride("hayTrap", hayTrapOrder);
+registerOverride("beam", beamOrder);
+registerOverride("translocate", translocateOrder);
+registerOverride("editorRemoveEntity", editorRemoveEntity);
+registerOverride("editorMoveEntityDown", editorMoveEntityDown);
+registerOverride("editorMoveEntityLeft", editorMoveEntityLeft);
+registerOverride("editorMoveEntityRight", editorMoveEntityRight);
+registerOverride("editorMoveEntityUp", editorMoveEntityUp);

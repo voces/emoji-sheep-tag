@@ -1,5 +1,4 @@
-import { Order } from "@/shared/types.ts";
-import { OrderDefinition } from "./types.ts";
+import { OrderOverride } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import { lookup } from "../systems/lookup.ts";
 import { addSystem } from "@/shared/context.ts";
@@ -7,7 +6,6 @@ import { distanceBetweenPoints } from "@/shared/pathing/math.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 
 import type { Entity } from "@/shared/types.ts";
-import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 
 const hayTrapProjectiles = new Map<
   Entity,
@@ -17,35 +15,11 @@ const hayTrapProjectiles = new Map<
 const hayTrapData = new WeakMap<Entity, NonNullable<Entity["projectile"]>>();
 
 export const hayTrapOrder = {
-  id: "hayTrap",
-
-  onIssue: (unit, target, queue) => {
-    if (typeof target === "string") target = lookup(target)?.position;
-    if (!target) return "failed";
-
-    const action = findActionByOrder(unit, "hayTrap");
-    if (!action) return "failed";
-
-    const order: Order = {
-      type: "cast",
-      orderId: "hayTrap",
-      remaining: "castDuration" in action ? action.castDuration ?? 0 : 0,
-      target,
-    };
-
-    if (queue) unit.queue = [...unit.queue ?? [], order];
-    else {
-      delete unit.queue;
-      unit.order = order;
-    }
-
-    return "ordered";
-  },
-
   onCastStart: (unit) => {
     if (unit.order?.type !== "cast" || unit.order.orderId !== "hayTrap") return;
 
-    const target = unit.order.target;
+    const target = unit.order.target ??
+      (unit.order.targetId ? lookup(unit.order.targetId)?.position : undefined);
     if (!target || !unit.owner || !unit.position) {
       return console.warn("Missing target, owner, or position");
     }
@@ -82,7 +56,7 @@ export const hayTrapOrder = {
       hayTrapProjectiles.delete(unit);
     }
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;
 
 const handlePotentialInterrupt = (e: Entity) => {
   if (e.order?.type === "cast" && e.order.orderId === "hayTrap") return;

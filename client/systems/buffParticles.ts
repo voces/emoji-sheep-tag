@@ -83,14 +83,15 @@ const updateParticles = (e: Entity, delta: number, time: number) => {
     const emitter = getEmitter(buff.model!);
     if (!emitter) continue;
     const svg = svgs[buff.model!];
-    // Opt-in: a buff with particleUseOwnerColor inherits the owner's player
-    // color (used for bulldog reach-the-end sparkles); otherwise we fall back
-    // to the SVG fill so existing buffs (e.g. crimsonArc) stay their natural color.
+    // Color precedence: an explicit particleColor wins; otherwise particleUseOwnerColor
+    // inherits the owner's player color (e.g. bulldog reach-the-end sparkles); otherwise
+    // we fall back to the SVG fill so existing buffs (e.g. crimsonArc) stay natural.
     const ownerColor = buff.particleUseOwnerColor && e.owner
       ? getPlayer(e.owner)?.playerColor ?? e.playerColor
       : undefined;
-    const color = ownerColor
-      ? hexToLinearRgb(ownerColor)
+    const tint = buff.particleColor ?? ownerColor;
+    const color = tint
+      ? hexToLinearRgb(tint)
       : svg
       ? hexToLinearRgb(extractFill(svg))
       : [1, 1, 1] as [number, number, number];

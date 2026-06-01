@@ -1,31 +1,10 @@
-import { Order, SystemEntity } from "@/shared/types.ts";
-import { OrderDefinition } from "./types.ts";
-import { findActionByOrder } from "@/shared/util/actionLookup.ts";
+import { SystemEntity } from "@/shared/types.ts";
+import { OrderOverride } from "./types.ts";
 import { lookup } from "../systems/lookup.ts";
 import { translocateUnit } from "../api/unit.ts";
 
 export const translocateOrder = {
-  id: "translocate",
-
-  onIssue: (unit, target, queue) => {
-    const action = findActionByOrder(unit, "translocate");
-    if (!action || action.type !== "auto") return "failed";
-    if (typeof target !== "string") return "failed";
-
-    const order: Order = {
-      type: "cast",
-      orderId: "translocate",
-      remaining: action.castDuration ?? 0,
-      targetId: target,
-    };
-
-    if (queue) unit.queue = [...(unit.queue ?? []), order];
-    else {
-      delete unit.queue;
-      unit.order = order;
-    }
-    return "ordered";
-  },
+  canExecute: (_unit, target) => typeof target === "string",
 
   onCastComplete: (unit) => {
     if (unit.order?.type !== "cast" || !unit.order.targetId) return;
@@ -40,4 +19,4 @@ export const translocateOrder = {
       unit.id,
     );
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;

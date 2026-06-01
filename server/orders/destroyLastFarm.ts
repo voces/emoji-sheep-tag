@@ -1,24 +1,11 @@
-import { OrderDefinition } from "./types.ts";
+import { OrderOverride } from "./types.ts";
 import { findLastPlayerUnit } from "../systems/playerEntities.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 import { isStructure } from "@/shared/api/unit.ts";
 import { refundEntity } from "../api/unit.ts";
 
 export const destroyLastFarmOrder = {
-  id: "destroyLastFarm",
-
-  onIssue: (unit, _, queue) => {
-    if (!unit.owner) return "failed";
-    if (queue) {
-      unit.queue = [...unit.queue ?? [], {
-        type: "cast",
-        orderId: "destroyLastFarm",
-        remaining: 0,
-      }];
-      return "ordered";
-    }
-    return "immediate";
-  },
+  canExecute: (unit) => !!unit.owner,
 
   onCastComplete: (unit) => {
     if (!unit.owner) return false;
@@ -34,4 +21,4 @@ export const destroyLastFarmOrder = {
     }
     return true;
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;

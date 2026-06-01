@@ -1,53 +1,25 @@
-import { Buff, Order } from "@/shared/types.ts";
+import { Buff } from "@/shared/types.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
-import { OrderDefinition } from "./types.ts";
+import { OrderOverride } from "./types.ts";
 import { appContext } from "@/shared/context.ts";
 
+const findMirror = (unit: { owner?: string }) =>
+  Array.from(appContext.current.entities).find((e) =>
+    e.isMirror && e.owner === unit.owner && e.position
+  );
+
 export const swapOrder = {
-  id: "swap",
-
-  onIssue: (unit, _, queue) => {
-    const action = findActionByOrder(unit, "swap");
-    if (!action || action.type !== "auto") return "failed";
-
-    // Check if unit has enough mana
-    const manaCost = action.manaCost ?? 0;
-    if (typeof unit.mana !== "number" || unit.mana < manaCost) {
-      return "failed";
-    }
-
-    // Find the mirror image
-    const mirror = Array.from(appContext.current.entities).find((e) =>
-      e.isMirror && e.owner === unit.owner && e.position
-    );
-
-    if (!mirror || !mirror.position || !unit.position) return "failed";
-
-    const order: Order = {
-      type: "cast",
-      orderId: "swap",
-      remaining: action.castDuration ?? 0,
-    };
-
-    if (queue) {
-      unit.queue = [...unit.queue ?? [], order];
-      return "ordered";
-    } else {
-      delete unit.queue;
-      unit.order = order;
-    }
-
-    return "ordered";
+  // Swap requires an existing mirror image to swap with (mana is checked generically).
+  canExecute: (unit) => {
+    const mirror = findMirror(unit);
+    return !!(mirror && mirror.position && unit.position);
   },
 
   onCastStart: (unit) => {
     const action = findActionByOrder(unit, "swap");
     if (!action || action.type !== "auto") return;
 
-    const mirror = Array.from(appContext.current.entities).find((e) =>
-      e.isMirror && e.owner === unit.owner && e.position
-    );
-
+    const mirror = findMirror(unit);
     if (!mirror || !mirror.position || !unit.position) return;
 
     // Add buff to mirror with swap model for visual effect during cast
@@ -77,11 +49,7 @@ export const swapOrder = {
     const action = findActionByOrder(unit, "swap");
     if (!action || action.type !== "auto") return false;
 
-    // Find the mirror image
-    const mirror = Array.from(appContext.current.entities).find((e) =>
-      e.isMirror && e.owner === unit.owner && e.position
-    );
-
+    const mirror = findMirror(unit);
     if (!mirror || !mirror.position || !unit.position) return false;
 
     // Remove the swap buff from mirror
@@ -110,4 +78,4 @@ export const swapOrder = {
 
     return true;
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;

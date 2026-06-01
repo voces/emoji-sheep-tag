@@ -1,6 +1,5 @@
-import { Order } from "@/shared/types.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
-import { OrderDefinition } from "./types.ts";
+import { OrderOverride } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
 import {
   DEFAULT_FACING,
@@ -9,24 +8,6 @@ import {
 } from "@/shared/constants.ts";
 
 export const dodgeOrder = {
-  id: "dodge",
-
-  onIssue: (unit, _, queue) => {
-    const action = findActionByOrder(unit, "dodge");
-    if (!action || action.type !== "auto") {
-      return "failed";
-    }
-
-    const order: Order = { type: "cast", orderId: "dodge", remaining: 0 };
-
-    if (queue) {
-      unit.queue = [...unit.queue ?? [], order];
-      return "ordered";
-    }
-
-    return "immediate";
-  },
-
   onCastComplete: (unit) => {
     const action = findActionByOrder(unit, "dodge");
     if (
@@ -83,4 +64,4 @@ export const dodgeOrder = {
 
     return true;
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;

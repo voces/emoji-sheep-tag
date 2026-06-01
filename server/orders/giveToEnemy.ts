@@ -1,9 +1,7 @@
-import { OrderDefinition } from "./types.ts";
+import { OrderOverride } from "./types.ts";
 import { practiceModeActions } from "@/shared/data.ts";
 
 export const giveToEnemyOrder = {
-  id: "giveToEnemy",
-
   onIssue: (unit) => {
     // Only works if unit has a trueOwner (practice mode)
     if (!unit.trueOwner) return "failed";
@@ -25,4 +23,4 @@ export const giveToEnemyOrder = {
 
     return "immediate";
   },
-} satisfies OrderDefinition;
+} satisfies OrderOverride;
