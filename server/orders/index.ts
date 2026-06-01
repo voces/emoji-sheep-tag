@@ -24,16 +24,13 @@ import {
   editorMoveEntityRight,
   editorMoveEntityUp,
 } from "./editorMoveEntity.ts";
-
-/** Orders handled directly by the legacy switch in unitOrder.ts. */
-const LEGACY = new Set([
-  "move",
-  "attack",
-  "attack-ground",
-  "stop",
-  "hold",
-  "walk",
-]);
+import {
+  attackGroundOrder,
+  attackOrder,
+  holdOrder,
+  moveOrder,
+  stopOrder,
+} from "./core.ts";
 
 const overrides = new Map<string, OrderOverride>();
 const registerOverride = (id: string, override: OrderOverride) =>
@@ -82,8 +79,7 @@ const genericOnCastComplete = (unit: Entity, orderId: string) => {
   applyOrderEffects(unit, resolveOrderTarget(unit), effects);
 };
 
-export const getOrder = (orderId: string): OrderDefinition | undefined => {
-  if (LEGACY.has(orderId)) return undefined;
+export const getOrder = (orderId: string): OrderDefinition => {
   const override = overrides.get(orderId);
   return {
     id: orderId,
@@ -95,6 +91,13 @@ export const getOrder = (orderId: string): OrderDefinition | undefined => {
       ((unit) => genericOnCastComplete(unit, orderId)),
   };
 };
+
+// Core control verbs (handled entirely in onIssue).
+registerOverride("move", moveOrder);
+registerOverride("attack", attackOrder);
+registerOverride("attack-ground", attackGroundOrder);
+registerOverride("stop", stopOrder);
+registerOverride("hold", holdOrder);
 
 // Custom orders: only the callbacks that resist a data-driven representation.
 // Any omitted callback falls back to the generic, effect-driven implementation.

@@ -2,8 +2,6 @@ import { z } from "zod";
 import { lookup } from "../systems/lookup.ts";
 import { Client } from "../client.ts";
 import { zPoint } from "@/shared/zod.ts";
-import { handleMove } from "./move.ts";
-import { handleAttack } from "./attack.ts";
 import { getOrder } from "../orders/index.ts";
 import { findActionAndItem } from "@/shared/util/actionLookup.ts";
 import { canExecuteAction, precast } from "../orders/precast.ts";
@@ -64,11 +62,10 @@ export const unitOrder = (
       continue;
     }
 
-    // Check if this order is handled by the new registry system
     const orderDef = getOrder(order);
 
     // Handle autocast toggle (before other checks since it doesn't require execution)
-    if (orderDef && typeof autocast === "boolean") {
+    if (typeof autocast === "boolean") {
       const currentAutocast = unit.autocast ?? [];
       const isEnabled = currentAutocast.includes(order);
       if (autocast && !isEnabled) {
@@ -80,60 +77,24 @@ export const unitOrder = (
       continue;
     }
 
-    // Check constructing, mana, gold, and cooldown (applies to all handlers)
+    // Check constructing, mana, gold, and cooldown
     if (!canExecuteAction(unit, action)) continue;
 
-    if (orderDef) {
-      // Order-specific validation
-      if (orderDef.canExecute && !orderDef.canExecute(unit, target)) continue;
+    // Order-specific validation
+    if (orderDef.canExecute && !orderDef.canExecute(unit, target)) continue;
 
-      // Already casting this order on same target - ignore
-      if (!queue && isAlreadyCasting(unit, order, target)) continue;
+    // Already casting this order on same target - ignore
+    if (!queue && isAlreadyCasting(unit, order, target)) continue;
 
-      const issueResult = orderDef.onIssue(unit, target, queue);
+    if (orderDef.onIssue(unit, target, queue) === "immediate") {
+      if (!precast(unit, action)) continue;
 
-      if (issueResult === "immediate") {
-        if (!precast(unit, action)) continue;
+      orderDef.onCastStart?.(unit);
 
-        orderDef?.onCastStart?.(unit);
+      // NOTE: remaining is ignored, so cast completes immediately after it starts
+      orderDef.onCastComplete?.(unit);
 
-        // NOTE: remaining is ignored, so cast completes immediately after it starts
-        orderDef.onCastComplete?.(unit);
-
-        postCast(unit, itemWithAction, action);
-      }
-    } else {
-      // Fall back to legacy handlers
-      switch (order) {
-        case "move":
-          handleMove(unit, target, queue);
-          break;
-        case "attack":
-          handleAttack(unit, target, queue, false);
-          break;
-        case "attack-ground":
-          handleAttack(unit, target, queue, true);
-          break;
-        case "stop":
-          if (!queue) {
-            delete unit.queue;
-            delete unit.order;
-            if (unit.swing) delete unit.swing;
-          }
-          // Do nothing if stop is queued
-          break;
-        case "hold":
-          if (queue) unit.queue = [...unit.queue ?? [], { type: "hold" }];
-          else {
-            delete unit.queue;
-            if (unit.swing) delete unit.swing;
-            unit.order = { type: "hold" };
-          }
-          break;
-        default:
-          console.warn("Unhandled order type", { order, units, target });
-          continue;
-      }
+      postCast(unit, itemWithAction, action);
     }
   }
 };
