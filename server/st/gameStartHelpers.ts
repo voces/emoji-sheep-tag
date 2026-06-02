@@ -33,6 +33,13 @@ const tryGetClient = () => {
   }
 };
 
+// Most ticks to run in a single wake-up. `cb` advances the simulation by one
+// fixed `seconds` step; running several per wake lets us recover lost time when
+// a timer fires late, but capping it stops a stall (GC pause, event-loop
+// starvation) from triggering an unbounded catch-up spiral — we drop the
+// backlog instead.
+const MAX_CATCHUP_TICKS = 5;
+
 const realtimeInterval = (
   cb: () => void,
   seconds: number,
@@ -44,12 +51,20 @@ const realtimeInterval = (
   const client = tryGetClient();
   const clientRef = client ? new WeakRef(client) : undefined;
   let active = true;
+
+  const intervalMs = () => {
+    const multiplier = lobby.settings.speedMultiplier;
+    return multiplier > 0 ? (seconds * 1000) / multiplier : seconds * 1000;
+  };
+
+  // Wall-clock time the next tick is due. Advancing it by exactly one interval
+  // per tick (rather than `now + interval`) keeps the cadence anchored to
+  // wall-clock, so processing time and setTimeout slack don't accumulate into
+  // the simulation running slow.
+  let nextTickAt = performance.now() + intervalMs();
+
   const schedule = () => {
     if (!active) return;
-    const multiplier = lobby.settings.speedMultiplier;
-    const delay = multiplier > 0
-      ? (seconds * 1000) / multiplier
-      : seconds * 1000;
     setTimeout(() => {
       if (!active) return;
       const lobby = lobbyRef.deref();
@@ -59,22 +74,41 @@ const realtimeInterval = (
         active = false;
         return;
       }
+      const step = intervalMs();
+
       lobbyContext.with(lobby, () => {
-        appContext.with(ecs, () => {
-          if (client) {
-            clientContext.with(client, () => {
-              if (ecs.flushScheduled) cb();
-              else ecs.batch(cb);
-            });
-          } else {
-            if (ecs.flushScheduled) cb();
+        const runTick = () => {
+          appContext.with(ecs, () => {
+            if (client) {
+              clientContext.with(client, () => {
+                if (ecs.flushScheduled) cb();
+                else ecs.batch(cb);
+              });
+            } else if (ecs.flushScheduled) cb();
             else ecs.batch(cb);
-          }
-        });
-        flushUpdates();
+          });
+        };
+
+        let ran = 0;
+        while (
+          active && performance.now() >= nextTickAt && ran < MAX_CATCHUP_TICKS
+        ) {
+          runTick();
+          nextTickAt += step;
+          ran++;
+        }
+
+        // Still behind after the cap: too far in the hole to catch up, so drop
+        // the backlog and resync to now rather than spiral.
+        if (performance.now() >= nextTickAt) {
+          nextTickAt = performance.now() + step;
+        }
+
+        if (ran > 0) flushUpdates();
       });
+
       schedule();
-    }, delay);
+    }, Math.max(0, nextTickAt - performance.now()));
   };
   schedule();
   return () => {

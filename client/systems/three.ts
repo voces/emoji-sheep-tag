@@ -269,10 +269,11 @@ addSystem({
 addSystem({
   props: ["progress", "completionTime"],
   updateEntity: (e, delta) => {
-    if (e.progress + delta >= 1) {
-      return delete (e as Entity).progress;
-    }
-    e.progress += delta / e.completionTime;
+    // Advance locally for smooth visuals between server ticks, but let the
+    // server own completion — it deletes progress (synced as `progress: null`).
+    // Hold just below 1 rather than clearing here: completing client-side ran
+    // ahead of the server and let a late update resurrect a finished build.
+    e.progress = Math.min(e.progress + delta / e.completionTime, 0.9999);
   },
 });
 

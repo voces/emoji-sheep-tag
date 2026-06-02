@@ -3,7 +3,9 @@ import { expect } from "@std/expect";
 import { endRound, leave } from "./lobbyApi.ts";
 import { cleanupTest, it } from "./testing/setup.ts";
 import { getPlayerGold, grantPlayerGold } from "./api/player.ts";
+import { getTeamGold } from "./api/teamGold.ts";
 import { newUnit } from "./api/unit.ts";
+import { getPlayer } from "@/shared/api/player.ts";
 import { lobbyContext } from "./contexts.ts";
 
 afterEach(cleanupTest);
@@ -73,6 +75,38 @@ describe("leave - gold distribution", () => {
       // Check that gold was distributed to wolf2
       const wolf2FinalGold = getPlayerGold("wolf2");
       expect(wolf2FinalGold - wolf2InitialGold).toBe(wolf1InitialGold);
+    },
+  );
+
+  it(
+    "should redistribute a leaver's gold into the team pool with team gold enabled",
+    {
+      sheep: ["sheep1", "sheep2", "sheep3"],
+      wolves: ["wolf1"],
+      gold: 0,
+      teamGold: true,
+    },
+    function* ({ clients }) {
+      newUnit("sheep1", "sheep", 10, 10);
+      newUnit("sheep2", "sheep", 11, 10);
+      newUnit("sheep3", "sheep", 12, 10);
+
+      // Park both surviving allies at the individual cap so any gold granted to
+      // them overflows into the shared team pool — the mutation that previously
+      // threw "outside batch" when leaving outside a game tick.
+      getPlayer("sheep2")!.gold = 20;
+      getPlayer("sheep3")!.gold = 20;
+      getPlayer("sheep1")!.gold = 30;
+
+      yield;
+
+      const teamGoldBefore = getTeamGold("sheep");
+
+      leave(clients.get("sheep1"));
+
+      // Allies are capped, so redistributed gold overflows into the team pool —
+      // exercising the team-entity mutation that must run inside the round batch.
+      expect(getTeamGold("sheep")).toBeGreaterThan(teamGoldBefore);
     },
   );
 

@@ -88,6 +88,10 @@ import circle from "../assets/circle.svg" with { type: "text" };
 import crate from "../assets/crate.svg" with { type: "text" };
 import cart from "../assets/cart.svg" with { type: "text" };
 import wagon from "../assets/wagon.svg" with { type: "text" };
+import up from "../assets/up.svg" with { type: "text" };
+import down from "../assets/down.svg" with { type: "text" };
+import left from "../assets/left.svg" with { type: "text" };
+import right from "../assets/right.svg" with { type: "text" };
 
 export const svgs: Record<string, string> = {
   // units
@@ -140,6 +144,10 @@ export const svgs: Record<string, string> = {
   route,
   swap,
   alignment,
+  up,
+  down,
+  left,
+  right,
 
   // misc
   gold,

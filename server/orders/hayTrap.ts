@@ -29,6 +29,7 @@ export const hayTrapOrder = {
       "hayCube",
       unit.position.x,
       unit.position.y,
+      { isEffect: true },
     );
 
     hayTrapProjectiles.set(unit, { hay, target });

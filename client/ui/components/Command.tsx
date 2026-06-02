@@ -1,10 +1,5 @@
 import { keyframes, styled } from "styled-components";
 
-const marchingAnts = keyframes`
-  0% { background-position: 0 0, 100% 0, 100% 100%, 0 100%; }
-  100% { background-position: 12px 0, 100% 12px, calc(100% - 12px) 100%, 0 calc(100% - 12px); }
-`;
-
 export const CommandButton = styled.div`
   position: relative;
   width: 44px;
@@ -31,30 +26,62 @@ export const CommandButton = styled.div`
     transform: translateY(-1px);
   }
 
+  /* The gold dashed edge (static when autocastable, marching when enabled) is
+    drawn by the MarchingAnts SVG overlay; keep the 1px border for layout. */
   &[data-autocast] {
-    border: 1px dashed ${({ theme }) => theme.game.gold};
-  }
-
-  &[data-autocast="enabled"] {
     border-color: transparent;
   }
-  &[data-autocast="enabled"]::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    background:
-      repeating-linear-gradient(90deg, gold 0 6px, transparent 6px 10px),
-      repeating-linear-gradient(180deg, gold 0 6px, transparent 6px 10px),
-      repeating-linear-gradient(90deg, gold 0 6px, transparent 6px 10px),
-      repeating-linear-gradient(180deg, gold 0 6px, transparent 6px 10px);
-    background-size: 100% 2px, 2px 100%, 100% 2px, 2px 100%;
-    background-position: 0 0, 100% 0, 100% 100%, 0 100%;
-    background-repeat: no-repeat;
-    animation: ${marchingAnts} 0.4s linear infinite;
-    pointer-events: none;
-    border-radius: inherit;
+`;
+
+/**
+ * Gold dashed border for autocastable abilities, drawn as a single SVG rect
+ * stroke so both states share identical dash lengths. The 1px stroke (matching
+ * the button border) stays 1px regardless of scaling via vector-effect, and a
+ * single continuous path means the dashes follow the rounded corners cleanly.
+ * When `animated`, an animated stroke-dashoffset marches the dashes around the
+ * perimeter; the offset spans exactly one dash period so the loop is seamless.
+ */
+const antsMarch = keyframes`
+  to { stroke-dashoffset: -10; }
+`;
+
+const MarchingAntsSvg = styled.svg`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  color: ${({ theme }) => theme.game.gold};
+
+  rect {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1;
+    stroke-dasharray: 5 5;
+  }
+
+  &[data-animated="true"] rect {
+    animation: ${antsMarch} 0.4s linear infinite;
   }
 `;
+
+export const MarchingAnts = ({ animated }: { animated?: boolean }) => (
+  <MarchingAntsSvg
+    viewBox="0 0 44 44"
+    preserveAspectRatio="none"
+    data-animated={animated ? "true" : undefined}
+    aria-hidden
+  >
+    <rect
+      x="0.5"
+      y="0.5"
+      width="43"
+      height="43"
+      rx="4.5"
+      vectorEffect="non-scaling-stroke"
+    />
+  </MarchingAntsSvg>
+);
 
 const CommandBadge = styled.span`
   position: absolute;

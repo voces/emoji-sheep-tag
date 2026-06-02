@@ -72,15 +72,22 @@ export const getCurrentAnimation = (e: Entity): string | undefined => {
 
 export const computeAnimationParams = (
   animationName: string | undefined,
-  collection: AnimatedInstancedMesh,
+  collection: Pick<AnimatedInstancedMesh, "getClipInfo">,
   e: Entity,
 ): { phase: number; speed: number } => {
   if (!animationName) return { phase: 0, speed: 0 };
-  const clipInfo = collection.getClipInfo(animationName);
-  let targetDuration = clipInfo?.duration ?? 1;
-  if (animationName === "build" && e.completionTime) {
-    targetDuration = e.completionTime * (1 - (e.progress ?? 0));
+
+  // Build/upgrade: lock the clip's frame directly to construction progress.
+  // With speed 0 the shader holds frame = phase, so phase = progress maps the
+  // clip 1:1 onto build completeness. The world system re-applies this as
+  // progress advances, so the animation tracks the build exactly rather than
+  // running on its own clock — which drifts over a long build and then loops or
+  // freezes near the end.
+  if (animationName === "build" && typeof e.progress === "number") {
+    return { phase: Math.min(e.progress, 0.9999), speed: 0 };
   }
+
+  const targetDuration = collection.getClipInfo(animationName)?.duration ?? 1;
   const speed = 1 / targetDuration;
   const phase = 1 - ((getAnimationTime() * speed) % 1);
   return { phase, speed };
@@ -177,6 +184,11 @@ export const updateAnimationState = (e: Entity) => {
     const shouldCrossfade = FADEABLE_ANIMS.has(currentAnim ?? "");
     entityAnimationState.set(e, animationName);
     applyAnimation(e, collection, animationName ?? "default", shouldCrossfade);
+  } else if (animationName === "build") {
+    // Keep the build clip's frame locked to progress as it advances, so the
+    // construction animation tracks the build's real duration exactly.
+    const { phase, speed } = computeAnimationParams("build", collection, e);
+    collection.setAnimationAt(e.id, "build", phase, speed, false);
   }
 };
 

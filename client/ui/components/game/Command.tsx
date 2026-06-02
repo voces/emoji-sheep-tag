@@ -8,6 +8,7 @@ import {
   CommandButton,
   CommandCount,
   CommandShortcut,
+  MarchingAnts,
 } from "@/components/Command.tsx";
 
 const flash = keyframes`
@@ -239,6 +240,7 @@ export const Command = ({
         cooldownRemaining > 0 && cooldownTotal > 0 && (
         <CooldownOverlay $progress={1 - cooldownRemaining / cooldownTotal} />
       )}
+      {autocast && <MarchingAnts animated={autocast === "enabled"} />}
       {!hideTooltip && tooltip}
     </FlashingCommandButton>
   );

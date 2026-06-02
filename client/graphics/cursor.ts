@@ -126,6 +126,9 @@ export const updateCursor = (updatePosition = false) => {
       cursor.style.height = `${diameter}px`;
       cursor.style.transform = "translate(-50%, -50%)";
       cursor.style.color = "blue";
+      // The ring colors itself via the data-player fill below; clear any
+      // hue-rotate left over from a prior pointer-mode render so it doesn't tint.
+      cursor.style.filter = "none";
       for (const n of cursor.querySelectorAll("[data-player")) {
         if (!(n instanceof SVGElement)) return;
         n.style.fill = `hsl(${variants[variant].hue - 150}, 90%, 60%)`;
