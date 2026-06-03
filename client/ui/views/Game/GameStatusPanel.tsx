@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
 import { makeVar, useReactiveVar } from "@/hooks/useVar.tsx";
@@ -9,11 +8,10 @@ import { useLocalPlayer, usePlayers } from "@/hooks/usePlayers.ts";
 import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { practiceVar } from "@/vars/practice.ts";
-import { shortcutsVar } from "@/vars/shortcuts.ts";
-import { checkShortcut } from "../../../controls/keyboardHandlers.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { vipVar } from "@/vars/vip.ts";
 import { editorVar } from "@/vars/editor.ts";
+import { scoreboardExpandedVar } from "@/vars/scoreboard.ts";
 import { Player } from "@/shared/api/player.ts";
 import { isStructure } from "@/shared/api/unit.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
@@ -22,7 +20,6 @@ export const timersVar = makeVar<Entity[]>([]);
 const spiritsVar = makeVar<Entity[]>([]);
 const structuresByOwner: Record<string, Set<Entity>> = {};
 const structuresByOwnerVar = makeVar(structuresByOwner);
-const scoreboardExpandedVar = makeVar<boolean>(true);
 
 app.addSystem({
   props: ["isTimer", "buffs"],
@@ -339,7 +336,6 @@ export const GameStatusPanel = () => {
   const timers = useReactiveVar(timersVar);
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const practice = useReactiveVar(practiceVar);
-  const shortcuts = useReactiveVar(shortcutsVar);
   const players = usePlayers();
   const expanded = useReactiveVar(scoreboardExpandedVar);
   const isEditor = useReactiveVar(editorVar);
@@ -347,24 +343,6 @@ export const GameStatusPanel = () => {
   const localPlayer = useLocalPlayer();
 
   useListenToEntities(players, ["sheepTime", "team"]);
-
-  const shortcutsRef = useRef(shortcuts);
-  shortcutsRef.current = shortcuts;
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === "INPUT") return;
-      if (
-        checkShortcut(shortcutsRef.current.misc, "toggleScoreboard", e.code)
-      ) {
-        e.preventDefault();
-        scoreboardExpandedVar(!scoreboardExpandedVar());
-      }
-    };
-
-    globalThis.addEventListener("keydown", handleKeyDown);
-    return () => globalThis.removeEventListener("keydown", handleKeyDown);
-  }, []);
 
   if (isEditor) return null;
 

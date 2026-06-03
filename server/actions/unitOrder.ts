@@ -14,14 +14,16 @@ const isAlreadyCasting = (
   unit: Entity,
   orderId: string,
   target: Point | string | undefined,
-): boolean =>
-  unit.order?.type === "cast" &&
-  unit.order.orderId === orderId &&
-  (typeof target === "string"
-    ? "targetId" in unit.order && unit.order.targetId === target
-    : "target" in unit.order &&
-      unit.order.target?.x === target?.x &&
-      unit.order.target?.y === target?.y);
+): boolean => {
+  if (unit.order?.type !== "cast" || unit.order.orderId !== orderId) {
+    return false;
+  }
+  if (typeof target === "string") return unit.order.targetId === target;
+  if (target === undefined) {
+    return unit.order.target === undefined && unit.order.targetId === undefined;
+  }
+  return unit.order.target?.x === target.x && unit.order.target?.y === target.y;
+};
 
 export const zOrderEvent = z.object({
   type: z.literal("unitOrder"),

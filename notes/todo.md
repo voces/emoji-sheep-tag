@@ -31,8 +31,6 @@
     or a stack-id/max mechanism on the buff)
 - Pub functionality
 - Pausing?
-- Editor improvements
-  - Brush size
 - Enable queuing actions during construction/upgrades
 - Enable queuing actions for gold? This would require monitoring gold...
 - Targeting range indicators
@@ -45,13 +43,6 @@
 
 - Sheep count keeps getting reset?
 - Switch broken - won without timer expiring
-- Mirror image: recasting mid-cast re-consumes mana and interrupts the cast. Add
-  a brief (~0.5s) cooldown OR block recasting while already in progress.
-  (Pre-existing: `isAlreadyCasting` doesn't match target-less self-casts since
-  it checks `"target" in order`.)
-- Beam: reads as a thick line rather than a cone (frustum taper 1->2 over length
-  6 is too subtle; widen the end width?)
-- Cancel (cancel-upgrade): multiple detectors; pick/order by context
 - Wolf invisible to sheep until the sheep moved (fog/vision not updated for a
   stationary observer)
 

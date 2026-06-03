@@ -23,6 +23,7 @@ import { showFeedback } from "@/vars/feedback.ts";
 import { stateVar } from "@/vars/state.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { showSettingsVar } from "@/vars/showSettings.ts";
+import { scoreboardExpandedVar } from "@/vars/scoreboard.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { isSoftwareRenderer } from "./util/gpu.ts";
 import { selectEntity, selectPrimaryUnit } from "./api/selection.ts";
@@ -1169,8 +1170,22 @@ document.addEventListener("keydown", (e) => {
         clearTerrainSelection();
         return false;
       }
+      // Only consume the (overloaded) key when there is actually an order or
+      // blueprint to cancel; otherwise fall through to the scoreboard toggle.
+      const hadActiveOrder = !!getActiveOrder() || hasBlueprintHandler();
       cancelOrder();
-      return false;
+      if (hadActiveOrder) return false;
+    }
+
+    // Scoreboard toggle. The key is overloaded with the cancel/back family
+    // (menu back, cancel-upgrade, cancel order); those are handled above and
+    // via handleAction, so reaching here means nothing was cancelled or closed.
+    if (
+      checkShortcut(shortcuts.misc, "toggleScoreboard", e.code) &&
+      !getCurrentMenu()
+    ) {
+      e.preventDefault();
+      scoreboardExpandedVar(!scoreboardExpandedVar());
     }
     return;
   }

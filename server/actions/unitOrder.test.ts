@@ -457,6 +457,48 @@ describe("unitOrder special abilities", () => {
     expect(wolf.order).toBe(initialOrder);
   });
 
+  it("should not re-consume mana or interrupt when recasting mid-cast", {
+    wolves: ["test-client"],
+  }, function* ({ clients }) {
+    const client = clients.get("test-client")!;
+
+    const wolf = newUnit("test-client", "wolf", 15, 15);
+    wolf.mana = 100;
+    wolf.maxMana = 100;
+    yield;
+
+    // Start casting mirror image
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "mirrorImage",
+    });
+    yield;
+
+    // Advance cast to trigger mana consumption
+    advanceCast(wolf, 0.1);
+    yield;
+
+    expect(wolf.order!.type).toBe("cast");
+    const remainingAfterStart = (wolf.order as { remaining: number }).remaining;
+    const manaAfterStart = wolf.mana;
+
+    // Recast the same self-cast while still casting - should be ignored
+    unitOrder(client, {
+      type: "unitOrder",
+      units: [wolf.id],
+      order: "mirrorImage",
+    });
+    yield;
+
+    // Cast should keep progressing (not reset) and mana should not be
+    // re-consumed (re-consumption would drop mana by the full cast cost)
+    expect(wolf.order!.type).toBe("cast");
+    expect((wolf.order as { remaining: number }).remaining)
+      .toBeLessThanOrEqual(remainingAfterStart);
+    expect(wolf.mana).toBeGreaterThan(manaAfterStart! - 1);
+  });
+
   it("should consume mana for mirror image", {
     wolves: ["test-client"],
   }, function* ({ clients }) {
