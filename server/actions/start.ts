@@ -280,6 +280,9 @@ const launchAndStartOnFlyMachine = async (
         message: `Failed to launch server: ${userMessage}`,
       });
 
+      // Let the host clear its pending start state
+      lobby.host?.send({ type: "startFailed" });
+
       // Clean up failed machine (e.g., if shard never registered)
       if (machineId) {
         destroyFlyMachine(machineId);

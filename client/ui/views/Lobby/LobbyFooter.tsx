@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { styled } from "styled-components";
 import { useTranslation } from "react-i18next";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
@@ -6,10 +7,12 @@ import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { draftModeVar } from "@/vars/draftMode.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
+import { startFailedVar } from "@/vars/startFailed.ts";
 import {
   ActionButton,
   GhostButton,
   LargePrimaryButton,
+  Spinner,
 } from "@/components/forms/ActionButton.tsx";
 import { useShakeError } from "@/components/ShakeError.tsx";
 import { send } from "../../../messaging.ts";
@@ -46,7 +49,21 @@ export const LobbyFooter = () => {
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const draftMode = useReactiveVar(draftModeVar);
   const captainsDraft = useReactiveVar(captainsDraftVar);
+  const startFailed = useReactiveVar(startFailedVar);
+  const [pending, setPending] = useState<"start" | "practice" | null>(null);
   useListenToEntities(players, ["team"]);
+
+  // Clear pending when the server reports the round failed to start.
+  useEffect(() => setPending(null), [startFailed]);
+
+  // Safety net: if no start/failure signal arrives (e.g. an uncaught server
+  // path), re-enable the buttons rather than spinning forever. A successful
+  // start unmounts this footer before the timeout fires.
+  useEffect(() => {
+    if (!pending) return;
+    const id = setTimeout(() => setPending(null), 120_000);
+    return () => clearTimeout(id);
+  }, [pending]);
 
   const isHost = localPlayer?.id === lobbySettings.host;
 
@@ -91,6 +108,7 @@ export const LobbyFooter = () => {
   }
 
   const handleStart = () => {
+    if (pending) return;
     if (nonObserversCount < 2) {
       showError(t("lobby.needMorePlayers"));
       return;
@@ -99,14 +117,17 @@ export const LobbyFooter = () => {
       type: "start",
       fixedTeams: isCaptainsPhase || draftMode === "manual",
     });
+    setPending("start");
   };
 
   const handlePractice = () => {
+    if (pending) return;
     if (nonObserversCount < 1) {
       showError(t("lobby.needMorePlayers"));
       return;
     }
     send({ type: "start", practice: true });
+    setPending("practice");
   };
 
   const startLabel = isCaptainsPhase
@@ -136,7 +157,12 @@ export const LobbyFooter = () => {
             {t("lobby.reverseTeams")}
           </ActionButton>
         )}
-        <ActionButton type="button" onClick={handlePractice}>
+        <ActionButton
+          type="button"
+          onClick={handlePractice}
+          disabled={pending !== null}
+        >
+          {pending === "practice" && <Spinner size={16} />}
           {t("lobby.practice")}
         </ActionButton>
         <ShakeWrapper ref={startRef}>
@@ -144,7 +170,9 @@ export const LobbyFooter = () => {
             type="button"
             onClick={handleStart}
             title={startTooltip}
+            disabled={pending !== null}
           >
+            {pending === "start" && <Spinner size={18} />}
             {startLabel}
           </LargePrimaryButton>
         </ShakeWrapper>

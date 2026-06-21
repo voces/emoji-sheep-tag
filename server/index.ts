@@ -35,14 +35,16 @@ Deno.serve({
   const url = new URL(req.url);
 
   if (req.headers.get("upgrade") === "websocket") {
-    const { socket, response } = Deno.upgradeWebSocket(req);
-    // Route shard connections to shard handler
+    // Read request headers before upgrading; after Deno.upgradeWebSocket the
+    // request is closed and accessing req.headers throws.
     const remoteIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
       req.headers.get("x-real-ip") ??
       info.remoteAddr.hostname;
+    const isSecure = url.protocol === "https:" ||
+      req.headers.get("x-forwarded-proto") === "https";
+    const { socket, response } = Deno.upgradeWebSocket(req);
+    // Route shard connections to shard handler
     if (url.pathname === "/shard") {
-      const isSecure = url.protocol === "https:" ||
-        req.headers.get("x-forwarded-proto") === "https";
       handleShardSocket(socket, remoteIp, isSecure);
     } else {
       handleSocket(socket, url, remoteIp);

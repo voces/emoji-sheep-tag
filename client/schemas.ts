@@ -538,6 +538,10 @@ const zStop = z.object({
   round: zRound.optional(),
 });
 
+const zStartFailed = z.object({
+  type: z.literal("startFailed"),
+});
+
 const zPong = z.object({
   type: z.literal("pong"),
   time: z.number(),
@@ -637,6 +641,7 @@ const zVip = z.object({
 
 export const zMessage = z.discriminatedUnion("type", [
   zStart,
+  zStartFailed,
   zUpdates,
   zJoin,
   zLeave,

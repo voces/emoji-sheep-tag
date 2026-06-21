@@ -1,4 +1,5 @@
-import { css, styled } from "styled-components";
+import { css, keyframes, styled } from "styled-components";
+import { Loader2 } from "lucide-react";
 
 const base = css`
   display: inline-flex;
@@ -86,4 +87,13 @@ export const LargePrimaryButton = styled(PrimaryButton)`
   min-height: 44px;
   padding: 12px 20px;
   font-size: ${({ theme }) => theme.text.lg};
+`;
+
+const spin = keyframes`
+  to { transform: rotate(360deg); }
+`;
+
+export const Spinner = styled(Loader2)`
+  animation: ${spin} 0.7s linear infinite;
+  flex-shrink: 0;
 `;

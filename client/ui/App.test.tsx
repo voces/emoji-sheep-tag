@@ -22,6 +22,75 @@ afterEach(() => {
   stopReconnecting();
 });
 
+it("shows a loading state on the clicked start button while the other is disabled", async () => {
+  clearTestServerMessages();
+  setServer(`localhost:${getTestServerPort()}`);
+
+  render(<App />);
+  await userEvent.click(await screen.findByText("Play"));
+  await sendMessageFromServer({
+    type: "join",
+    lobby: "Strong Spirit",
+    status: "lobby",
+    updates: [
+      {
+        id: "player-0",
+        isPlayer: true,
+        name: "Player 0",
+        playerColor: colors[0],
+        team: "sheep",
+        sheepCount: 0,
+      },
+      {
+        id: "player-1",
+        isPlayer: true,
+        name: "Player 1",
+        playerColor: colors[1],
+        team: "wolf",
+        sheepCount: 0,
+      },
+    ],
+    localPlayer: "player-0",
+    rounds: [],
+    lobbySettings: {
+      map: "revo",
+      mode: "survival",
+      vipHandicap: 0.75,
+      sheep: 1,
+      autoSheep: true,
+      time: 60,
+      autoTime: true,
+      startingGold: { sheep: 0, wolves: 0 },
+      income: { sheep: 1, wolves: 1 },
+      view: false,
+      teamGold: true,
+      host: "player-0",
+      shard: null,
+      shards: [],
+    },
+    captainsDraft: null,
+  });
+
+  const startButton = await screen.findByRole("button", {
+    name: "Smart start",
+  });
+  const practiceButton = screen.getByRole("button", { name: "Practice" });
+
+  await userEvent.click(startButton);
+
+  await waitFor(() => expect(startButton.hasAttribute("disabled")).toBe(true));
+  expect(practiceButton.hasAttribute("disabled")).toBe(true);
+  expect(startButton.querySelector("svg")).not.toBeNull();
+  expect(practiceButton.querySelector("svg")).toBeNull();
+
+  // A failed start (e.g. shard boot failure) re-enables both buttons
+  await sendMessageFromServer({ type: "startFailed" });
+
+  await waitFor(() => expect(startButton.hasAttribute("disabled")).toBe(false));
+  expect(practiceButton.hasAttribute("disabled")).toBe(false);
+  expect(startButton.querySelector("svg")).toBeNull();
+});
+
 it("can move an action into a menu", async () => {
   clearTestServerMessages();
   setServer(`localhost:${getTestServerPort()}`);

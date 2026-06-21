@@ -46,6 +46,7 @@ import { isStructure } from "@/shared/api/unit.ts";
 import { consumePendingJoinLobby } from "./autoJoin.ts";
 import i18next from "i18next";
 import { hubNoticeVar } from "@/vars/hubNotice.ts";
+import { startFailedVar } from "@/vars/startFailed.ts";
 
 const processUpdates = (updates: ReadonlyArray<Update>) => {
   const players = updates.filter((u) => u.isPlayer || map[u.id]?.isPlayer);
@@ -251,6 +252,9 @@ export const handlers = {
     camera.position.x = center.x;
     camera.position.y = center.y;
     applyZoom(true);
+  },
+  startFailed: () => {
+    startFailedVar((n) => n + 1);
   },
   stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
     stateVar("lobby");
