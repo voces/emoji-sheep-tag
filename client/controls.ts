@@ -17,6 +17,8 @@ import { findAutoTarget } from "@/shared/util/autoTargeting.ts";
 import { updateCursor } from "./graphics/cursor.ts";
 import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
+import { isTauri } from "./isTauri.ts";
+import { toggleFullscreen } from "./displayMode.ts";
 import { showChatBoxVar } from "@/vars/showChatBox.ts";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
@@ -1058,6 +1060,19 @@ mouse.addEventListener("mouseMove", (e) => {
 document.addEventListener("keydown", (e) => {
   handleKeyDown(e.code);
 
+  // Fullscreen. In the browser, F11 is the browser's own (non-rebindable)
+  // fullscreen key. In Tauri it's the customizable misc.toggleFullscreen
+  // binding (defaults: F11 + Alt+Enter).
+  if (
+    isTauri
+      ? checkShortcut(shortcutsVar().misc, "toggleFullscreen", e.code)
+      : e.key === "F11"
+  ) {
+    e.preventDefault();
+    toggleFullscreen();
+    return;
+  }
+
   // Block Tab to prevent focus leaving the game (e.g., to URL bar)
   if (e.key === "Tab") e.preventDefault();
 
@@ -1650,11 +1665,22 @@ document.addEventListener("pointerlockchange", () => {
   if (!document.pointerLockElement) cancelBlueprint();
 });
 
+// Cursor lock is scoped to an active round in Tauri: release it when the round
+// ends. (The browser keeps its own pointer-lock lifecycle untouched.)
+stateVar.subscribe((state) => {
+  if (isTauri && state !== "playing" && document.pointerLockElement) {
+    document.exitPointerLock();
+  }
+});
+
 for (const event of ["pointerdown", "keydown", "contextmenu"]) {
   globalThis.document.body.addEventListener(event, async () => {
     if (
       !document.pointerLockElement && !isSoftwareRenderer() &&
-      gameplaySettingsVar().pointerLock === "always"
+      gameplaySettingsVar().pointerLock === "always" &&
+      // Round-scoped locking is a Tauri-only behavior; the browser keeps its
+      // existing gesture-driven lock so we don't churn enter/exit there.
+      (!isTauri || stateVar() === "playing")
     ) {
       try {
         // Ensure body has focus before requesting pointer lock

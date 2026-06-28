@@ -6,6 +6,7 @@ import { handlers } from "./messageHandlers.ts";
 import { type ServerToClientMessage, zMessage } from "./schemas.ts";
 import { unloadEcs } from "./ecs.ts";
 import { recordPing } from "./ping.ts";
+import { isTauri } from "./isTauri.ts";
 
 let ws: WebSocket | LocalWebSocket | undefined;
 let reconnectTimeout: number | undefined;
@@ -27,7 +28,9 @@ const delay = (fn: () => void) => {
   delayTimeouts.add(timeoutId);
 };
 
-const defaultServer = location?.host || "localhost:8080";
+const defaultServer = isTauri
+  ? "est.w3x.io"
+  : (location?.host || "localhost:8080");
 let server = defaultServer;
 export const setServer = (value: string) => server = value;
 
@@ -45,7 +48,9 @@ export const connect = () => {
   ws = server === "local"
     ? new LocalWebSocket(storedName || undefined)
     : new WebSocket(
-      `ws${location?.protocol === "https:" ? "s" : ""}://${server}${nameParam}`,
+      `ws${
+        server.includes(".") || location?.protocol === "https:" ? "s" : ""
+      }://${server}${nameParam}`,
     );
 
   ws.addEventListener("close", () => {

@@ -333,6 +333,10 @@ export const en = {
     showFps: "Show FPS",
     disableMessaging: "Disable messaging",
     enableDebugging: "Enable debugging",
+    displayMode: "Display mode",
+    displayModeWindowed: "Windowed",
+    displayModeBorderless: "Borderless",
+    displayModeFullscreen: "Fullscreen",
 
     mapsTitle: "Custom Maps",
     importMap: "Import map",
@@ -364,6 +368,7 @@ export const en = {
     miscApplyZoom: "Apply zoom",
     miscToggleScoreboard: "Toggle scoreboard",
     miscCycleSelection: "Cycle selection focus",
+    miscToggleFullscreen: "Toggle fullscreen",
 
     group1: "Group 1 \u2014 Primary unit",
     group2: "Group 2 \u2014 Mirrors",

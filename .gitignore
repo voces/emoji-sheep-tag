@@ -3,3 +3,4 @@ client/testing/test-port-registry.json
 .env
 node_modules
 .vapid.json
+src-tauri/target/

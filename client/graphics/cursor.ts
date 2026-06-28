@@ -5,6 +5,7 @@ import { getBlueprint } from "../controls/blueprintHandlers.ts";
 import { Entity } from "../ecs.ts";
 import { mouse } from "../mouse.ts";
 import { getLocalPlayer } from "../api/player.ts";
+import { isTauri } from "../isTauri.ts";
 import cursorSvg from "../assets/cursor.svg" with { type: "text" };
 import ringSvg from "../assets/ring.svg" with { type: "text" };
 import { camera, renderer } from "./three.ts";
@@ -87,17 +88,20 @@ export const updateCursor = (updatePosition = false) => {
   const variant = getCursorVariant(setFirst(mouse.intersects));
   const aoe = getActiveOrder()?.aoe;
 
+  // In Tauri we always draw our own cursor (the OS cursor is hidden app-wide via
+  // CSS), in and out of round — mouse.pixels tracks the real cursor position.
+  // The browser keeps its original lock-based visibility.
+  const showCustom = isTauri || !!document.pointerLockElement;
+
   if (variant === "hidden") {
     document.body.style.cursor = "none";
     if (cursor) cursor.style.visibility = "hidden";
     return;
   }
 
-  document.body.style.cursor = variants[variant].css;
+  document.body.style.cursor = showCustom ? "none" : variants[variant].css;
   if (cursor) {
-    cursor.style.visibility = document.pointerLockElement
-      ? "visible"
-      : "hidden";
+    cursor.style.visibility = showCustom ? "visible" : "hidden";
 
     if (!aoe) {
       if (cursor.dataset.mode !== "pointer") {
@@ -141,3 +145,6 @@ export const updateCursor = (updatePosition = false) => {
 };
 
 document.addEventListener("pointerlockchange", () => updateCursor(true));
+// In Tauri the custom cursor is shown in and out of round, so keep it positioned
+// on every move (not just while the game's own handlers run).
+if (isTauri) mouse.addEventListener("mouseMove", () => updateCursor(true));

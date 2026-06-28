@@ -1,3 +1,6 @@
+import "./errorOverlay.ts";
+import "./tauriBridge.ts";
+import "./displayMode.ts";
 import "./i18n/index.ts";
 import "./suppressReactDevtools.ts";
 import "./ping.ts";

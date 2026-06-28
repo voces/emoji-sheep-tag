@@ -2,6 +2,7 @@ import i18next from "i18next";
 import { z } from "zod";
 import { pluck } from "../../util/pluck.ts";
 import { items, prefabs } from "@/shared/data.ts";
+import { isTauri } from "../../isTauri.ts";
 import {
   actionToShortcutKey,
   getMenuShortcutKeys,
@@ -32,6 +33,7 @@ const getUpgradeTargets = (): Map<string, string[]> => {
 };
 
 const upgradeTargets = getUpgradeTargets();
+export const defaultCancelKey = isTauri ? "Escape" : "Backquote";
 
 const localStorageShortcuts = (() => {
   try {
@@ -59,6 +61,7 @@ const miscI18nKeys: Record<string, string> = {
   applyZoom: "settings.miscApplyZoom",
   toggleScoreboard: "settings.miscToggleScoreboard",
   cycleSelection: "settings.miscCycleSelection",
+  toggleFullscreen: "settings.miscToggleFullscreen",
 };
 
 export const getMiscName = (key: string): string =>
@@ -130,7 +133,7 @@ export const isDefaultBinding = (
 ): boolean => {
   // Handle menu-specific Back action keys
   if (fullKey.startsWith("menu-back-")) {
-    const defaultBackBinding = ["Backquote"];
+    const defaultBackBinding = [defaultCancelKey];
     return bindingsEqual(shortcut, defaultBackBinding);
   }
 
@@ -172,14 +175,22 @@ export const defaultBindings: Shortcuts = {
   misc: {
     openCommandPalette: ["Slash"],
     openChat: ["Enter"],
-    cancel: ["Backquote"],
+    cancel: [defaultCancelKey],
     queueModifier: ["ShiftLeft"],
     addToSelectionModifier: ["ShiftLeft"],
     ping: ["AltLeft", "KeyG"],
     jumpToPing: ["Space"],
-    applyZoom: ["Backquote"],
+    applyZoom: [defaultCancelKey],
     toggleScoreboard: ["Backquote"],
     cycleSelection: ["Tab"],
+    // Fullscreen is only customizable in Tauri; in the browser F11 is the
+    // browser's own (non-rebindable) fullscreen key.
+    ...(isTauri
+      ? {
+        toggleFullscreen: ["F11"],
+        [makeAltKey("toggleFullscreen", 1)]: ["AltLeft", "Enter"],
+      }
+      : {}),
   },
   controlGroups: {
     group1: ["Digit1"],
@@ -203,7 +214,9 @@ export const defaultBindings: Shortcuts = {
         [
           ...d.actions!.map((a) => [actionToShortcutKey(a), a.binding ?? []]),
           // Add cancel-upgrade entry if this prefab can be upgraded to
-          ...(upgradeTargets.has(u) ? [["cancel-upgrade", ["Backquote"]]] : []),
+          ...(upgradeTargets.has(u)
+            ? [["cancel-upgrade", [defaultCancelKey]]]
+            : []),
           // Add menu shortcuts as nested entries
           ...d.actions!
             .filter((a) => a.type === "menu")

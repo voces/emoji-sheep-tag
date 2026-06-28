@@ -3,6 +3,7 @@ import { MenuActionRef, MenuConfig } from "@/vars/menus.ts";
 import { nonNull, UnitDataAction } from "@/shared/types.ts";
 import { items } from "@/shared/data.ts";
 import { actionToShortcutKey } from "./actionToShortcutKey.ts";
+import { defaultCancelKey } from "../ui/util/shortcutUtils.ts";
 
 /**
  * Converts a menu configuration to a UnitDataAction for a specific entity.
@@ -27,7 +28,7 @@ export const convertMenuConfigToAction = (
       // Back action
       if (ref.actionKey === "back") {
         const actionKey = `menu-back-${config.id}`;
-        const binding = shortcuts[section]?.[actionKey] ?? ["Backquote"];
+        const binding = shortcuts[section]?.[actionKey] ?? [defaultCancelKey];
         return {
           name: "Back",
           type: "auto",

@@ -1,0 +1,29 @@
+{
+  "productName": "Emoji Sheep Tag",
+  "version": "0.0.0",
+  "identifier": "com.emoji-sheep-tag",
+  "build": {
+    "frontendDist": "../dist",
+    "beforeBuildCommand": "deno task build"
+  },
+  "app": {
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' wss: ws:; script-src 'self' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data:",
+      "dangerousDisableAssetCspModification": ["style-src"]
+    },
+    "windows": [
+      {
+        "title": "Emoji Sheep Tag",
+        "width": 1280,
+        "height": 720,
+        "fullscreen": false,
+        "backgroundColor": "#152700"
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png", "icons/icon.ico"]
+  }
+}

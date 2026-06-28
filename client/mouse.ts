@@ -11,6 +11,7 @@ import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { addSystem } from "@/shared/context.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
+import { isTauri } from "./isTauri.ts";
 
 export class MouseEvent extends Event {
   readonly pixels: Vector2;
@@ -175,7 +176,11 @@ const updateIntersects = () => {
 };
 
 globalThis.addEventListener("pointermove", (event) => {
-  if (document.pointerLockElement) {
+  // Browser pointer lock gives no absolute position, so accumulate relative
+  // deltas. In Tauri we confine the real cursor instead (and never hide it at
+  // the OS level), so its absolute position is valid even "locked" — using it
+  // directly avoids the edge-delta / cursor-warp problems entirely.
+  if (document.pointerLockElement && !isTauri) {
     const sensitivity = gameplaySettingsVar().mouseSensitivity;
     mouse.pixels.x = Math.max(
       8,
@@ -190,6 +195,19 @@ globalThis.addEventListener("pointermove", (event) => {
         mouse.pixels.y + event.movementY * sensitivity,
         globalThis.innerHeight - 8,
       ),
+    );
+  } else if (isTauri) {
+    // Keep a small inset "wall": the OS cursor is confined to the very edge (and
+    // hidden), but the visible game cursor stops a few px short — matching the
+    // old pointer-lock feel. Edge-pan still triggers (<=12px from the edge).
+    const INSET = 8;
+    mouse.pixels.x = Math.max(
+      INSET,
+      Math.min(event.clientX, globalThis.innerWidth - INSET),
+    );
+    mouse.pixels.y = Math.max(
+      INSET,
+      Math.min(event.clientY, globalThis.innerHeight - INSET),
     );
   } else {
     mouse.pixels.x = event.clientX;

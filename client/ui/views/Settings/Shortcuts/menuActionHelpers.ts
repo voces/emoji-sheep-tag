@@ -1,4 +1,5 @@
 import { items, prefabs } from "@/shared/data.ts";
+import { defaultCancelKey } from "@/util/shortcutUtils.ts";
 import type { MenuConfig } from "@/vars/menus.ts";
 import { menuActionRefToKey } from "../../../../util/actionToShortcutKey.ts";
 import { actionToShortcutKey } from "../../../../util/actionToShortcutKey.ts";
@@ -35,7 +36,7 @@ export const getMenuActionInfo = (
       return {
         actionKey: `menu-back-${menuId}`,
         displayName: "Back",
-        defaultBinding: ["Backquote"],
+        defaultBinding: [defaultCancelKey],
       };
     }
 

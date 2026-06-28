@@ -9,7 +9,11 @@
     "shard:compile": "deno compile -A --output dist/shard server/shard.ts",
     "setup-hooks": "mkdir -p .hooks && cp .git/hooks/* .hooks/ 2>/dev/null || true && rm -f .hooks/*.sample 2>/dev/null || true && git config core.hooksPath .hooks",
     "pre-commit": "deno fmt && deno lint && deno check",
-    "deploy": "bash scripts/deploy.sh"
+    "deploy": "bash scripts/deploy.sh",
+    "setup:tauri": "bash scripts/setup-tauri.sh",
+    "icons:tauri": "bash -c 'sed \"s/fill=\\\"#6c6863\\\"/fill=\\\"#ff0303\\\"/g; s/fill=\\\"#3b332e\\\"/fill=\\\"#990202\\\"/g\" client/assets/bite.svg > /tmp/bite-icon.svg && magick -background none /tmp/bite-icon.svg -resize 512x512 -gravity center -extent 512x512 PNG32:src-tauri/icons/icon.png && magick src-tauri/icons/icon.png -define icon:auto-resize=256,128,64,48,32,16 src-tauri/icons/icon.ico && rm /tmp/bite-icon.svg && echo \"Generated src-tauri/icons/icon.png and icon.ico\"'",
+    "build:tauri": "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig cargo tauri build",
+    "sync:windows": "deno run -A scripts/sync-windows.ts"
   },
   "imports": {
     "@/client-testing/": "./client/testing/",
@@ -20,6 +24,7 @@
     "@/util/": "./client/ui/util/",
     "@/vars/": "./client/ui/vars/",
     "@std": "jsr:@std",
+    "@tauri-apps/api": "npm:@tauri-apps/api",
     "@testing-library/react": "npm:@testing-library/react",
     "@testing-library/user-event": "npm:@testing-library/user-event",
     "@verit/ecs": "jsr:@verit/ecs",
@@ -55,6 +60,7 @@
       "./client/types.d.ts"
     ]
   },
+  "exclude": ["src-tauri/"],
   "fmt": {
     "indentWidth": 2,
     "exclude": ["**/snapshots"]
