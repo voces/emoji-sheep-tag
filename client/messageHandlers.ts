@@ -12,6 +12,8 @@ import {
   setMapForApp,
 } from "@/shared/map.ts";
 import { addChatMessage } from "@/vars/chat.ts";
+import { uiSettingsVar } from "@/vars/uiSettings.ts";
+import { isPlayerIgnored } from "@/vars/ignoredPlayers.ts";
 import { roundsVar } from "@/vars/rounds.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
@@ -286,6 +288,16 @@ export const handlers = {
       { type: "chat" }
     >,
   ) => {
+    // Messages without a player are server/system messages and always show.
+    if (player) {
+      if (uiSettingsVar().disableMessaging) return;
+      // Never ignore yourself — two clients can share an IP (and thus
+      // clientId), so the ignore filter must not suppress your own messages.
+      if (
+        player !== localPlayerIdVar() &&
+        isPlayerIgnored(getPlayer(player)?.clientId)
+      ) return;
+    }
     const p = getPlayer(player);
     const channelPrefix = channel === "allies" ? "[Allies] " : "[All] ";
     addChatMessage(

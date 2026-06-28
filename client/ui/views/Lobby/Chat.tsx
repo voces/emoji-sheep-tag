@@ -14,6 +14,7 @@ import {
   chatValueVar,
   toggleChatChannel,
 } from "@/vars/chat.ts";
+import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { ColorMarkdown } from "@/components/Markdown.tsx";
 import { send } from "../../../messaging.ts";
 
@@ -94,6 +95,7 @@ export const Chat = () => {
   const chatLog = useReactiveVar(chatLogVar);
   const chatValue = useReactiveVar(chatValueVar);
   const chatChannel = useReactiveVar(chatChannelVar);
+  const messagingDisabled = useReactiveVar(uiSettingsVar).disableMessaging;
   const chatLogRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
   const [disabled, setDisabled] = useState(true);
@@ -123,7 +125,7 @@ export const Chat = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatValue.trim()) return;
+    if (messagingDisabled || !chatValue.trim()) return;
     send({ type: "chat", message: chatValue, channel: chatChannel });
     chatValueVar("");
   };
@@ -151,8 +153,10 @@ export const Chat = () => {
           ref={inputRef}
           maxLength={150}
           value={chatValue}
-          disabled={disabled}
-          placeholder={t("lobby.chatPlaceholder")}
+          disabled={disabled || messagingDisabled}
+          placeholder={messagingDisabled
+            ? t("lobby.chatDisabledPlaceholder")
+            : t("lobby.chatPlaceholder")}
           onInput={(e) => chatValueVar(e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === "Tab") {

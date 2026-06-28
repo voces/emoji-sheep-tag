@@ -5,6 +5,7 @@ const uiSettingsSchema = z.object({
   preferredActionsPerRow: z.number().min(0).max(8).catch(4),
   showPing: z.boolean().catch(false),
   showFps: z.boolean().catch(false),
+  disableMessaging: z.boolean().catch(false),
 });
 
 export type UiSettings = z.infer<typeof uiSettingsSchema>;

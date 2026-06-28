@@ -38,6 +38,8 @@
 - Death animation (sheep)
 - Monolith needs new model
 - Mobile: observe+chat friendly
+- Whisper / DM: send a private message to a single player (e.g. via command
+  palette)
 
 # Bugs
 

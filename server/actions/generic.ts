@@ -1,7 +1,7 @@
 import z from "zod";
 import { Client, getAllClients } from "../client.ts";
 import { isComputerPlayer } from "../computerPlayer.ts";
-import { send } from "../lobbyApi.ts";
+import { leave, send } from "../lobbyApi.ts";
 import { generateUniqueName } from "../util/uniqueName.ts";
 import { colors } from "@/shared/data.ts";
 import { getPlayer } from "@/shared/api/player.ts";
@@ -38,6 +38,10 @@ export const zGenericEvent = z.object({
       type: z.literal("transferHost"),
       playerId: z.string(),
     }),
+    z.object({
+      type: z.literal("ban"),
+      playerId: z.string(),
+    }),
   ]),
 });
 
@@ -56,6 +60,10 @@ type TeamChangeEvent = Extract<
 type TransferHostEvent = Extract<
   z.TypeOf<typeof zGenericEvent>["event"],
   { type: "transferHost" }
+>;
+type BanEvent = Extract<
+  z.TypeOf<typeof zGenericEvent>["event"],
+  { type: "ban" }
 >;
 
 const updatePlayerProperties = (
@@ -300,6 +308,59 @@ const handleTransferHost = (client: Client, event: TransferHostEvent) => {
   send({ type: "lobbySettings", ...serializeLobbySettings(client.lobby) });
 };
 
+const handleBan = (client: Client, event: BanEvent) => {
+  if (!client.lobby) {
+    console.error(
+      `Client ${client.id} attempted to ban but is not in a lobby`,
+    );
+    return;
+  }
+
+  // Only the host can ban
+  if (client.lobby.host?.id !== client.id) {
+    console.error(
+      `Client ${client.id} attempted to ban but is not the host`,
+    );
+    return;
+  }
+
+  const targetClient = Array.from(client.lobby.players).find((c) =>
+    c.id === event.playerId
+  );
+  if (!targetClient) {
+    console.error(`Target player ${event.playerId} not found in lobby`);
+    return;
+  }
+
+  // Can't ban yourself; use "Remove computer" for computers
+  if (targetClient.id === client.id || isComputerPlayer(targetClient)) {
+    console.error(`Client ${client.id} attempted to ban ${targetClient.id}`);
+    return;
+  }
+
+  // Bar the target's IP from rejoining for this lobby's lifetime
+  if (targetClient.ip) {
+    (client.lobby.bannedIps ??= new Set()).add(targetClient.ip);
+  }
+  console.log(
+    new Date(),
+    "Host",
+    client.id,
+    "banned",
+    targetClient.id,
+    "from lobby",
+    client.lobby.name,
+  );
+
+  targetClient.send({
+    type: "chat",
+    message: "You have been banned from the lobby.",
+  });
+
+  // Remove from the lobby (returns them to the hub)
+  leave(targetClient);
+};
+
 export const generic = (
   client: Client,
   event: z.TypeOf<typeof zGenericEvent>,
@@ -314,6 +375,8 @@ export const generic = (
       return handleTeamChange(client, eventData);
     case "transferHost":
       return handleTransferHost(client, eventData);
+    case "ban":
+      return handleBan(client, eventData);
     default:
       absurd(eventData);
   }

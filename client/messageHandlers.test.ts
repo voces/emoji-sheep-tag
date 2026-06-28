@@ -11,6 +11,8 @@ import { getLocalPlayer } from "./api/player.ts";
 import { stateVar } from "@/vars/state.ts";
 import { handlers } from "./messageHandlers.ts";
 import { chatLogVar } from "@/vars/chat.ts";
+import { uiSettingsVar } from "@/vars/uiSettings.ts";
+import { ignoredPlayersVar } from "@/vars/ignoredPlayers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { roundsVar } from "@/vars/rounds.ts";
 import { generateDoodads } from "@/shared/map.ts";
@@ -603,6 +605,85 @@ describe("chat", () => {
     expect(chatLogVar()[chatLogVar().length - 1].message).toBe(
       "Server message",
     );
+  });
+
+  it("suppresses player chat when receiving is disabled but keeps server messages", () => {
+    handlers.join(createJoinMessage({
+      updates: [{
+        id: "player-1",
+        isPlayer: true,
+        name: "Test Player",
+        playerColor: "#FF0000",
+      }],
+    }));
+
+    const before = chatLogVar().length;
+    uiSettingsVar({ ...uiSettingsVar(), disableMessaging: true });
+    try {
+      handlers.chat({ type: "chat", player: "player-1", message: "Hello!" });
+      expect(chatLogVar()).toHaveLength(before);
+
+      // Server messages (no player) still come through
+      handlers.chat({ type: "chat", message: "Sheep win!" });
+      expect(chatLogVar()).toHaveLength(before + 1);
+      expect(chatLogVar()[chatLogVar().length - 1].message).toBe("Sheep win!");
+    } finally {
+      uiSettingsVar({ ...uiSettingsVar(), disableMessaging: false });
+    }
+  });
+
+  it("suppresses chat from ignored players by clientId", () => {
+    handlers.join(createJoinMessage({
+      updates: [{
+        id: "player-1",
+        isPlayer: true,
+        name: "Spammer",
+        playerColor: "#FF0000",
+        clientId: "client-hash-abc",
+      }],
+    }));
+
+    const before = chatLogVar().length;
+    ignoredPlayersVar(["client-hash-abc"]);
+    try {
+      handlers.chat({ type: "chat", player: "player-1", message: "spam" });
+      expect(chatLogVar()).toHaveLength(before);
+    } finally {
+      ignoredPlayersVar([]);
+    }
+  });
+
+  it("never suppresses the local player's own messages even when their clientId is ignored", () => {
+    // Two clients sharing an IP share a clientId; ignoring the other must not
+    // silence yourself.
+    handlers.join(createJoinMessage({
+      updates: [{
+        id: "me",
+        isPlayer: true,
+        name: "Me",
+        playerColor: "#FF0000",
+        clientId: "shared-hash",
+      }, {
+        id: "other",
+        isPlayer: true,
+        name: "Other",
+        playerColor: "#00FF00",
+        clientId: "shared-hash",
+      }],
+      localPlayer: "me",
+    }));
+
+    const before = chatLogVar().length;
+    ignoredPlayersVar(["shared-hash"]);
+    try {
+      handlers.chat({ type: "chat", player: "me", message: "still me" });
+      expect(chatLogVar()).toHaveLength(before + 1);
+
+      handlers.chat({ type: "chat", player: "other", message: "spam" });
+      expect(chatLogVar()).toHaveLength(before + 1);
+    } finally {
+      ignoredPlayersVar([]);
+    }
   });
 });
 

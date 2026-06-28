@@ -1,7 +1,12 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { Player } from "@/shared/api/player.ts";
+import {
+  ignoredPlayersVar,
+  toggleIgnoredPlayer,
+} from "@/vars/ignoredPlayers.ts";
 import { ColorPickerPopup } from "@/components/forms/ColorPicker.tsx";
 import { NameInput, NameInputRef } from "@/components/forms/NameInput.tsx";
 import { send } from "../../../messaging.ts";
@@ -10,6 +15,7 @@ import { AccentTag, GoldTag, Tag } from "@/components/Tag.tsx";
 import { draftModeVar } from "@/vars/draftMode.ts";
 import {
   ArrowRightLeft,
+  Ban,
   Crown,
   Eye,
   Gamepad2,
@@ -17,6 +23,8 @@ import {
   PenLine,
   Trash2,
   Trophy,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { IconTooltip } from "@/components/InfoTooltip.tsx";
@@ -77,8 +85,16 @@ export const PlayerRow = ({
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const ignoredPlayers = useReactiveVar(ignoredPlayersVar);
 
+  // You're never effectively ignored (your own messages always show), even if a
+  // client on the same machine shares your clientId.
+  const isIgnored = !isLocalPlayer && !!player.clientId &&
+    ignoredPlayers.includes(player.clientId);
+  const canIgnore = !isLocalPlayer && !isComputer && !!player.clientId;
+  const canBan = isHost && !isLocalPlayer && !isComputer;
   const canEdit = isLocalPlayer || isHost;
+  const showMenu = canEdit || canIgnore;
   const teamIcon = getTeamIcon(player.team);
 
   const handleTeamChange = (team: "sheep" | "wolf" | "observer" | "auto") => {
@@ -140,6 +156,11 @@ export const PlayerRow = ({
               {t("lobby.captain")}
             </GoldTag>
           )}
+          {isIgnored && (
+            <Tag style={{ marginLeft: 6 }} tooltip={t("lobby.ignoredTooltip")}>
+              {t("lobby.ignored")}
+            </Tag>
+          )}
         </PlayerNameCell>
         {isBulldog
           ? (
@@ -176,7 +197,7 @@ export const PlayerRow = ({
               })()}
             </>
           )}
-        {canEdit
+        {showMenu
           ? (
             <KebabButton
               ref={menuButtonRef}
@@ -204,14 +225,16 @@ export const PlayerRow = ({
                   right: globalThis.innerWidth - rect.right,
                 }}
               >
-                <MenuItem
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setColorPickerOpen(true);
-                  }}
-                >
-                  <Palette size={14} /> {t("lobby.changeColor")}
-                </MenuItem>
+                {canEdit && (
+                  <MenuItem
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setColorPickerOpen(true);
+                    }}
+                  >
+                    <Palette size={14} /> {t("lobby.changeColor")}
+                  </MenuItem>
+                )}
                 {isLocalPlayer && (
                   <MenuItem
                     onClick={() => {
@@ -268,7 +291,33 @@ export const PlayerRow = ({
                         <Trash2 size={14} /> {t("lobby.removeComputer")}
                       </MenuItem>
                     )}
+                    {canBan && (
+                      <MenuItem
+                        onClick={() => {
+                          send({
+                            type: "generic",
+                            event: { type: "ban", playerId: player.id },
+                          });
+                          setMenuOpen(false);
+                        }}
+                      >
+                        <Ban size={14} /> {t("lobby.banPlayer")}
+                      </MenuItem>
+                    )}
                   </>
+                )}
+                {canIgnore && (
+                  <MenuItem
+                    onClick={() => {
+                      toggleIgnoredPlayer(player.clientId!);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    {isIgnored ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                    {isIgnored
+                      ? t("lobby.unignorePlayer")
+                      : t("lobby.ignorePlayer")}
+                  </MenuItem>
                 )}
                 {isLocalPlayer && !isHost && (
                   player.team === "observer"

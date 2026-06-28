@@ -333,6 +333,7 @@ export const zUpdate = z.object({
   handicap: z.number().optional(),
   sheepTime: z.number().optional(),
   sheepCount: z.number().optional(),
+  clientId: z.string().optional(),
 
   position: zPoint.optional(),
   movementSpeed: z.number().optional(),

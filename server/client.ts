@@ -75,6 +75,7 @@ import {
   zStartCaptains,
 } from "./actions/captains.ts";
 import { computer, zComputerEvent } from "./actions/computer.ts";
+import { hashIp } from "./util/hashIp.ts";
 import {
   handleMessage,
   type Socket,
@@ -97,6 +98,7 @@ export class Client implements Entity {
   isPlayer: true = true;
   team: "sheep" | "wolf" | "pending" | "observer" = "pending";
   handicap?: number;
+  clientId?: string;
 
   // Client-specific properties (not part of ECS)
   // Note: socket, lobby, ip are defined non-enumerable in constructor to prevent JSON serialization
@@ -135,6 +137,8 @@ export class Client implements Entity {
       enumerable: false,
       configurable: false,
     });
+
+    if (ip) this.clientId = hashIp(ip);
 
     // Make startLocation non-enumerable to prevent JSON serialization to clients
     Object.defineProperty(this, "startLocation", {

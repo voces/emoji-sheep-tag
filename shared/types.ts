@@ -354,6 +354,8 @@ export type Entity = {
   handicap?: number;
   sheepTime?: number;
   sheepCount?: number;
+  /** Stable, IP-derived identifier used to ignore a player's chat client-side */
+  clientId?: string;
 
   movementSpeed?: number;
   /** Radians per second */

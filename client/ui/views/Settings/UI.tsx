@@ -60,6 +60,14 @@ export const UI = () => {
         </Toggle>
 
         <Toggle
+          checked={uiSettings.disableMessaging}
+          onChange={(checked) =>
+            uiSettingsVar({ ...uiSettings, disableMessaging: checked })}
+        >
+          {t("settings.disableMessaging")}
+        </Toggle>
+
+        <Toggle
           checked={debug}
           onChange={(checked) => {
             flags.debug = checked;

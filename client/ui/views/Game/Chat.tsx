@@ -11,6 +11,7 @@ import {
   toggleChatChannel,
 } from "@/vars/chat.ts";
 import { showChatBoxVar } from "@/vars/showChatBox.ts";
+import { uiSettingsVar } from "@/vars/uiSettings.ts";
 
 const ChatContainer = styled.div`
   position: absolute;
@@ -149,6 +150,7 @@ export const Chat = () => {
   const showChatBox = useReactiveVar(showChatBoxVar);
   const chatValue = useReactiveVar(chatValueVar);
   const chatChannel = useReactiveVar(chatChannelVar);
+  const messagingDisabled = useReactiveVar(uiSettingsVar).disableMessaging;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const seenMessagesRef = useRef<Set<string>>(new Set());
   const [, forceUpdate] = useState({});
@@ -219,41 +221,43 @@ export const Chat = () => {
             <ColorMarkdown text={log.message} />
           </ChatMessage>
         ))}
-      <InputWrapper $state={showChatBox}>
-        <ChannelButton
-          $state={showChatBox}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => {
-            toggleChatChannel();
-            showChatBoxVar("open");
-            inputRef.current?.focus();
-          }}
-          title={t("hud.chatTabToSwitch")}
-        >
-          [{chatChannel === "all" ? t("hud.chatAll") : t("hud.chatAllies")}]
-        </ChannelButton>
-        <ChatInput
-          autoFocus
-          ref={inputRef}
-          maxLength={150}
-          value={chatValue}
-          onInput={(e) => chatValueVar(e.currentTarget.value)}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === "Tab") {
-              e.preventDefault();
-              return toggleChatChannel();
-            }
-            if (e.code !== "Enter") return;
-            showChatBoxVar("sent");
-          }}
-          onBlur={() =>
-            setTimeout(() => {
-              if (showChatBoxVar() !== "open") return;
-              showChatBoxVar("dismissed");
-            })}
-        />
-      </InputWrapper>
+      {!messagingDisabled && (
+        <InputWrapper $state={showChatBox}>
+          <ChannelButton
+            $state={showChatBox}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              toggleChatChannel();
+              showChatBoxVar("open");
+              inputRef.current?.focus();
+            }}
+            title={t("hud.chatTabToSwitch")}
+          >
+            [{chatChannel === "all" ? t("hud.chatAll") : t("hud.chatAllies")}]
+          </ChannelButton>
+          <ChatInput
+            autoFocus
+            ref={inputRef}
+            maxLength={150}
+            value={chatValue}
+            onInput={(e) => chatValueVar(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Tab") {
+                e.preventDefault();
+                return toggleChatChannel();
+              }
+              if (e.code !== "Enter") return;
+              showChatBoxVar("sent");
+            }}
+            onBlur={() =>
+              setTimeout(() => {
+                if (showChatBoxVar() !== "open") return;
+                showChatBoxVar("dismissed");
+              })}
+          />
+        </InputWrapper>
+      )}
     </ChatContainer>
   );
 };

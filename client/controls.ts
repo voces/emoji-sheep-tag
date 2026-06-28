@@ -18,6 +18,7 @@ import { updateCursor } from "./graphics/cursor.ts";
 import { playSound } from "./api/sound.ts";
 import { pick } from "./util/pick.ts";
 import { showChatBoxVar } from "@/vars/showChatBox.ts";
+import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
 import { showFeedback } from "@/vars/feedback.ts";
 import { stateVar } from "@/vars/state.ts";
@@ -1220,7 +1221,8 @@ const handleUIShortcuts = (
     checkShortcut(shortcuts.misc, "openChat", e.code) &&
     showChatBoxVar() !== "open" &&
     showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
+    stateVar() === "playing" &&
+    !uiSettingsVar().disableMessaging
   ) {
     e.preventDefault();
     showChatBoxVar("open");

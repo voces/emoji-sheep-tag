@@ -36,6 +36,18 @@ export const joinLobby = (
     return;
   }
 
+  // Banned players cannot rejoin
+  if (client.ip && lobby.bannedIps?.has(client.ip)) {
+    console.error(
+      `Client ${client.id} (${client.ip}) is banned from lobby ${lobbyName}`,
+    );
+    client.send({
+      type: "chat",
+      message: "You have been banned from this lobby and cannot rejoin.",
+    });
+    return;
+  }
+
   // Check if lobby is full (limited by available colors)
   if (lobby.players.size >= colors.length) {
     console.error(

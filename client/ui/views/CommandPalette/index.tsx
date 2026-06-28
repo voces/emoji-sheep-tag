@@ -12,7 +12,9 @@ import { flags } from "../../../flags.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { formatShortcut } from "@/util/formatShortcut.ts";
 import { Panel } from "@/components/Panel.tsx";
-import { isLocalPlayerHost } from "../../../api/player.ts";
+import { getLocalPlayer, isLocalPlayerHost } from "../../../api/player.ts";
+import { getPlayers } from "@/shared/api/player.ts";
+import { isPlayerIgnored, toggleIgnoredPlayer } from "@/vars/ignoredPlayers.ts";
 import {
   editorCurrentMapVar,
   editorHideUIVar,
@@ -255,6 +257,56 @@ export const CommandPalette = () => {
       valid: () => practice && isLocalPlayerHost() && !isEditor,
       callback: () =>
         send({ type: "lobbySettings", view: !lobbySettings.view }),
+    },
+    {
+      name: t("commands.ignorePlayer"),
+      description: t("commands.ignorePlayerDesc"),
+      group: t("commands.groupPlayers"),
+      valid: () =>
+        !isEditor &&
+        getPlayers().some((p) =>
+          p.id !== getLocalPlayer()?.id && !p.isComputer && !!p.clientId
+        ),
+      callback: () => ({
+        type: "options",
+        placeholder: t("commands.ignorePlayerPlaceholder"),
+        commands: getPlayers()
+          .filter((p) =>
+            p.id !== getLocalPlayer()?.id && !p.isComputer && !!p.clientId
+          )
+          .map((p) => ({
+            name: `${
+              isPlayerIgnored(p.clientId)
+                ? t("commands.unignore")
+                : t("commands.ignore")
+            } ${p.name}`,
+            callback: () => toggleIgnoredPlayer(p.clientId!),
+          })),
+      }),
+    },
+    {
+      name: t("commands.banPlayer"),
+      description: t("commands.banPlayerDesc"),
+      group: t("commands.groupPlayers"),
+      valid: () =>
+        !isEditor && isLocalPlayerHost() && stateVar() === "playing" &&
+        getPlayers().some((p) =>
+          p.id !== getLocalPlayer()?.id && !p.isComputer
+        ),
+      callback: () => ({
+        type: "options",
+        placeholder: t("commands.banPlayerPlaceholder"),
+        commands: getPlayers()
+          .filter((p) => p.id !== getLocalPlayer()?.id && !p.isComputer)
+          .map((p) => ({
+            name: `${t("commands.ban")} ${p.name}`,
+            callback: () =>
+              send({
+                type: "generic",
+                event: { type: "ban", playerId: p.id },
+              }),
+          })),
+      }),
     },
     {
       name: t("commands.leaveLobby"),

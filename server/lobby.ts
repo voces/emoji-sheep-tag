@@ -94,6 +94,8 @@ export type Lobby = {
   captainsDraft?: CaptainsDraft;
   /** Shard ID where the current game is running (if any). */
   activeShard?: string;
+  /** IPs the host has banned; barred from rejoining for this lobby's lifetime. */
+  bannedIps?: Set<string>;
 };
 
 // Global lobbies set for the primary server
@@ -132,6 +134,7 @@ export const newLobby = (host?: Client, silent = false) => {
     },
     status: "lobby",
     rounds: [],
+    bannedIps: new Set(),
   };
   if (!silent) {
     console.log(new Date(), "Lobby", lobby.name, "created with host", host?.id);

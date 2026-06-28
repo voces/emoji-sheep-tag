@@ -1,6 +1,8 @@
+import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 import { styled } from "styled-components";
+import { useTooltip } from "../hooks/useTooltip.tsx";
 
-export const Tag = styled.span`
+const BaseTag = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -15,7 +17,7 @@ export const Tag = styled.span`
   line-height: 1;
 `;
 
-export const AccentTag = styled(Tag)`
+const AccentBaseTag = styled(BaseTag)`
   color: ${({ theme }) => theme.accent.hi};
   border-color: color-mix(
     in oklab,
@@ -25,7 +27,7 @@ export const AccentTag = styled(Tag)`
   background: ${({ theme }) => theme.accent.bg};
 `;
 
-export const DangerTag = styled(Tag)`
+const DangerBaseTag = styled(BaseTag)`
   color: ${({ theme }) => theme.danger.DEFAULT};
   border-color: color-mix(
     in oklab,
@@ -35,7 +37,7 @@ export const DangerTag = styled(Tag)`
   background: ${({ theme }) => theme.danger.bg};
 `;
 
-export const SuccessTag = styled(Tag)`
+const SuccessBaseTag = styled(BaseTag)`
   color: ${({ theme }) => theme.success.DEFAULT};
   border-color: color-mix(
     in oklab,
@@ -45,7 +47,7 @@ export const SuccessTag = styled(Tag)`
   background: ${({ theme }) => theme.success.bg};
 `;
 
-export const GoldTag = styled(Tag)`
+const GoldBaseTag = styled(BaseTag)`
   color: ${({ theme }) => theme.game.gold};
   border-color: color-mix(
     in oklab,
@@ -58,3 +60,42 @@ export const GoldTag = styled(Tag)`
     transparent
   );
 `;
+
+export type TagProps = HTMLAttributes<HTMLSpanElement> & {
+  /** Shown in a tooltip on hover. Use this instead of `title`, which the
+   * simulated in-game pointer can't trigger. */
+  tooltip?: ReactNode;
+};
+
+const tagWithTooltip = (Span: typeof BaseTag) =>
+  forwardRef<HTMLSpanElement, TagProps>(
+    ({ tooltip, children, ...rest }, ref) => {
+      const { tooltipContainerProps, tooltip: tooltipEl } = useTooltip<
+        HTMLSpanElement
+      >(tooltip);
+
+      if (!tooltip) return <Span ref={ref} {...rest}>{children}</Span>;
+
+      const { ref: containerRef, ...handlers } = tooltipContainerProps;
+      const setRef = (node: HTMLSpanElement | null) => {
+        (containerRef as { current: HTMLSpanElement | null }).current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) {
+          (ref as { current: HTMLSpanElement | null }).current = node;
+        }
+      };
+
+      return (
+        <Span ref={setRef} {...handlers} {...rest}>
+          {children}
+          {tooltipEl}
+        </Span>
+      );
+    },
+  );
+
+export const Tag = tagWithTooltip(BaseTag);
+export const AccentTag = tagWithTooltip(AccentBaseTag);
+export const DangerTag = tagWithTooltip(DangerBaseTag);
+export const SuccessTag = tagWithTooltip(SuccessBaseTag);
+export const GoldTag = tagWithTooltip(GoldBaseTag);
