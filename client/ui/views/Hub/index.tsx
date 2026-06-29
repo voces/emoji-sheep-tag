@@ -213,10 +213,10 @@ const Notice = styled.div`
   background: ${({ theme }) => theme.danger.bg};
   border: 1px solid
     color-mix(
-      in oklab,
-      ${({ theme }) => theme.danger.DEFAULT} 35%,
-      ${({ theme }) => theme.border.DEFAULT}
-    );
+    in oklab,
+    ${({ theme }) => theme.danger.DEFAULT} 35%,
+    ${({ theme }) => theme.border.DEFAULT}
+  );
   color: ${({ theme }) => theme.danger.DEFAULT};
   font-size: ${({ theme }) => theme.text.sm};
 `;

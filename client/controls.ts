@@ -1770,13 +1770,19 @@ gameplaySettingsVar.subscribe(async (settings) => {
 
   if (settings.rawMouseInput !== lastRawMouseInput) {
     lastRawMouseInput = settings.rawMouseInput;
-    if (document.pointerLockElement) {
+    if (!isTauri && document.pointerLockElement) {
+      // Browser: re-request pointer lock to apply unadjustedMovement.
       document.exitPointerLock();
       try {
         await globalThis.document.body.requestPointerLock({
           unadjustedMovement: settings.rawMouseInput,
         });
       } catch { /* do nothing */ }
+    } else if (isTauri && document.pointerLockElement) {
+      // Desktop: switch live between raw WM_INPUT deltas and the 1:1 cursor.
+      const m = await import("./rawMouse.ts");
+      if (settings.rawMouseInput) m.startRawMouse();
+      else m.stopRawMouse();
     }
   }
 });

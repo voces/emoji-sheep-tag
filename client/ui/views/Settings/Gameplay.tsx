@@ -13,6 +13,8 @@ import {
 } from "./commonStyles.tsx";
 import { Slider } from "@/components/forms/Slider.tsx";
 import { camera } from "../../../graphics/three.ts";
+import { supportsRawMouse } from "../../../supportsRawMouse.ts";
+import { isTauri } from "../../../isTauri.ts";
 
 export const Gameplay = () => {
   const { t } = useTranslation();
@@ -82,32 +84,52 @@ export const Gameplay = () => {
             })}
         >
           {t("settings.pointerLock")}{" "}
-          <InfoTooltip text={t("settings.pointerLockTooltip")} />
+          <InfoTooltip
+            text={t(
+              isTauri
+                ? "settings.pointerLockTooltipDesktop"
+                : "settings.pointerLockTooltip",
+            )}
+          />
         </Toggle>
 
-        <Toggle
-          checked={settings.rawMouseInput}
-          onChange={(checked) =>
-            gameplaySettingsVar({
-              ...settings,
-              rawMouseInput: checked,
-            })}
-          disabled={settings.pointerLock === "never"}
-        >
-          {t("settings.rawMouseInput")}{" "}
-          <InfoTooltip text={t("settings.rawMouseInputTooltip")} />
-        </Toggle>
-        <Slider
-          label={t("settings.mouseSensitivity")}
-          value={settings.mouseSensitivity}
-          min={0.2}
-          max={3}
-          step={0.1}
-          formatValue={(v) => `${v}x`}
-          disabled={settings.pointerLock === "never"}
-          onChange={(value) =>
-            gameplaySettingsVar({ ...settings, mouseSensitivity: value })}
-        />
+        {
+          /* Raw vs OS-accelerated (1:1). Browser: pointer-lock unadjustedMovement.
+            Windows desktop: raw WM_INPUT deltas vs the confined-absolute cursor.
+            (macOS/Linux desktop have no raw path, so this is hidden there.) */
+        }
+        {supportsRawMouse && (
+          <Toggle
+            checked={settings.rawMouseInput}
+            onChange={(checked) =>
+              gameplaySettingsVar({
+                ...settings,
+                rawMouseInput: checked,
+              })}
+            disabled={settings.pointerLock === "never"}
+          >
+            {t("settings.rawMouseInput")}{" "}
+            <InfoTooltip text={t("settings.rawMouseInputTooltip")} />
+          </Toggle>
+        )}
+        {
+          /* Sensitivity scales relative deltas — meaningless for the 1:1 absolute
+            cursor, so disable it when raw is off on the desktop. */
+        }
+        {supportsRawMouse && (
+          <Slider
+            label={t("settings.mouseSensitivity")}
+            value={settings.mouseSensitivity}
+            min={0.2}
+            max={3}
+            step={0.1}
+            formatValue={(v) => `${v}x`}
+            disabled={settings.pointerLock === "never" ||
+              (isTauri && !settings.rawMouseInput)}
+            onChange={(value) =>
+              gameplaySettingsVar({ ...settings, mouseSensitivity: value })}
+          />
+        )}
       </ToggleGroup>
 
       <SettingDivider />

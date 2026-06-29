@@ -175,44 +175,13 @@ const updateIntersects = () => {
   }
 };
 
-globalThis.addEventListener("pointermove", (event) => {
-  // Browser pointer lock gives no absolute position, so accumulate relative
-  // deltas. In Tauri we confine the real cursor instead (and never hide it at
-  // the OS level), so its absolute position is valid even "locked" — using it
-  // directly avoids the edge-delta / cursor-warp problems entirely.
-  if (document.pointerLockElement && !isTauri) {
-    const sensitivity = gameplaySettingsVar().mouseSensitivity;
-    mouse.pixels.x = Math.max(
-      8,
-      Math.min(
-        mouse.pixels.x + event.movementX * sensitivity,
-        globalThis.innerWidth - 8,
-      ),
-    );
-    mouse.pixels.y = Math.max(
-      8,
-      Math.min(
-        mouse.pixels.y + event.movementY * sensitivity,
-        globalThis.innerHeight - 8,
-      ),
-    );
-  } else if (isTauri) {
-    // Keep a small inset "wall": the OS cursor is confined to the very edge (and
-    // hidden), but the visible game cursor stops a few px short — matching the
-    // old pointer-lock feel. Edge-pan still triggers (<=12px from the edge).
-    const INSET = 8;
-    mouse.pixels.x = Math.max(
-      INSET,
-      Math.min(event.clientX, globalThis.innerWidth - INSET),
-    );
-    mouse.pixels.y = Math.max(
-      INSET,
-      Math.min(event.clientY, globalThis.innerHeight - INSET),
-    );
-  } else {
-    mouse.pixels.x = event.clientX;
-    mouse.pixels.y = event.clientY;
-  }
+// A small inset "wall": the visible game cursor stops a few px short of the edge
+// (matching the old pointer-lock feel). Edge-pan still triggers (<=12px).
+const CURSOR_INSET = 8;
+const clampPixel = (value: number, max: number) =>
+  Math.max(CURSOR_INSET, Math.min(value, max - CURSOR_INSET));
+
+const commitMouseMove = () => {
   mouse.percent.x = mouse.pixels.x / globalThis.innerWidth;
   mouse.percent.y = mouse.pixels.y / globalThis.innerHeight;
   cameraSpace.x = mouse.percent.x * 2 - 1;
@@ -222,6 +191,53 @@ globalThis.addEventListener("pointermove", (event) => {
   updateIntersects();
 
   mouse.dispatchTypedEvent("mouseMove", new MouseMoveEvent());
+};
+
+// While raw mouse input is active (Windows desktop), the cursor is driven by raw
+// deltas (rawMouse.ts) and we ignore the OS pointer position entirely.
+let rawMouseActive = false;
+export const setRawMouseActive = (active: boolean) => {
+  rawMouseActive = active;
+};
+
+/** Move the simulated cursor by a raw delta (scaled by sensitivity), clamped to
+ * the viewport, then run the usual mouse-move pipeline. */
+export const applyRawMouseDelta = (dx: number, dy: number) => {
+  const sensitivity = gameplaySettingsVar().mouseSensitivity;
+  mouse.pixels.x = clampPixel(
+    mouse.pixels.x + dx * sensitivity,
+    globalThis.innerWidth,
+  );
+  mouse.pixels.y = clampPixel(
+    mouse.pixels.y + dy * sensitivity,
+    globalThis.innerHeight,
+  );
+  commitMouseMove();
+};
+
+globalThis.addEventListener("pointermove", (event) => {
+  if (rawMouseActive) return;
+  // Browser pointer lock gives no absolute position, so accumulate relative
+  // deltas. In Tauri (without raw input) we confine the real cursor and use its
+  // absolute position directly.
+  if (document.pointerLockElement && !isTauri) {
+    const sensitivity = gameplaySettingsVar().mouseSensitivity;
+    mouse.pixels.x = clampPixel(
+      mouse.pixels.x + event.movementX * sensitivity,
+      globalThis.innerWidth,
+    );
+    mouse.pixels.y = clampPixel(
+      mouse.pixels.y + event.movementY * sensitivity,
+      globalThis.innerHeight,
+    );
+  } else if (isTauri) {
+    mouse.pixels.x = clampPixel(event.clientX, globalThis.innerWidth);
+    mouse.pixels.y = clampPixel(event.clientY, globalThis.innerHeight);
+  } else {
+    mouse.pixels.x = event.clientX;
+    mouse.pixels.y = event.clientY;
+  }
+  commitMouseMove();
 });
 
 globalThis.addEventListener("pointerdown", (event) => {

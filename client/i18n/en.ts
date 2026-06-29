@@ -311,7 +311,9 @@ export const en = {
     inputSection: "Input",
     pointerLock: "Capture cursor",
     pointerLockTooltip:
-      "Locks the cursor to the game window, enabling edge-of-screen panning. Recommended for multi-monitor setups.",
+      "Locks the cursor to the game window for edge-of-screen panning (press Esc to release). Recommended for multi-monitor setups.",
+    pointerLockTooltipDesktop:
+      "Confines the cursor to the window during a round for edge-of-screen panning. Recommended for multi-monitor setups.",
     rawMouseInput: "Raw mouse input",
     rawMouseInputTooltip:
       "Bypasses OS mouse acceleration for more consistent cursor movement.",

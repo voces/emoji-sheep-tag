@@ -9,131 +9,132 @@
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'><text x='50%' y='50%' font-size='32' text-anchor='middle' dominant-baseline='central'>🐑</text></svg>"
     >
     <style>
-      :root {
-        color-scheme: dark;
-      }
-      body {
-        margin: 0;
-        font: 14px/1.4 system-ui, sans-serif;
-        background: #0e1116;
-        color: #e6edf3;
-        padding: 24px;
-        max-width: 720px;
-        margin-inline: auto;
-      }
-      h1 {
-        margin: 0 0 16px;
-        font-size: 22px;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-      .card {
-        background: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 8px;
-        padding: 12px 14px;
-      }
-      .card .label {
-        color: #8b949e;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-      .card .value {
-        font-size: 24px;
-        font-weight: 600;
-        margin-top: 4px;
-      }
-      h2 {
-        margin: 24px 0 8px;
-        font-size: 16px;
-        color: #c9d1d9;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-      }
-      th, td {
-        text-align: left;
-        padding: 6px 8px;
-        border-bottom: 1px solid #21262d;
-      }
-      th {
-        color: #8b949e;
-        font-weight: 500;
-      }
-      .row-windows td {
-        font-variant-numeric: tabular-nums;
-      }
-      button {
-        background: #238636;
-        color: #fff;
-        border: 0;
-        border-radius: 6px;
-        padding: 8px 14px;
-        cursor: pointer;
-        font: inherit;
-      }
-      button[disabled] {
-        background: #30363d;
-        color: #8b949e;
-        cursor: not-allowed;
-      }
-      button.unsub {
-        background: #6e7681;
-      }
-      .status-line {
-        color: #8b949e;
-        font-size: 13px;
-        margin-top: 8px;
-      }
-      .muted {
-        color: #8b949e;
-      }
-      .rounds {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-      .round {
-        background: #161b22;
-        border: 1px solid #21262d;
-        border-radius: 8px;
-        padding: 10px 12px;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 4px 12px;
-      }
-      .round__mode {
-        font-weight: 600;
-        text-transform: capitalize;
-      }
-      .round__lobby {
-        color: #8b949e;
-        margin-left: 8px;
-        font-size: 12px;
-      }
-      .round__duration {
-        font-variant-numeric: tabular-nums;
-        color: #c9d1d9;
-        font-weight: 600;
-      }
-      .round__meta {
-        grid-column: 1 / -1;
-        color: #8b949e;
-        font-size: 12px;
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-      }
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      margin: 0;
+      font: 14px/1.4 system-ui, sans-serif;
+      background: #0e1116;
+      color: #e6edf3;
+      padding: 24px;
+      max-width: 720px;
+      margin-inline: auto;
+    }
+    h1 {
+      margin: 0 0 16px;
+      font-size: 22px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .card .label {
+      color: #8b949e;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .card .value {
+      font-size: 24px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    h2 {
+      margin: 24px 0 8px;
+      font-size: 16px;
+      color: #c9d1d9;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th,
+    td {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid #21262d;
+    }
+    th {
+      color: #8b949e;
+      font-weight: 500;
+    }
+    .row-windows td {
+      font-variant-numeric: tabular-nums;
+    }
+    button {
+      background: #238636;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font: inherit;
+    }
+    button[disabled] {
+      background: #30363d;
+      color: #8b949e;
+      cursor: not-allowed;
+    }
+    button.unsub {
+      background: #6e7681;
+    }
+    .status-line {
+      color: #8b949e;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    .muted {
+      color: #8b949e;
+    }
+    .rounds {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .round {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4px 12px;
+    }
+    .round__mode {
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .round__lobby {
+      color: #8b949e;
+      margin-left: 8px;
+      font-size: 12px;
+    }
+    .round__duration {
+      font-variant-numeric: tabular-nums;
+      color: #c9d1d9;
+      font-weight: 600;
+    }
+    .round__meta {
+      grid-column: 1 / -1;
+      color: #8b949e;
+      font-size: 12px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
     </style>
   </head>
   <body>
@@ -167,7 +168,9 @@
         </tr>
       </thead>
       <tbody id="clientsBody">
-        <tr><td colspan="2" class="muted">Nobody online.</td></tr>
+        <tr>
+          <td colspan="2" class="muted">Nobody online.</td>
+        </tr>
       </tbody>
     </table>
 
@@ -182,7 +185,9 @@
         </tr>
       </thead>
       <tbody id="lobbiesBody">
-        <tr><td colspan="4" class="muted">No lobbies.</td></tr>
+        <tr>
+          <td colspan="4" class="muted">No lobbies.</td>
+        </tr>
       </tbody>
     </table>
 
@@ -225,7 +230,9 @@
         </tr>
       </thead>
       <tbody id="shardsBody">
-        <tr><td colspan="5" class="muted">No shards.</td></tr>
+        <tr>
+          <td colspan="5" class="muted">No shards.</td>
+        </tr>
       </tbody>
     </table>
 

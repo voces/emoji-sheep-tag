@@ -68,10 +68,10 @@ const ActiveTag = styled.span`
   background: ${({ theme }) => theme.accent.bg};
   border: 1px solid
     color-mix(
-      in oklab,
-      ${({ theme }) => theme.accent.DEFAULT} 35%,
-      ${({ theme }) => theme.border.DEFAULT}
-    );
+    in oklab,
+    ${({ theme }) => theme.accent.DEFAULT} 35%,
+    ${({ theme }) => theme.border.DEFAULT}
+  );
   line-height: 1.6;
 `;
 

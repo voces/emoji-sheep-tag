@@ -35,10 +35,10 @@ const Bubble = styled.div`
   background: ${({ theme }) => theme.surface[1]};
   border: 1px solid
     color-mix(
-      in oklab,
-      ${({ theme }) => theme.danger.DEFAULT} 35%,
-      ${({ theme }) => theme.border.DEFAULT}
-    );
+    in oklab,
+    ${({ theme }) => theme.danger.DEFAULT} 35%,
+    ${({ theme }) => theme.border.DEFAULT}
+  );
   border-radius: ${({ theme }) => theme.radius.sm};
   padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[3]};
   box-shadow: ${({ theme }) => theme.shadow.md};

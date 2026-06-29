@@ -54,14 +54,24 @@ if (isTauri) {
   };
 
   // Confinement is scoped to a round via controls.ts calling requestPointerLock.
+  // Imported lazily so its mouse.ts dependency doesn't initialize at startup.
+  const setRaw = (on: boolean) => {
+    import("./rawMouse.ts").then((m) => {
+      if (on) m.startRawMouse();
+      else m.stopRawMouse();
+    });
+  };
+
   Element.prototype.requestPointerLock = async function () {
     locked = this;
     await grab();
+    setRaw(true);
     document.dispatchEvent(new Event("pointerlockchange"));
   };
 
   document.exitPointerLock = () => {
     locked = null;
+    setRaw(false);
     release();
     document.dispatchEvent(new Event("pointerlockchange"));
   };
@@ -74,6 +84,7 @@ if (isTauri) {
   globalThis.addEventListener("blur", () => {
     if (!locked) return;
     locked = null;
+    setRaw(false);
     release();
     document.dispatchEvent(new Event("pointerlockchange"));
   });
