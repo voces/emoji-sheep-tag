@@ -1,9 +1,10 @@
 import { styled } from "styled-components";
 import React, { useEffect, useRef } from "react";
-import { Color, PerspectiveCamera, WebGLRenderer } from "three";
+import { PerspectiveCamera } from "three";
 import {
   camera as mainCamera,
   onRender,
+  renderer,
   scene,
 } from "../../../graphics/three.ts";
 import { getMap, onMapChange } from "@/shared/map.ts";
@@ -33,46 +34,6 @@ addSystem({
   },
 });
 
-// --- Renderer pool ---
-
-type PoolEntry = {
-  canvas: HTMLCanvasElement;
-  renderer: WebGLRenderer;
-  pixelRatio: number;
-  timer?: number;
-};
-
-const pool: PoolEntry[] = [];
-const compiled = new WeakSet<WebGLRenderer>();
-const POOL_EXPIRY_MS = 60_000;
-
-const acquire = (): PoolEntry => {
-  const entry = pool.pop();
-  if (entry) {
-    clearTimeout(entry.timer);
-    delete entry.timer;
-    return entry;
-  }
-  const canvas = document.createElement("canvas");
-  const pixelRatio = Math.min(globalThis.devicePixelRatio, 2);
-  const renderer = new WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(pixelRatio);
-  renderer.setClearColor(new Color(0x333333));
-  return { canvas, renderer, pixelRatio };
-};
-
-const release = (entry: PoolEntry) => {
-  entry.timer = setTimeout(() => {
-    const idx = pool.indexOf(entry);
-    if (idx >= 0) pool.splice(idx, 1);
-    entry.renderer.forceContextLoss();
-    entry.renderer.dispose();
-  }, POOL_EXPIRY_MS);
-  pool.push(entry);
-};
-
-// --- Component ---
-
 const Container = styled.div`
   & > canvas {
     position: static;
@@ -93,21 +54,24 @@ export const Minimap = (
 
   useEffect(() => {
     const container = containerRef.current;
-    if ("Deno" in globalThis || !container) return;
+    if (!renderer || !container) return;
 
-    const entry = acquire();
-    const { canvas, renderer, pixelRatio } = entry;
-
-    // Copy data attributes to canvas for minimap click detection
+    const canvas = document.createElement("canvas");
+    // Data attributes drive minimap click detection
     canvas.setAttribute("data-minimap", "");
     canvas.setAttribute("data-game-ui", "");
-    // Reset inline size so CSS rules apply in the new container
-    canvas.style.width = "";
-    canvas.style.height = "";
-    canvas.style.aspectRatio = "";
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) return;
     container.appendChild(canvas);
 
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+    const pixelRatio = Math.min(globalThis.devicePixelRatio, 2);
+    const resize = (width: number, height: number) => {
+      const w = Math.max(1, Math.round(width * pixelRatio));
+      const h = Math.max(1, Math.round(height * pixelRatio));
+      if (canvas.width === w && canvas.height === h) return;
+      canvas.width = w;
+      canvas.height = h;
+    };
 
     const camera = new PerspectiveCamera(75, 1, 0.1, 1000);
     const updateCamera = () => {
@@ -123,6 +87,7 @@ export const Minimap = (
       canvas.style.aspectRatio = String(aspect);
     };
     updateCamera();
+    resize(canvas.clientWidth, canvas.clientHeight);
     const unsubscribeMapChange = onMapChange(updateCamera);
     camera.layers.enableAll();
 
@@ -149,61 +114,38 @@ export const Minimap = (
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const e of entries) {
-        renderer.setSize(e.contentRect.width, e.contentRect.height, false);
+        resize(e.contentRect.width, e.contentRect.height);
       }
     });
     resizeObserver.observe(canvas);
 
-    let disposed = false;
-    let disposeRender: (() => void) | undefined;
+    minimapRenderer.renderScene();
 
-    const startRendering = () => {
-      if (disposed) return;
+    const targetFPS = 15;
+    const frameTime = 1 / targetFPS;
+    let timeSinceLastSceneRender = 0;
 
-      minimapRenderer.renderScene();
+    const disposeRender = onRender((delta) => {
+      cameraMovement?.updateCameraSmooth(delta);
 
-      const targetFPS = 15;
-      const frameTime = 1 / targetFPS;
-      let timeSinceLastSceneRender = 0;
+      timeSinceLastSceneRender += delta;
+      if (timeSinceLastSceneRender >= frameTime) {
+        minimapRenderer.renderScene();
+        timeSinceLastSceneRender -= frameTime;
+      }
 
-      disposeRender = onRender((delta) => {
-        cameraMovement?.updateCameraSmooth(delta);
-
-        timeSinceLastSceneRender += delta;
-        if (timeSinceLastSceneRender >= frameTime) {
-          minimapRenderer.renderScene();
-          timeSinceLastSceneRender -= frameTime;
-        }
-
-        minimapRenderer.renderFogAndOverlay(delta, mainCamera);
-      });
-    };
-
-    let compilePromise: Promise<unknown> | undefined;
-    if (compiled.has(renderer)) {
-      startRendering();
-    } else {
-      compilePromise = minimapRenderer.compileAsync().then(() => {
-        compiled.add(renderer);
-        startRendering();
-      });
-    }
+      minimapRenderer.renderFogAndOverlay(delta, mainCamera, ctx);
+    });
 
     return () => {
-      disposed = true;
       resizeObserver.disconnect();
       unsubscribeMapChange();
       unsubscribeLobbySettings?.();
-      disposeRender?.();
+      disposeRender();
       cameraMovement?.dispose();
       raycast?.dispose();
-      if (compilePromise) {
-        compilePromise.catch(() => {}).finally(() => minimapRenderer.dispose());
-      } else {
-        minimapRenderer.dispose();
-      }
+      minimapRenderer.dispose();
       canvas.remove();
-      release(entry);
     };
   }, []);
 

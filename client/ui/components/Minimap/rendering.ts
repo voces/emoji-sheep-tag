@@ -1,5 +1,6 @@
 import {
   BufferGeometry,
+  Color,
   DepthTexture,
   Line,
   LineBasicMaterial,
@@ -11,6 +12,7 @@ import {
   ShaderMaterial,
   UnsignedInt248Type,
   Vector3,
+  Vector4,
   type WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
@@ -20,6 +22,12 @@ import { FogPass } from "../../../graphics/FogPass.ts";
 import { type Entity } from "../../../ecs.ts";
 import { setMinimapMask } from "../../../systems/three.ts";
 import { terrain } from "../../../graphics/three.ts";
+
+const BACKGROUND_COLOR = 0x333333;
+
+const previousClearColor = new Color();
+const previousViewport = new Vector4();
+const previousScissor = new Vector4();
 
 export const createMinimapRenderer = (
   renderer: WebGLRenderer,
@@ -124,9 +132,15 @@ export const createMinimapRenderer = (
     }
 
     terrain.setDecalsEnabled(false);
+    const previousTarget = renderer.getRenderTarget();
+    renderer.getClearColor(previousClearColor);
+    const previousClearAlpha = renderer.getClearAlpha();
+    renderer.setClearColor(BACKGROUND_COLOR, 1);
     renderer.setRenderTarget(sceneRenderTarget);
     renderer.clear();
     renderer.render(scene, camera);
+    renderer.setClearColor(previousClearColor, previousClearAlpha);
+    renderer.setRenderTarget(previousTarget);
     terrain.setDecalsEnabled(true);
 
     for (const { entity, originalScale } of scaledEntities) {
@@ -140,9 +154,60 @@ export const createMinimapRenderer = (
     for (const entity of maskedEntities) setMinimapMask(entity, false);
   };
 
+  // The minimap has no renderer of its own: it borrows the main one, composites
+  // into the bottom-left corner of its drawing buffer and copies that rect out
+  // to its own 2D canvas. The copy is valid because this runs inside the main
+  // render loop, before the frame is presented — and the game render that
+  // follows overwrites the corner again.
+  const present = (ctx: CanvasRenderingContext2D) => {
+    const source = renderer.domElement;
+    const target = ctx.canvas;
+    if (!target.width || !target.height || !source.width || !source.height) {
+      return;
+    }
+
+    const ratio = renderer.getPixelRatio();
+    const scale = Math.min(
+      1,
+      source.width / target.width,
+      source.height / target.height,
+    );
+    const width = target.width * scale;
+    const height = target.height * scale;
+
+    renderer.getViewport(previousViewport);
+    renderer.getScissor(previousScissor);
+    const previousScissorTest = renderer.getScissorTest();
+    const previousTarget = renderer.getRenderTarget();
+
+    renderer.setRenderTarget(null);
+    renderer.setViewport(0, 0, width / ratio, height / ratio);
+    renderer.setScissor(0, 0, width / ratio, height / ratio);
+    renderer.setScissorTest(true);
+    renderer.render(blitScene, blitCamera);
+
+    ctx.drawImage(
+      source,
+      0,
+      source.height - Math.round(height),
+      Math.round(width),
+      Math.round(height),
+      0,
+      0,
+      target.width,
+      target.height,
+    );
+
+    renderer.setRenderTarget(previousTarget);
+    renderer.setViewport(previousViewport);
+    renderer.setScissor(previousScissor);
+    renderer.setScissorTest(previousScissorTest);
+  };
+
   const renderFogAndOverlay = (
     delta: number,
     mainCamera: PerspectiveCamera,
+    ctx: CanvasRenderingContext2D,
   ) => {
     // Sync fog texture in case visibilityGrid was recreated
     minimapFogPass.setFogTexture(visibilityGrid.fogTexture);
@@ -182,20 +247,10 @@ export const createMinimapRenderer = (
     }
 
     blitMaterial.uniforms.tDiffuse.value = fogOutputTarget.texture;
-    renderer.setRenderTarget(null);
-    renderer.render(blitScene, blitCamera);
+    present(ctx);
   };
 
-  const compileAsync = () =>
-    Promise.all([
-      renderer.compileAsync(scene, camera),
-      renderer.compileAsync(blitScene, blitCamera),
-      renderer.compileAsync(viewportIndicatorScene, camera),
-      minimapFogPass.compileAsync(renderer),
-    ]);
-
   return {
-    compileAsync,
     renderScene,
     renderFogAndOverlay,
     setDisableFogOfWar: (disable: boolean) => {

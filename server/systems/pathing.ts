@@ -283,16 +283,36 @@ export const displaceThrough = (
     seedY = spunY * back;
   }
 
-  entity.position = p.withoutEntity(
-    entity,
-    () =>
-      p.nearestSpiralPathing(
-        structure.position!.x + seedX,
-        structure.position!.y + seedY,
-        entity,
-        p.layer(entity.position.x, entity.position.y),
-      ),
-  );
+  const spot = {
+    x: structure.position.x + seedX,
+    y: structure.position.y + seedY,
+  };
+
+  const layer = p.layer(entity.position.x, entity.position.y);
+
+  entity.position = p.withoutEntity(entity, () => {
+    if (
+      p.pathable(entity, spot.x, spot.y) && p.layer(spot.x, spot.y) === layer
+    ) return spot;
+
+    // Searched from between where the builder stands and the spot it is owed.
+    // From the spot alone it is carried round the far side of whichever
+    // neighbour took it, which off a mass of small structures puts it outside
+    // everything it has built; from the builder alone the carry is lost and it
+    // is set down by whichever way it happened to walk in. Halfway keeps the
+    // turn while holding it in to its own work.
+    //
+    // Where two openings are equally near — a square has four corners the same
+    // way out — the one the spot leans towards wins, so the turn settles it
+    // rather than the direction the sweep happens to run.
+    return p.nearestSpiralPathing(
+      (entity.position.x + spot.x) / 2,
+      (entity.position.y + spot.y) / 2,
+      entity,
+      layer,
+      { tieBreak: spot },
+    );
+  });
 };
 
 export const updatePathing = (entity: Entity, max = Infinity) => {
@@ -301,7 +321,14 @@ export const updatePathing = (entity: Entity, max = Infinity) => {
   if (p.pathable(entity)) return;
   const nearest = p.withoutEntity(
     entity,
-    () => p.nearestSpiralPathing(entity.position.x, entity.position.y, entity),
+    () =>
+      p.nearestSpiralPathing(
+        entity.position.x,
+        entity.position.y,
+        entity,
+        undefined,
+        { bySquare: true },
+      ),
   );
   if (
     (nearest.x !== entity.position.x || nearest.y !== entity.position.y) &&

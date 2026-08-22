@@ -602,7 +602,24 @@ export class PathingMap {
     yWorld: number,
     entity: PathingEntity,
     layer = this.layer(xWorld, yWorld),
-    startDirection = SPIRAL_START_DIRECTION,
+    { startDirection = SPIRAL_START_DIRECTION, tieBreak, bySquare }: {
+      startDirection?: number;
+      /**
+       * Measure from the middle of the square asked about rather than from the
+       * point itself, so that where within a square a unit stands cannot decide
+       * which opening it is given. For a unit being shoved out of something it
+       * has ended up inside, where it stands is arbitrary and the square is the
+       * real question.
+       */
+      bySquare?: boolean;
+      /**
+       * Where two openings are equally near, the one nearer this point wins.
+       * Ties are common and exact — a square has four corners the same way out
+       * — and scan order settling them means the answer turns on which way the
+       * sweep happens to run rather than on anything about the unit.
+       */
+      tieBreak?: Point;
+    } = {},
   ): Point {
     const originalX = xWorld;
     const originalY = yWorld;
@@ -610,7 +627,7 @@ export class PathingMap {
     let xTile = this.xWorldToTile(xWorld);
     let yTile = this.yWorldToTile(yWorld);
 
-    let attemptLayer = this._layer(xTile, yTile);
+    const attemptLayer = this._layer(xTile, yTile);
 
     if (layer === attemptLayer) {
       const tilemap = entity.requiresTilemap ?? entity.tilemap;
@@ -667,15 +684,49 @@ export class PathingMap {
       };
     }
 
-    const tried = [];
-    const initialTile = this.getTile(xTile, yTile);
-    if (initialTile) tried.push(initialTile);
+    const fromX = xTile;
+    const fromY = yTile;
 
-    while (
-      !this._pathable(minimalTilemap, xTile, yTile) ||
-      (layer !== undefined && attemptLayer !== layer)
-    ) {
-      if (!remainingTries--) return { x: originalX, y: originalY };
+    const originX = bySquare ? this.xTileToWorld(fromX) + offset.x : xWorld;
+    const originY = bySquare ? this.yTileToWorld(fromY) + offset.y : yWorld;
+
+    // Which square of the spiral the scan is on. Every cell of a square is the
+    // same number of steps out, so the scan finishes the one it found something
+    // on before settling — a corner of a square is half again as far as the
+    // middle of its side, and taking whichever turned up first would pass over
+    // nearer ground for it.
+    const square = () =>
+      Math.max(Math.abs(xTile - fromX), Math.abs(yTile - fromY));
+
+    let best:
+      | {
+        x: number;
+        y: number;
+        square: number;
+        distance: number;
+        tie: number;
+      }
+      | undefined;
+
+    const consider = () => {
+      if (!this._pathable(minimalTilemap, xTile, yTile)) return;
+      if (layer !== undefined && this._layer(xTile, yTile) !== layer) return;
+
+      const x = this.xTileToWorld(xTile) + offset.x;
+      const y = this.yTileToWorld(yTile) + offset.y;
+      const distance = (x - originX) ** 2 + (y - originY) ** 2;
+      const tie = tieBreak ? (x - tieBreak.x) ** 2 + (y - tieBreak.y) ** 2 : 0;
+
+      if (
+        !best || distance < best.distance ||
+        (distance === best.distance && tie < best.tie)
+      ) best = { x, y, square: square(), distance, tie };
+    };
+
+    consider();
+
+    while (!best || square() <= best.square) {
+      if (!remainingTries--) break;
 
       switch (direction) {
         case DIRECTION.DOWN:
@@ -692,9 +743,6 @@ export class PathingMap {
           break;
       }
 
-      const tile = this.getTile(xTile, yTile);
-      if (tile) tried.push(tile);
-
       if (steps === 0) {
         steps = initialSteps;
         // Arms grow 1,1,2,2,3,3… — every other turn, whichever direction the
@@ -704,13 +752,10 @@ export class PathingMap {
         direction = (direction + 1) % 4;
       } else steps--;
 
-      attemptLayer = this._layer(xTile, yTile);
+      consider();
     }
 
-    return {
-      x: this.xTileToWorld(xTile) + offset.x,
-      y: this.yTileToWorld(yTile) + offset.y,
-    };
+    return best ?? { x: originalX, y: originalY };
   }
 
   worldToTile(world: Point): Tile {

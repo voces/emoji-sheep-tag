@@ -141,9 +141,10 @@ for (const prefab of ["hut", "cottage", "house"]) {
 
 /**
  * A builder is turned a consistent way round each structure it lays, so which
- * of a pair it lays first decides where it stands for the next row. Laying them
- * one way round is quicker than the other, which is the point: without the turn
- * it is set down in the hole between four and the choice means nothing.
+ * of a pair it lays first decides where it stands for the next row, and one way
+ * round is quicker than the other. Without the turn it is set down in the hole
+ * between four and the choice means nothing. The margin is small — the builder
+ * is held in against its own work either way, so neither order walks far.
  */
 it(
   "makes it matter which of a pair is laid first",
@@ -187,7 +188,7 @@ it(
     const rightFirst = yield* mass(false);
 
     expect(Math.abs(leftFirst - rightFirst)).toBeGreaterThan(
-      Math.min(leftFirst, rightFirst) * 0.1,
+      Math.min(leftFirst, rightFirst) * 0.05,
     );
   },
 );
@@ -243,5 +244,153 @@ it(
       sheep.position!.x - left,
     ) * 180 / Math.PI;
     expect(Math.abs(secondBearing - second)).toBeLessThan(1);
+  },
+);
+
+/**
+ * Filling the last corner of a close block, the spot a builder is owed is
+ * inside a neighbour. It has to be set down against what it just built, not
+ * carried round the far side of the neighbour that took its spot.
+ */
+for (const pitch of [1, 1.25]) {
+  it(
+    `sets a builder beside the structure it just closed a block with, pitch ${pitch}`,
+    { sheep: ["player-0"], gold: 40000 },
+    function* () {
+      const left = 40;
+      const bottom = 30;
+      const right = left + pitch;
+      const top = bottom + pitch;
+
+      // Three of four up; the builder fills the last from just above it.
+      newUnit("player-0", "hut", left, top);
+      newUnit("player-0", "hut", right, top);
+      newUnit("player-0", "hut", right, bottom);
+
+      const sheep = newUnit("player-0", "sheep", left, bottom + 0.75);
+
+      yield;
+
+      orderBuild(sheep, "hut", left, bottom);
+      for (let tick = 0; tick < 300 && sheep.order; tick++) yield;
+
+      // Against the hut it laid, rather than past the one above it.
+      const outX = sheep.position!.x - left;
+      const outY = sheep.position!.y - bottom;
+
+      expect(Math.max(Math.abs(outX), Math.abs(outY))).toBeCloseTo(0.75);
+      expect(Math.hypot(outX, outY)).toBeLessThan(1.1);
+    },
+  );
+}
+
+/**
+ * A cross of huts divides the ground into four holes a house fits snugly in,
+ * meeting at the middle. Filling one from its inside corner, the spot the
+ * builder is owed is inside the cross, and the turn it was carried round the
+ * house decides which way it comes back out — so it is passed to the next hole
+ * round, the same way about from whichever it started in.
+ */
+it(
+  "passes a builder the same way round a cross of holes",
+  { sheep: ["player-0"], gold: 40000 },
+  function* ({ ecs }) {
+    const middle = { x: 40, y: 30 };
+
+    // A hole in each quarter, and the inside corner of each.
+    const QUARTERS: [number, number][] = [[-1, -1], [-1, 1], [1, 1], [1, -1]];
+
+    for (const [qx, qy] of QUARTERS) {
+      for (let i = -2; i <= 2; i++) {
+        newUnit("player-0", "hut", middle.x + i, middle.y);
+        if (i !== 0) newUnit("player-0", "hut", middle.x, middle.y + i);
+      }
+
+      const site = { x: middle.x + qx * 1.5, y: middle.y + qy * 1.5 };
+      const sheep = newUnit(
+        "player-0",
+        "sheep",
+        middle.x + qx * 0.75,
+        middle.y + qy * 0.75,
+      );
+
+      yield;
+
+      orderBuild(sheep, "house", site.x, site.y);
+      for (let tick = 0; tick < 400 && sheep.order; tick++) yield;
+
+      // The next quarter clockwise, at its inside corner.
+      expect(sheep.position!.x).toBeCloseTo(middle.x + qy * 0.75);
+      expect(sheep.position!.y).toBeCloseTo(middle.y - qx * 0.75);
+
+      for (const e of Array.from(ecs.entities)) {
+        if (e.prefab === "hut" || e.prefab === "house" || e === sheep) {
+          ecs.removeEntity(e);
+        }
+      }
+
+      yield;
+    }
+  },
+);
+
+/**
+ * Standing in the middle of a two-by-two and filling the last of it, every way
+ * out is over a neighbour. The builder belongs against the structure it just
+ * laid, not carried across one of the others and left outside everything it has
+ * built.
+ */
+it(
+  "keeps a builder in when it fills a block from the middle",
+  { sheep: ["player-0"], gold: 40000 },
+  function* ({ ecs }) {
+    const middle = { x: 40, y: 30 };
+    const CORNERS: [number, number][] = [[-1, -1], [-1, 1], [1, 1], [1, -1]];
+
+    const landings: { x: number; y: number }[] = [];
+
+    for (const [qx, qy] of CORNERS) {
+      const site = { x: middle.x + qx * 0.5, y: middle.y + qy * 0.5 };
+
+      for (const [ox, oy] of CORNERS) {
+        if (ox === qx && oy === qy) continue;
+        newUnit("player-0", "hut", middle.x + ox * 0.5, middle.y + oy * 0.5);
+      }
+
+      const sheep = newUnit(
+        "player-0",
+        "sheep",
+        middle.x + qx * 0.25,
+        middle.y + qy * 0.25,
+      );
+
+      yield;
+
+      orderBuild(sheep, "hut", site.x, site.y);
+      for (let tick = 0; tick < 400 && sheep.order; tick++) yield;
+
+      const out = {
+        x: sheep.position!.x - site.x,
+        y: sheep.position!.y - site.y,
+      };
+
+      // Against the hut it laid, rather than past one of the others.
+      expect(Math.max(Math.abs(out.x), Math.abs(out.y))).toBeCloseTo(0.75);
+      expect(Math.hypot(out.x, out.y)).toBeLessThan(1.1);
+      landings.push(out);
+
+      for (const e of Array.from(ecs.entities)) {
+        if (e.prefab === "hut" || e === sheep) ecs.removeEntity(e);
+      }
+
+      yield;
+    }
+
+    // The same corner of the block, turned four ways, so the same spot turned
+    // four ways: the builder is carried the same way about wherever it stands.
+    for (let i = 1; i < landings.length; i++) {
+      expect(landings[i].x).toBeCloseTo(landings[i - 1].y);
+      expect(landings[i].y).toBeCloseTo(-landings[i - 1].x);
+    }
   },
 );

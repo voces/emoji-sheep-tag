@@ -12,7 +12,7 @@ import {
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 import { clearDebugRings, updateDebugRings } from "../util/pathingDebug.ts";
-import { pathable } from "./pathing.ts";
+import { blockedByGeometry } from "./pathing.ts";
 
 const stalled = new WeakSet<Entity>();
 
@@ -60,8 +60,9 @@ const tweenPath = (e: Entity, delta: number): number => {
 
     // End of path
     if (e.order.path?.length === 1) {
-      // If end position isn't pathable, do nothing
-      if (!pathable(e, target)) {
+      // Only the ground stops it; another unit in the way is left to the
+      // server, which knows where everything really is.
+      if (blockedByGeometry(e, target)) {
         stalled.add(e);
         return delta;
       }
@@ -94,8 +95,7 @@ const tweenPath = (e: Entity, delta: number): number => {
       y: target.y,
     };
 
-  // If end position isn't pathable, do nothing
-  if (!pathable(e, newPosition)) {
+  if (blockedByGeometry(e, newPosition)) {
     stalled.add(e);
     return delta;
   }
