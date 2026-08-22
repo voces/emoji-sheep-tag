@@ -3,6 +3,7 @@ import { absurd } from "@/shared/util/absurd.ts";
 import { lookup } from "../lookup.ts";
 import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "@/shared/constants.ts";
 import { angleDifference, tweenAbsAngles } from "@/shared/pathing/math.ts";
+import { computeUnitMovementSpeed, turnSpeedCap } from "@/shared/api/unit.ts";
 import { advanceCast } from "./advanceCast.ts";
 import { advanceWalk } from "./advanceWalk.ts";
 import { advanceAttack } from "./advanceAttack.ts";
@@ -19,6 +20,12 @@ addSystem({
   },
   updateEntity: (e, delta) => {
     let attackCooldownAvailable = delta;
+
+    // Turning is budgeted for the tick, not for each pass round the loop. A
+    // unit that reroutes because something is in its way comes back round with
+    // its delta intact, and without a budget it would turn afresh every pass —
+    // spinning several times its own turn rate in a single tick.
+    let turnBudget = delta;
 
     let loops = 10;
     while (e.order && delta > 0) {
@@ -56,10 +63,22 @@ addSystem({
           lookTarget.x - e.position.x,
         );
         const diff = Math.abs(angleDifference(facing, targetAngle));
-        if (diff > 1e-07) {
-          const maxTurn = e.turnSpeed * delta;
+        if (diff > 1e-07 && turnBudget > 0) {
+          const maxTurn = e.turnSpeed * turnBudget;
           e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
+
+          turnBudget -= Math.min(diff, maxTurn) / e.turnSpeed;
         }
+        // How sharp the corner is caps how fast it may be taken, so a unit
+        // comes out of one having to pick up speed again. A slight correction
+        // costs next to nothing; swinging right around costs a step.
+        if (e.speed) {
+          e.speed = Math.min(
+            e.speed,
+            turnSpeedCap(computeUnitMovementSpeed(e), diff),
+          );
+        }
+
         if (diff > MAX_ATTACK_ANGLE) {
           delta = Math.max(
             0,

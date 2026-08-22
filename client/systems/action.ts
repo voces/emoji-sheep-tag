@@ -4,11 +4,24 @@ import {
   distanceBetweenPoints,
   tweenAbsAngles,
 } from "@/shared/pathing/math.ts";
-import { computeUnitMovementSpeed } from "@/shared/api/unit.ts";
+import {
+  accelerate,
+  computeUnitMovementSpeed,
+  turnSpeedCap,
+} from "@/shared/api/unit.ts";
 import { app, Entity } from "../ecs.ts";
 import { lookup } from "./lookup.ts";
 import { clearDebugRings, updateDebugRings } from "../util/pathingDebug.ts";
 import { pathable } from "./pathing.ts";
+
+const stalled = new WeakSet<Entity>();
+
+/**
+ * Whether the entity holds a path it cannot currently advance along, because
+ * something is standing in the way. Such a unit keeps its walk order, so it
+ * would otherwise be animated running on the spot.
+ */
+export const isStalled = (e: Entity): boolean => stalled.has(e);
 
 const tweenPath = (e: Entity, delta: number): number => {
   if (
@@ -16,9 +29,25 @@ const tweenPath = (e: Entity, delta: number): number => {
     !e.position || !e.movementSpeed
   ) return 0;
 
+  // The server has it held behind something in the way. Predicting it forward
+  // would only have to be undone, and the further it went the worse the undoing
+  // looks, so it stands still until told otherwise.
+  if (e.blocked) {
+    stalled.add(e);
+    return 0;
+  }
+
   let target = e.order.path[0];
-  const effectiveMovementSpeed = computeUnitMovementSpeed(e);
-  let movement = effectiveMovementSpeed * delta;
+
+  // Same ramp the server applies, so a unit setting off is not predicted at
+  // full speed and then pulled back.
+  const max = computeUnitMovementSpeed(e);
+  const ramped = accelerate(e.speed ?? 0, max, delta);
+  e.speed = ramped.speed;
+
+  const effectiveMovementSpeed = ramped.distance / delta;
+  let movement = ramped.distance;
+  if (!effectiveMovementSpeed) return 0;
 
   // Tween along movement
   let remaining = distanceBetweenPoints(target, e.position);
@@ -32,9 +61,13 @@ const tweenPath = (e: Entity, delta: number): number => {
     // End of path
     if (e.order.path?.length === 1) {
       // If end position isn't pathable, do nothing
-      if (!pathable(e, target)) return delta;
+      if (!pathable(e, target)) {
+        stalled.add(e);
+        return delta;
+      }
 
       // Update end position
+      stalled.delete(e);
       e.position = { ...target };
       const { path: _path, ...rest } = e.order;
       e.order = rest;
@@ -62,8 +95,12 @@ const tweenPath = (e: Entity, delta: number): number => {
     };
 
   // If end position isn't pathable, do nothing
-  if (!pathable(e, newPosition)) return delta;
+  if (!pathable(e, newPosition)) {
+    stalled.add(e);
+    return delta;
+  }
 
+  stalled.delete(e);
   e.position = newPosition;
   return delta;
 };
@@ -111,6 +148,14 @@ app.addSystem({
         if (diff > 1e-07) {
           const maxTurn = e.turnSpeed * delta;
           e.facing = tweenAbsAngles(facing, targetAngle, maxTurn);
+        }
+
+        // Same cornering cost the server applies.
+        if (e.speed) {
+          e.speed = Math.min(
+            e.speed,
+            turnSpeedCap(computeUnitMovementSpeed(e), diff),
+          );
         }
         if (diff > MAX_ATTACK_ANGLE) {
           delta = Math.max(

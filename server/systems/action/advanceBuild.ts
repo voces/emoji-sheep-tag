@@ -8,7 +8,7 @@ import {
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
 import { addSystem } from "@/shared/context.ts";
-import { handleBlockedPath } from "./pathRetry.ts";
+import { handleBlockedPath, shouldWaitForBlockers } from "./pathRetry.ts";
 
 export const advanceBuild = (e: Entity, delta: number): number => {
   if (e.order?.type !== "build") return delta;
@@ -38,6 +38,7 @@ export const advanceBuild = (e: Entity, delta: number): number => {
     const tweenResult = tweenPath(e, delta);
 
     if (tweenResult.pathBlocked && e.order.path) {
+      if (shouldWaitForBlockers(e, tweenResult.blockers)) return 0;
       if (
         handleBlockedPath(e, e.order, e.order.path, { distanceFromTarget: d })
       ) {

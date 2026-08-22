@@ -1,4 +1,4 @@
-import { DEFAULT_FACING } from "../constants.ts";
+import { DEFAULT_FACING, MAX_ATTACK_ANGLE } from "../constants.ts";
 import { isNight, NIGHT_SIGHT_MULTIPLIER } from "../dayNight.ts";
 import {
   Classification,
@@ -180,6 +180,43 @@ export const computeUnitMovementSpeed = (unit: Entity): number => {
   // Apply multipliers first, then add flat bonuses
   return baseSpeed * speedMultiplier + flatSpeedBonus;
 };
+
+/**
+ * Seconds a unit takes to reach its full speed from a stop, and to lose it
+ * again. Short enough to sit inside a single step, so it is felt rather than
+ * seen: setting off and turning cost a little ground without ever looking
+ * sluggish.
+ */
+export const ACCELERATION_TIME = 0.015;
+
+/**
+ * Advances `speed` toward `max` over `delta`, and reports how far that carried
+ * the unit. Ramping rather than snapping to full speed is what makes a turn
+ * cost something, since a unit that has to turn has already been slowed by it.
+ */
+export const accelerate = (
+  speed: number,
+  max: number,
+  delta: number,
+): { distance: number; speed: number } => {
+  if (max <= 0 || delta <= 0) return { distance: 0, speed: 0 };
+
+  const rate = max / ACCELERATION_TIME;
+  const ramp = Math.min(delta, Math.max(0, max - speed) / rate);
+  const distance = speed * ramp + rate * ramp * ramp / 2 +
+    max * (delta - ramp);
+
+  return { distance, speed: Math.min(max, speed + rate * ramp) };
+};
+
+/**
+ * The most speed a unit may hold while facing `off` radians away from where it
+ * is going. Cornering costs speed in proportion to how sharp the corner is,
+ * reaching a standstill at the angle beyond which a unit may not move while
+ * turning at all — so there is one threshold governing turning, not two.
+ */
+export const turnSpeedCap = (max: number, off: number) =>
+  max * Math.max(0, 1 - Math.abs(off) / MAX_ATTACK_ANGLE);
 
 /**
  * Computes the total damage a unit can deal, including base damage plus bonuses from items and buffs

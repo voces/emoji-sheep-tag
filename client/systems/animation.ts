@@ -7,6 +7,7 @@ import {
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { addSystem, appContext } from "@/shared/context.ts";
 import { collections } from "./models.ts";
+import { isStalled } from "./action.ts";
 
 // Animation state tracking for AnimatedInstancedMesh models
 const entityAnimationState = new WeakMap<Entity, string | undefined>();
@@ -47,6 +48,7 @@ export const getCurrentAnimation = (e: Entity): string | undefined => {
 
   if (
     e.order && "path" in e.order && e.order.path?.length &&
+    !e.blocked && !isStalled(e) &&
     collection.getClipInfo("run")
   ) return "run";
 
@@ -221,6 +223,12 @@ addSystem({
   props: ["progress"],
   onAdd: updateAnimationState,
   onChange: updateAnimationState,
+  onRemove: updateAnimationState,
+});
+
+addSystem({
+  props: ["blocked"],
+  onAdd: updateAnimationState,
   onRemove: updateAnimationState,
 });
 

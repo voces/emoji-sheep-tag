@@ -16,6 +16,7 @@ import { Buff, Entity, Item, Order, SystemEntity } from "@/shared/types.ts";
 import { computeUnitSightRadius } from "@/shared/api/unit.ts";
 import {
   calcPath,
+  displaceThrough,
   pathable,
   pathingMap,
   updatePathing,
@@ -89,6 +90,9 @@ export const translocateUnit = (
   });
 };
 
+/** Where each builder last placed a structure, which gives the line of a wide. */
+const lastBuildSite = new WeakMap<Entity, { x: number; y: number }>();
+
 export const build = (builder: Entity, type: string, x: number, y: number) => {
   const app = appContext.current;
   if (
@@ -147,10 +151,14 @@ export const build = (builder: Entity, type: string, x: number, y: number) => {
     );
   }
 
-  app.enqueue(() => {
-    if (translocateAction) translocateUnit(builder, temp.position, temp.id);
+  const previousSite = lastBuildSite.get(builder);
+  lastBuildSite.set(builder, { x, y });
 
-    updatePathing(builder);
+  app.enqueue(() => {
+    if (translocateAction) {
+      translocateUnit(builder, temp.position, temp.id);
+      updatePathing(builder);
+    } else displaceThrough(builder, temp, previousSite);
   });
 
   return temp;

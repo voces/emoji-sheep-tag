@@ -460,6 +460,18 @@ export type Entity = {
   order?: Order | null;
   queue?: ReadonlyArray<Order> | null;
   autocast?: ReadonlyArray<string> | null;
+  /**
+   * Holding its plan behind something in the way rather than advancing along
+   * it. Held units write nothing else, so without this a client would go on
+   * predicting one forward and have to be snapped back when it finally moves.
+   */
+  blocked?: boolean | null;
+  /**
+   * How fast it is actually travelling, as against the `movementSpeed` it is
+   * capable of. Units ramp up to speed and are slowed by turning, so this sits
+   * below the maximum for a moment after setting off or changing direction.
+   */
+  speed?: number | null;
 
   // Action cooldowns (keyed by order ID)
   actionCooldowns?: Readonly<Record<string, number>> | null;

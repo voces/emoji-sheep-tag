@@ -22,6 +22,7 @@ import {
   yTileToWorld as tileToWorldY,
   yWorldToTile as worldToTileY,
 } from "./coordinates.ts";
+import { isMoving } from "./util.ts";
 
 // Raw-coordinate versions of trueMinX/trueMaxX for tile-native _linearPathable
 // Avoids Point object allocation by accepting px, py directly
@@ -73,6 +74,15 @@ try {
 const DEFAULT_RESOLUTION = 1;
 
 const MAX_TRIES = 3481; // 59**2
+
+/**
+ * The side of the ring the placement spiral scans first. Deriving this from the
+ * entity's sub-tile position made displacement depend on where a path happened
+ * to stop, which is not reproducible; a fixed start makes it a function of the
+ * surrounding geometry alone. This constant is the direction a displaced unit
+ * drifts when it has a free choice.
+ */
+const SPIRAL_START_DIRECTION = DIRECTION.UP;
 const EPSILON = Number.EPSILON * 100;
 
 // interface BaseEntity {
@@ -403,6 +413,50 @@ export class PathingMap {
   }
 
   /**
+   * Returns the entities keeping `entity` out of `(xWorld, yWorld)`. Empty when
+   * the position is pathable or only terrain blocks it.
+   */
+  blockers(
+    entity: PathingEntity,
+    xWorld?: number,
+    yWorld?: number,
+  ): PathingEntity[] {
+    const position = entity.position;
+    if (xWorld === undefined) xWorld = position.x;
+    if (yWorld === undefined) yWorld = position.y;
+
+    const xTile = this.xWorldToTile(xWorld);
+    const yTile = this.yWorldToTile(yWorld);
+    const map = entity.requiresTilemap ?? entity.tilemap ??
+      this.pointToTilemap(xWorld, yWorld, entity.radius, {
+        type: entity.requiresPathing ?? entity.pathing,
+      });
+
+    return this.withoutEntity(entity, () => {
+      const blockers = new Set<PathingEntity>();
+
+      let i = 0;
+      for (let y = yTile + map.top; y < yTile + map.height + map.top; y++) {
+        for (
+          let x = xTile + map.left;
+          x < xTile + map.width + map.left;
+          x++, i++
+        ) {
+          const required = map.map[i];
+          if (!required) continue;
+          const tile = this.getTile(x, y);
+          if (!tile) continue;
+          for (const [other, pathing] of tile.entities) {
+            if (pathing & required) blockers.add(other);
+          }
+        }
+      }
+
+      return Array.from(blockers);
+    });
+  }
+
+  /**
    * Temporarily removes an entity from the PathingMap, invokes the passed
    * function, re-adds the entity, and returns the result of the function.
    */
@@ -548,6 +602,7 @@ export class PathingMap {
     yWorld: number,
     entity: PathingEntity,
     layer = this.layer(xWorld, yWorld),
+    startDirection = SPIRAL_START_DIRECTION,
   ): Point {
     const originalX = xWorld;
     const originalY = yWorld;
@@ -581,20 +636,12 @@ export class PathingMap {
       ) return { x: xWorld, y: yWorld };
     }
 
-    const xMiss = Math.abs(xWorld * this.resolution - xTile);
-    const yMiss = Math.abs(yWorld * this.resolution - yTile);
-
-    // todo mirror WC3 for equal misses
-    // 0 down, 1 left, 2 up, 3 right
-    let direction = Math.abs(0.5 - xMiss) > Math.abs(0.5 - yMiss)
-      ? xMiss < 0.5 ? DIRECTION.LEFT : DIRECTION.RIGHT
-      : yMiss < 0.5 && yMiss >= 0
-      ? DIRECTION.UP
-      : DIRECTION.DOWN;
+    let direction = startDirection;
 
     let steps = 0;
     const stride = entity.requiresTilemap ?? entity.tilemap ? 2 : 1;
     let initialSteps = 0;
+    let turns = 0;
 
     let remainingTries = MAX_TRIES;
 
@@ -650,9 +697,10 @@ export class PathingMap {
 
       if (steps === 0) {
         steps = initialSteps;
-        if (direction === DIRECTION.DOWN || direction === DIRECTION.UP) {
-          initialSteps++;
-        }
+        // Arms grow 1,1,2,2,3,3… — every other turn, whichever direction the
+        // scan started on. Keying this off DOWN/UP instead silently malformed
+        // the spiral for horizontal starts.
+        if (turns++ % 2 === 0) initialSteps++;
         direction = (direction + 1) % 4;
       } else steps--;
 
@@ -790,10 +838,13 @@ export class PathingMap {
       start = entity.position,
       distanceFromTarget,
       removeMovingEntities = true,
+      keepMoving,
     }: {
       start?: Point;
       distanceFromTarget?: number;
       removeMovingEntities?: boolean;
+      /** Movers this one must still route around, however they are moving. */
+      keepMoving?: (other: PathingEntity) => boolean;
     } = {},
   ): Point[] {
     if (typeof entity.radius !== "number") {
@@ -851,14 +902,15 @@ export class PathingMap {
     const removedMovingEntities = new Set<PathingEntity>();
     if (removeMovingEntities) {
       for (const e of this.entities.keys()) {
-        if (!e.order || !("path" in e.order) || !e.order.path?.length) {
-          continue;
-        }
+        if (!isMoving(e)) continue;
 
         // Don't remove entities that are targeting the pathing entity
         if ("targetId" in e.order && e.order.targetId === entity.id) {
           continue;
         }
+
+        // Nor ones the caller says are obstacles regardless of moving.
+        if (keepMoving?.(e)) continue;
 
         // Pre-filter: skip expensive distanceBetweenEntities for distant entities
         const dx = e.position.x - entity.position.x;
@@ -1514,12 +1566,23 @@ export class PathingMap {
 
     path.push(...pathWorld.slice(1, -1));
 
-    if (
-      !this.linearPathable(entity, path[path.length - 1], targetPosition) ||
-      (last !== targetTile)
-    ) path.push(pathWorld[pathWorld.length - 1]);
+    const targetLos = this.linearPathable(
+      entity,
+      path[path.length - 1],
+      targetPosition,
+    );
 
-    if (last === targetTile && targetPathable) path.push(targetPosition);
+    // A search that stops short of the target — on `distanceFromTarget`, or on
+    // its budget — still aims at the target itself when it can see it, so that
+    // the approach does not depend on how the search happened to terminate.
+    const aimAtTarget = targetPathable &&
+      (last === targetTile || (targetLos && !("position" in target)));
+
+    if (!targetLos || (last !== targetTile && !aimAtTarget)) {
+      path.push(pathWorld[pathWorld.length - 1]);
+    }
+
+    if (aimAtTarget) path.push(targetPosition);
 
     // Step back with a tolerance between 99% and 100% distance to target
     // E.g., if the passed distance is 100, the path will terminate (if

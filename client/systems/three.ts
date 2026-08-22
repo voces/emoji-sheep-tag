@@ -127,6 +127,11 @@ const onPositionOrRotationChange = (
   let baseX = e.position.x;
   let baseY = e.position.y;
 
+  // Smoothing only ever catches up by one step per position update, so it can
+  // only be applied to a unit that keeps sending them — a walking one. A unit
+  // that was moved once and then stands still would be left short of where it
+  // actually is, with everything drawn from its position, such as its selection
+  // ring, correctly ahead of it.
   if (e.order && "path" in e.order) {
     const prev = prevPositions.get(e);
     if (prev) {

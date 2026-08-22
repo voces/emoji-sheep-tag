@@ -5,7 +5,11 @@ import { canSee } from "@/shared/api/unit.ts";
 import { Entity } from "@/shared/types.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenPath } from "./tweenPath.ts";
-import { handleBlockedPath, shouldRepath } from "./pathRetry.ts";
+import {
+  handleBlockedPath,
+  shouldRepath,
+  shouldWaitForBlockers,
+} from "./pathRetry.ts";
 import {
   angleDifference,
   distanceBetweenEntities,
@@ -71,6 +75,8 @@ export const advanceWalk = (e: Entity, delta: number): number => {
   const tweenResult = tweenPath(e, delta);
 
   if (tweenResult.pathBlocked && e.order.path) {
+    if (shouldWaitForBlockers(e, tweenResult.blockers)) return 0;
+
     const target = "targetId" in e.order ? e.order.targetId : e.order.target;
     const options = "targetId" in e.order
       ? { distanceFromTarget: FOLLOW_DISTANCE }

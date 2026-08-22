@@ -10,7 +10,7 @@ import { calcPath } from "../pathing.ts";
 import { lookup } from "../lookup.ts";
 import { precast } from "../../orders/precast.ts";
 import { postCast } from "../../orders/postCast.ts";
-import { handleBlockedPath } from "./pathRetry.ts";
+import { handleBlockedPath, shouldWaitForBlockers } from "./pathRetry.ts";
 import { canSee } from "@/shared/api/unit.ts";
 import { breakInvisibility } from "../../api/unit.ts";
 
@@ -63,6 +63,8 @@ export const advanceCast = (e: Entity, delta: number): number => {
       const tweenResult = tweenPath(e, delta);
 
       if (tweenResult.pathBlocked && e.order.path) {
+        if (shouldWaitForBlockers(e, tweenResult.blockers)) return 0;
+
         const targetRef = "x" in target ? target : target.id;
         if (
           handleBlockedPath(e, targetRef, e.order.path, {

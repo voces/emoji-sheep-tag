@@ -5,7 +5,7 @@ import { lookup } from "../lookup.ts";
 import { calcPath } from "../pathing.ts";
 import { tweenAttack } from "./tweenAttack.ts";
 import { tweenPath } from "./tweenPath.ts";
-import { handleBlockedPath } from "./pathRetry.ts";
+import { handleBlockedPath, shouldWaitForBlockers } from "./pathRetry.ts";
 
 export const advanceAttackMove = (e: Entity, delta: number): number => {
   if (e.order?.type !== "attackMove") return delta;
@@ -54,6 +54,7 @@ export const advanceAttackMove = (e: Entity, delta: number): number => {
   const tweenResult = tweenPath(e, delta);
 
   if (tweenResult.pathBlocked && e.order.path) {
+    if (shouldWaitForBlockers(e, tweenResult.blockers)) return 0;
     if (handleBlockedPath(e, e.order.target, e.order.path)) {
       delete e.order;
       return delta;

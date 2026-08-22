@@ -355,6 +355,8 @@ export const zUpdate = z.object({
   actions: z.array(zAction).readonly().optional(),
   completionTime: z.number().nullable().optional(),
   progress: z.number().nullable().optional(),
+  blocked: z.boolean().nullable().optional(),
+  speed: z.number().nullable().optional(),
   isDoodad: z.boolean().nullable().optional(),
   isEffect: z.boolean().optional(),
   isTimer: z.boolean().optional(),
