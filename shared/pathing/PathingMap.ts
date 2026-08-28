@@ -714,7 +714,16 @@ export class PathingMap {
 
       const x = this.xTileToWorld(xTile) + offset.x;
       const y = this.yTileToWorld(yTile) + offset.y;
-      const distance = (x - originX) ** 2 + (y - originY) ** 2;
+
+      // Rounded to whole cells where something else is to settle ties, since
+      // openings a whisker apart are for this purpose the same distance away:
+      // a unit's own position is arbitrary to well within a cell, and comparing
+      // exactly lets that arbitrariness decide instead of the tie-break.
+      const distance = tieBreak
+        ? Math.round(
+          ((x - originX) ** 2 + (y - originY) ** 2) ** 0.5 * this.resolution,
+        )
+        : (x - originX) ** 2 + (y - originY) ** 2;
       const tie = tieBreak ? (x - tieBreak.x) ** 2 + (y - tieBreak.y) ** 2 : 0;
 
       if (
@@ -725,7 +734,14 @@ export class PathingMap {
 
     consider();
 
-    while (!best || square() <= best.square) {
+    // One square further where something else is to settle ties: which square
+    // a point falls on is measured from the middle of the square the search
+    // started in, so two openings the same distance off can sit on different
+    // squares, and stopping at the first would hand it to whichever of them the
+    // start happened to lie nearer the edge of.
+    const overrun = tieBreak ? 1 : 0;
+
+    while (!best || square() <= best.square + overrun) {
       if (!remainingTries--) break;
 
       switch (direction) {

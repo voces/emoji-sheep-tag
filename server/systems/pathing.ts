@@ -295,19 +295,19 @@ export const displaceThrough = (
       p.pathable(entity, spot.x, spot.y) && p.layer(spot.x, spot.y) === layer
     ) return spot;
 
-    // Searched from between where the builder stands and the spot it is owed.
-    // From the spot alone it is carried round the far side of whichever
-    // neighbour took it, which off a mass of small structures puts it outside
-    // everything it has built; from the builder alone the carry is lost and it
-    // is set down by whichever way it happened to walk in. Halfway keeps the
-    // turn while holding it in to its own work.
+    // Searched from where the builder stands, so that it comes out by the
+    // nearest way. Searched from the spot it is owed instead, or from between
+    // the two, it is carried round the far side of whichever neighbour took the
+    // spot: filling in the edge of a block that leaves one way out, the ground
+    // over the whole block reads as near as the ground beside the hut it just
+    // laid.
     //
-    // Where two openings are equally near — a square has four corners the same
-    // way out — the one the spot leans towards wins, so the turn settles it
-    // rather than the direction the sweep happens to run.
+    // The turn still decides between ways out that are as near as each other —
+    // a hole in a mass has one every way — so the same hole filled from any of
+    // its corners passes the builder on the same way about.
     return p.nearestSpiralPathing(
-      (entity.position.x + spot.x) / 2,
-      (entity.position.y + spot.y) / 2,
+      entity.position.x,
+      entity.position.y,
       entity,
       layer,
       { tieBreak: spot },

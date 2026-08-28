@@ -394,3 +394,50 @@ it(
     }
   },
 );
+
+/**
+ * Filling the last hole along the edge of a block, the ground below is the only
+ * way out, and it is right there against the hut being laid. Standing anywhere
+ * in the hole the builder has to be set down on it, never carried up over both
+ * rows and left on the far side of everything it has built.
+ */
+it(
+  "brings a builder out the one open side of a block",
+  { sheep: ["player-0"], gold: 40000 },
+  function* ({ ecs }) {
+    const site = { x: 41, y: 30 };
+    const CORNERS: [number, number][] = [[-1, -1], [-1, 1], [1, 1], [1, -1]];
+
+    for (const [ox, oy] of CORNERS) {
+      // Four huts across and two deep, the site the gap in the lower row.
+      for (const y of [site.y, site.y + 1]) {
+        for (const x of [40, 41, 42, 43]) {
+          if (x !== site.x || y !== site.y) newUnit("player-0", "hut", x, y);
+        }
+      }
+
+      const sheep = newUnit(
+        "player-0",
+        "sheep",
+        site.x + ox * 0.25,
+        site.y + oy * 0.25,
+      );
+
+      yield;
+
+      orderBuild(sheep, "hut", site.x, site.y);
+      for (let tick = 0; tick < 400 && sheep.order; tick++) yield;
+
+      // Below the hut it laid and against it, whichever corner of the hole it
+      // stood in.
+      expect(sheep.position!.y - site.y).toBeCloseTo(-0.75);
+      expect(Math.abs(sheep.position!.x - site.x)).toBeLessThanOrEqual(0.75);
+
+      for (const e of Array.from(ecs.entities)) {
+        if (e.prefab === "hut" || e === sheep) ecs.removeEntity(e);
+      }
+
+      yield;
+    }
+  },
+);
