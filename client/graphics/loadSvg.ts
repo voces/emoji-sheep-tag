@@ -24,6 +24,15 @@ import {
   WATER_SHADER_RIPPLES,
 } from "./waterShader.ts";
 import { waterRippleUniforms } from "./waterRipples.ts";
+import {
+  OVERLAY_RENDER_ORDER,
+  SORTED_PROJECT_VERTEX,
+  SPRITE_PASS_DEFINES,
+  SPRITE_PASS_DISCARD,
+  spriteMaterialOptions,
+  SpritePass,
+  TRANSLUCENT_RENDER_ORDER,
+} from "./depthSort.ts";
 
 const instancedSvgShaders = new Set<WebGLProgramParametersWithUniforms>();
 
@@ -76,6 +85,15 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
       "  vPlayerColor = instancePlayerColor;\n" +
       WATER_SHADER_ENTITY_VERTEX +
       "  vWaterline = shapeInfo.z - submergence - waterWaveOffset_;",
+  );
+
+  shader.vertexShader = shader.vertexShader.replace(
+    "#include <project_vertex>",
+    `#if SPRITE_PASS == 2
+      #include <project_vertex>
+    #else
+      ${SORTED_PROJECT_VERTEX}
+    #endif`,
   );
 
   // Apply colors: base vertex color, then either instanceColor or playerColor luminosity blend
@@ -143,6 +161,7 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     }
     float effectiveAlpha = vProgressiveMode > 0.5 ? shapeAlpha : vInstanceAlpha;
     float finalOpacity = vInstanceMinimapMask > 0.5 ? effectiveAlpha : vVertexOpacity * effectiveAlpha;
+    ${SPRITE_PASS_DISCARD}
     vec4 diffuseColor = vec4( diffuse, finalOpacity );`,
   );
 
@@ -156,15 +175,16 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
   );
 };
 
-const createMaterial = () => {
+const createMaterial = (pass: SpritePass) => {
   const material = new MeshBasicMaterial({
     vertexColors: true,
     transparent: true,
     side: DoubleSide,
-    depthWrite: true,
     forceSinglePass: true,
+    ...spriteMaterialOptions(pass),
   });
-  material.customProgramCacheKey = () => "instanceAlpha";
+  material.defines = { SPRITE_PASS: SPRITE_PASS_DEFINES[pass] };
+  material.customProgramCacheKey = () => `instanceAlpha-${pass}`;
   material.onBeforeCompile = addInstanceAlpha;
   material.onBeforeRender = () => {
     const now = getAnimationTime();
@@ -175,17 +195,33 @@ const createMaterial = () => {
   return material;
 };
 
-const sharedMaterial = createMaterial();
+const materials = {
+  opaque: createMaterial("opaque"),
+  translucent: createMaterial("translucent"),
+  overlay: createMaterial("overlay"),
+};
 
 export const loadSvg = (
   svg: string,
   scale: number,
-  { count = 0, layer, yOffset = 0, xOffset = 0, facingOffset }: {
+  {
+    count = 0,
+    layer,
+    yOffset = 0,
+    xOffset = 0,
+    facingOffset,
+    overlay = false,
+    sortBias = 0,
+  }: {
     count?: number;
     layer?: number;
     yOffset?: number;
     xOffset?: number;
     facingOffset?: number;
+    /** Draw over everything in render order instead of sorting by position. */
+    overlay?: boolean;
+    /** Sort this far south of the drawing's base, to cover things standing in it. */
+    sortBias?: number;
   } = {},
   zOrder: number,
 ) => {
@@ -283,12 +319,21 @@ export const loadSvg = (
     geo.setAttribute("shapeInfo", new BufferAttribute(shapeInfoData, 3));
   }
 
-  // Create instanced mesh from merged geometries
-  const isvg = new InstancedSvg(geometries, sharedMaterial, count, name);
-  if (typeof layer === "number") isvg.layers.set(layer);
+  const isvg = overlay
+    ? new InstancedSvg(geometries, materials.overlay, count, name)
+    : new InstancedSvg(geometries, materials.opaque, count, name, {
+      sort: { baseY: spriteMinY, bias: sortBias },
+      translucentMaterial: materials.translucent,
+    });
+  if (typeof layer === "number") {
+    isvg.layers.set(layer);
+    isvg.translucentMesh.layers.set(layer);
+  }
 
-  isvg.renderOrder = zOrder;
+  isvg.renderOrder = overlay ? OVERLAY_RENDER_ORDER + zOrder : zOrder;
+  isvg.translucentMesh.renderOrder = TRANSLUCENT_RENDER_ORDER + zOrder;
 
   scene.add(isvg);
+  if (!overlay) scene.add(isvg.translucentMesh);
   return isvg;
 };

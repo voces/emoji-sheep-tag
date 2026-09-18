@@ -1,8 +1,10 @@
 /**
  * AnimatedMeshMaterial - Custom material with GPU-driven animation shader.
  *
- * Two-pass rendering for "object opacity" (no internal part stacking):
- * 1. Depth pass: writes depth buffer with partID Z-offset for intra-instance occlusion
+ * Opaque instances draw in one pass that writes depth, sorted with every other
+ * sprite. See-through instances draw after all opaque sprites, in two passes for
+ * "object opacity" (no internal part stacking):
+ * 1. Depth pass: writes depth with a partID offset for intra-instance occlusion
  * 2. Color pass: tests against depth, renders with instance opacity
  */
 
@@ -24,6 +26,14 @@ import {
   WATER_SHADER_RIPPLES,
 } from "./waterShader.ts";
 import { waterRippleUniforms } from "./waterRipples.ts";
+import {
+  PART_DEPTH_GLSL,
+  SORTED_PROJECT_VERTEX,
+  SPRITE_PASS_DEFINES,
+  SPRITE_PASS_DISCARD,
+  spriteMaterialOptions,
+  SpritePass,
+} from "./depthSort.ts";
 
 let animationTime = 0;
 
@@ -51,7 +61,14 @@ export const onShaderReady = (material: Material, callback: () => void) => {
   }
 };
 
-const PART_Z_OFFSET = 0.0001;
+const PROJECT_VERTEX = `
+  #if SPRITE_PASS == 2
+    #include <project_vertex>
+  #else
+    ${SORTED_PROJECT_VERTEX}
+  #endif
+  ${PART_DEPTH_GLSL}
+`;
 
 const VERTEX_ATTRIBUTES = `
   attribute vec2 partInfo;
@@ -110,17 +127,19 @@ const addWaterRippleUniforms = (shader: WebGLProgramParametersWithUniforms) => {
   shader.uniforms.waterRipples = waterRippleUniforms.waterRipples;
 };
 
-export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
+export const createAnimatedMeshMaterial = (
+  pass: SpritePass = "opaque",
+): MeshBasicMaterial => {
   const material = new MeshBasicMaterial({
     vertexColors: true,
     transparent: true,
     side: DoubleSide,
-    depthWrite: false,
-    depthTest: true,
     depthFunc: LessEqualDepth,
+    ...spriteMaterialOptions(pass),
   });
+  material.defines = { SPRITE_PASS: SPRITE_PASS_DEFINES[pass] };
 
-  material.customProgramCacheKey = () => "animatedMesh";
+  material.customProgramCacheKey = () => `animatedMesh-${pass}`;
 
   material.onBeforeCompile = (shader) => {
     const existing = shaderRefs.get(material);
@@ -207,10 +226,7 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
 
     shader.vertexShader = shader.vertexShader.replace(
       "#include <project_vertex>",
-      `
-      #include <project_vertex>
-      gl_Position.z -= partID * ${PART_Z_OFFSET};
-      `,
+      PROJECT_VERTEX,
     );
 
     shader.vertexShader = shader.vertexShader.replace(
@@ -267,6 +283,7 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
       /vec4 diffuseColor = vec4\( diffuse, opacity \);/,
       `
       float finalOpacity = vInstanceAlpha * vAnimOpacity;
+      ${SPRITE_PASS_DISCARD}
       vec4 diffuseColor = vec4( diffuse, finalOpacity );
       `,
     );
@@ -294,11 +311,6 @@ export const createAnimatedMeshMaterial = (): MeshBasicMaterial => {
   return material;
 };
 
-let sharedMaterial: MeshBasicMaterial | null = null;
-
-export const getAnimatedMeshMaterial = (): MeshBasicMaterial =>
-  sharedMaterial ?? (sharedMaterial = createAnimatedMeshMaterial());
-
 export const createDepthMaterial = (): MeshBasicMaterial => {
   const material = new MeshBasicMaterial({
     colorWrite: false,
@@ -307,6 +319,7 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
     depthWrite: true,
     depthTest: true,
   });
+  material.defines = { SPRITE_PASS: SPRITE_PASS_DEFINES.translucent };
 
   material.customProgramCacheKey = () => "animatedMeshDepth";
 
@@ -372,10 +385,7 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
 
     shader.vertexShader = shader.vertexShader.replace(
       "#include <project_vertex>",
-      `
-      #include <project_vertex>
-      gl_Position.z -= partID * ${PART_Z_OFFSET};
-      `,
+      PROJECT_VERTEX,
     );
 
     shader.fragmentShader = `

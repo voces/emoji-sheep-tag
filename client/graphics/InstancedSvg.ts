@@ -19,6 +19,7 @@ import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { getMapBounds } from "@/shared/map.ts";
+import { instanceZ, type SpriteSort } from "./depthSort.ts";
 
 const dummy = new Object3D();
 const dummyColor = new Color();
@@ -38,6 +39,11 @@ export class InstancedSvg extends InstancedMesh {
   private mapUtilizationThreshold: number;
   private playerVertexMask: Float32Array | null = null;
   shapeCount: number = 1;
+  private readonly sort: SpriteSort | undefined;
+  /** Draws see-through instances after every opaque sprite, without writing depth. */
+  readonly translucentMesh: InstancedMesh;
+  private translucentInstances = 0;
+  private readonly hasTranslucentShapes: boolean;
 
   constructor(
     geometries: BufferGeometry[],
@@ -47,6 +53,9 @@ export class InstancedSvg extends InstancedMesh {
     options?: {
       skipBoundsRecalc?: boolean;
       mapUtilizationThreshold?: number;
+      /** Sorts instances by position; unsorted meshes draw in render order. */
+      sort?: SpriteSort;
+      translucentMaterial?: Material;
     },
   ) {
     // Merge all geometries into one
@@ -56,6 +65,22 @@ export class InstancedSvg extends InstancedMesh {
     }
 
     super(mergedGeometry, material, count);
+
+    this.sort = options?.sort;
+    this.hasTranslucentShapes = geometries.some((geo) => {
+      const opacities = geo.getAttribute("vertexOpacity")?.array;
+      return !!opacities &&
+        Array.from(opacities).some((o) => (o > 1 ? o - 2 : o) < 0.999);
+    });
+    this.translucentMesh = new InstancedMesh(
+      mergedGeometry,
+      options?.translucentMaterial ?? material,
+      count,
+    );
+    this.translucentMesh.frustumCulled = false;
+    this.translucentMesh.raycast = () => {};
+    this.translucentMesh.visible = false;
+    this.syncTranslucentMesh();
 
     this.bvh = new BVH(svgName);
     this.bvh.setGetBoundingBox((index) => {
@@ -67,7 +92,6 @@ export class InstancedSvg extends InstancedMesh {
     this.skipBoundsRecalc = options?.skipBoundsRecalc ?? false;
     this.mapUtilizationThreshold = options?.mapUtilizationThreshold ?? 0.5;
 
-    // Build player vertex mask from merged geometry
     this.buildPlayerVertexMask(geometries);
 
     // Add instance attributes
@@ -237,6 +261,21 @@ export class InstancedSvg extends InstancedMesh {
     // InstancedMesh.count is the actual count used for rendering
     // deno-lint-ignore no-explicit-any
     (this as any).count = value;
+    this.syncTranslucentMesh();
+  }
+
+  private syncTranslucentMesh() {
+    this.translucentMesh.instanceMatrix = this.instanceMatrix;
+    this.translucentMesh.instanceColor = this.instanceColor;
+    this.translucentMesh.count = this.count;
+    this.translucentMesh.visible = this.visible &&
+      this.translucentMesh.material !== this.material &&
+      (this.hasTranslucentShapes || this.translucentInstances > 0);
+  }
+
+  private isTranslucentAt(index: number) {
+    const encoded = this.geometry.getAttribute("instanceAlpha").getX(index);
+    return encoded > 1 || encoded < 0.999;
   }
 
   getCount() {
@@ -247,6 +286,11 @@ export class InstancedSvg extends InstancedMesh {
     if (!(id in this.map)) return;
     const index = this.map[id];
     const swapIndex = this.reverseMap.length - 1;
+
+    if (this.isTranslucentAt(index)) {
+      this.translucentInstances--;
+      this.syncTranslucentMesh();
+    }
 
     if (swapIndex !== index) {
       const swapId = this.reverseMap[swapIndex];
@@ -466,7 +510,7 @@ export class InstancedSvg extends InstancedMesh {
     dummy.position.set(
       x,
       y,
-      z ?? (Number.isFinite(dummy.position.z) ? dummy.position.z : 0),
+      instanceZ(this.sort, x, y, dummy.scale.y, z ?? dummy.position.z),
     );
     dummy.updateMatrix();
 
@@ -507,15 +551,22 @@ export class InstancedSvg extends InstancedMesh {
     this.initializeInstanceColorWithWhite();
     this.setColorAt(index, color);
     if (this.instanceColor) this.instanceColor.needsUpdate = true;
+    this.syncTranslucentMesh();
   }
 
   setAlphaAt(index: number | string, alpha: number, progressiveAlpha = false) {
     if (typeof index === "string") index = this.getIndex(index);
     const instanceAlphaAttr = this.geometry.getAttribute("instanceAlpha");
+    const wasTranslucent = this.isTranslucentAt(index);
     // Encode progressive mode: values > 1.0 = progressive (add 2 so alpha=0 encodes as 2)
     const encodedAlpha = progressiveAlpha ? alpha + 2 : alpha;
     instanceAlphaAttr.setX(index, encodedAlpha);
     instanceAlphaAttr.needsUpdate = true;
+    const isTranslucent = this.isTranslucentAt(index);
+    if (wasTranslucent !== isTranslucent) {
+      this.translucentInstances += isTranslucent ? 1 : -1;
+      this.syncTranslucentMesh();
+    }
   }
 
   // instanceMinimapMask packs the minimap flag with submergence in a single
@@ -558,6 +609,7 @@ export class InstancedSvg extends InstancedMesh {
     if (color) {
       this.setColorAt(index, color);
       if (this.instanceColor) this.instanceColor.needsUpdate = true;
+      this.syncTranslucentMesh();
     }
   }
 
@@ -570,6 +622,13 @@ export class InstancedSvg extends InstancedMesh {
     if (typeof aspectRatio === "number") {
       dummy.scale.setY(dummy.scale.y * aspectRatio);
     }
+    dummy.position.z = instanceZ(
+      this.sort,
+      dummy.position.x,
+      dummy.position.y,
+      dummy.scale.y,
+      dummy.position.z,
+    );
     dummy.updateMatrix();
 
     this.setMatrixAt(index, dummy.matrix);

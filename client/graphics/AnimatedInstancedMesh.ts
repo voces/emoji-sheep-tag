@@ -33,6 +33,7 @@ import {
   getShaderRefs,
   onShaderReady,
 } from "./AnimatedMeshMaterial.ts";
+import { instanceZ, type SpriteSort } from "./depthSort.ts";
 
 const dummy = new Object3D();
 const _tempBox = new Box3();
@@ -58,8 +59,12 @@ export class AnimatedInstancedMesh extends InstancedMesh {
   readonly cameras: ParsedCamera[];
   /** Scale factor used when building geometry */
   readonly modelScale: number;
-  /** Depth pre-pass mesh for intra-instance occlusion */
+  /** Depth pre-pass mesh for intra-instance occlusion of see-through instances */
   readonly depthMesh: InstancedMesh;
+  /** Draws see-through instances and faded parts after every opaque sprite */
+  readonly translucentMesh: InstancedMesh;
+  private readonly sort: SpriteSort | undefined;
+  private readonly hasAnimatedOpacity: boolean;
   /** Callback when shader is ready (for re-applying animations) */
   onShaderReady?: () => void;
 
@@ -74,9 +79,17 @@ export class AnimatedInstancedMesh extends InstancedMesh {
       modelScale?: number;
       skipBoundsRecalc?: boolean;
       mapUtilizationThreshold?: number;
+      /** Sorts instances by position; unsorted meshes draw in render order. */
+      sort?: SpriteSort;
+      translucentMaterial?: Material;
     },
   ) {
     super(geometry, material, count);
+
+    this.sort = options?.sort;
+    this.hasAnimatedOpacity = Array.from(
+      animationData?.opacityTexture.image.data ?? [],
+    ).some((opacity) => opacity < 0.999);
 
     this.animationData = animationData ?? null;
     this.cameras = options?.cameras ?? [];
@@ -107,6 +120,16 @@ export class AnimatedInstancedMesh extends InstancedMesh {
         this.updateAnimationUniforms(shaderRef);
       }
     };
+
+    this.translucentMesh = new InstancedMesh(
+      geometry,
+      options?.translucentMaterial ?? material,
+      count,
+    );
+    this.translucentMesh.frustumCulled = false;
+    this.translucentMesh.raycast = () => {};
+    this.translucentMesh.onBeforeRender = this.depthMesh.onBeforeRender;
+    this.syncPassMeshes();
 
     this.onBeforeRender = (_r, _s, _c, _g, mat) => {
       for (const shaderRef of getShaderRefs(mat)) {
@@ -325,9 +348,18 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     // deno-lint-ignore no-explicit-any
     (this as any).count = value;
 
-    this.depthMesh.instanceMatrix = this.instanceMatrix;
-    // deno-lint-ignore no-explicit-any
-    (this.depthMesh as any).count = value;
+    this.syncPassMeshes();
+  }
+
+  private syncPassMeshes() {
+    for (const mesh of [this.depthMesh, this.translucentMesh]) {
+      mesh.instanceMatrix = this.instanceMatrix;
+      mesh.count = this.count;
+    }
+    this.depthMesh.visible = this.transparentInstanceCount > 0;
+    this.translucentMesh.visible =
+      this.translucentMesh.material !== this.material &&
+      (this.hasAnimatedOpacity || this.transparentInstanceCount > 0);
   }
 
   getCount() {
@@ -343,7 +375,7 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     const instanceAlphaAttr = this.geometry.getAttribute("instanceAlpha");
     if (instanceAlphaAttr.getX(index) < 1) {
       this.transparentInstanceCount--;
-      this.depthMesh.visible = this.transparentInstanceCount > 0;
+      this.syncPassMeshes();
     }
 
     if (swapIndex !== index) {
@@ -537,7 +569,7 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     dummy.position.set(
       x,
       y,
-      z ?? (Number.isFinite(dummy.position.z) ? dummy.position.z : 0),
+      instanceZ(this.sort, x, y, dummy.scale.y, z ?? dummy.position.z),
     );
     dummy.updateMatrix();
 
@@ -580,7 +612,7 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     } else if (!wasTransparent && isTransparent) {
       this.transparentInstanceCount++;
     }
-    this.depthMesh.visible = this.transparentInstanceCount > 0;
+    this.syncPassMeshes();
 
     instanceAlphaAttr.setX(index, alpha);
     instanceAlphaAttr.needsUpdate = true;
@@ -729,6 +761,13 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     if (typeof aspectRatio === "number") {
       dummy.scale.setY(dummy.scale.y * aspectRatio);
     }
+    dummy.position.z = instanceZ(
+      this.sort,
+      dummy.position.x,
+      dummy.position.y,
+      dummy.scale.y,
+      dummy.position.z,
+    );
     dummy.updateMatrix();
 
     this.setMatrixAt(index, dummy.matrix);

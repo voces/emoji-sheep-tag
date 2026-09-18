@@ -172,7 +172,6 @@ export const terrain = new Terrain2D(
 terrain.layers.set(3);
 terrain.position.z = -0.002;
 terrain.scale.setScalar(0.5);
-if ("depthWrite" in terrain.material) terrain.material.depthWrite = false;
 scene.add(terrain);
 let currentTerrainMapId = initialMap.id;
 onMapChange((map) => {

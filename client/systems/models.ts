@@ -228,7 +228,8 @@ const estme = (
 ): EstmeConfig => ({ type: "estme", data, options: { ...options, scale } });
 
 const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
-  // Background elements (lowest z-order)
+  // World sprites sort by position: whichever stands further south draws in
+  // front. Order here only breaks ties and orders the see-through pass.
   flowers: svg(flowers, 0.25, { layer: 2 }),
   treeStump: svg(treeStump, 0.11, {
     layer: 2,
@@ -248,11 +249,9 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   wagon: svg(wagon, 0.13, { layer: 2 }),
   glow,
 
-  // Units that can hide behind things
   sentry: svg(sentry, 0.03),
   sheep: estme(sheep.buffer, 0.0005),
 
-  // Background decor units can hide behind
   hayPile: svg(hayPile, 0.12, { layer: 2 }),
 
   // Basic units and structures
@@ -267,10 +266,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   monolith: svg(monolith, 0.13, { yOffset: 0.05 }),
   fox: estme(fox.buffer, 0.0088),
   wolf: estme(wolf.buffer, 0.01),
-  atom: svg(atom, 0.05),
-  startLocation: estme(startLocation.buffer, 0.25),
 
-  // Trees (should render in front of structures)
   windmill: estme(windmill.buffer, 0.0033, {
     layer: 2,
     yOffset: 0.1,
@@ -282,40 +278,48 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   hayCube: svg(hayCube, 0.05),
   brokenHayCube: svg(brokenHayCube, 0.05),
 
+  // Overlays draw over every sprite, in this order
   // Temple stacks on things, we want it visible, always
-  hinduTemple: svg(hinduTemple, 1.9),
+  hinduTemple: svg(hinduTemple, 1.9, { overlay: true }),
+  atom: svg(atom, 0.05, { overlay: true }),
+  startLocation: estme(startLocation.buffer, 0.25, { overlay: true }),
 
-  bird1: estme(bird1.buffer, 0.004, { layer: 2 }),
-  bird2: estme(bird2.buffer, 0.004, { layer: 2 }),
-  bee: svg(bee, 0.17, { layer: 2 }),
+  bird1: estme(bird1.buffer, 0.004, { layer: 2, overlay: true }),
+  bird2: estme(bird2.buffer, 0.004, { layer: 2, overlay: true }),
+  bee: svg(bee, 0.17, { layer: 2, overlay: true }),
 
-  // SFX elements (highest z-order, always on top)
-  shield: svg(shield, 1, { layer: 2 }),
-  wind: svg(wind, 1, { layer: 2 }),
-  sparkle: svg(sparkle, 1, { layer: 2 }),
-  sparkle2: svg(sparkle2, 0.2, { layer: 2 }),
-  rune: svg(rune, 0.4, { layer: 2 }),
-  rune2: svg(rune2, 0.05, { layer: 2 }),
-  eye: svg(eye, 0.05, { layer: 2 }),
-  swap: svg(swap, 0.1, { layer: 2 }),
-  circle: svg(circle, 0.08, { layer: 2 }),
-  fire: svg(fire, 1, { layer: 2 }),
-  crimsonArc: svg(crimsonArc, 0.1, { layer: 2 }),
-  vip: svg(vip, 0.03, { layer: 2 }),
-  claw: svg(claw, 0.05, { layer: 2 }),
-  dash: svg(dash, 0.1, { layer: 2 }),
-  flag: svg(flag, 1, { layer: 2, yOffset: 0.15, xOffset: 0.09 }),
-  location: svg(location, 2, { layer: 2 }),
-  collision: svg(collision, 2, { layer: 2 }),
-  meteor: svg(meteor, 0.5, { layer: 2, yOffset: 0.7, xOffset: 0.08 }),
-  beamStart: svg(beamStart, 0.25, { layer: 2, xOffset: 0.75 }),
-  beam: svg(beam, 0.5, { layer: 2, xOffset: -3 }),
-  frostOrb: svg(frostOrb, 0.4, { layer: 2 }),
-  square: svg(square, 1, { layer: 2 }),
+  // SFX elements
+  shield: svg(shield, 1, { layer: 2, overlay: true }),
+  wind: svg(wind, 1, { layer: 2, overlay: true }),
+  sparkle: svg(sparkle, 1, { layer: 2, overlay: true }),
+  sparkle2: svg(sparkle2, 0.2, { layer: 2, overlay: true }),
+  rune: svg(rune, 0.4, { layer: 2, overlay: true }),
+  rune2: svg(rune2, 0.05, { layer: 2, overlay: true }),
+  eye: svg(eye, 0.05, { layer: 2, overlay: true }),
+  swap: svg(swap, 0.1, { layer: 2, overlay: true }),
+  circle: svg(circle, 0.08, { layer: 2, overlay: true }),
+  fire: svg(fire, 1, { layer: 2, overlay: true }),
+  crimsonArc: svg(crimsonArc, 0.1, { layer: 2, overlay: true }),
+  vip: svg(vip, 0.03, { layer: 2, overlay: true }),
+  claw: svg(claw, 0.05, { layer: 2, overlay: true }),
+  dash: svg(dash, 0.1, { layer: 2, overlay: true }),
+  flag: svg(flag, 1, { layer: 2, overlay: true, yOffset: 0.15, xOffset: 0.09 }),
+  location: svg(location, 2, { layer: 2, overlay: true }),
+  collision: svg(collision, 2, { layer: 2, overlay: true }),
+  meteor: svg(meteor, 0.5, {
+    layer: 2,
+    overlay: true,
+    yOffset: 0.7,
+    xOffset: 0.08,
+  }),
+  beamStart: svg(beamStart, 0.25, { layer: 2, overlay: true, xOffset: 0.75 }),
+  beam: svg(beam, 0.5, { layer: 2, overlay: true, xOffset: -3 }),
+  frostOrb: svg(frostOrb, 0.4, { layer: 2, overlay: true }),
+  square: svg(square, 1, { layer: 2, overlay: true }),
 
   // Top-layer indicators (render above everything)
-  ring: svg(ring, 0.08, { layer: 2 }),
-  gravity: svg(gravity, 2, { layer: 2 }),
+  ring: svg(ring, 0.08, { layer: 2, overlay: true }),
+  gravity: svg(gravity, 2, { layer: 2, overlay: true }),
 };
 
 // Pre-assign render orders based on the order in modelConfigs

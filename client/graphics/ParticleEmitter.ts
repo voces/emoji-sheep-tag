@@ -10,6 +10,7 @@ import {
 } from "three";
 import { scene } from "./three.ts";
 import { WIND_SHADER_INTEGRAL_FN } from "./windShader.ts";
+import { OVERLAY_RENDER_ORDER } from "./depthSort.ts";
 
 const INITIAL_CAPACITY = 64;
 const GROWTH_FACTOR = 2;
@@ -193,6 +194,7 @@ export class ParticleEmitter {
       vertexShader,
       fragmentShader,
       transparent: true,
+      depthTest: false,
       depthWrite: false,
       uniforms: {
         uTime: { value: 0 },
@@ -218,7 +220,7 @@ export class ParticleEmitter {
   private buildMesh() {
     const mesh = new InstancedMesh(this.geo, this.material, this.capacity);
     mesh.frustumCulled = false;
-    mesh.renderOrder = 999;
+    mesh.renderOrder = OVERLAY_RENDER_ORDER - 1;
     scene.add(mesh);
     return mesh;
   }

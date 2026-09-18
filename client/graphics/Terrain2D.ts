@@ -23,6 +23,7 @@ import {
 } from "./waterShader.ts";
 import { waterRippleUniforms } from "./waterRipples.ts";
 import { cliffDefs } from "@/shared/data.ts";
+import { SPRITE_DEPTH_GLSL } from "./depthSort.ts";
 
 export type Cliff = number | "r";
 export type CliffMask = Cliff[][];
@@ -539,9 +540,12 @@ const buildDoodadTexture = (
 const vertexShader = `
   varying vec2 vUv;
   varying vec2 vWorldPos;
+  // Clip z and w of this point on the sprite plane (z = 0), for sorting grass
+  varying vec2 vPlaneClipZW;
   void main() {
     vUv = uv;
     vWorldPos = (modelMatrix * vec4(position, 1.0)).xy;
+    vPlaneClipZW = (projectionMatrix * viewMatrix * vec4(vWorldPos, 0.0, 1.0)).zw;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
@@ -563,7 +567,14 @@ const fragmentShader = `
 
   varying vec2 vUv;
   varying vec2 vWorldPos;
+  varying vec2 vPlaneClipZW;
 
+  // A clump hides sprites standing behind it only where it covers the pixel
+  // this densely. Its soft fringe keeps the ground's depth, so the seam over a
+  // sprite falls inside the clump's solid part instead of in its faded edge.
+  const float PLANT_HIDE_MIN_COVERAGE = 0.8;
+
+  ${SPRITE_DEPTH_GLSL}
   ${WATER_SHADER_CONSTANTS}
   ${WATER_SHADER_NOISE}
   ${WATER_SHADER_MOTION}
@@ -710,7 +721,13 @@ const fragmentShader = `
 
   void main() {
     vec2 wp = vWorldPos;
+    // How much world space one pixel covers. Taken here rather than inside the
+    // decal loops: those skip cells per pixel, and a derivative taken where the
+    // 2x2 pixel quad disagrees on which cells it drew returns a bogus width.
+    float worldPx = max(fwidth(wp.x), 1e-5);
     vec3 tileColor = softTileColor(wp);
+    float planeDepth = (vPlaneClipZW.x / vPlaneClipZW.y) * 0.5 + 0.5;
+    float fragDepth = gl_FragCoord.z;
 
     float smoothH = heightSmooth(vUv);
 
@@ -951,6 +968,8 @@ const fragmentShader = `
 
       float winAlpha = 0.0;
       vec3 winColor = vec3(0.0);
+      // Where the winning clump is rooted, which is where it sorts against sprites
+      float winRootY = 0.0;
 
       // 4-quad: the 4 closest clump cells to the pixel. Max blade extent
       // (~0.88 cell-units) is short enough that blades rooted outside
@@ -993,7 +1012,7 @@ const fragmentShader = `
       float sizeBoost = 0.6 + proximity * 0.4;
       float baseH = (0.35 + h1 * 0.2) * bladeScale * sizeBoost;
 
-      float px = fwidth(cellUv.x);
+      float px = worldPx / cellSize / grassScale;
       // Accumulate blade coverage and color — blades within a clump overlap
       float clumpAlpha = 0.0;
       vec3 clumpColor = vec3(0.0);
@@ -1061,7 +1080,10 @@ const fragmentShader = `
         vec2 db = vec2(bladeD.x*ca - bladeD.y*sa, bladeD.x*sa + bladeD.y*ca);
 
         float t = db.y / max(bladeH, 0.001);
-        if (t < 0.0 || t > 1.15) continue;
+        // A blade stops at its root; fade over a pixel so the clump's bottom
+        // edge isn't a hard line
+        float tpx = px * 1.1 / max(bladeH, 0.001);
+        if (t < -tpx || t > 1.15) continue;
 
         db.x -= curve * mix(t * t, t, 0.3);
 
@@ -1078,7 +1100,7 @@ const fragmentShader = `
         float dist = length(vec2(db.x, dy));
 
         float alpha = 1.0 - smoothstep(w - px, w + px, dist);
-        alpha *= step(0.0, t);
+        alpha *= smoothstep(-tpx, tpx, t);
 
         if (alpha > 0.01) {
           // Left fan: outer=lighter, lead=darker
@@ -1103,11 +1125,15 @@ const fragmentShader = `
       if (clumpAlpha > winAlpha) {
         winAlpha = clumpAlpha;
         winColor = clumpColor;
+        winRootY = rootWorld.y;
       }
       } // end neighbor loop
 
       if (winAlpha > 0.01) {
         color = mix(color, winColor, winAlpha);
+      }
+      if (winAlpha > PLANT_HIDE_MIN_COVERAGE) {
+        fragDepth = min(fragDepth, spriteDepthAt(planeDepth, winRootY));
       }
     }
 
@@ -1309,6 +1335,8 @@ const fragmentShader = `
 
       float cattailWinAlpha = 0.0;
       vec3 cattailWinColor = vec3(0.0);
+      // The waterline point the cattail stands at, where it sorts against sprites
+      float cattailWinRootY = 0.0;
 
       // 2×4 window: 4-quad horizontal × 4 rows {pixel-2, -1, 0, +1}.
       // Cattails extend ~1.66 cell-units above and (depth-dependent)
@@ -1371,10 +1399,19 @@ const fragmentShader = `
       float cattailRipple = cattailDepth > 0.0 ? waterRippleSignal(cattailWorldPos) : 0.0;
 
       int cattailBladeCount = 1 + int(ch2 * 2.99);
-      float cpx = fwidth(cattailCellUv.x);
+      // Blade space is cell space divided by the scale, with y stretched 1.1
+      float cpx = worldPx / cattailCellSize / cattailScale;
+      float cpy = cpx * 1.1;
 
       float cattailClumpAlpha = 0.0;
       vec3 cattailClumpColor = vec3(0.0);
+
+      // Underwater stem length, shared by the clump's blades. The stem is drawn
+      // this far south of the waterline point, so that's where the cattail
+      // meets the bottom and where it sorts against sprites.
+      float cattailBelowLen = max(0.25, cattailDepth * 1.5);
+      float cattailBaseY = cattailWorldPos.y
+        - cattailBelowLen * cattailScale * cattailCellSize / 1.1;
 
       for (int cb = 0; cb < 3; cb++) {
         if (cb >= cattailBladeCount) break;
@@ -1388,8 +1425,7 @@ const fragmentShader = `
         float headSize = 0.06 + cbHash2 * 0.1;
         float tipSize = 0.08 + cbHash3 * 0.2;
         float aboveTotal = aboveStem + headSize + tipSize;
-        // Underwater stem length based on depth
-        float belowLen = max(0.25, cattailDepth * 1.5);
+        float belowLen = cattailBelowLen;
 
         float cattailAngle = (cbHash1 - 0.5) * 0.25;
         float cattailCurve = (cbHash2 - 0.5) * 0.1;
@@ -1405,7 +1441,7 @@ const fragmentShader = `
 
 
         // cdb.y: 0 = waterline, positive = above, negative = below
-        if (cdb.y > aboveTotal || cdb.y < -belowLen) continue;
+        if (cdb.y > aboveTotal || cdb.y < -belowLen - cpy) continue;
 
         // Normalized t for curve (0 at bottom, 1 at top)
         float totalLen = aboveTotal + belowLen;
@@ -1430,17 +1466,29 @@ const fragmentShader = `
 
         // Thin stem — squared off at bottom, tapered at top
         float cattailTaper = smoothstep(aboveTotal, aboveTotal * 0.92, cdb.y);
-        // Head bulge in above-water space
-        float headStart = aboveStem / aboveTotal;
-        float headEnd = (aboveStem + headSize) / aboveTotal;
-        float headBulge = step(headStart, aboveT) * step(aboveT, headEnd) * 1.5;
-        float cw = (0.012 + headBulge * 0.018) * cattailScale * cattailTaper;
+        float stemW = 0.012 * cattailScale * cattailTaper;
+        float stemAlpha = 1.0 - smoothstep(stemW - cpx, stemW + cpx, abs(cdb.x));
+        stemAlpha *= smoothstep(-belowLen - cpy, -belowLen + cpy, cdb.y);
 
-        float cdist = abs(cdb.x);
-        float calpha = 1.0 - smoothstep(cw - cpx, cw + cpx, cdist);
+        // Head: a rounded box around the stem, measured as a distance so its
+        // ends antialias the way its sides do. Blade space stretches y by 1.1,
+        // so undo that to keep the distance even in both directions.
+        float headHalfW = 0.039 * cattailScale;
+        float headHalfH = headSize * 0.5 / 1.1;
+        float headRound = min(headHalfW, headHalfH) * 0.8;
+        vec2 headP = vec2(
+          cdb.x,
+          (cdb.y - (aboveStem + headSize * 0.5)) / 1.1
+        );
+        vec2 headQ = abs(headP) - vec2(headHalfW, headHalfH) + headRound;
+        float headDist = length(max(headQ, 0.0))
+          + min(max(headQ.x, headQ.y), 0.0) - headRound;
+        float headAlpha = 1.0 - smoothstep(-cpx, cpx, headDist);
+
+        float calpha = max(stemAlpha, headAlpha);
 
         if (calpha > 0.01) {
-          float isHead = step(headStart, aboveT) * step(aboveT, headEnd);
+          float isHead = headAlpha;
           // Per-clump color variation
           // Stems darker in deep water, lighter in shallow
           float depthBias = 1.0 - smoothstep(0.1, 0.8, cattailDepth) * 0.4;
@@ -1459,12 +1507,17 @@ const fragmentShader = `
           vec3 cattailCol = mix(stemCol, headCol, isHead);
           cattailCol *= (0.3 + ch2 * 0.25) + smoothH * 0.3;
 
-          // Below dynamic waterline: apply water effect
-          if (cdb.y < dynOffset) {
-            float waterDist = (dynOffset - cdb.y) * cattailCellSize * 2.0;
+          // Below dynamic waterline: apply water effect, crossing the
+          // waterline over a pixel so it isn't a hard band
+          float submerged =
+            1.0 - smoothstep(dynOffset - cpy, dynOffset + cpy, cdb.y);
+          if (submerged > 0.001) {
+            float waterDist = max(0.0, dynOffset - cdb.y) * cattailCellSize * 2.0;
             float depthT = clamp(cattailDepth * 1.5, 0.0, 1.0);
-            cattailCol = applyWaterSubmerge(
-              cattailCol, waterDist, depthT, wp, time);
+            cattailCol = mix(
+              cattailCol,
+              applyWaterSubmerge(cattailCol, waterDist, depthT, wp, time),
+              submerged);
           }
 
           cattailClumpColor = mix(cattailClumpColor, cattailCol,
@@ -1476,15 +1529,20 @@ const fragmentShader = `
       if (cattailClumpAlpha > cattailWinAlpha) {
         cattailWinAlpha = cattailClumpAlpha;
         cattailWinColor = cattailClumpColor;
+        cattailWinRootY = cattailBaseY;
       }
       } // end cattail neighbor loop
 
       if (cattailWinAlpha > 0.01) {
         color = mix(color, cattailWinColor, cattailWinAlpha);
       }
+      if (cattailWinAlpha > PLANT_HIDE_MIN_COVERAGE) {
+        fragDepth = min(fragDepth, spriteDepthAt(planeDepth, cattailWinRootY));
+      }
     }
 
     gl_FragColor = vec4(color, 1.0);
+    gl_FragDepth = fragDepth;
   }
 `;
 
@@ -1557,7 +1615,6 @@ export class Terrain2D extends Mesh {
       },
       vertexShader,
       fragmentShader,
-      depthWrite: false,
       side: 2,
     });
 

@@ -108,7 +108,12 @@ export class Grid extends Mesh {
 
     super(
       plane,
-      new MeshBasicMaterial({ vertexColors: true, transparent: true }),
+      new MeshBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+      }),
     );
 
     this.colors = colors;

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Color, OrthographicCamera, Scene, Vector4 } from "three";
+import { Color, Material, OrthographicCamera, Scene, Vector4 } from "three";
 import { styled } from "styled-components";
 import { type Entity } from "../../../ecs.ts";
 import { AnimatedInstancedMesh } from "../../../graphics/AnimatedInstancedMesh.ts";
-import { getAnimatedMeshMaterial } from "../../../graphics/AnimatedMeshMaterial.ts";
+import { createAnimatedMeshMaterial } from "../../../graphics/AnimatedMeshMaterial.ts";
 import { onRender, renderer } from "../../../graphics/three.ts";
 import { collections } from "../../../systems/models.ts";
 import {
@@ -59,22 +59,20 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
     camera.position.set(0, 0, 10);
     camera.layers.enableAll();
 
-    const material = getAnimatedMeshMaterial();
-
     const mesh = new AnimatedInstancedMesh(
       collection.geometry.clone(),
-      material,
+      createAnimatedMeshMaterial("opaque"),
       1,
       modelName,
       collection.animationData ?? undefined,
+      { translucentMaterial: createAnimatedMeshMaterial("translucent") },
     );
     mesh.setPositionAt(0, 0, 0);
     mesh.frustumCulled = false;
-    portraitScene.add(mesh);
-
-    mesh.depthMesh.renderOrder = -0.001;
+    mesh.depthMesh.renderOrder = 0.999;
     mesh.depthMesh.frustumCulled = false;
-    portraitScene.add(mesh.depthMesh);
+    mesh.translucentMesh.renderOrder = 1;
+    portraitScene.add(mesh, mesh.depthMesh, mesh.translucentMesh);
 
     const geo = mesh.geometry;
     geo.computeBoundingBox();
@@ -168,6 +166,9 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
     return () => {
       disposeRender();
       mesh.geometry.dispose();
+      for (const m of [mesh, mesh.depthMesh, mesh.translucentMesh]) {
+        (m.material as Material).dispose();
+      }
     };
   }, [canvas, modelName, entity.id]);
 
