@@ -86,7 +86,6 @@ export const createInstanceAttribute = (
 export abstract class InstancedEntityMesh extends InstancedMesh {
   private map: Record<string, number> = {};
   private reverseMap: string[] = [];
-  private innerCount: number;
   private readonly bvh: BVH;
   private readonly instanceAttributes: readonly InstanceAttribute[];
   protected readonly sort: SpriteSort | undefined;
@@ -104,7 +103,6 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
     },
   ) {
     super(geometry, material, count);
-    this.innerCount = count;
     this.sort = sort;
     this.instanceAttributes = [...SHARED_ATTRIBUTES, ...attributes];
     for (const attribute of this.instanceAttributes) {
@@ -129,7 +127,7 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
   protected abstract syncPassMeshes(): void;
 
   resize(value: number) {
-    const kept = Math.min(value, this.innerCount);
+    const kept = Math.min(value, this.count);
     const matrices = new Float32Array(value * 16);
     matrices.set(this.instanceMatrix.array.subarray(0, kept * 16));
     for (let n = kept; n < value; n++) hidden.toArray(matrices, n * 16);
@@ -150,13 +148,12 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
 
     for (const id of this.reverseMap.splice(value)) delete this.map[id];
 
-    this.innerCount = value;
     this.count = value;
     this.syncPassMeshes();
   }
 
   getCount() {
-    return this.innerCount;
+    return this.count;
   }
 
   getId(index: number): string | undefined {
@@ -260,7 +257,7 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
     if (geometry.boundingBox === null) geometry.computeBoundingBox();
     this.boundingBox.makeEmpty();
 
-    for (let i = 0; i < this.innerCount; i++) {
+    for (let i = 0; i < this.count; i++) {
       this.getMatrixAt(i, _matrix);
       if (!isFiniteMatrix(_matrix)) continue;
       this.boundingBox.union(
@@ -275,7 +272,7 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
     if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
     this.boundingSphere.makeEmpty();
 
-    for (let i = 0; i < this.innerCount; i++) {
+    for (let i = 0; i < this.count; i++) {
       this.getMatrixAt(i, _matrix);
       if (!isFiniteMatrix(_matrix)) continue;
       this.boundingSphere.union(
