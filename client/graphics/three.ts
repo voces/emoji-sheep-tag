@@ -2,8 +2,6 @@ import {
   AudioListener,
   Color,
   DepthTexture,
-  type Material,
-  type Object3D,
   PerspectiveCamera,
   Scene,
   UnsignedInt248Type,
@@ -16,6 +14,8 @@ import { stats } from "../util/Stats.ts";
 import { prefabs, tileDefs } from "@/shared/data.ts";
 import { type DoodadPoint, Terrain2D } from "./Terrain2D.ts";
 import { FogPass } from "./FogPass.ts";
+import { withRendererState } from "./rendererState.ts";
+import { watchForUncompiled } from "./compileAhead.ts";
 import { gpuInfoOf } from "../util/gpu.ts";
 import { placeListenerWhenMoved } from "./audioPlacement.ts";
 import {
@@ -282,8 +282,7 @@ addSystem({
   onRemove: (e) => doodads.delete(e) && queueRebuild(),
 });
 
-// deno-lint-ignore no-explicit-any
-(globalThis as any).terrain = terrain;
+Object.assign(globalThis, { terrain });
 
 const BASE_FOV = 50;
 const BASE_HEIGHT = 720;
@@ -341,45 +340,17 @@ if (
 }
 
 let last = performance.now() / 1000;
-const frameTimes: number[] = [];
+const FPS_WINDOW = 100;
+const frameTimes = new Float64Array(FPS_WINDOW);
+let frameTimesIndex = 0;
+let frameTimesCount = 0;
+let frameTimesSum = 0;
 let fps = 0;
 let nightAmount = 0;
-/** Materials whose programs have been sent to compile ahead. */
-const compiledMaterials = new WeakSet<Material>();
-
-const drawsWithMaterial = (
-  object: Object3D,
-): object is Object3D & { material: Material | Material[] } =>
-  "material" in object && !!object.material;
-
-const isCompiled = (material: Material) => compiledMaterials.has(material);
-
-/** Whether anything under `root` draws with a material not yet compiled. */
-const hasUncompiled = (root: Object3D) => {
-  const stack: Object3D[] = [root];
-  for (let object = stack.pop(); object; object = stack.pop()) {
-    if (drawsWithMaterial(object)) {
-      const { material } = object;
-      if (
-        Array.isArray(material)
-          ? !material.every(isCompiled)
-          : !isCompiled(material)
-      ) return true;
-    }
-    for (let i = 0; i < object.children.length; i++) {
-      stack.push(object.children[i]);
-    }
-  }
-  return false;
-};
-
-const markCompiled = (root: Object3D) =>
-  root.traverse((object) => {
-    if (!drawsWithMaterial(object)) return;
-    for (const material of [object.material].flat()) {
-      compiledMaterials.add(material);
-    }
-  });
+/** Where the driver compiles in parallel, what the frame draws that is new. */
+const uncompiled = renderer?.extensions.has("KHR_parallel_shader_compile")
+  ? watchForUncompiled([scene, healthbarScene, floatingTextScene])
+  : undefined;
 
 let programsCompiling: Promise<void> | undefined;
 const animate = () => {
@@ -387,12 +358,18 @@ const animate = () => {
   const delta = time - last;
   last = time;
 
-  frameTimes.push(delta);
-  if (frameTimes.length > 100) frameTimes.shift();
-  fps = 1 / (frameTimes.reduce((a, b) => a + b) / frameTimes.length);
+  frameTimesSum += delta - frameTimes[frameTimesIndex];
+  frameTimes[frameTimesIndex] = delta;
+  frameTimesIndex = (frameTimesIndex + 1) % FPS_WINDOW;
+  frameTimesCount = Math.min(frameTimesCount + 1, FPS_WINDOW);
+  fps = frameTimesCount / frameTimesSum;
 
   stats.begin();
+  drawFrame(delta, time);
+  stats.end();
+};
 
+const drawFrame = (delta: number, time: number) => {
   for (let i = 0; i < renderListeners.length; i++) {
     renderListeners[i](delta, time);
   }
@@ -400,6 +377,7 @@ const animate = () => {
   terrain.setTime(time);
 
   if (!renderer || !fogPass || !renderTarget) return;
+  const gl = renderer, target = renderTarget, fog = fogPass;
 
   // Where the driver compiles in parallel, programs compile before they are
   // first drawn, off the main thread, rather than one after another as a frame
@@ -407,20 +385,15 @@ const animate = () => {
   // yet compiled, such as the first healthbar. The last frame stays up and the
   // game runs on meanwhile. Elsewhere that would only compile hidden materials
   // early, so they compile as first drawn
-  if (
-    !programsCompiling &&
-    renderer.extensions.has("KHR_parallel_shader_compile") &&
-    [scene, healthbarScene, floatingTextScene].some(hasUncompiled)
-  ) {
+  if (!programsCompiling && uncompiled?.needsCompile()) {
     // A program is built for the target it draws into, so each scene compiles
     // against the one it renders to
-    for (const root of [scene, healthbarScene, floatingTextScene]) {
-      markCompiled(root);
-    }
+    uncompiled.markCompiled();
     const programs = renderer.info.programs?.length ?? 0;
-    renderer.setRenderTarget(renderTarget);
-    const world = renderer.compileAsync(scene, camera);
-    renderer.setRenderTarget(null);
+    const world = withRendererState(gl, () => {
+      gl.setRenderTarget(target);
+      return gl.compileAsync(scene, camera);
+    });
     const compiling = Promise.all([
       world,
       fogPass.compileAsync(renderer, renderTarget),
@@ -458,7 +431,6 @@ const animate = () => {
   }
 
   // Render scene to non-MSAA target with depth
-  const gl = renderer, target = renderTarget, fog = fogPass;
   gl.setRenderTarget(target);
   if (!holding) {
     gl.clear();
@@ -470,13 +442,13 @@ const animate = () => {
         camera.layers.set(TERRAIN_LAYER);
         gl.render(scene, camera);
       });
-      timed("sprites", () => {
-        camera.layers.mask = layers;
-        camera.layers.disable(TERRAIN_LAYER);
-        gl.autoClear = false;
-        gl.render(scene, camera);
-        gl.autoClear = true;
-      });
+      timed("sprites", () =>
+        withRendererState(gl, () => {
+          camera.layers.mask = layers;
+          camera.layers.disable(TERRAIN_LAYER);
+          gl.autoClear = false;
+          gl.render(scene, camera);
+        }));
       camera.layers.mask = layers;
     } else gl.render(scene, camera);
   }
@@ -488,15 +460,13 @@ const animate = () => {
   if (holding) return;
 
   // Render healthbars and floating text on top
-  timed("healthbars and text", () => {
-    gl.autoClear = false;
-    gl.render(healthbarScene, camera);
-    gl.render(floatingTextScene, camera);
-    gl.autoClear = true;
-  });
+  timed("healthbars and text", () =>
+    withRendererState(gl, () => {
+      gl.autoClear = false;
+      gl.render(healthbarScene, camera);
+      gl.render(floatingTextScene, camera);
+    }));
   gpuTimingsFrame(time);
-
-  stats.end();
 };
 renderer?.setAnimationLoop(animate);
 

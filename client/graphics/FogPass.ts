@@ -20,6 +20,7 @@ import {
 } from "three";
 
 import { getMaskShapeForBounds, type LoadedMap } from "@/shared/map.ts";
+import { withRendererState } from "./rendererState.ts";
 
 type MapDimensions = {
   width: number;
@@ -87,6 +88,7 @@ export class FogPass {
   private smoothMaterial: ShaderMaterial;
   private previousFogTarget: WebGLRenderTarget;
   private currentFogTarget: WebGLRenderTarget;
+  private maskTexture: DataTexture;
   renderToScreen = false;
   clear = false;
 
@@ -112,6 +114,7 @@ export class FogPass {
       format: RedFormat,
     });
     const maskTex = buildMaskTexture(mapDimensions.mask);
+    this.maskTexture = maskTex.texture;
     const maskShape = getMaskShapeForBounds(mapDimensions.bounds);
     // Anchor points at the world center of texel (0, 0) — the top-left of the
     // padding ring. With 1 cell of padding, that's one cell outside the
@@ -457,17 +460,17 @@ export class FogPass {
    * being where the final pass draws when not to the screen.
    */
   compileAsync(renderer: WebGLRenderer, target: WebGLRenderTarget | null) {
-    const previous = renderer.getRenderTarget();
-    renderer.setRenderTarget(this.currentFogTarget);
-    const smooth = renderer.compileAsync(this.smoothScene, this.camera);
-    renderer.setRenderTarget(this.renderToScreen ? null : target);
-    const final = renderer.compileAsync(this.scene, this.camera);
-    renderer.setRenderTarget(previous);
-    return Promise.all([smooth, final]);
+    return withRendererState(renderer, () => {
+      renderer.setRenderTarget(this.currentFogTarget);
+      const smooth = renderer.compileAsync(this.smoothScene, this.camera);
+      renderer.setRenderTarget(this.renderToScreen ? null : target);
+      const final = renderer.compileAsync(this.scene, this.camera);
+      return Promise.all([smooth, final]);
+    });
   }
 
   render(
-    renderer: WebGLRenderer,
+    renderer: Pick<WebGLRenderer, "setRenderTarget" | "clear" | "render">,
     writeBuffer: WebGLRenderTarget,
     readBuffer: WebGLRenderTarget,
     deltaTime?: number,
@@ -519,8 +522,8 @@ export class FogPass {
   setMask(mask: number[][], bounds: LoadedMap["bounds"]) {
     const next = buildMaskTexture(mask);
     const shape = getMaskShapeForBounds(bounds);
-    const old = this.material.uniforms.maskMap.value as DataTexture | null;
-    old?.dispose();
+    this.maskTexture.dispose();
+    this.maskTexture = next.texture;
     this.material.uniforms.maskMap.value = next.texture;
     (this.material.uniforms.maskAnchor.value as Vector4).set(
       shape.firstVertexX - 1,
@@ -538,29 +541,25 @@ export class FogPass {
     this.material.uniforms.nightAmount.value = amount;
   }
 
+  /** Clears both fog targets to black, forgetting everywhere seen before. */
   reset(renderer: WebGLRenderer) {
-    // Clear previous fog targets to reset the black mask effect
-    // We need to render black (0,0,0,1) to these targets
-    const oldTarget = renderer.getRenderTarget();
-    const oldClearColor = renderer.getClearColor(new Color());
-    const oldClearAlpha = renderer.getClearAlpha();
-
-    // Set clear color to black
-    renderer.setClearColor(0x000000, 1.0);
-
-    renderer.setRenderTarget(this.previousFogTarget);
-    renderer.clear();
-
-    renderer.setRenderTarget(this.currentFogTarget);
-    renderer.clear();
-
-    // Restore previous clear color
-    renderer.setClearColor(oldClearColor, oldClearAlpha);
-    renderer.setRenderTarget(oldTarget);
+    withRendererState(renderer, () => {
+      renderer.setClearColor(0x000000, 1.0);
+      renderer.setRenderTarget(this.previousFogTarget);
+      renderer.clear();
+      renderer.setRenderTarget(this.currentFogTarget);
+      renderer.clear();
+    });
   }
 
+  /** Frees what the pass owns; the fog and depth textures it was given stay. */
   dispose() {
+    this.maskTexture.dispose();
     this.material.dispose();
     this.quad.geometry.dispose();
+    this.smoothMaterial.dispose();
+    this.smoothQuad.geometry.dispose();
+    this.previousFogTarget.dispose();
+    this.currentFogTarget.dispose();
   }
 }

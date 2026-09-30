@@ -1,11 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { Color, Material, OrthographicCamera, Scene, Vector4 } from "three";
+import {
+  Color,
+  Material,
+  OrthographicCamera,
+  Scene,
+  type WebGLRenderer,
+} from "three";
 import { styled } from "styled-components";
 import { type Entity } from "../../../ecs.ts";
 import { AnimatedInstancedMesh } from "../../../graphics/AnimatedInstancedMesh.ts";
 import { createAnimatedMeshMaterial } from "../../../graphics/AnimatedMeshMaterial.ts";
 import { onRender, renderer } from "../../../graphics/three.ts";
 import { timed } from "../../../graphics/gpuTimings.ts";
+import {
+  type CornerContext,
+  type CornerRenderer,
+  renderInCorner,
+  withRendererState,
+} from "../../../graphics/rendererState.ts";
 import { collections } from "../../../systems/models.ts";
 import {
   computeAnimationParams,
@@ -21,10 +33,35 @@ const Canvas = styled.canvas`
 `;
 
 const tmpColor = new Color();
-const tmpViewport = new Vector4();
-const tmpScissor = new Vector4();
 
 const PORTRAIT_SIZE = 128;
+
+type PortraitRenderer<Source extends { width: number; height: number }> =
+  & CornerRenderer<Source>
+  & Pick<WebGLRenderer, "clear">;
+
+/**
+ * Draws a portrait on a grey ground into the corner of the renderer's canvas,
+ * and copies it to `ctx`'s canvas.
+ */
+export const drawPortrait = <Source extends { width: number; height: number }>(
+  renderer: PortraitRenderer<Source>,
+  ctx: CornerContext<Source>,
+  draw: () => void,
+) => {
+  const size = PORTRAIT_SIZE * renderer.getPixelRatio();
+  // The portrait's camera looks up its y axis, so the copy flips it back
+  renderInCorner(
+    renderer,
+    ctx,
+    { width: size, height: size, flipY: true },
+    () => {
+      renderer.setClearColor(0x222222, 1);
+      renderer.clear();
+      draw();
+    },
+  );
+};
 
 export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
@@ -80,12 +117,13 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
     // portrait staying blank meanwhile, rather than stalling that frame
     let ready = !renderer.extensions.has("KHR_parallel_shader_compile");
     if (!ready) {
-      const previousTarget = renderer.getRenderTarget();
-      renderer.setRenderTarget(null);
-      renderer.compileAsync(portraitScene, camera).catch(() => {}).then(() => {
+      const gl = renderer;
+      withRendererState(gl, () => {
+        gl.setRenderTarget(null);
+        return gl.compileAsync(portraitScene, camera);
+      }).catch(() => {}).then(() => {
         ready = true;
       });
-      renderer.setRenderTarget(previousTarget);
     }
 
     const geo = mesh.geometry;
@@ -133,51 +171,12 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
       syncColors();
       mesh.decayBlendWeights(delta, 0.15 / 0.2);
 
-      const glCanvas = renderer.domElement;
-      const dpr = renderer.getPixelRatio();
-      const pxSize = PORTRAIT_SIZE * dpr;
-
-      // Save renderer state
-      renderer.getViewport(tmpViewport);
-      renderer.getScissor(tmpScissor);
-      const prevScissorTest = renderer.getScissorTest();
-      const prevTarget = renderer.getRenderTarget();
-
-      // Render portrait to a small viewport on the WebGL canvas
-      renderer.setRenderTarget(null);
-      renderer.setViewport(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
-      renderer.setScissor(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
-      renderer.setScissorTest(true);
-      renderer.setClearColor(0x222222, 1);
       const gl = renderer;
-      timed("portrait", () => {
-        gl.clear();
-        gl.render(portraitScene, camera);
-      });
-
-      // Blit from WebGL canvas to 2D canvas (GPU-composited, no pipeline stall)
-      // Flip vertically: WebGL origin is bottom-left, canvas origin is top-left
-      ctx.save();
-      ctx.translate(0, PORTRAIT_SIZE);
-      ctx.scale(1, -1);
-      ctx.drawImage(
-        glCanvas,
-        0,
-        glCanvas.height - pxSize,
-        pxSize,
-        pxSize,
-        0,
-        0,
-        PORTRAIT_SIZE,
-        PORTRAIT_SIZE,
+      drawPortrait(
+        gl,
+        ctx,
+        () => timed("portrait", () => gl.render(portraitScene, camera)),
       );
-      ctx.restore();
-
-      // Restore renderer state
-      renderer.setRenderTarget(prevTarget);
-      renderer.setViewport(tmpViewport);
-      renderer.setScissor(tmpScissor);
-      renderer.setScissorTest(prevScissorTest);
     });
 
     return () => {
