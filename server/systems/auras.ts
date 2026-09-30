@@ -71,10 +71,10 @@ const updateAuras = (state: AuraState, entity: Entity) => {
 
       if (existingIndex !== undefined && existingIndex >= 0) {
         // Back in range: drop the linger countdown, leaving an unchanged buff untouched
-        const { remainingDuration, ...buffWithoutDuration } =
-          target.buffs![existingIndex];
-        if (remainingDuration !== undefined) {
-          target.buffs = target.buffs!.with(existingIndex, buffWithoutDuration);
+        const existing = target.buffs![existingIndex];
+        if (existing.remainingDuration !== undefined) {
+          const { remainingDuration: _, ...rest } = existing;
+          target.buffs = target.buffs!.with(existingIndex, rest);
         }
       } else {
         target.buffs = [...target.buffs ?? [], {
