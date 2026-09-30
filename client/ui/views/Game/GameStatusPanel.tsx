@@ -5,7 +5,6 @@ import { app, Entity } from "../../../ecs.ts";
 import { formatDuration } from "@/util/formatDuration.ts";
 import { VStack } from "@/components/layout/Layout.tsx";
 import { useLocalPlayer, usePlayers } from "@/hooks/usePlayers.ts";
-import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { practiceVar } from "@/vars/practice.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
@@ -152,35 +151,43 @@ const PlayerValue = styled.span`
   color: ${({ theme }) => theme.ink.lo};
 `;
 
-type TimerInfo = {
-  label: string;
-  time: string;
+type MainTimerProps = {
+  players: readonly Player[];
+  lobbySettings: ReturnType<typeof lobbySettingsVar>;
+  practice: boolean;
 };
 
-const getMainTimer = (
-  timers: Entity[],
-  players: readonly Player[],
-  lobbySettings: ReturnType<typeof lobbySettingsVar>,
-  practice: boolean,
-): TimerInfo | null => {
-  if (practice) return { label: "Practice", time: "" };
+const getSwitchLeader = (players: readonly Player[]) =>
+  players.reduce((a, b) => (a.sheepTime ?? 0) >= (b.sheepTime ?? 0) ? a : b);
 
+const getMainTimerLabel = (
+  expiration: string | undefined,
+  { players, lobbySettings, practice }: MainTimerProps,
+) => {
+  if (practice) return "Practice";
   if (lobbySettings.mode === "switch") {
-    const leader = players.reduce((a, b) =>
-      (a.sheepTime ?? 0) >= (b.sheepTime ?? 0) ? a : b
-    );
-    const remaining = lobbySettings.time - (leader.sheepTime ?? 0);
-    return {
-      label: leader.name ?? "",
-      time: formatDuration(remaining * 1000, remaining < 10),
-    };
+    return getSwitchLeader(players).name ?? "";
   }
+  return expiration ?? "";
+};
 
-  const buff = timers[0]?.buffs?.[0];
-  return {
-    label: buff?.expiration ?? "",
-    time: formatDuration((buff?.remainingDuration ?? 0) * 1000),
-  };
+const getMainTimerTime = (
+  timers: Entity[],
+  { players, lobbySettings, practice }: MainTimerProps,
+) => {
+  if (practice) return "";
+  if (lobbySettings.mode === "switch") {
+    const remaining = lobbySettings.time -
+      (getSwitchLeader(players).sheepTime ?? 0);
+    return formatDuration(remaining * 1000, remaining < 10);
+  }
+  return formatDuration((timers[0]?.buffs?.[0]?.remainingDuration ?? 0) * 1000);
+};
+
+const MainTimerTime = (props: MainTimerProps) => {
+  const timers = useReactiveVar(timersVar);
+  const time = getMainTimerTime(timers, props);
+  return time ? <span>{time}</span> : null;
 };
 
 type PlayerNameWithIndicatorProps = {
@@ -333,25 +340,25 @@ const Scoreboard = (
 };
 
 export const GameStatusPanel = () => {
-  const timers = useReactiveVar(timersVar);
+  const expiration = useReactiveVar(
+    timersVar,
+    (timers) => timers[0]?.buffs?.[0]?.expiration,
+  );
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const practice = useReactiveVar(practiceVar);
-  const players = usePlayers();
+  const players = usePlayers(["sheepTime", "team"]);
   const expanded = useReactiveVar(scoreboardExpandedVar);
   const isEditor = useReactiveVar(editorVar);
 
   const localPlayer = useLocalPlayer();
 
-  useListenToEntities(players, ["sheepTime", "team"]);
-
   if (isEditor) return null;
 
-  const mainTimer = getMainTimer(timers, players, lobbySettings, practice);
-  if (!mainTimer) return null;
+  const timerProps = { players, lobbySettings, practice };
+  const label = getMainTimerLabel(expiration, timerProps);
   const hasPlayers = players.length > 0;
-  const forceExpanded = mainTimer.label === "Time until sheep spawn:" ||
-    (localPlayer?.team === "wolf" &&
-      mainTimer.label === "Time until wolves spawn:");
+  const forceExpanded = label === "Time until sheep spawn:" ||
+    (localPlayer?.team === "wolf" && label === "Time until wolves spawn:");
   const showScoreboard = (expanded || forceExpanded) && hasPlayers;
 
   return (
@@ -362,8 +369,8 @@ export const GameStatusPanel = () => {
           ? () => scoreboardExpandedVar(!expanded)
           : undefined}
       >
-        <span>{mainTimer.label}</span>
-        {mainTimer.time && <span>{mainTimer.time}</span>}
+        <span>{label}</span>
+        <MainTimerTime {...timerProps} />
         {hasPlayers && (
           <ExpandIndicator
             $expanded={expanded || forceExpanded}

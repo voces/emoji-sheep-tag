@@ -11,7 +11,6 @@ import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { Toggle } from "@/components/forms/Toggle.tsx";
 import { TimeInput } from "@/components/forms/TimeInput.tsx";
 import { PercentInput } from "@/components/forms/PercentInput.tsx";
-import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { getMapManifestTags, MAPS } from "@/shared/maps/manifest.ts";
 import { mapMatchesMode } from "@/shared/maps/tags.ts";
 import {
@@ -356,8 +355,7 @@ const formatDate = (timestamp: number): string =>
 export const LobbySettings = () => {
   const { t } = useTranslation();
   const lobbySettings = useReactiveVar(lobbySettingsVar);
-  const players = usePlayers();
-  useListenToEntities(players, ["team"]);
+  const players = usePlayers(["team"]);
   const isHost = useIsLocalPlayerHost();
   const [hostOpen, setHostOpen] = useState(false);
   const [localMaps, setLocalMaps] = useState<LocalMapMetadata[]>([]);

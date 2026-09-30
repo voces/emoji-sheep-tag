@@ -2,8 +2,6 @@ import { styled } from "styled-components";
 import { useState } from "react";
 import { colors } from "@/shared/data.ts";
 import { usePlayers } from "@/hooks/usePlayers.ts";
-import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
-import { playerEntities } from "@/shared/api/player.ts";
 
 const Wrapper = styled.div`
   width: 1cap;
@@ -74,8 +72,7 @@ export const ColorPickerPopup = (
     onClose?: () => void;
   },
 ) => {
-  const players = usePlayers();
-  useListenToEntities(playerEntities(), ["playerColor"]);
+  const players = usePlayers(["playerColor"]);
   const takenColors = new Set(players.map((p) => p.playerColor));
 
   return (
