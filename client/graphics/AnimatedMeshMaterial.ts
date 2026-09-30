@@ -18,7 +18,6 @@ import {
 import {
   WATER_SHADER_CAUSTICS,
   WATER_SHADER_CONSTANTS,
-  WATER_SHADER_ENTITY_TINT,
   WATER_SHADER_ENTITY_VARYINGS,
   WATER_SHADER_ENTITY_VERTEX,
   WATER_SHADER_MOTION,
@@ -26,6 +25,12 @@ import {
   WATER_SHADER_RIPPLES,
 } from "./waterShader.ts";
 import { waterRippleUniforms } from "./waterRipples.ts";
+import {
+  SPRITE_COLOR_FRAGMENT,
+  SPRITE_MINIMAP_MASK_DECODE,
+  SPRITE_PLAYER_COLOR_BLEND,
+  SPRITE_VERTEX_COLOR_INIT,
+} from "./spriteShaderChunks.ts";
 import {
   PART_DEPTH_GLSL,
   SORTED_PROJECT_VERTEX,
@@ -35,30 +40,30 @@ import {
   SpritePass,
 } from "./depthSort.ts";
 
-let animationTime = 0;
+/** Shared by every sprite shader, so advancing it once animates them all. */
+export const animationTimeUniform = { value: 0 };
 
 export const updateAnimationTime = (delta: number) => {
-  animationTime += delta;
+  animationTimeUniform.value += delta;
 };
 
-export const getAnimationTime = () => animationTime;
+export const getAnimationTime = () => animationTimeUniform.value;
 
 const shaderRefs = new WeakMap<
   Material,
   WebGLProgramParametersWithUniforms[]
 >();
-const shaderReadyCallbacks = new Map<Material, () => void>();
+const shaderReadyCallbacks = new WeakMap<Material, (() => void)[]>();
 
 export const getShaderRefs = (
   material: Material,
 ): WebGLProgramParametersWithUniforms[] => shaderRefs.get(material) ?? [];
 
 export const onShaderReady = (material: Material, callback: () => void) => {
-  if (shaderRefs.has(material)) {
-    callback();
-  } else {
-    shaderReadyCallbacks.set(material, callback);
-  }
+  if (shaderRefs.has(material)) return callback();
+  const callbacks = shaderReadyCallbacks.get(material);
+  if (callbacks) callbacks.push(callback);
+  else shaderReadyCallbacks.set(material, [callback]);
 };
 
 const PROJECT_VERTEX = `
@@ -113,8 +118,41 @@ const ANIMATION_FUNCTIONS = `
   }
 `;
 
+/**
+ * Moves `transformed` by the instance's animation, blending clip A into clip B
+ * by `instanceAnimB.w`, and writes the blended part opacity to `opacityOut`.
+ */
+const animateTransformed = (opacityOut: string) => `
+  {
+    vec3 posA = transformed * animA.a;
+    float cosA = cos(animA.b);
+    float sinA = sin(animA.b);
+    posA = vec3(posA.x * cosA - posA.y * sinA, posA.x * sinA + posA.y * cosA, posA.z);
+    posA.x += animA.r;
+    posA.y += animA.g;
+
+    if (wB > 0.001) {
+      vec4 animB = sampleAnimation(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
+      float opacityB = sampleOpacity(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
+      ${opacityOut} = mix(opacityA, opacityB, wB);
+
+      vec3 posB = transformed * animB.a;
+      float cosB = cos(animB.b);
+      float sinB = sin(animB.b);
+      posB = vec3(posB.x * cosB - posB.y * sinB, posB.x * sinB + posB.y * cosB, posB.z);
+      posB.x += animB.r;
+      posB.y += animB.g;
+
+      transformed = mix(posA, posB, wB);
+    } else {
+      transformed = posA;
+      ${opacityOut} = opacityA;
+    }
+  }
+`;
+
 const addAnimationUniforms = (shader: WebGLProgramParametersWithUniforms) => {
-  shader.uniforms.uTime = { value: 0 };
+  shader.uniforms.uTime = animationTimeUniform;
   shader.uniforms.uTransformTex = { value: null };
   shader.uniforms.uOpacityTex = { value: null };
   shader.uniforms.uSampleCount = { value: 1 };
@@ -147,11 +185,9 @@ export const createAnimatedMeshMaterial = (
     // with different shader objects (for different render targets/cameras)
     if (!existing) {
       shaderRefs.set(material, [shader]);
-      const callback = shaderReadyCallbacks.get(material);
-      if (callback) {
-        shaderReadyCallbacks.delete(material);
-        callback();
-      }
+      const callbacks = shaderReadyCallbacks.get(material);
+      shaderReadyCallbacks.delete(material);
+      if (callbacks) { for (const callback of callbacks) callback(); }
     } else if (!existing.includes(shader)) existing.push(shader);
     addAnimationUniforms(shader);
     addWaterRippleUniforms(shader);
@@ -175,10 +211,7 @@ export const createAnimatedMeshMaterial = (
       void main() {
         float partID = partInfo.x;
         vInstanceAlpha = instanceAlpha;
-        // instanceMinimapMask packs the minimap flag as a +4 offset on top of
-        // submergence (stored as a float in [0, 4), not a quantized 0..1).
-        vInstanceMinimapMask = instanceMinimapMask >= 4.0 ? 1.0 : 0.0;
-        float submergence = instanceMinimapMask - vInstanceMinimapMask * 4.0;
+        ${SPRITE_MINIMAP_MASK_DECODE}
         vPlayerMask = playerMask;
         vPlayerColor = instancePlayerColor;
         vTint = instanceTint;
@@ -195,32 +228,7 @@ export const createAnimatedMeshMaterial = (
       "#include <begin_vertex>",
       `
       #include <begin_vertex>
-      {
-        vec3 posA = transformed * animA.a;
-        float cosA = cos(animA.b);
-        float sinA = sin(animA.b);
-        posA = vec3(posA.x * cosA - posA.y * sinA, posA.x * sinA + posA.y * cosA, posA.z);
-        posA.x += animA.r;
-        posA.y += animA.g;
-
-        if (wB > 0.001) {
-          vec4 animB = sampleAnimation(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
-          float opacityB = sampleOpacity(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
-          vAnimOpacity = mix(opacityA, opacityB, wB);
-
-          vec3 posB = transformed * animB.a;
-          float cosB = cos(animB.b);
-          float sinB = sin(animB.b);
-          posB = vec3(posB.x * cosB - posB.y * sinB, posB.x * sinB + posB.y * cosB, posB.z);
-          posB.x += animB.r;
-          posB.y += animB.g;
-
-          transformed = mix(posA, posB, wB);
-        } else {
-          transformed = posA;
-          vAnimOpacity = opacityA;
-        }
-      }
+      ${animateTransformed("vAnimOpacity")}
       `,
     );
 
@@ -232,35 +240,11 @@ export const createAnimatedMeshMaterial = (
     shader.vertexShader = shader.vertexShader.replace(
       /#include <color_vertex>/,
       `
-      #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
-        vColor = vec4( 1.0 );
-      #endif
-      #ifdef USE_COLOR
-        vColor.rgb *= color;
-      #endif
-
+      ${SPRITE_VERTEX_COLOR_INIT}
       if (vPlayerMask < 0.5) {
         vColor.rgb *= vTint;
       }
-
-      if (vPlayerMask > 0.5) {
-        vec3 srgb = mix(
-          vColor.rgb * 12.92,
-          pow(vColor.rgb, vec3(1.0 / 2.4)) * 1.055 - 0.055,
-          step(0.0031308, vColor.rgb)
-        );
-        float lum = (srgb.r + srgb.g + srgb.b) / 3.0;
-        if (lum < 0.5) {
-          vColor.rgb = instancePlayerColor * (lum * 2.0);
-        } else {
-          vColor.rgb = mix(instancePlayerColor, vec3(1.0), (lum - 0.5) * 2.0);
-        }
-      }
-      #ifdef USE_INSTANCING_COLOR
-      else {
-        vColor.rgb *= instanceColor.rgb;
-      }
-      #endif
+      ${SPRITE_PLAYER_COLOR_BLEND}
       `,
     );
 
@@ -290,22 +274,8 @@ export const createAnimatedMeshMaterial = (
 
     shader.fragmentShader = shader.fragmentShader.replace(
       /#include <color_fragment>/,
-      `
-      #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
-        diffuseColor *= vInstanceMinimapMask > 0.5 ? vec4(vPlayerColor, 1.0) : vColor;
-      #endif
-      ${WATER_SHADER_ENTITY_TINT}
-      `,
+      SPRITE_COLOR_FRAGMENT,
     );
-  };
-
-  material.onBeforeRender = () => {
-    const refs = shaderRefs.get(material);
-    if (refs) {
-      for (const shaderRef of refs) {
-        shaderRef.uniforms.uTime.value = animationTime;
-      }
-    }
   };
 
   return material;
@@ -351,35 +321,10 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
       "#include <begin_vertex>",
       `
       #include <begin_vertex>
-      {
-        vec3 posA = transformed * animA.a;
-        float cosA = cos(animA.b);
-        float sinA = sin(animA.b);
-        posA = vec3(posA.x * cosA - posA.y * sinA, posA.x * sinA + posA.y * cosA, posA.z);
-        posA.x += animA.r;
-        posA.y += animA.g;
-        float animOpacity;
-
-        if (wB > 0.001) {
-          vec4 animBVal = sampleAnimation(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
-          float opacityB = sampleOpacity(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
-          animOpacity = mix(opacityA, opacityB, wB);
-
-          vec3 posB = transformed * animBVal.a;
-          float cosB = cos(animBVal.b);
-          float sinB = sin(animBVal.b);
-          posB = vec3(posB.x * cosB - posB.y * sinB, posB.x * sinB + posB.y * cosB, posB.z);
-          posB.x += animBVal.r;
-          posB.y += animBVal.g;
-
-          transformed = mix(posA, posB, wB);
-        } else {
-          transformed = posA;
-          animOpacity = opacityA;
-        }
-        vFinalOpacity = instanceAlpha * animOpacity;
-        vInstanceAlpha = instanceAlpha;
-      }
+      float animOpacity;
+      ${animateTransformed("animOpacity")}
+      vFinalOpacity = instanceAlpha * animOpacity;
+      vInstanceAlpha = instanceAlpha;
       `,
     );
 
@@ -403,15 +348,6 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
         if (vFinalOpacity < 0.01) discard;
       `,
     );
-  };
-
-  material.onBeforeRender = () => {
-    const refs = shaderRefs.get(material);
-    if (refs) {
-      for (const shaderRef of refs) {
-        shaderRef.uniforms.uTime.value = animationTime;
-      }
-    }
   };
 
   return material;

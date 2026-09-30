@@ -12,11 +12,10 @@ import { SVGLoader } from "three/SVGLoader";
 import { InstancedSvg } from "./InstancedSvg.ts";
 import { scene } from "./three.ts";
 import { svgs } from "../systems/models.ts";
-import { getAnimationTime } from "./AnimatedMeshMaterial.ts";
+import { animationTimeUniform } from "./AnimatedMeshMaterial.ts";
 import {
   WATER_SHADER_CAUSTICS,
   WATER_SHADER_CONSTANTS,
-  WATER_SHADER_ENTITY_TINT,
   WATER_SHADER_ENTITY_VARYINGS,
   WATER_SHADER_ENTITY_VERTEX,
   WATER_SHADER_MOTION,
@@ -24,6 +23,12 @@ import {
   WATER_SHADER_RIPPLES,
 } from "./waterShader.ts";
 import { waterRippleUniforms } from "./waterRipples.ts";
+import {
+  SPRITE_COLOR_FRAGMENT,
+  SPRITE_MINIMAP_MASK_DECODE,
+  SPRITE_PLAYER_COLOR_BLEND,
+  SPRITE_VERTEX_COLOR_INIT,
+} from "./spriteShaderChunks.ts";
 import {
   OVERLAY_RENDER_ORDER,
   SORTED_PROJECT_VERTEX,
@@ -34,13 +39,10 @@ import {
   TRANSLUCENT_RENDER_ORDER,
 } from "./depthSort.ts";
 
-const instancedSvgShaders = new Set<WebGLProgramParametersWithUniforms>();
-
 const loader = new SVGLoader();
 
 const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
-  instancedSvgShaders.add(shader);
-  shader.uniforms.uTime = { value: 0 };
+  shader.uniforms.uTime = animationTimeUniform;
   shader.uniforms.waterRippleCount = waterRippleUniforms.waterRippleCount;
   shader.uniforms.waterRipples = waterRippleUniforms.waterRipples;
 
@@ -74,10 +76,7 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     "void main() {\n" +
       "  vProgressiveMode = instanceAlpha > 1.0 ? 1.0 : 0.0;\n" +
       "  vInstanceAlpha = instanceAlpha > 1.0 ? instanceAlpha - 2.0 : instanceAlpha;\n" +
-      // instanceMinimapMask packs the minimap flag as a +4 offset on top of
-      // submergence (stored as a float in [0, 4), not a quantized 0..1).
-      "  vInstanceMinimapMask = instanceMinimapMask >= 4.0 ? 1.0 : 0.0;\n" +
-      "  float submergence = instanceMinimapMask - vInstanceMinimapMask * 4.0;\n" +
+      SPRITE_MINIMAP_MASK_DECODE +
       "  vPlayerMask = vertexOpacity > 1.0 ? 1.0 : 0.0;\n" +
       "  vVertexOpacity = vertexOpacity > 1.0 ? vertexOpacity - 2.0 : vertexOpacity;\n" +
       "  vShapeIndex = shapeInfo.x;\n" +
@@ -96,40 +95,9 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     #endif`,
   );
 
-  // Apply colors: base vertex color, then either instanceColor or playerColor luminosity blend
   shader.vertexShader = shader.vertexShader.replace(
     /#include <color_vertex>/,
-    `#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
-      vColor = vec4( 1.0 );
-    #endif
-    #ifdef USE_COLOR
-      vColor.rgb *= color;
-    #endif
-    // playerColor: luminosity blend for player-masked vertices
-    // vertex color encodes luminosity: 0=black, 0.5=playerColor, 1=white
-    // Colors are in linear space; convert to sRGB for luminosity calculation
-    if (vPlayerMask > 0.5) {
-      // sRGB transfer function (matches Three.js LinearToSRGB)
-      vec3 srgb = mix(
-        vColor.rgb * 12.92,
-        pow(vColor.rgb, vec3(1.0 / 2.4)) * 1.055 - 0.055,
-        step(0.0031308, vColor.rgb)
-      );
-      float lum = (srgb.r + srgb.g + srgb.b) / 3.0;
-      if (lum < 0.5) {
-        // 0 -> 0.5 maps to black -> playerColor
-        vColor.rgb = instancePlayerColor * (lum * 2.0);
-      } else {
-        // 0.5 -> 1 maps to playerColor -> white
-        vColor.rgb = mix(instancePlayerColor, vec3(1.0), (lum - 0.5) * 2.0);
-      }
-    }
-    #ifdef USE_INSTANCING_COLOR
-    else {
-      // instanceColor only applies to non-player vertices
-      vColor.rgb *= instanceColor.rgb;
-    }
-    #endif`,
+    SPRITE_VERTEX_COLOR_INIT + SPRITE_PLAYER_COLOR_BLEND,
   );
 
   shader.fragmentShader = WATER_SHADER_CONSTANTS +
@@ -165,13 +133,9 @@ const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
     vec4 diffuseColor = vec4( diffuse, finalOpacity );`,
   );
 
-  // In minimap mode, use player color only (solid silhouette); otherwise use vColor
   shader.fragmentShader = shader.fragmentShader.replace(
     /#include <color_fragment>/,
-    `#if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
-      diffuseColor *= vInstanceMinimapMask > 0.5 ? vec4(vPlayerColor, 1.0) : vColor;
-    #endif
-    ${WATER_SHADER_ENTITY_TINT}`,
+    SPRITE_COLOR_FRAGMENT,
   );
 };
 
@@ -186,12 +150,6 @@ const createMaterial = (pass: SpritePass) => {
   material.defines = { SPRITE_PASS: SPRITE_PASS_DEFINES[pass] };
   material.customProgramCacheKey = () => `instanceAlpha-${pass}`;
   material.onBeforeCompile = addInstanceAlpha;
-  material.onBeforeRender = () => {
-    const now = getAnimationTime();
-    for (const shader of instancedSvgShaders) {
-      shader.uniforms.uTime.value = now;
-    }
-  };
   return material;
 };
 
