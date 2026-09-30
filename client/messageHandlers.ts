@@ -315,9 +315,7 @@ export const handlers = {
     ensureMapLoaded(lobbySettings.map);
     lobbySettingsVar({ ...lobbySettings, name: lobbySettingsVar().name });
   },
-  captainsDraft: (
-    data,
-  ) => {
+  captainsDraft: (data) => {
     if (!data.phase) {
       captainsDraftVar(undefined);
     } else {
