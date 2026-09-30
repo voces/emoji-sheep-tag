@@ -20,6 +20,7 @@ import {
 } from "three";
 
 import { getMaskShapeForBounds, type LoadedMap } from "@/shared/map.ts";
+import { withRendererState } from "./rendererState.ts";
 
 type MapDimensions = {
   width: number;
@@ -457,13 +458,13 @@ export class FogPass {
    * being where the final pass draws when not to the screen.
    */
   compileAsync(renderer: WebGLRenderer, target: WebGLRenderTarget | null) {
-    const previous = renderer.getRenderTarget();
-    renderer.setRenderTarget(this.currentFogTarget);
-    const smooth = renderer.compileAsync(this.smoothScene, this.camera);
-    renderer.setRenderTarget(this.renderToScreen ? null : target);
-    const final = renderer.compileAsync(this.scene, this.camera);
-    renderer.setRenderTarget(previous);
-    return Promise.all([smooth, final]);
+    return withRendererState(renderer, () => {
+      renderer.setRenderTarget(this.currentFogTarget);
+      const smooth = renderer.compileAsync(this.smoothScene, this.camera);
+      renderer.setRenderTarget(this.renderToScreen ? null : target);
+      const final = renderer.compileAsync(this.scene, this.camera);
+      return Promise.all([smooth, final]);
+    });
   }
 
   render(
@@ -538,25 +539,15 @@ export class FogPass {
     this.material.uniforms.nightAmount.value = amount;
   }
 
+  /** Clears both fog targets to black, forgetting everywhere seen before. */
   reset(renderer: WebGLRenderer) {
-    // Clear previous fog targets to reset the black mask effect
-    // We need to render black (0,0,0,1) to these targets
-    const oldTarget = renderer.getRenderTarget();
-    const oldClearColor = renderer.getClearColor(new Color());
-    const oldClearAlpha = renderer.getClearAlpha();
-
-    // Set clear color to black
-    renderer.setClearColor(0x000000, 1.0);
-
-    renderer.setRenderTarget(this.previousFogTarget);
-    renderer.clear();
-
-    renderer.setRenderTarget(this.currentFogTarget);
-    renderer.clear();
-
-    // Restore previous clear color
-    renderer.setClearColor(oldClearColor, oldClearAlpha);
-    renderer.setRenderTarget(oldTarget);
+    withRendererState(renderer, () => {
+      renderer.setClearColor(0x000000, 1.0);
+      renderer.setRenderTarget(this.previousFogTarget);
+      renderer.clear();
+      renderer.setRenderTarget(this.currentFogTarget);
+      renderer.clear();
+    });
   }
 
   dispose() {

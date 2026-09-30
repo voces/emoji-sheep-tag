@@ -16,6 +16,7 @@ import {
   type CornerContext,
   type CornerRenderer,
   renderInCorner,
+  withRendererState,
 } from "../../../graphics/rendererState.ts";
 import { collections } from "../../../systems/models.ts";
 import {
@@ -116,12 +117,13 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
     // portrait staying blank meanwhile, rather than stalling that frame
     let ready = !renderer.extensions.has("KHR_parallel_shader_compile");
     if (!ready) {
-      const previousTarget = renderer.getRenderTarget();
-      renderer.setRenderTarget(null);
-      renderer.compileAsync(portraitScene, camera).catch(() => {}).then(() => {
+      const gl = renderer;
+      withRendererState(gl, () => {
+        gl.setRenderTarget(null);
+        return gl.compileAsync(portraitScene, camera);
+      }).catch(() => {}).then(() => {
         ready = true;
       });
-      renderer.setRenderTarget(previousTarget);
     }
 
     const geo = mesh.geometry;

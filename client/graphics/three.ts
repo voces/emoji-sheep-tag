@@ -16,6 +16,7 @@ import { stats } from "../util/Stats.ts";
 import { prefabs, tileDefs } from "@/shared/data.ts";
 import { type DoodadPoint, Terrain2D } from "./Terrain2D.ts";
 import { FogPass } from "./FogPass.ts";
+import { withRendererState } from "./rendererState.ts";
 import { gpuInfoOf } from "../util/gpu.ts";
 import { placeListenerWhenMoved } from "./audioPlacement.ts";
 import {
@@ -400,6 +401,7 @@ const animate = () => {
   terrain.setTime(time);
 
   if (!renderer || !fogPass || !renderTarget) return;
+  const gl = renderer, target = renderTarget, fog = fogPass;
 
   // Where the driver compiles in parallel, programs compile before they are
   // first drawn, off the main thread, rather than one after another as a frame
@@ -418,9 +420,10 @@ const animate = () => {
       markCompiled(root);
     }
     const programs = renderer.info.programs?.length ?? 0;
-    renderer.setRenderTarget(renderTarget);
-    const world = renderer.compileAsync(scene, camera);
-    renderer.setRenderTarget(null);
+    const world = withRendererState(gl, () => {
+      gl.setRenderTarget(target);
+      return gl.compileAsync(scene, camera);
+    });
     const compiling = Promise.all([
       world,
       fogPass.compileAsync(renderer, renderTarget),
@@ -458,7 +461,6 @@ const animate = () => {
   }
 
   // Render scene to non-MSAA target with depth
-  const gl = renderer, target = renderTarget, fog = fogPass;
   gl.setRenderTarget(target);
   if (!holding) {
     gl.clear();
@@ -470,13 +472,13 @@ const animate = () => {
         camera.layers.set(TERRAIN_LAYER);
         gl.render(scene, camera);
       });
-      timed("sprites", () => {
-        camera.layers.mask = layers;
-        camera.layers.disable(TERRAIN_LAYER);
-        gl.autoClear = false;
-        gl.render(scene, camera);
-        gl.autoClear = true;
-      });
+      timed("sprites", () =>
+        withRendererState(gl, () => {
+          camera.layers.mask = layers;
+          camera.layers.disable(TERRAIN_LAYER);
+          gl.autoClear = false;
+          gl.render(scene, camera);
+        }));
       camera.layers.mask = layers;
     } else gl.render(scene, camera);
   }
@@ -488,12 +490,12 @@ const animate = () => {
   if (holding) return;
 
   // Render healthbars and floating text on top
-  timed("healthbars and text", () => {
-    gl.autoClear = false;
-    gl.render(healthbarScene, camera);
-    gl.render(floatingTextScene, camera);
-    gl.autoClear = true;
-  });
+  timed("healthbars and text", () =>
+    withRendererState(gl, () => {
+      gl.autoClear = false;
+      gl.render(healthbarScene, camera);
+      gl.render(floatingTextScene, camera);
+    }));
   gpuTimingsFrame(time);
 
   stats.end();
