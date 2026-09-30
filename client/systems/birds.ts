@@ -4,6 +4,7 @@ import { prefabs } from "@/shared/data.ts";
 import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { Entity } from "@/shared/types.ts";
 import { isNight } from "@/shared/dayNight.ts";
+import { getMap } from "@/shared/map.ts";
 
 // Track all living trees
 const trees = new Set<Entity>();
@@ -13,6 +14,35 @@ const treeLastVisitTime = new Map<Entity, number>();
 
 // Track which bird belongs to which tree (one bird per tree)
 const treeToBird = new Map<Entity, Entity>();
+
+/**
+ * Square world units of map per bird.
+ *
+ * A bird is rolled for per tree, so without a ceiling the flock grows with the
+ * number of trees rather than with the ground they cover, and a wood fills the
+ * sky. This is a ceiling rather than a spacing rule on purpose: a spacing rule
+ * thins out wherever trees happen to cluster, which punishes a sparse map with
+ * one dense copse. A ceiling leaves such maps untouched.
+ *
+ * Set from the maps that already look right — `compact` sits near one bird per
+ * 250 square units and `revo` near one per 370 — with enough headroom that
+ * neither reaches the limit. The densely wooded maps do: `breach` comes down
+ * from 134 birds to 27, and the campaign map from 344 to 58.
+ */
+export const AREA_PER_BIRD = 200;
+
+/** How many birds a map of this size should hold at most. */
+export const birdLimit = (bounds: {
+  min: { x: number; y: number };
+  max: { x: number; y: number };
+}) =>
+  Math.max(
+    1,
+    Math.round(
+      ((bounds.max.x - bounds.min.x) * (bounds.max.y - bounds.min.y)) /
+        AREA_PER_BIRD,
+    ),
+  );
 
 const treeOffsets = [
   { x: 0.2, y: 0.1 },
@@ -41,7 +71,10 @@ addSystem({
       trees.add(e);
       treeLastVisitTime.set(e, 0);
 
-      if (Math.random() < 0.35) spawnBirdAtTree(e);
+      if (
+        Math.random() < 0.35 &&
+        treeToBird.size < birdLimit(getMap().bounds)
+      ) spawnBirdAtTree(e);
     }
   },
   onRemove: (e) => {
