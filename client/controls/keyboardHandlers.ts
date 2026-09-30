@@ -74,6 +74,31 @@ const checkSingleBinding = (
   return matches ? normalizedShortcut.length : 0;
 };
 
+const checkAltBindings = (
+  sectionShortcuts: Record<string, string[]>,
+  actionKey: string,
+  currentKey?: string,
+): number => {
+  for (const key in sectionShortcuts) {
+    if (!key.startsWith(actionKey + ALT_SEPARATOR)) continue;
+    const alt = sectionShortcuts[key];
+    const q = alt.length > 0 ? checkSingleBinding(alt, currentKey) : 0;
+    if (q) return q;
+  }
+  return 0;
+};
+
+const checkWithAlts = (
+  primary: readonly string[] | undefined,
+  actionKey: string,
+  prefabShortcuts: Record<string, string[]> | undefined,
+  currentKey?: string,
+): number =>
+  (primary ? checkSingleBinding(primary, currentKey) : 0) ||
+  (prefabShortcuts
+    ? checkAltBindings(prefabShortcuts, actionKey, currentKey)
+    : 0);
+
 /**
  * Check a shortcut and all its alt bindings in a section.
  * Returns match quality (number of keys) or 0 if no match.
@@ -82,49 +107,23 @@ export const checkShortcut = (
   sectionShortcuts: Record<string, string[]>,
   actionKey: string,
   currentKey?: string,
-): number => {
-  const primary = sectionShortcuts[actionKey];
-  if (primary) {
-    const q = checkSingleBinding(primary, currentKey);
-    if (q) return q;
-  }
-  for (const key in sectionShortcuts) {
-    if (key.startsWith(actionKey + ALT_SEPARATOR)) {
-      const alt = sectionShortcuts[key];
-      if (alt.length > 0) {
-        const q = checkSingleBinding(alt, currentKey);
-        if (q) return q;
-      }
-    }
-  }
-  return 0;
-};
+): number =>
+  checkWithAlts(
+    sectionShortcuts[actionKey],
+    actionKey,
+    sectionShortcuts,
+    currentKey,
+  );
 
 export const isQueueModifierHeld = () =>
   checkShortcut(shortcutsVar().misc, "queueModifier") > 0;
 
-const checkWithAlts = (
-  primary: readonly string[] | undefined,
-  actionKey: string,
-  prefabShortcuts: Record<string, string[]> | undefined,
-  currentKey: string,
-): number => {
-  if (primary) {
-    const q = checkSingleBinding(primary, currentKey);
-    if (q) return q;
-  }
-  if (!prefabShortcuts) return 0;
-  for (const key in prefabShortcuts) {
-    if (key.startsWith(actionKey + ALT_SEPARATOR)) {
-      const alt = prefabShortcuts[key];
-      if (alt.length > 0) {
-        const q = checkSingleBinding(alt, currentKey);
-        if (q) return q;
-      }
-    }
-  }
-  return 0;
-};
+const getUsableItemActions = (entity: Entity): UnitDataAction[] =>
+  entity.inventory?.flatMap((item) =>
+    item.actions?.length && (!item.charges || item.charges > 0)
+      ? item.actions
+      : []
+  ) ?? [];
 
 export const findActionForShortcut = (
   e: KeyboardEvent,
@@ -134,184 +133,118 @@ export const findActionForShortcut = (
   let action: UnitDataAction | undefined;
   let bestMatchQuality = 0;
 
+  // A better match replaces the pick; an equal match of the same action adds
+  // its unit, unless ties are disallowed
+  const consider = (
+    matchQuality: number,
+    candidate: UnitDataAction,
+    unit: Entity,
+    allowTies = true,
+  ) => {
+    if (!matchQuality) return;
+    if (matchQuality > bestMatchQuality) {
+      bestMatchQuality = matchQuality;
+      action = candidate;
+      units.length = 0;
+      units.push(unit);
+    } else if (
+      allowTies && matchQuality === bestMatchQuality &&
+      isSameAction(action!, candidate)
+    ) units.push(unit);
+  };
+
   const currentMenu = getCurrentMenu();
   const menuUnit = currentMenu ? lookup(currentMenu.unitId) : undefined;
 
   if (currentMenu && menuUnit) {
-    // Check menu actions
     for (const a of currentMenu.action.actions) {
-      if (!a.binding) continue;
-      const matchQuality = checkSingleBinding(a.binding, e.code);
-      if (matchQuality) {
-        if (matchQuality > bestMatchQuality) {
-          // Better match found, replace
-          bestMatchQuality = matchQuality;
-          action = a;
-          units.length = 0;
-          units.push(menuUnit);
-        } else if (
-          matchQuality === bestMatchQuality && isSameAction(action!, a)
-        ) {
-          // Same quality and same action type
-          units.push(menuUnit);
-        }
+      if (a.binding) {
+        consider(checkSingleBinding(a.binding, e.code), a, menuUnit);
       }
     }
-  } else {
-    // Get actions that are in menus for filtering
-    const actionsInMenus = getActionsInMenusForSelection(selection);
+    return { units, action };
+  }
 
-    // Check selection actions
-    for (const entity of selection) {
-      // Check unit's base actions
-      if (entity.actions) {
-        const prefabShortcuts = entity.prefab
-          ? shortcuts[entity.prefab]
-          : undefined;
-        for (const a of entity.actions) {
-          // Skip actions that are in menus
-          const actionKey = actionToShortcutKey(a);
-          if (actionsInMenus.has(actionKey)) {
-            continue;
-          }
+  // Actions reachable through a menu only trigger via that menu
+  const actionsInMenus = getActionsInMenusForSelection(selection);
+  const { useSlotBindings } = shortcutSettingsVar();
 
-          const matchQuality = checkWithAlts(
-            a.binding,
+  for (const entity of selection) {
+    const prefabShortcuts = entity.prefab
+      ? shortcuts[entity.prefab]
+      : undefined;
+
+    for (const a of entity.actions ?? []) {
+      const actionKey = actionToShortcutKey(a);
+      if (actionsInMenus.has(actionKey)) continue;
+
+      const matchQuality = checkWithAlts(
+        a.binding,
+        actionKey,
+        prefabShortcuts,
+        e.code,
+      );
+      if (!matchQuality) continue;
+      const localPlayer = getLocalPlayer();
+      if (localPlayer && canPlayerExecuteAction(localPlayer.id, entity, a)) {
+        consider(matchQuality, a, entity);
+      }
+    }
+
+    if (entity.inventory && !useSlotBindings) {
+      for (const itemAction of getUsableItemActions(entity)) {
+        const actionKey = actionToShortcutKey(itemAction);
+        consider(
+          checkWithAlts(
+            prefabShortcuts?.[actionKey] ?? itemAction.binding,
             actionKey,
             prefabShortcuts,
             e.code,
-          );
-          if (matchQuality) {
-            const localPlayer = getLocalPlayer();
-            if (
-              localPlayer && canPlayerExecuteAction(localPlayer.id, entity, a)
-            ) {
-              if (matchQuality > bestMatchQuality) {
-                bestMatchQuality = matchQuality;
-                action = a;
-                units.length = 0;
-                units.push(entity);
-              } else if (
-                matchQuality === bestMatchQuality && isSameAction(action!, a)
-              ) {
-                units.push(entity);
-              }
-            }
-          }
-        }
-      }
-
-      // Check item actions from inventory (skip when slot bindings are active)
-      if (entity.inventory && !shortcutSettingsVar().useSlotBindings) {
-        const itemPrefabShortcuts = entity.prefab
-          ? shortcuts[entity.prefab]
-          : undefined;
-        for (const item of entity.inventory) {
-          if (
-            item.actions && item.actions.length > 0 &&
-            (!item.charges || item.charges > 0)
-          ) {
-            for (const itemAction of item.actions) {
-              const actionKey = actionToShortcutKey(itemAction);
-              const binding = itemPrefabShortcuts?.[actionKey] ??
-                itemAction.binding;
-
-              const matchQuality = checkWithAlts(
-                binding,
-                actionKey,
-                itemPrefabShortcuts,
-                e.code,
-              );
-              if (matchQuality) {
-                if (matchQuality > bestMatchQuality) {
-                  bestMatchQuality = matchQuality;
-                  action = itemAction;
-                  units.length = 0;
-                  units.push(entity);
-                } else if (
-                  matchQuality === bestMatchQuality &&
-                  isSameAction(action!, itemAction)
-                ) {
-                  units.push(entity);
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Check slot bindings for inventory items
-      if (
-        entity.inventory && entity.prefab &&
-        shortcutSettingsVar().useSlotBindings
-      ) {
-        const prefabShortcuts = shortcuts[entity.prefab];
-        if (prefabShortcuts) {
-          const usableActions: UnitDataAction[] = [];
-          for (const item of entity.inventory) {
-            if (
-              item.actions && item.actions.length > 0 &&
-              (!item.charges || item.charges > 0)
-            ) {
-              for (const itemAction of item.actions) {
-                usableActions.push(itemAction);
-              }
-            }
-          }
-          for (let i = 0; i < Math.min(usableActions.length, SLOT_COUNT); i++) {
-            const slotBinding = prefabShortcuts[`slot-${i + 1}`];
-            if (!slotBinding) continue;
-            const matchQuality = checkSingleBinding(slotBinding, e.code);
-            if (matchQuality && matchQuality > bestMatchQuality) {
-              bestMatchQuality = matchQuality;
-              action = usableActions[i];
-              units.length = 0;
-              units.push(entity);
-            }
-          }
-        }
-      }
-
-      // Check menu actions for this entity
-      if (entity.prefab) {
-        const allMenus = menusVar();
-        const prefabMenus = allMenus.filter((menu) =>
-          menu.prefabs.includes(entity.prefab!)
+          ),
+          itemAction,
+          entity,
         );
-        for (const menu of prefabMenus) {
-          // Convert menu config to full action with all sub-actions
-          const menuAction = convertMenuConfigToAction(
-            menu,
-            allMenus,
-            shortcuts,
-            entity,
-          );
+      }
+    }
 
-          // Skip menus that only have a back action or are empty
-          const nonBackActions = menuAction.actions.filter((a) =>
-            a.type !== "auto" || a.order !== "back"
-          );
-          if (nonBackActions.length === 0) {
-            continue;
-          }
+    if (entity.inventory && prefabShortcuts && useSlotBindings) {
+      const usableActions = getUsableItemActions(entity);
+      for (let i = 0; i < Math.min(usableActions.length, SLOT_COUNT); i++) {
+        const slotBinding = prefabShortcuts[`slot-${i + 1}`];
+        if (!slotBinding) continue;
+        consider(
+          checkSingleBinding(slotBinding, e.code),
+          usableActions[i],
+          entity,
+          false,
+        );
+      }
+    }
 
-          if (menuAction.binding) {
-            const matchQuality = checkSingleBinding(menuAction.binding, e.code);
-            if (matchQuality) {
-              if (matchQuality > bestMatchQuality) {
-                bestMatchQuality = matchQuality;
-                action = menuAction;
-                units.length = 0;
-                units.push(entity);
-              } else if (
-                matchQuality === bestMatchQuality &&
-                isSameAction(action!, menuAction)
-              ) {
-                units.push(entity);
-              }
-            }
-          }
-        }
+    if (entity.prefab) {
+      const allMenus = menusVar();
+      for (const menu of allMenus) {
+        if (!menu.prefabs.includes(entity.prefab)) continue;
+        const menuAction = convertMenuConfigToAction(
+          menu,
+          allMenus,
+          shortcuts,
+          entity,
+        );
+
+        // Skip menus that only have a back action or are empty
+        if (
+          !menuAction.binding ||
+          menuAction.actions.every((a) =>
+            a.type === "auto" && a.order === "back"
+          )
+        ) continue;
+
+        consider(
+          checkSingleBinding(menuAction.binding, e.code),
+          menuAction,
+          entity,
+        );
       }
     }
   }
