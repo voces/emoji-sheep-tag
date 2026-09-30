@@ -9,33 +9,47 @@ export type Game = App<Entity> & {
   tick: number;
 };
 
-export function makeLoopGuard(
-  label: string,
+type Message = () => string;
+
+const withInfo = (message: string, info?: Message) => {
+  const detail = info?.();
+  return detail ? `${message} ${detail}` : message;
+};
+
+export const makeLoopGuard = (
+  label: Message,
   warnIters = 100,
   throwIters = 10_000,
-) {
+) => {
   let i = 0, lastWarn = 0;
-  return (progressInfo?: string) => {
+  return (progressInfo?: Message) => {
     i++;
     if (i === warnIters || (i > warnIters && i - lastWarn >= warnIters)) {
       lastWarn = i;
       console.warn(
-        new Error(
-          `[loop-warn] ${label} i=${i}${
-            progressInfo ? " " + progressInfo : ""
-          }`,
-        ),
+        new Error(withInfo(`[loop-warn] ${label()} i=${i}`, progressInfo)),
       );
     }
     if (i >= throwIters) {
-      const msg = `[loop-infinite] ${label} exceeded ${throwIters} iterations${
-        progressInfo ? " " + progressInfo : ""
-      }`;
+      const msg = withInfo(
+        `[loop-infinite] ${label()} exceeded ${throwIters} iterations`,
+        progressInfo,
+      );
       console.error(msg);
       throw new Error(msg);
     }
   };
-}
+};
+
+type LoopGuard = ReturnType<typeof makeLoopGuard>;
+
+const systemName = (system: unknown) =>
+  (system as { name?: string }).name || "unknown";
+
+const allPresent = (entity: Entity, props: Iterable<keyof Entity>) => {
+  for (const prop of props) if (entity[prop] == null) return false;
+  return true;
+};
 
 export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
   const initializeEntity = (input: Partial<Entity>) => {
@@ -90,52 +104,52 @@ export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
   const app = newApp<Entity>({
     initializeEntity,
     flush: () => {
-      // Guard for the outer flush loop (total iterations across entire flush)
-      const guardFlush = makeLoopGuard("flush-outer", 10, 1000);
+      const guardFlush = makeLoopGuard(() => "flush-outer", 10, 1000);
 
-      // Guards per entity - persists across the entire flush
-      const entityGuards = new Map<string, ReturnType<typeof makeLoopGuard>>();
+      // Guards persist across re-queues for the entire flush
+      const entityGuards = new Map<Entity, LoopGuard>();
+      const changeGuards = new Map<Entity, Map<unknown, LoopGuard>>();
 
-      // Guards per (entity, system) pair - persists across the entire flush
-      const changeGuards = new Map<string, ReturnType<typeof makeLoopGuard>>();
-
-      // Outer drainer
       while (app.callbackQueue.length || app.entityChangeQueue.size) {
-        guardFlush(
-          `callbacks=${app.callbackQueue.length} entities=${app.entityChangeQueue.size}`,
+        guardFlush(() =>
+          `callbacks=${app.callbackQueue.length} entities=${app.entityChangeQueue.size}`
         );
 
-        // Entity queue drainer
         while (app.entityChangeQueue.size) {
           const [entity, changes] = app.entityChangeQueue.entries().next()
             .value!;
 
-          // Get or create guard for this entity (persists across re-queues)
-          if (!entityGuards.has(entity.id)) {
-            entityGuards.set(
-              entity.id,
-              makeLoopGuard(`flush-entity[${entity.id}]`, 50, 500),
+          let guardEntity = entityGuards.get(entity);
+          if (!guardEntity) {
+            guardEntity = makeLoopGuard(
+              () => `flush-entity[${entity.id}]`,
+              50,
+              500,
             );
+            entityGuards.set(entity, guardEntity);
           }
-          const guardEntity = entityGuards.get(entity.id)!;
 
-          // Per-entity changes drainer
+          let systemGuards = changeGuards.get(entity);
+          if (!systemGuards) {
+            systemGuards = new Map();
+            changeGuards.set(entity, systemGuards);
+          }
+
           while (changes.size) {
             const [system, props] = changes.entries().next().value!;
 
-            // Get or create guard for this (entity, system) pair (persists across re-queues)
-            const systemName = (system as { name?: string }).name || "unknown";
-            const systemKey = `${entity.id}:${systemName}`;
-            if (!changeGuards.has(systemKey)) {
-              changeGuards.set(
-                systemKey,
-                makeLoopGuard(`flush-change[${systemKey}]`, 50, 500),
+            let guardChange = systemGuards.get(system);
+            if (!guardChange) {
+              guardChange = makeLoopGuard(
+                () => `flush-change[${entity.id}:${systemName(system)}]`,
+                50,
+                500,
               );
+              systemGuards.set(system, guardChange);
             }
-            const guardChange = changeGuards.get(systemKey)!;
 
-            guardEntity(`changes=${changes.size}`);
-            guardChange(`props=[${Array.from(props).join(",")}]`);
+            guardEntity(() => `changes=${changes.size}`);
+            guardChange(() => `props=[${Array.from(props).join(",")}]`);
 
             changes.delete(system);
 
@@ -143,7 +157,7 @@ export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
             if (system.entities.has(entity)) {
               // If every modified prop is present, it's a change
               if (
-                Array.from(props).every((p) => entity[p] != null) &&
+                allPresent(entity, props) &&
                 app.entities.has(entity) &&
                 app.systems.has(system)
               ) {
@@ -201,9 +215,7 @@ import("./systems/death.ts");
 import("./systems/editor.ts");
 import("./systems/goldGeneration.ts");
 import("./systems/lookup.ts");
-import("./systems/lookup.ts");
 import("./systems/tilemapRotation.ts");
-import("./systems/pathing.ts");
 import("./systems/pathing.ts");
 import("./systems/playerEntities.ts");
 import("./systems/practiceMode.ts");

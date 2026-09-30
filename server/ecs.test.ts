@@ -16,7 +16,7 @@ const countWarnings = (fn: () => void) => {
 
 describe("makeLoopGuard", () => {
   it("warns at the threshold and then once every threshold iterations", () => {
-    const guard = makeLoopGuard("test", 10, 1000);
+    const guard = makeLoopGuard(() => "test", 10, 1000);
     expect(countWarnings(() => {
       for (let i = 0; i < 9; i++) guard();
     })).toBe(0);
@@ -31,7 +31,7 @@ describe("makeLoopGuard", () => {
   });
 
   it("throws once the throw threshold is reached", () => {
-    const guard = makeLoopGuard("test", 1000, 5);
+    const guard = makeLoopGuard(() => "test", 1000, 5);
     for (let i = 0; i < 4; i++) guard();
     const original = console.error;
     console.error = () => {};
