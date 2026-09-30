@@ -3,9 +3,17 @@ type ExtendedSetEventMap<T> = {
   delete: T;
 };
 
+type ExtendedSetListener<T, K extends keyof ExtendedSetEventMap<T>> = (
+  ev: ExtendedSetEventMap<T>[K],
+) => void;
+
+type ExtendedSetListeners<T> = {
+  [K in keyof ExtendedSetEventMap<T>]?: ExtendedSetListener<T, K>[];
+};
+
 export class ExtendedSet<T> extends Set<T> {
-  // deno-lint-ignore ban-types
-  private eventListeners?: { [key: string]: Function[] } = {};
+  /** Optional because Set's constructor calls `add` before fields initialize. */
+  private eventListeners?: ExtendedSetListeners<T> = {};
 
   override add(value: T): this {
     super.add(value);
@@ -21,13 +29,11 @@ export class ExtendedSet<T> extends Set<T> {
 
   /** Returns true if `predicate` returns a truthy value for any element. */
   some(predicate: (value: T) => unknown) {
-    for (const entity of this) if (predicate(entity)) return true;
-    return false;
+    return this.values().some((value) => predicate(value));
   }
 
   every(predicate: (value: T) => unknown) {
-    for (const entity of this) if (!predicate(entity)) return false;
-    return true;
+    return this.values().every((value) => predicate(value));
   }
 
   filter<U extends T>(
@@ -36,16 +42,6 @@ export class ExtendedSet<T> extends Set<T> {
     const newSet = new ExtendedSet<U>();
     for (const entity of this) if (predicate(entity)) newSet.add(entity as U);
     return newSet;
-  }
-
-  filterToArray<U extends T>(
-    predicate: ((value: T) => value is U) | ((value: T) => unknown),
-  ): U[] {
-    const result: U[] = [];
-    for (const element of this) {
-      if (predicate(element)) result.push(element as U);
-    }
-    return result;
   }
 
   clone() {
@@ -61,93 +57,24 @@ export class ExtendedSet<T> extends Set<T> {
   }
 
   map<U>(mapper: (item: T) => U): U[] {
-    const result: U[] = [];
-    for (const element of this) result.push(mapper(element));
-    return result;
+    return this.values().map((item) => mapper(item)).toArray();
   }
 
-  find(mapper: (item: T) => boolean) {
-    for (const element of this) if (mapper(element)) return element;
-  }
-
-  findMap<U>(mapper: (item: T) => U | undefined) {
-    for (const element of this) {
-      const result = mapper(element);
-      if (result !== undefined) return result as U;
-    }
-  }
-
-  group<U>(
-    fn: (item: T) => U,
-  ): U extends string ? Record<string, ExtendedSet<T> | undefined>
-    : Map<U, ExtendedSet<T> | undefined> {
-    type Result = U extends string ? Record<string, ExtendedSet<T> | undefined>
-      : Map<U, ExtendedSet<T> | undefined>;
-
-    const values = this.values();
-
-    // Determine initial container type and seed it
-    const first = values.next();
-    if (first.done) return {} as Result;
-    const firstValue = first.value;
-    const firstGroup = fn(firstValue);
-    let isMap = typeof firstGroup !== "string";
-    const set = new ExtendedSet([firstValue]);
-
-    // Create container
-    let container =
-      (isMap
-        ? new Map([[firstGroup, set]])
-        : { [firstGroup as string]: set }) as Result;
-
-    // Iterate through rest of values
-    while (!first.done) {
-      const next = values.next();
-      if (next.done) return container;
-
-      const value = next.value;
-      const group = fn(value);
-
-      // Change to map if we find a non-string key
-      const curIsMap = typeof group !== "string";
-      if (!isMap && curIsMap) {
-        container = new Map(Object.entries(container)) as Result;
-        isMap = true;
-      }
-
-      // Handle maps
-      if (container instanceof Map) {
-        const prev = container.get(group);
-        if (prev) prev.add(value);
-        else container.set(group, new ExtendedSet([value]));
-
-        // Handle records
-      } else {
-        const castContainer = container as Record<
-          U & string,
-          ExtendedSet<T> | undefined
-        >;
-        const prev = castContainer[group as U & string];
-        if (prev) prev.add(value);
-        else castContainer[group as U & string] = new ExtendedSet([value]);
-      }
-    }
-    return container;
+  find(predicate: (item: T) => boolean) {
+    return this.values().find((item) => predicate(item));
   }
 
   addEventListener<K extends keyof ExtendedSetEventMap<T>>(
     type: K,
-    listener: (ev: ExtendedSetEventMap<T>[K]) => void,
+    listener: ExtendedSetListener<T, K>,
   ) {
-    if (!this.eventListeners) this.eventListeners = {};
-    if (!this.eventListeners[type]) {
-      this.eventListeners[type] = [];
-    }
-    this.eventListeners[type].push(listener);
+    const listeners: ExtendedSetListener<T, K>[] =
+      (this.eventListeners ??= {})[type] ??= [];
+    listeners.push(listener);
 
     return () => {
-      const idx = this.eventListeners![type].indexOf(listener);
-      if (idx >= 0) this.eventListeners![type].splice(idx, 1);
+      const idx = listeners.indexOf(listener);
+      if (idx >= 0) listeners.splice(idx, 1);
     };
   }
 
@@ -155,11 +82,8 @@ export class ExtendedSet<T> extends Set<T> {
     type: K,
     event: ExtendedSetEventMap<T>[K],
   ) {
-    if (!this.eventListeners) this.eventListeners = {};
-    if (this.eventListeners[type]) {
-      this.eventListeners[type]?.forEach((listener) =>
-        listener.call(this, event)
-      );
-    }
+    this.eventListeners?.[type]?.forEach((listener) =>
+      listener.call(this, event)
+    );
   }
 }

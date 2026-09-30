@@ -1,28 +1,16 @@
-export const setFind = <
-  T,
-  U extends T,
-  Fn extends ((element: T) => element is U) | ((element: T) => boolean),
->(
-  set: ReadonlySet<T>,
-  fn: Fn,
-): (Fn extends ((element: T) => element is U) ? U : T) | undefined => {
-  for (const element of set) {
-    if (fn(element)) {
-      return element as
-        | (Fn extends ((element: T) => element is U) ? U : T)
-        | undefined;
-    }
-  }
-};
+export const setFind: {
+  <T, U extends T>(
+    set: ReadonlySet<T>,
+    fn: (element: T) => element is U,
+  ): U | undefined;
+  <T>(set: ReadonlySet<T>, fn: (element: T) => boolean): T | undefined;
+} = <T>(set: ReadonlySet<T>, fn: (element: T) => boolean) =>
+  set.values().find((element) => fn(element));
 
 export const setSome = <T>(
   set: ReadonlySet<T>,
   fn: (element: T) => boolean,
-) => {
-  for (const element of set) if (fn(element)) return true;
-  return false;
-};
+) => set.values().some((element) => fn(element));
 
-export const setFirst = <T>(set: ReadonlySet<T>) => {
-  for (const element of set) return element;
-};
+export const setFirst = <T>(set: ReadonlySet<T>): T | undefined =>
+  set.values().next().value;

@@ -1,7 +1,7 @@
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { useEffect, useRef, useState } from "react";
 
-export const useSet = (set: ExtendedSet<unknown>) => {
+export const useSet = <T>(set: ExtendedSet<T>) => {
   const [, next] = useState(0);
   const pendingUpdate = useRef(false);
 
