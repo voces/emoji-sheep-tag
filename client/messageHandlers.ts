@@ -1,6 +1,6 @@
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { stateVar } from "@/vars/state.ts";
-import { app, map, unloadEcs } from "./ecs.ts";
+import { app, map, removeTracked, unloadEcs } from "./ecs.ts";
 import { camera, triggerFlowerRegeneration } from "./graphics/three.ts";
 import {
   clearDoodads,
@@ -50,15 +50,20 @@ import i18next from "i18next";
 import { hubNoticeVar } from "@/vars/hubNotice.ts";
 import { startFailedVar } from "@/vars/startFailed.ts";
 
+const isPlayerUpdate = (update: Pick<Update, "id" | "isPlayer">) =>
+  !!(update.isPlayer || map[update.id]?.isPlayer);
+
 const processUpdates = (updates: ReadonlyArray<Update>) => {
-  const players = updates.filter((u) => u.isPlayer || map[u.id]?.isPlayer);
+  const players = updates.filter(isPlayerUpdate);
 
   // Track owners whose sheep are being deleted - their structures shouldn't persist in fog
   // (e.g., when a sheep dies, wolves know all their structures are destroyed)
   const ownersWithDeletedSheep = new Set(
     updates.filter((u) =>
       u.__delete && (u.prefab === "sheep" || map[u.id]?.prefab === "sheep")
-    ).map((u) => u.owner ?? map[u.id]?.owner).filter(Boolean) as string[],
+    ).map((u) => u.owner ?? map[u.id]?.owner).filter((owner): owner is string =>
+      !!owner
+    ),
   );
 
   // If any sheep died, also remove their structures that were already pending removal
@@ -78,7 +83,7 @@ const processUpdates = (updates: ReadonlyArray<Update>) => {
 
     // Add other entities
     for (const { __delete, ...update } of updates) {
-      if (update.isPlayer || map[update.id]?.isPlayer) continue;
+      if (isPlayerUpdate(update)) continue;
       if (update.id in map) {
         // Preserve fog snapshot values - don't let server updates override them
         const entity = map[update.id];
@@ -119,16 +124,14 @@ const processUpdates = (updates: ReadonlyArray<Update>) => {
         ) {
           markPendingRemoval(entity);
         } else {
-          app.removeEntity(entity);
-          delete map[update.id];
+          removeTracked(entity);
         }
       }
     }
 
     for (const p of players) {
       if (p.__delete) {
-        app.removeEntity(map[p.id]);
-        delete map[p.id];
+        removeTracked(map[p.id]);
       }
     }
   });
@@ -165,8 +168,17 @@ export const ensureMapLoaded = async (map: string) => {
   }
 };
 
+type Msg<T extends ServerToClientMessage["type"]> = Extract<
+  ServerToClientMessage,
+  { type: T }
+>;
+
+type Handlers = {
+  [T in ServerToClientMessage["type"]]: (message: Msg<T>) => unknown;
+};
+
 export const handlers = {
-  join: (data: Extract<ServerToClientMessage, { type: "join" }>) => {
+  join: (data) => {
     if (data.localPlayer) localPlayerIdVar(data.localPlayer);
 
     // When the local player is joining a new lobby, remove stale players
@@ -179,8 +191,7 @@ export const handlers = {
       );
       for (const p of getPlayers()) {
         if (!incomingIds.has(p.id)) {
-          app.removeEntity(p);
-          delete map[p.id];
+          removeTracked(p);
         }
       }
     }
@@ -243,7 +254,7 @@ export const handlers = {
 
     if (data.status === "playing") applyZoom(true);
   },
-  start: (e: Extract<ServerToClientMessage, { type: "start" }>) => {
+  start: (e) => {
     stateVar("lobby");
     unloadEcs();
     stateVar("playing");
@@ -258,7 +269,7 @@ export const handlers = {
   startFailed: () => {
     startFailedVar((n) => n + 1);
   },
-  stop: (d: Extract<ServerToClientMessage, { type: "stop" }>) => {
+  stop: (d) => {
     stateVar("lobby");
     unloadEcs();
     practiceVar(false);
@@ -268,26 +279,21 @@ export const handlers = {
     if (d.updates) processUpdates(d.updates);
     if (d.round) roundsVar((r) => [...r, d.round!]);
   },
-  updates: (data: Extract<ServerToClientMessage, { type: "updates" }>) => {
+  updates: (data) => {
     processUpdates(
       stateVar() === "playing"
         ? data.updates
-        : data.updates.filter((u) => u.isPlayer || map[u.id]?.isPlayer),
+        : data.updates.filter(isPlayerUpdate),
     );
   },
-  leave: (data: Extract<ServerToClientMessage, { type: "leave" }>) => {
+  leave: (data) => {
     processUpdates(data.updates);
     lobbySettingsVar({ ...data.lobbySettings, name: lobbySettingsVar().name });
   },
   // pong is intercepted at the connection-site dispatchers (connection.ts and
   // shardConnection.ts) so each ping source can be recorded under its own key.
   pong: () => {},
-  chat: (
-    { player, message, channel }: Extract<
-      ServerToClientMessage,
-      { type: "chat" }
-    >,
-  ) => {
+  chat: ({ player, message, channel }) => {
     // Messages without a player are server/system messages and always show.
     if (player) {
       if (uiSettingsVar().disableMessaging) return;
@@ -305,18 +311,11 @@ export const handlers = {
       channel,
     );
   },
-  lobbySettings: (
-    { type: _type, ...lobbySettings }: Extract<
-      ServerToClientMessage,
-      { type: "lobbySettings" }
-    >,
-  ) => {
+  lobbySettings: ({ type: _type, ...lobbySettings }) => {
     ensureMapLoaded(lobbySettings.map);
     lobbySettingsVar({ ...lobbySettings, name: lobbySettingsVar().name });
   },
-  captainsDraft: (
-    data: Extract<ServerToClientMessage, { type: "captainsDraft" }>,
-  ) => {
+  captainsDraft: (data) => {
     if (!data.phase) {
       captainsDraftVar(undefined);
     } else {
@@ -329,7 +328,7 @@ export const handlers = {
       });
     }
   },
-  mapUpdate: (data: Extract<ServerToClientMessage, { type: "mapUpdate" }>) => {
+  mapUpdate: (data) => {
     const currentMap = getMap();
     const tiles = unpackMap2D(data.terrain);
     const cliffs = unpackMap2D(data.cliffs).map((row) =>
@@ -374,9 +373,7 @@ export const handlers = {
     setMapForApp(app, updatedMap);
     // The terrain will be automatically updated by the onMapChange listener in three.ts
   },
-  hubState: (
-    { lobbies }: Extract<ServerToClientMessage, { type: "hubState" }>,
-  ) => {
+  hubState: ({ lobbies }) => {
     // In offline mode, auto-join the first lobby if one exists
     const ws = getWebSocket();
     if (ws instanceof LocalWebSocket && lobbies.length > 0) {
@@ -407,17 +404,10 @@ export const handlers = {
     generateDoodads(["dynamic"]);
     lobbiesVar(lobbies);
   },
-  nameChanged: (
-    { name }: Extract<ServerToClientMessage, { type: "nameChanged" }>,
-  ) => {
+  nameChanged: ({ name }) => {
     playerNameVar(name);
   },
-  uploadCustomMap: async (
-    { mapId, mapData }: Extract<
-      ServerToClientMessage,
-      { type: "uploadCustomMap" }
-    >,
-  ) => {
+  uploadCustomMap: async ({ mapId, mapData }) => {
     // Store the received custom map data so it can be loaded when needed
     storeReceivedMap(mapId, mapData as PackedMap);
 
@@ -446,16 +436,8 @@ export const handlers = {
       }
     }
   },
-  connectToShard: (
-    { shardUrl, token, lobbyId }: Extract<
-      ServerToClientMessage,
-      { type: "connectToShard" }
-    >,
-  ) => connectToShard(shardUrl, token, lobbyId),
-  shards: (
-    { shards }: Extract<ServerToClientMessage, { type: "shards" }>,
-  ) => lobbySettingsVar({ ...lobbySettingsVar(), shards }),
-  vip: (
-    { playerId }: Extract<ServerToClientMessage, { type: "vip" }>,
-  ) => vipVar(playerId),
-};
+  connectToShard: ({ shardUrl, token, lobbyId }) =>
+    connectToShard(shardUrl, token, lobbyId),
+  shards: ({ shards }) => lobbySettingsVar({ ...lobbySettingsVar(), shards }),
+  vip: ({ playerId }) => vipVar(playerId),
+} satisfies Handlers;

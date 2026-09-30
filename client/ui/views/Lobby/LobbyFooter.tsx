@@ -3,7 +3,6 @@ import { styled } from "styled-components";
 import { useTranslation } from "react-i18next";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useLocalPlayer, usePlayers } from "@/hooks/usePlayers.ts";
-import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { draftModeVar } from "@/vars/draftMode.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
@@ -45,13 +44,12 @@ const FooterActions = styled.div`
 export const LobbyFooter = () => {
   const { t } = useTranslation();
   const localPlayer = useLocalPlayer();
-  const players = usePlayers();
+  const players = usePlayers(["team"]);
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const draftMode = useReactiveVar(draftModeVar);
   const captainsDraft = useReactiveVar(captainsDraftVar);
   const startFailed = useReactiveVar(startFailedVar);
   const [pending, setPending] = useState<"start" | "practice" | null>(null);
-  useListenToEntities(players, ["team"]);
 
   // Clear pending when the server reports the round failed to start.
   useEffect(() => setPending(null), [startFailed]);

@@ -1,6 +1,5 @@
 import { memo, useCallback } from "react";
 import { Entity } from "../../../ecs.ts";
-import { lookup } from "../../../systems/lookup.ts";
 import { selection } from "../../../systems/selection.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { UnitDataAction } from "@/shared/types.ts";
@@ -10,17 +9,9 @@ import { Command } from "./Command.tsx";
 import { iconEffects } from "@/components/SVGIcon.tsx";
 import { getPlayer } from "@/shared/api/player.ts";
 import { useListenToEntityProps } from "@/hooks/useListenToEntityProp.ts";
-import {
-  getEffectivePlayerGold,
-  isTeamGoldEnabled,
-} from "../../../api/player.ts";
+import { useEffectiveGold } from "@/hooks/useEffectiveGold.ts";
 import { send } from "../../../messaging.ts";
 import { playSound } from "../../../api/sound.ts";
-
-const TEAM_ENTITY_IDS = {
-  sheep: "team-sheep",
-  wolf: "team-wolf",
-} as const;
 
 export const Action = memo(({ action, current, entity }: {
   action: UnitDataAction & { count?: number };
@@ -36,30 +27,9 @@ export const Action = memo(({ action, current, entity }: {
   );
 
   const owningPlayer = getPlayer(entity.owner);
-  const ownerTeam = owningPlayer?.team === "wolf" ||
-      owningPlayer?.team === "sheep"
-    ? owningPlayer.team
-    : undefined;
-  const teamGoldEnabled = isTeamGoldEnabled(ownerTeam);
 
-  // Get team entity for team gold checks
-  const teamEntityId = ownerTeam ? TEAM_ENTITY_IDS[ownerTeam] : undefined;
-  const teamEntity = teamEntityId ? lookup(teamEntityId) : undefined;
-
-  // Check if action is disabled due to insufficient gold
   const goldCost = action.goldCost ?? 0;
-  // Listen to gold changes to trigger rerenders, flooring to avoid unnecessary rerenders
-  useListenToEntityProps(
-    owningPlayer,
-    goldCost > 0 ? ["gold"] : [],
-    ({ gold }) => Math.floor(gold ?? 0),
-  );
-  useListenToEntityProps(
-    teamEntity,
-    goldCost > 0 && teamGoldEnabled ? ["gold"] : [],
-    ({ gold }) => Math.floor(gold ?? 0),
-  );
-  const hasGold = getEffectivePlayerGold(entity.owner) >= goldCost;
+  const hasGold = useEffectiveGold(entity.owner, goldCost > 0) >= goldCost;
 
   // Check if action is disabled during construction
   const blockedByConstructing = useListenToEntityProps(

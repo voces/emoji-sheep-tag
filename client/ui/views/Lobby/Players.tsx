@@ -18,7 +18,6 @@ import {
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { draftModeVar } from "@/vars/draftMode.ts";
-import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { Chat } from "./Chat.tsx";
 import { PlayerRow } from "./PlayerRow.tsx";
 import { usePlayerStats } from "./usePlayerStats.ts";
@@ -33,19 +32,17 @@ import {
 
 export const Players = () => {
   const { t } = useTranslation();
-  const players = usePlayers();
-  const localPlayer = useLocalPlayer();
-  const rounds = useReactiveVar(roundsVar);
-  const lobbySettings = useReactiveVar(lobbySettingsVar);
-  const captainsDraft = useReactiveVar(captainsDraftVar);
-
-  useListenToEntities(players, [
+  const players = usePlayers([
     "playerColor",
     "name",
     "team",
     "sheepCount",
     "isComputer",
   ]);
+  const localPlayer = useLocalPlayer();
+  const rounds = useReactiveVar(roundsVar);
+  const lobbySettings = useReactiveVar(lobbySettingsVar);
+  const captainsDraft = useReactiveVar(captainsDraftVar);
 
   const isHost = localPlayer?.id === lobbySettings.host;
   const isBulldog = lobbySettings.mode === "bulldog";

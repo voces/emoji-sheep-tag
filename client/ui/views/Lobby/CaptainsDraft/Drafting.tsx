@@ -3,7 +3,6 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { usePlayers } from "@/hooks/usePlayers.ts";
-import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { GoldTag } from "@/components/Tag.tsx";
 import { send } from "../../../../messaging.ts";
@@ -26,8 +25,7 @@ export const Drafting = () => {
   const { t } = useTranslation();
   const draft = useReactiveVar(captainsDraftVar);
   const localPlayerId = useReactiveVar(localPlayerIdVar);
-  const players = usePlayers();
-  useListenToEntities(players, ["playerColor", "name", "team"]);
+  const players = usePlayers(["playerColor", "name", "team"]);
 
   if (!draft) return null;
 

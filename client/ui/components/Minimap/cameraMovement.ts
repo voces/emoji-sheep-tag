@@ -81,16 +81,14 @@ export const createCameraMovement = (
   // No longer needed - interpolation is now handled by camera.ts onRender
   const updateCameraSmooth = (_delta: number) => {};
 
-  mouse.addEventListener("mouseButtonDown", handleMouseButtonDown);
-  mouse.addEventListener("mouseButtonUp", handleMouseButtonUp);
-  mouse.addEventListener("mouseMove", handleMouseMove);
+  const listeners = new AbortController();
+  const { signal } = listeners;
+  mouse.addEventListener("mouseButtonDown", handleMouseButtonDown, { signal });
+  mouse.addEventListener("mouseButtonUp", handleMouseButtonUp, { signal });
+  mouse.addEventListener("mouseMove", handleMouseMove, { signal });
 
   return {
     updateCameraSmooth,
-    dispose: () => {
-      mouse.removeEventListener("mouseButtonDown", handleMouseButtonDown);
-      mouse.removeEventListener("mouseButtonUp", handleMouseButtonUp);
-      mouse.removeEventListener("mouseMove", handleMouseMove);
-    },
+    dispose: () => listeners.abort(),
   };
 };

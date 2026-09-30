@@ -3,18 +3,14 @@ import { styled } from "styled-components";
 import { SvgIcon } from "@/components/SVGIcon.tsx";
 import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { useLocalPlayer, usePlayer } from "@/hooks/usePlayers.ts";
-import { Entity } from "../../../ecs.ts";
-import { lookup } from "../../../systems/lookup.ts";
+import { Player } from "@/shared/api/player.ts";
 import { useListenToEntityProp } from "@/hooks/useListenToEntityProp.ts";
+import { useEffectiveGold } from "@/hooks/useEffectiveGold.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { useTooltip } from "@/hooks/useTooltip.tsx";
 import { primaryUnitVar } from "@/vars/primaryUnit.ts";
 import { getDistanceMultiplier } from "@/shared/penAreas.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
-import {
-  getEffectivePlayerGold,
-  isTeamGoldEnabled,
-} from "../../../api/player.ts";
 import { selection } from "../../../systems/selection.ts";
 import { useSet } from "@/hooks/useSet.ts";
 
@@ -88,32 +84,10 @@ const useGoldTooltip = (team: string | undefined) => {
   return null;
 };
 
-const TEAM_ENTITY_IDS = {
-  sheep: "team-sheep",
-  wolf: "team-wolf",
-} as const;
+const InnerGold = ({ player }: { player: Player }) => {
+  const displayGold = Math.floor(useEffectiveGold(player.id));
 
-const InnerGold = (
-  { entity, team }: { entity: Entity; team: string | undefined },
-) => {
-  const validTeam = team === "wolf" || team === "sheep" ? team : undefined;
-  const teamGoldEnabled = isTeamGoldEnabled(validTeam);
-
-  // Listen to gold changes to trigger rerenders, flooring to avoid unnecessary rerenders
-  useListenToEntityProp(entity, "gold", (g) => Math.floor(g ?? 0));
-
-  // Get team entity for team gold display
-  const teamEntityId = validTeam ? TEAM_ENTITY_IDS[validTeam] : undefined;
-  const teamEntity = teamEntityId ? lookup(teamEntityId) : undefined;
-  useListenToEntityProp(
-    teamGoldEnabled ? teamEntity : undefined,
-    "gold",
-    (g) => Math.floor(g ?? 0),
-  );
-
-  const displayGold = Math.floor(getEffectivePlayerGold(entity.id));
-
-  const tooltipContent = useGoldTooltip(team);
+  const tooltipContent = useGoldTooltip(player.team);
   const { tooltipContainerProps, tooltip } = useTooltip(tooltipContent);
 
   return (
@@ -151,8 +125,8 @@ export const Gold = () => {
 
   // Observer viewing a selected entity's owner gold
   if (player.team === "observer" && selectedOwner) {
-    return <InnerGold entity={selectedOwner} team={selectedOwner.team} />;
+    return <InnerGold player={selectedOwner} />;
   }
 
-  return <InnerGold entity={player} team={player.team} />;
+  return <InnerGold player={player} />;
 };

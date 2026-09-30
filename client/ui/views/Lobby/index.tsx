@@ -5,7 +5,6 @@ import { useReactiveVar } from "@/hooks/useVar.tsx";
 import { captainsDraftVar } from "@/vars/captainsDraft.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import { usePlayers } from "@/hooks/usePlayers.ts";
-import { useListenToEntities } from "@/hooks/useListenToEntityProp.ts";
 import { AccentTag, Tag } from "@/components/Tag.tsx";
 import { SmallGhostButton } from "@/components/forms/ActionButton.tsx";
 import { showSettingsVar } from "@/vars/showSettings.ts";
@@ -219,8 +218,7 @@ export const Lobby = () => {
   const { t } = useTranslation();
   const captainsDraft = useReactiveVar(captainsDraftVar);
   const lobbySettings = useReactiveVar(lobbySettingsVar);
-  const players = usePlayers();
-  useListenToEntities(players, ["team"]);
+  const players = usePlayers(["team"]);
 
   const inCaptainsMode = !!captainsDraft &&
     captainsDraft.phase !== "drafted" &&

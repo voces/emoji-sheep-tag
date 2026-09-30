@@ -19,8 +19,7 @@ import {
 } from "./commands.ts";
 
 let overlay: SelectionOverlay | undefined;
-let editorScopedSubscriptions: Array<() => void> = [];
-let mouseAttached = false;
+let attachment: AbortController | undefined;
 
 const tileColorTable = (): number[] => tileDefs.map((t) => t.color);
 
@@ -251,22 +250,21 @@ const refresh = () => {
 };
 
 const attach = () => {
-  if (mouseAttached) return;
-  mouseAttached = true;
-  mouse.addEventListener("mouseMove", refresh);
-  editorScopedSubscriptions = [
+  if (attachment) return;
+  attachment = new AbortController();
+  const { signal } = attachment;
+  mouse.addEventListener("mouseMove", refresh, { signal });
+  const unsubscribes = [
     editorTerrainSelectionVar.subscribe(refresh),
     editorActiveActionVar.subscribe(refresh),
     editorTerrainClipboardVar.subscribe(refresh),
   ];
+  signal.addEventListener("abort", () => unsubscribes.forEach((fn) => fn()));
 };
 
 const detach = () => {
-  if (!mouseAttached) return;
-  mouseAttached = false;
-  mouse.removeEventListener("mouseMove", refresh);
-  for (const unsubscribe of editorScopedSubscriptions) unsubscribe();
-  editorScopedSubscriptions = [];
+  attachment?.abort();
+  attachment = undefined;
 };
 
 const init = () => {

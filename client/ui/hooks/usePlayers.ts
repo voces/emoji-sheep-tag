@@ -1,24 +1,31 @@
 import { Player, playerEntities } from "@/shared/api/player.ts";
+import { useMemo } from "react";
+import type { Entity } from "../../ecs.ts";
 import { useSet } from "./useSet.ts";
+import { useListenToEntities } from "./useListenToEntityProp.ts";
 import { useReactiveVar } from "./useVar.tsx";
 import { localPlayerIdVar } from "@/vars/localPlayerId.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 
-/**
- * React hook that returns all player entities from the ECS.
- * Automatically updates when players are added, removed, or their properties change.
- * Filters out synthetic players like "practice-enemy".
- */
-export const usePlayers = (): readonly Player[] => {
-  // Use the useSet hook to listen for changes to the player entities set
-  useSet(playerEntities());
-  // TODO: register player props we need to be reactive
-  // useListenToEntities(playerEntities, [''])
+const isRealPlayer = (player: Player) => player.id !== "practice-enemy";
 
-  // Return the current player entities as an array, filtering out practice-enemy
-  return (Array.from(playerEntities()) as Player[]).filter((p) =>
-    p.id !== "practice-enemy"
-  );
+/**
+ * Returns all player entities from the ECS, excluding synthetic players like
+ * "practice-enemy". Rerenders when players are added or removed, and when any
+ * of the given props change on a player; the array keeps its identity between
+ * those changes.
+ */
+export const usePlayers = (
+  props: (keyof Entity)[] = [],
+): readonly Player[] => {
+  const set = playerEntities();
+  const version = useSet(set);
+  const players = useMemo(() => set.filterToArray(isRealPlayer), [
+    set,
+    version,
+  ]);
+  const propsVersion = useListenToEntities(players, props);
+  return useMemo(() => [...players], [players, propsVersion]);
 };
 
 /**
