@@ -192,6 +192,52 @@ describe("PathingMap", () => {
     expect(solver.getExistingTile(6, 6)?.pathing).toBe(1);
   });
 
+  it("path restores the entity and lifted movers when keepMoving throws", () => {
+    const solver = new PathingMap({
+      pathing: Array.from({ length: 8 }, () => Array(8).fill(0)),
+    });
+    const walker = {
+      id: "walker",
+      radius: 0.5,
+      pathing: 1,
+      position: { x: 2.5, y: 2.5 },
+    };
+    const mover = (id: string, x: number) => ({
+      id,
+      radius: 0.5,
+      pathing: 1,
+      position: { x, y: 6.5 },
+      order: {
+        type: "walk" as const,
+        target: { x: 7, y: 1 },
+        path: [{ x: 7, y: 1 }],
+      },
+    });
+    const movers = [mover("a", 0.5), mover("b", 3.5), mover("c", 6.5)];
+    solver.addEntity(walker);
+    for (const m of movers) solver.addEntity(m);
+
+    let calls = 0;
+    expect(() =>
+      solver.path(walker, { x: 5.5, y: 5.5 }, {
+        keepMoving: () => {
+          if (++calls === 2) throw new Error("keepMoving failed");
+          return false;
+        },
+      })
+    ).toThrow("keepMoving failed");
+
+    for (const entity of [walker, ...movers]) {
+      expect(solver.getEntityTiles(entity)).toBeDefined();
+      expect(
+        solver.getExistingTile(
+          Math.floor(entity.position.x),
+          Math.floor(entity.position.y),
+        )?.pathing,
+      ).toBe(1);
+    }
+  });
+
   it("should handle distance to target corner", () => {
     const sheep = {
       id: "sheep-0",

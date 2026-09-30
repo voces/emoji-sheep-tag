@@ -913,13 +913,22 @@ export class PathingMap {
 
     if (distanceFromTarget) distanceFromTarget *= this.resolution;
 
-    const removed = this.entities.has(entity);
-    if (removed) this.removeEntity(entity);
-    const removedMovingEntities = removeMovingEntities
-      ? this.removeMovingEntities(entity, target, keepMoving)
-      : [];
+    let removed = false;
+    const removedMovingEntities: PathingEntity[] = [];
 
     try {
+      if (this.entities.has(entity)) {
+        this.removeEntity(entity);
+        removed = true;
+      }
+      if (removeMovingEntities) {
+        this.removeMovingEntities(
+          entity,
+          target,
+          removedMovingEntities,
+          keepMoving,
+        );
+      }
       return this.searchPath(entity, target, start, distanceFromTarget);
     } finally {
       this._losCtx = undefined;
@@ -931,15 +940,15 @@ export class PathingMap {
   /**
    * Lifts movers out of the map ahead of a search, as they should have moved
    * on by the time `entity` arrives. Movers chasing `entity`, ones
-   * `keepMoving` picks, and nearby ones heading across its way stay. Returns
-   * the movers removed.
+   * `keepMoving` picks, and nearby ones heading across its way stay. Each
+   * mover is pushed onto `removed` just before it is lifted.
    */
   private removeMovingEntities(
     entity: PathingEntity,
     target: TargetEntity | Readonly<Point>,
+    removed: PathingEntity[],
     keepMoving?: (other: PathingEntity) => boolean,
-  ): PathingEntity[] {
-    const removed: PathingEntity[] = [];
+  ): void {
     const targetPosition = "x" in target ? target : target.position;
     const heading = Math.atan2(
       targetPosition.y - entity.position.y,
@@ -974,8 +983,6 @@ export class PathingMap {
       removed.push(e);
       this.removeEntity(e);
     }
-
-    return removed;
   }
 
   /** Per-search memoisation of the line-of-sight and footprint checks. */
