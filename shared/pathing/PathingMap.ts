@@ -1323,10 +1323,7 @@ export class PathingMap {
             }
 
             if (!wasVisited) startHeap.push(neighbor);
-            else {
-              const index = startHeap.indexOf(neighbor);
-              if (index >= 0) startHeap.sinkDown(index);
-            }
+            else startHeap.decrease(neighbor);
           }
 
           // First visit or better score than previously known
@@ -1357,10 +1354,7 @@ export class PathingMap {
           }
 
           if (!wasVisited) startHeap.push(neighbor);
-          else {
-            const index = startHeap.indexOf(neighbor);
-            if (index >= 0) startHeap.sinkDown(index);
-          }
+          else startHeap.decrease(neighbor);
         }
       }
 
@@ -1477,10 +1471,7 @@ export class PathingMap {
             }
 
             if (!wasVisited) endHeap.push(neighbor);
-            else {
-              const index = endHeap.indexOf(neighbor);
-              if (index >= 0) endHeap.sinkDown(index);
-            }
+            else endHeap.decrease(neighbor);
           }
 
           // First visit or better score than previously known
@@ -1511,10 +1502,7 @@ export class PathingMap {
           }
 
           if (!wasVisited) endHeap.push(neighbor);
-          else {
-            const index = endHeap.indexOf(neighbor);
-            if (index >= 0) endHeap.sinkDown(index);
-          }
+          else endHeap.decrease(neighbor);
         }
       }
     }
