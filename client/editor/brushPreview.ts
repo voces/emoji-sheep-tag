@@ -11,7 +11,6 @@ import {
   editorTileModeVar,
   editorVar,
 } from "@/vars/editor.ts";
-import { clipCellsToSelection } from "./selection.ts";
 import { getMap } from "@/shared/map.ts";
 import {
   fillsByCliff,
@@ -22,6 +21,15 @@ import {
   getTileGridSize,
   isInMaskGrid,
 } from "./terrainCells.ts";
+import {
+  buildPreviewCache,
+  buildTilePreview,
+  isPreviewCached,
+  maskPreviewKey,
+  type PreviewCache,
+  selectionKey,
+  tilePreviewKey,
+} from "./previewCells.ts";
 import {
   getTerrainTool,
   isCliffTool,
@@ -35,15 +43,11 @@ let preview: BrushPreview | undefined;
 // The cell set the preview is currently showing, plus the inputs that produced
 // it. When the next refresh's inputs match, we can skip the (expensive) cell
 // recompute + geometry rebuild and just slide the center crosshair.
-let cachedKey = "";
-let cachedCellSet: Set<number> | null = null;
+let cache: PreviewCache | undefined;
 let cachedCenter = "";
 
-const cellId = (x: number, y: number) => y * 100000 + x;
-
 const resetPreview = () => {
-  cachedKey = "";
-  cachedCellSet = null;
+  cache = undefined;
   cachedCenter = "";
   preview?.hide();
 };
@@ -58,23 +62,13 @@ const moveCenter = (x: number, y: number) => {
   preview.visible = true;
 };
 
-/**
- * Whether the cached cells still apply for `key`. A fill's cells depend on
- * which region the cursor is in, not just the source value in the key, so it
- * also needs the cursor cell inside the cached set.
- */
-const isCached = (key: string, fill: boolean, x: number, y: number) =>
-  key === cachedKey && (!fill || !!cachedCellSet?.has(cellId(x, y)));
-
 const showCells = (
-  key: string,
-  cellsForSet: Cell[],
+  nextCache: PreviewCache,
   cells: Cell[],
   color: number,
 ) => {
   preview?.setArea(cells, color);
-  cachedKey = key;
-  cachedCellSet = new Set(cellsForSet.map(([x, y]) => cellId(x, y)));
+  cache = nextCache;
 };
 
 const getFillColor = (
@@ -85,11 +79,6 @@ const getFillColor = (
   if (!tool || isCliffTool(tool.kind)) return CLIFF_FILL_COLOR;
   if (tool.kind === "tile") return tool.color;
   return TERRAIN_TOOL_COLORS[tool.kind];
-};
-
-const selectionKey = (): string => {
-  const sel = editorTerrainSelectionVar();
-  return sel ? `${sel.minX},${sel.minY},${sel.maxX},${sel.maxY}` : "none";
 };
 
 // Mask paint: cells live on cliff vertices, anchored to the bounds. Compute
@@ -110,19 +99,19 @@ const refreshMask = (kind: "mask" | "unmask") => {
   const brushShape = editorBrushShapeVar();
   if (size === "fill" && !isInMaskGrid(anchor)) return resetPreview();
 
-  // Sized brushes move with the cursor; "all" and a fill (while the cursor
-  // stays inside its region) do not
-  const key = size === "all"
-    ? `mask|${kind}|all`
-    : size === "fill"
-    ? `mask-fill|${kind}|${getMap().mask[y]?.[x] ?? 0}`
-    : `mask|${kind}|${size}|${brushShape}|${x}|${y}`;
+  const key = maskPreviewKey(
+    kind,
+    size,
+    brushShape,
+    x,
+    y,
+    () => getMap().mask[y]?.[x] ?? 0,
+  );
 
-  if (!isCached(key, size === "fill", x, y)) {
+  if (!isPreviewCached(cache, key, size === "fill", x, y)) {
     const mapCells = getMaskCells(size, brushShape, anchor);
     showCells(
-      key,
-      mapCells,
+      buildPreviewCache(key, mapCells),
       mapCells.map(([mx, my]) => [
         shape.firstVertexX + mx - 0.5,
         shape.topVertexY - my - 0.5,
@@ -173,21 +162,25 @@ const refresh = () => {
   const shape = editorBrushShapeVar();
   const toolKey = `${mode}|${
     activeKind === "tile" ? tool?.color : activeKind
-  }|${selectionKey()}`;
+  }|${selectionKey(editorTerrainSelectionVar())}`;
 
-  const key = size === "all"
-    ? `all|${width}|${height}|${toolKey}`
-    : size === "fill"
-    ? `fill|${toolKey}|${getTileFillValue(byCliff, cx, cy)}`
-    : `brush|${size}|${shape}|${cx}|${cy}|${toolKey}`;
+  const key = tilePreviewKey(
+    size,
+    shape,
+    cx,
+    cy,
+    { width, height },
+    toolKey,
+    () => getTileFillValue(byCliff, cx, cy),
+  );
 
-  if (!isCached(key, size === "fill", cx, cy)) {
-    // Clip the previewed cells to the active terrain selection so the brush
-    // overlay matches what the click would actually paint.
-    const cells = clipCellsToSelection(
+  if (!isPreviewCached(cache, key, size === "fill", cx, cy)) {
+    const { cache: nextCache, drawn } = buildTilePreview(
+      key,
       getTileCells(size, shape, cx, cy, byCliff),
-    ) as Cell[];
-    showCells(key, cells, cells, getFillColor(mode, tool));
+      editorTerrainSelectionVar(),
+    );
+    showCells(nextCache, drawn, getFillColor(mode, tool));
   }
   moveCenter(cx, cy);
 };

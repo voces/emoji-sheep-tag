@@ -17,6 +17,7 @@ import {
   type EditorCommand,
   fillTilesCommand,
 } from "./commands.ts";
+import { clipCells } from "./previewCells.ts";
 
 let overlay: SelectionOverlay | undefined;
 let editorScopedSubscriptions: Array<() => void> = [];
@@ -45,17 +46,7 @@ const clampToMap = (
 /** Intersect a cell list with the active selection (if any). */
 export const clipCellsToSelection = (
   cells: ReadonlyArray<readonly [number, number]>,
-): Array<[number, number]> => {
-  const sel = editorTerrainSelectionVar();
-  if (!sel) return cells.map(([x, y]) => [x, y]);
-  const out: Array<[number, number]> = [];
-  for (const [x, y] of cells) {
-    if (x >= sel.minX && x <= sel.maxX && y >= sel.minY && y <= sel.maxY) {
-      out.push([x, y]);
-    }
-  }
-  return out;
-};
+): Array<[number, number]> => clipCells(cells, editorTerrainSelectionVar());
 
 /** Snapshot terrain inside the selection rect into the clipboard. */
 export const copyTerrainSelection = () => {
