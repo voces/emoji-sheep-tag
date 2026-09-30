@@ -1,27 +1,47 @@
+import { App } from "@verit/ecs";
 import { addSystem } from "@/shared/context.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
 import { buffs } from "@/shared/data.ts";
 import { iterateBuffs, testClassification } from "@/shared/api/unit.ts";
 import { lookup } from "./lookup.ts";
-import type { Buff, Entity } from "@/shared/types.ts";
+import type { Entity } from "@/shared/types.ts";
 
-// Track which entities have which aura buffs applied (auraSourceId-auraBuffId -> Set of targetIds)
-const auraApplications = new Map<string, Set<string>>();
+const AURA_LINGER = 2;
 
-// Shared handler for aura updates
-const handleAuraUpdate = (entity: Entity) => {
-  if (!entity.position) return;
+type AuraState = {
+  /** `${sourceId}-${auraBuffId}` -> ids of targets the aura is applied to */
+  applications: Map<string, Set<string>>;
+  processedThisTick: Set<Entity>;
+};
 
-  // Find buffs with aura properties (from direct buffs and item buffs)
-  const auraBuffs = Array.from(iterateBuffs(entity)).filter((buff) =>
-    buff.radius && buff.auraBuff
-  );
+const states = new WeakMap<App<Entity>, AuraState>();
 
-  // Track which targets should have auras from this entity
-  const currentlyInRange = new Map<string, Set<string>>(); // auraBuffId -> Set of targetIds
+const getState = (app: App<Entity>) => {
+  let state = states.get(app);
+  if (!state) {
+    state = { applications: new Map(), processedThisTick: new Set() };
+    states.set(app, state);
+  }
+  return state;
+};
 
-  // For each aura buff, apply it to nearby entities
-  for (const auraBuff of auraBuffs) {
+/** Starts the linger countdown on a target's aura buff, unless it is already counting down */
+const lingerAura = (targetId: string, auraBuffId: string) => {
+  const target = lookup(targetId);
+  if (!target?.buffs) return;
+  const index = target.buffs.findIndex((b) => b.auraBuff === auraBuffId);
+  if (index < 0 || target.buffs[index].remainingDuration !== undefined) return;
+  target.buffs = target.buffs.with(index, {
+    ...target.buffs[index],
+    remainingDuration: AURA_LINGER,
+  });
+};
+
+const updateAuras = (state: AuraState, entity: Entity) => {
+  if (!entity.position || state.processedThisTick.has(entity)) return;
+  state.processedThisTick.add(entity);
+
+  for (const auraBuff of iterateBuffs(entity)) {
     if (!auraBuff.radius || !auraBuff.auraBuff) continue;
 
     const buffDefinition = buffs[auraBuff.auraBuff];
@@ -30,147 +50,80 @@ const handleAuraUpdate = (entity: Entity) => {
     const auraKey = `${entity.id}-${auraBuff.auraBuff}`;
     const targetsInRange = new Set<string>();
 
-    // Get entities in range
     const nearbyEntities = getEntitiesInRange(
       entity.position.x,
       entity.position.y,
       auraBuff.radius,
     );
 
-    // Apply buff to each nearby entity
     for (const target of nearbyEntities) {
-      // Skip self
-      if (target.id === entity.id) continue;
-
-      // Skip if no position
-      if (!target.position) continue;
-
-      // Check if this buff should apply to this target using targetsAllowed from the aura buff
+      if (target.id === entity.id || !target.position) continue;
       if (!auraBuff.targetsAllowed) continue;
-
-      const shouldApply = testClassification(
-        entity,
-        target,
-        auraBuff.targetsAllowed,
-      );
-
-      if (!shouldApply) continue;
+      if (!testClassification(entity, target, auraBuff.targetsAllowed)) {
+        continue;
+      }
 
       targetsInRange.add(target.id);
 
-      // Check if target already has this specific aura buff from this source
-      const existingAuraBuffIndex = target.buffs?.findIndex((b) =>
+      const existingIndex = target.buffs?.findIndex((b) =>
         b.auraBuff === auraBuff.auraBuff
       );
 
-      if (existingAuraBuffIndex !== undefined && existingAuraBuffIndex >= 0) {
-        // Aura is being reapplied - remove any linger duration if it exists
-        const existingAuraBuff = target.buffs![existingAuraBuffIndex];
-        if (existingAuraBuff.remainingDuration !== undefined) {
-          // Replace with a new buff without the duration (only update if duration exists)
-          const { remainingDuration: _removed, ...buffWithoutDuration } =
-            existingAuraBuff;
-          target.buffs = [
-            ...target.buffs!.slice(0, existingAuraBuffIndex),
-            buffWithoutDuration,
-            ...target.buffs!.slice(existingAuraBuffIndex + 1),
-          ];
+      if (existingIndex !== undefined && existingIndex >= 0) {
+        // Back in range: drop the linger countdown, leaving an unchanged buff untouched
+        const existing = target.buffs![existingIndex];
+        if (existing.remainingDuration !== undefined) {
+          const { remainingDuration: _, ...rest } = existing;
+          target.buffs = target.buffs!.with(existingIndex, rest);
         }
-        // If no remainingDuration, buff is already correct - no update needed (referential stability)
       } else {
-        // Add the aura buff to the target (with auraBuff marker for tracking)
-        const existingBuffs = target.buffs ?? [];
-        target.buffs = [...existingBuffs, {
+        target.buffs = [...target.buffs ?? [], {
           ...buffDefinition,
           auraBuff: auraBuff.auraBuff,
         }];
       }
     }
 
-    currentlyInRange.set(auraBuff.auraBuff, targetsInRange);
-
-    // Clean up aura buffs from entities that left range
-    const previousTargets = auraApplications.get(auraKey) ?? new Set();
-    for (const targetId of previousTargets) {
+    for (const targetId of state.applications.get(auraKey) ?? []) {
       if (!targetsInRange.has(targetId)) {
-        // Target left range, add 2-second linger duration
-        const target = lookup(targetId);
-        if (target?.buffs) {
-          const auraBuffIndex = target.buffs.findIndex((b: Buff) =>
-            b.auraBuff === auraBuff.auraBuff
-          );
-
-          if (auraBuffIndex >= 0) {
-            const existingAuraBuff = target.buffs[auraBuffIndex];
-            // Only add duration if it doesn't already have one (to avoid resetting the timer)
-            if (existingAuraBuff.remainingDuration === undefined) {
-              target.buffs = [
-                ...target.buffs.slice(0, auraBuffIndex),
-                { ...existingAuraBuff, remainingDuration: 2 },
-                ...target.buffs.slice(auraBuffIndex + 1),
-              ];
-            }
-          }
-        }
+        lingerAura(targetId, auraBuff.auraBuff);
       }
     }
 
-    // Update tracking
-    auraApplications.set(auraKey, targetsInRange);
+    state.applications.set(auraKey, targetsInRange);
   }
 };
 
-// Shared handler for aura removal
-const handleAuraRemove = (entity: Entity) => {
-  // When an aura source is removed, add linger duration to all its aura buffs
-  const auraBuffs = Array.from(iterateBuffs(entity)).filter((buff) =>
-    buff.radius && buff.auraBuff
-  );
-
-  for (const auraBuff of auraBuffs) {
-    if (!auraBuff.auraBuff) continue;
+const removeAuras = (state: AuraState, entity: Entity) => {
+  for (const auraBuff of iterateBuffs(entity)) {
+    if (!auraBuff.radius || !auraBuff.auraBuff) continue;
 
     const auraKey = `${entity.id}-${auraBuff.auraBuff}`;
-    const targets = auraApplications.get(auraKey);
+    const targets = state.applications.get(auraKey);
+    if (!targets) continue;
 
-    if (targets) {
-      // Add 2-second linger duration to aura buffs on all affected targets
-      for (const targetId of targets) {
-        const target = lookup(targetId);
-        if (target?.buffs) {
-          const auraBuffIndex = target.buffs.findIndex((b: Buff) =>
-            b.auraBuff === auraBuff.auraBuff
-          );
-
-          if (auraBuffIndex >= 0) {
-            const existingAuraBuff = target.buffs[auraBuffIndex];
-            // Only add duration if it doesn't already have one
-            if (existingAuraBuff.remainingDuration === undefined) {
-              target.buffs = [
-                ...target.buffs.slice(0, auraBuffIndex),
-                { ...existingAuraBuff, remainingDuration: 2 },
-                ...target.buffs.slice(auraBuffIndex + 1),
-              ];
-            }
-          }
-        }
-      }
-
-      auraApplications.delete(auraKey);
-    }
+    for (const targetId of targets) lingerAura(targetId, auraBuff.auraBuff);
+    state.applications.delete(auraKey);
   }
 };
 
-// System for entities with buffs
-addSystem((_app) => ({
-  props: ["buffs"] as const,
-  updateEntity: handleAuraUpdate,
-  onRemove: handleAuraRemove,
-}));
+// Entities with both buffs and inventory are in both systems; updateAuras
+// processes each entity once per tick
+addSystem((app) => {
+  const state = getState(app);
+  return {
+    props: ["buffs"] as const,
+    update: () => state.processedThisTick.clear(),
+    updateEntity: (entity) => updateAuras(state, entity),
+    onRemove: (entity) => removeAuras(state, entity),
+  };
+});
 
-// System for entities with inventory (for item aura buffs)
-addSystem((_app) => ({
-  props: ["inventory"] as const,
-  updateEntity: handleAuraUpdate,
-  onRemove: handleAuraRemove,
-}));
+addSystem((app) => {
+  const state = getState(app);
+  return {
+    props: ["inventory"] as const,
+    updateEntity: (entity) => updateAuras(state, entity),
+    onRemove: (entity) => removeAuras(state, entity),
+  };
+});
