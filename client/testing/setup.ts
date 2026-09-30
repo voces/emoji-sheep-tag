@@ -1,3 +1,4 @@
+import "./memoryStorage.ts";
 import "global-jsdom/register";
 import "../i18n/index.ts";
 import { afterEach, beforeEach } from "@std/testing/bdd";
