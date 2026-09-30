@@ -1,21 +1,41 @@
 import z from "zod";
-import { Entity } from "@/shared/types.ts";
+import {
+  Buff,
+  Entity,
+  Item,
+  Order,
+  OrderEffect,
+  UnitDataAction,
+} from "@/shared/types.ts";
+import { Classification, classificationGroups } from "@/shared/data.ts";
 import { zShardInfo } from "@/shared/shard.ts";
 import { zMode, zRound } from "@/shared/round.ts";
+import { zPoint as zMutablePoint } from "@/shared/zod.ts";
 export type { ShardInfo } from "@/shared/shard.ts";
 
-const zPoint = z.object({ x: z.number(), y: z.number() }).readonly();
+/** Strips readonly and flattens intersections so structurally equal types compare equal. */
+type Normalize<T> = T extends ReadonlyArray<infer U> ? Normalize<U>[]
+  : T extends object ? { -readonly [K in keyof T]: Normalize<T[K]> }
+  : T;
+
+type Equals<A, B> = (<X>() => X extends Normalize<A> ? 1 : 2) extends
+  (<X>() => X extends Normalize<B> ? 1 : 2) ? true
+  : false;
+
+const zPoint = zMutablePoint.readonly();
 
 const zOrder = z.union([
   z.object({
     type: z.literal("walk"),
     target: zPoint,
     path: zPoint.array().readonly().optional(),
+    lastRepath: z.number().optional(),
   }),
   z.object({
     type: z.literal("walk"),
     targetId: z.string(),
     path: zPoint.array().readonly().optional(),
+    lastRepath: z.number().optional(),
   }),
   z.object({
     type: z.literal("build"),
@@ -23,6 +43,7 @@ const zOrder = z.union([
     x: z.number(),
     y: z.number(),
     path: zPoint.array().readonly().optional(),
+    lastRepath: z.number().optional(),
   }),
   z.object({
     type: z.literal("upgrade"),
@@ -47,12 +68,14 @@ const zOrder = z.union([
     targetId: z.string().optional(),
     path: zPoint.array().readonly().optional(),
     started: z.boolean().optional(),
+    lastRepath: z.number().optional(),
   }),
   z.object({
     type: z.literal("attackMove"),
     target: zPoint,
     targetId: z.string().optional(),
     path: zPoint.array().readonly().optional(),
+    lastRepath: z.number().optional(),
   }),
 ]).readonly();
 
@@ -64,19 +87,7 @@ const zTilemap = z.object({
   map: z.number().array().readonly(),
 });
 
-const zClassification = z.union([
-  z.literal("unit"),
-  z.literal("structure"),
-  z.literal("tree"),
-  z.literal("ward"),
-  z.literal("ally"),
-  z.literal("enemy"),
-  z.literal("neutral"),
-  z.literal("self"),
-  z.literal("other"),
-  z.literal("spirit"),
-  z.literal("notSpirit"),
-]);
+const zClassification = z.enum(Object.values(classificationGroups).flat());
 
 const zIconEffect = z.union([z.literal("mirror")]);
 
@@ -122,7 +133,6 @@ const zOrderEffect = z.discriminatedUnion("type", [
   }),
 ]);
 
-// Define the base action types first (non-recursive)
 const zBaseAction = z.discriminatedUnion("type", [
   z.object({
     name: z.string(),
@@ -163,6 +173,7 @@ const zBaseAction = z.discriminatedUnion("type", [
     cooldown: z.number().optional(),
     soundOnCastStart: z.string().optional(),
     allowAllies: z.boolean().optional(),
+    prefab: z.string().optional(),
     canExecuteWhileConstructing: z.boolean().optional(),
     range: z.number().optional(),
     targeting: z.array(z.array(zClassification).readonly()).readonly()
@@ -208,29 +219,19 @@ const zBaseAction = z.discriminatedUnion("type", [
   }),
 ]);
 
-// Define the recursive action type using z.lazy with proper typing
-type ActionType = z.infer<typeof zBaseAction> | {
-  name: string;
-  type: "menu";
-  binding?: ReadonlyArray<string>;
-  actions: ReadonlyArray<ActionType>;
-};
+const zMenuAction = z.object({
+  name: z.string(),
+  type: z.literal("menu"),
+  icon: z.string().optional(),
+  actions: z.array(z.lazy(() => zAction)).readonly(),
+  description: z.string().optional(),
+  binding: z.array(z.string()).readonly().optional(),
+  allowAllies: z.boolean().optional(),
+  goldCost: z.number().optional(),
+});
 
-const zAction: z.ZodType<ActionType, ActionType> = z.lazy(() =>
-  z.union([
-    zBaseAction,
-    // TODO: remove?
-    z.object({
-      name: z.string(),
-      type: z.literal("menu"),
-      icon: z.string().optional(),
-      actions: z.array(zAction).readonly(),
-      description: z.string().optional(),
-      binding: z.array(z.string()).readonly().optional(),
-      allowAllies: z.boolean().optional(),
-      goldCost: z.number().optional(),
-    }),
-  ])
+const zAction: z.ZodType<UnitDataAction, UnitDataAction> = z.lazy(() =>
+  z.union([zBaseAction, zMenuAction])
 );
 
 const zBuff = z.object({
@@ -285,6 +286,19 @@ const zBuff = z.object({
   invisible: z.boolean().optional(),
 });
 
+true satisfies Equals<z.output<typeof zOrder>, Order>;
+true satisfies Equals<z.output<typeof zClassification>, Classification>;
+true satisfies Equals<z.output<typeof zOrderEffect>, OrderEffect>;
+true satisfies Equals<z.output<typeof zBuff>, Buff>;
+true satisfies Equals<
+  z.output<typeof zBaseAction>,
+  Exclude<UnitDataAction, { type: "menu" }>
+>;
+true satisfies Equals<
+  z.output<typeof zMenuAction>,
+  Extract<UnitDataAction, { type: "menu" }>
+>;
+
 const zItem = z.object({
   id: z.string(),
   name: z.string(),
@@ -297,6 +311,8 @@ const zItem = z.object({
   actions: z.array(zAction).readonly().optional(),
   buffs: z.array(zBuff).readonly().optional(),
 });
+
+true satisfies Equals<z.output<typeof zItem>, Item>;
 
 export const zUpdate = z.object({
   id: z.string(),
