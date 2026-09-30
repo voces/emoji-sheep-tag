@@ -2,6 +2,7 @@ import { makeVar } from "@/hooks/useVar.tsx";
 import { items } from "@/shared/data.ts";
 import { presetOverrides } from "./presets.ts";
 import { shortcutSettingsVar } from "./shortcutSettings.ts";
+import { deepEqual } from "../util/deepEqual.ts";
 
 export type MenuConfig = {
   id: string;
@@ -195,30 +196,14 @@ shortcutSettingsVar.subscribe(() => {
   menusVar(loadMenusFromStorage());
 });
 
-// Save to localStorage whenever menus change
-let previousMenus = menusVar();
-let previousDeletedMenus = deletedMenusVar();
-
-setInterval(() => {
-  const currentMenus = menusVar();
-  const currentDeletedMenus = deletedMenusVar();
-
-  if (currentMenus !== previousMenus) {
-    previousMenus = currentMenus;
-    const nonDefaultMenus = filterNonDefaultMenus(currentMenus);
-    localStorage.setItem("menus", JSON.stringify(nonDefaultMenus));
-
-    // Update deleted menus tracking
-    const newDeletedMenus = calculateDeletedMenus(currentMenus);
-    if (
-      JSON.stringify(newDeletedMenus) !== JSON.stringify(currentDeletedMenus)
-    ) {
-      deletedMenusVar(newDeletedMenus);
-    }
+menusVar.subscribe((menus) => {
+  localStorage.setItem("menus", JSON.stringify(filterNonDefaultMenus(menus)));
+  const deletedMenus = calculateDeletedMenus(menus);
+  if (!deepEqual(deletedMenus, deletedMenusVar())) {
+    deletedMenusVar(deletedMenus);
   }
+});
 
-  if (currentDeletedMenus !== previousDeletedMenus) {
-    previousDeletedMenus = currentDeletedMenus;
-    localStorage.setItem("deletedMenus", JSON.stringify(currentDeletedMenus));
-  }
-}, 100);
+deletedMenusVar.subscribe((deletedMenus) =>
+  localStorage.setItem("deletedMenus", JSON.stringify(deletedMenus))
+);
