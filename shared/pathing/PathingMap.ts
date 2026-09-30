@@ -165,6 +165,14 @@ export class PathingMap {
     radiusTileOffset: number;
   };
 
+  // Marks the tiles a search has touched, so stale per-tile state from an
+  // earlier search reads as unvisited without clearing the grid.
+  private searchTag = 0;
+
+  private nextSearchTag(): number {
+    return ++this.searchTag;
+  }
+
   // Per-player pathing iteration tracking
   private readonly pathingIterationsPerPlayer = new Map<string, number>();
 
@@ -522,9 +530,7 @@ export class PathingMap {
     // Create our heap
     const distance = (a: Point, b: Point) =>
       (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
-    // This won't desync anything
-    // eslint-disable-next-line no-restricted-syntax
-    const tag = Math.random();
+    const tag = this.nextSearchTag();
     const heap = new BinaryHeap((node: Tile) => node.__np ?? 0);
 
     // Seed our heap
@@ -1093,7 +1099,7 @@ export class PathingMap {
       y: targetPosition.y * this.resolution,
     };
 
-    const endTag = Math.random();
+    const endTag = this.nextSearchTag();
     const endHeap = new BinaryHeap(
       (node: Tile) => node.__endRealPlusEstimatedCost ?? 0,
     );
@@ -1196,9 +1202,7 @@ export class PathingMap {
     const startHeap = new BinaryHeap(
       (node: Tile) => node.__startRealPlusEstimatedCost ?? 0,
     );
-    // This won't desync anything.
-    // eslint-disable-next-line no-restricted-syntax
-    const startTag = Math.random();
+    const startTag = this.nextSearchTag();
     let startBest = startTile;
     startHeap.push(startTile);
     startTile.__startTag = startTag;
