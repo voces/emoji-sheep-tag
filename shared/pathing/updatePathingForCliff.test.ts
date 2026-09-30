@@ -39,7 +39,6 @@ describe("updatePathingForCliff", () => {
     yield;
 
     // Get initial pathing at grid position (20, 20) which corresponds to tile (5, 5)
-    // @ts-ignore - getTile is private
     const tileBefore = pm.getTile(20, 20);
     expect(tileBefore?.originalPathing).toBe(PATHING_NONE);
 
@@ -60,7 +59,6 @@ describe("updatePathingForCliff", () => {
     let foundUpdatedPathing = false;
     for (let gy = 20; gy < 24; gy++) {
       for (let gx = 20; gx < 24; gx++) {
-        // @ts-ignore - getTile is private
         const tile = pm.getTile(gx, gy);
         if (tile && tile.originalPathing !== PATHING_NONE) {
           foundUpdatedPathing = true;
@@ -110,7 +108,6 @@ describe("updatePathingForCliff", () => {
 
     // Check that tiles in a reasonable area were updated
     // The 5x5 tile area (8-12, 8-12) times 4 grid cells per tile = grid area (32-51, 32-51)
-    // @ts-ignore - getTile is private
     const centerTile = pm.getTile(40, 40);
     expect(centerTile).toBeDefined();
 
@@ -118,7 +115,6 @@ describe("updatePathingForCliff", () => {
     let foundBlocked = false;
     for (let gy = 38; gy < 44; gy++) {
       for (let gx = 38; gx < 44; gx++) {
-        // @ts-ignore - getTile is private
         const tile = pm.getTile(gx, gy);
         if (tile && tile.originalPathing > PATHING_NONE) {
           foundBlocked = true;

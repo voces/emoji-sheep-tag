@@ -169,7 +169,7 @@ export class PathingMap {
    * Instead, they're set up lazily via getNeighbors().
    * Returns undefined if coordinates are out of bounds.
    */
-  private getTile(x: number, y: number): Tile | undefined {
+  getTile(x: number, y: number): Tile | undefined {
     // Check bounds first
     if (x < 0 || y < 0 || x >= this.widthMap || y >= this.heightMap) {
       return undefined;
