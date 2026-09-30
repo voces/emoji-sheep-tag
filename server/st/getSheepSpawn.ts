@@ -345,7 +345,10 @@ export const getSheepSpawn = (): [x: number, y: number] => {
 
   const penAreas = getPenAreas();
 
-  if (penAreas.length === 0) return [0, 0];
+  if (penAreas.length === 0) {
+    const { x, y } = getMapCenter();
+    return [x, y];
+  }
 
   const totalArea = penAreas.reduce(
     (sum, area) => sum + area.width * area.height,

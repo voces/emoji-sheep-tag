@@ -6,7 +6,11 @@ import { newEcs } from "../ecs.ts";
 import { type LoadedMap, setMapForApp } from "@/shared/map.ts";
 import { END_TILE, PEN_TILE, START_TILE } from "@/shared/maps/tags.ts";
 import { clearPenAreasCache } from "@/shared/penAreas.ts";
-import { clampToSheepSpawnArea, isInSheepSpawnArea } from "./getSheepSpawn.ts";
+import {
+  clampToSheepSpawnArea,
+  getSheepSpawn,
+  isInSheepSpawnArea,
+} from "./getSheepSpawn.ts";
 
 const buildMap = (tiles: number[][]): LoadedMap => {
   const height = tiles.length;
@@ -51,6 +55,16 @@ afterEach(() => {
   lobbyContext.current = undefined;
   appContext.current = undefined;
   clearPenAreasCache();
+});
+
+it("spawns sheep at the map center when the map has no pen", () => {
+  setupLobby("survival");
+  useMap([
+    [G, G, G, G],
+    [G, G, G, G],
+  ]);
+
+  expect(getSheepSpawn()).toEqual([2, 1]);
 });
 
 describe("isInSheepSpawnArea — bulldog", () => {
