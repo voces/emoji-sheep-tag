@@ -7,7 +7,8 @@ import { CursorVariant, updateCursor } from "../graphics/cursor.ts";
 import { newIndicator } from "../systems/indicators.ts";
 import { playEntitySound, playSound, playSoundAt } from "../api/sound.ts";
 import { pick } from "../util/pick.ts";
-import { MouseButtonEvent } from "../mouse.ts";
+import type { MouseButtonEvent } from "../mouse.ts";
+import { showFeedback } from "@/vars/feedback.ts";
 import { getLocalPlayer } from "../api/player.ts";
 import { isEnemy, testClassification } from "@/shared/api/unit.ts";
 import { Classification } from "@/shared/data.ts";
@@ -59,7 +60,13 @@ export const cancelOrder = (
   }
 };
 
-export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
+/** The parts of a click that target orders act on. */
+export type TargetClick = Pick<
+  MouseButtonEvent,
+  "intersects" | "world" | "queue"
+>;
+
+export const handleSmartTarget = (e: TargetClick): boolean => {
   const target = e.intersects.first();
   const localPlayer = getLocalPlayer();
   if (!localPlayer) return false;
@@ -123,35 +130,32 @@ export const handleSmartTarget = (e: MouseButtonEvent): boolean => {
   // If no orders found and clicking on the only selected unit, retry as ground click
   if (!orders.length && clickingOnlySelectedUnit) {
     return handleSmartTarget({
-      ...e,
+      world: e.world,
+      queue: e.queue,
       intersects: new ExtendedSet(),
-    } as MouseButtonEvent);
+    });
   }
 
   if (!orders.length) return false;
 
-  const groupedOrders = orders.reduce((groups, [unit, action]) => {
-    if (!groups[action.order]) groups[action.order] = [];
-    groups[action.order].push(unit);
-    return groups;
-  }, {} as Record<string, Entity[]>);
+  const groupedOrders = Map.groupBy(orders, ([, action]) => action.order);
 
   let targetTarget = false;
 
-  for (const order in groupedOrders) {
+  for (const [order, group] of groupedOrders) {
     const againstTarget = target && (order !== "move" || target.movementSpeed);
     if (againstTarget) targetTarget = true;
 
     send({
       type: "unitOrder",
-      units: Array.from(groupedOrders[order], (e) => e.id),
+      units: group.map(([unit]) => unit.id),
       order,
       target: againstTarget ? target.id : e.world,
       queue: e.queue,
     });
 
     if (order === "attack") {
-      const u = groupedOrders[order].find((e) => e.sounds?.ackAttack);
+      const u = group.find(([unit]) => unit.sounds?.ackAttack)?.[0];
       if (u) playAckAttackSound(u, target?.id);
     }
   }
@@ -177,7 +181,7 @@ export type TargetOrderResult =
   | { success: true }
   | { success: false; reason: "invalid-target" | "out-of-range" };
 
-export const handleTargetOrder = (e: MouseButtonEvent): TargetOrderResult => {
+export const handleTargetOrder = (e: TargetClick): TargetOrderResult => {
   if (!activeOrder) return { success: false, reason: "invalid-target" };
 
   const orderToExecute = activeOrder.order;
@@ -307,6 +311,12 @@ export const handleTargetOrder = (e: MouseButtonEvent): TargetOrderResult => {
     success: false,
     reason: anyOutOfRange ? "out-of-range" : "invalid-target",
   };
+};
+
+/** Plays the error sound and, given a message, shows it as feedback. */
+export const rejectAction = (message?: string) => {
+  playSound("ui", pick("error1"), { volume: 0.3 });
+  if (message) showFeedback(message);
 };
 
 export const playOrderSound = (x?: number, y?: number, volume = 0.1) => {
