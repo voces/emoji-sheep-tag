@@ -4,13 +4,17 @@ export const setFind: {
     fn: (element: T) => element is U,
   ): U | undefined;
   <T>(set: ReadonlySet<T>, fn: (element: T) => boolean): T | undefined;
-} = <T>(set: ReadonlySet<T>, fn: (element: T) => boolean) =>
-  set.values().find((element) => fn(element));
+} = <T>(set: ReadonlySet<T>, fn: (element: T) => boolean) => {
+  for (const element of set) if (fn(element)) return element;
+};
 
 export const setSome = <T>(
   set: ReadonlySet<T>,
   fn: (element: T) => boolean,
-) => set.values().some((element) => fn(element));
+) => {
+  for (const element of set) if (fn(element)) return true;
+  return false;
+};
 
 export const setFirst = <T>(set: ReadonlySet<T>): T | undefined =>
   set.values().next().value;

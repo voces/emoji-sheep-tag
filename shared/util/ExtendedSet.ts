@@ -29,11 +29,13 @@ export class ExtendedSet<T> extends Set<T> {
 
   /** Returns true if `predicate` returns a truthy value for any element. */
   some(predicate: (value: T) => unknown) {
-    return this.values().some((value) => predicate(value));
+    for (const value of this) if (predicate(value)) return true;
+    return false;
   }
 
   every(predicate: (value: T) => unknown) {
-    return this.values().every((value) => predicate(value));
+    for (const value of this) if (!predicate(value)) return false;
+    return true;
   }
 
   filter<U extends T>(
@@ -57,11 +59,13 @@ export class ExtendedSet<T> extends Set<T> {
   }
 
   map<U>(mapper: (item: T) => U): U[] {
-    return this.values().map((item) => mapper(item)).toArray();
+    const result: U[] = [];
+    for (const item of this) result.push(mapper(item));
+    return result;
   }
 
   find(predicate: (item: T) => boolean) {
-    return this.values().find((item) => predicate(item));
+    for (const item of this) if (predicate(item)) return item;
   }
 
   addEventListener<K extends keyof ExtendedSetEventMap<T>>(
