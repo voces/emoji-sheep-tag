@@ -220,16 +220,19 @@ export const buildCliffDistanceField = (
         const svy = subPos[sy];
         for (let sx = 0; sx < scale; sx++) {
           const svx = subPos[sx];
-          let minDistSq = maxR * maxR;
+          // Chebyshev rather than Euclidean: a Euclidean contour rounds off at
+          // a convex corner, which turns a right-angled cliff into a smooth
+          // pipe. Square contours keep the corners square, as the cliffs are.
+          let minDist = maxR;
           for (let i = 0; i < neighbors.length; i++) {
             const dx = neighbors[i][0], dy = neighbors[i][1];
             const cx = dx > svx ? dx : svx < dx + 1 ? svx : dx + 1;
             const cy = dy > svy ? dy : svy < dy + 1 ? svy : dy + 1;
-            const ddx = svx - cx, ddy = svy - cy;
-            const dSq = ddx * ddx + ddy * ddy;
-            if (dSq < minDistSq) minDistSq = dSq;
+            const ddx = Math.abs(svx - cx), ddy = Math.abs(svy - cy);
+            const d = ddx > ddy ? ddx : ddy;
+            if (d < minDist) minDist = d;
           }
-          dist[(baseY + sy) * w + baseX + sx] = Math.sqrt(minDistSq);
+          dist[(baseY + sy) * w + baseX + sx] = minDist;
         }
       }
     }
