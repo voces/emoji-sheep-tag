@@ -159,17 +159,13 @@ const searchNode = (tile: Tile, side: SearchSide): SearchNode => {
   return node;
 };
 
-/**
- * Opens `tile` as a starting point of `side`. The heap scores the tile as it
- * stood before its node is filled in.
- */
+/** Opens `tile` as a starting point of `side`. */
 const seed = (
   side: SearchSide,
   tile: Tile,
   realCostFromOrigin: number,
   estimatedCostRemaining: number,
 ) => {
-  side.heap.push(tile);
   const node = searchNode(tile, side);
   node.realCostFromOrigin = realCostFromOrigin;
   node.estimatedCostRemaining = estimatedCostRemaining;
@@ -177,6 +173,7 @@ const seed = (
   node.visited = false;
   node.closed = false;
   node.parent = null;
+  side.heap.push(tile);
 };
 
 /** Nearer the other end, or as near for less cost. */

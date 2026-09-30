@@ -238,6 +238,35 @@ describe("PathingMap", () => {
     }
   });
 
+  it("an unpathable target's route does not depend on earlier searches", () => {
+    const newMap = () => {
+      const pathing = Array.from({ length: 12 }, () => Array(12).fill(0));
+      for (let y = 4; y < 8; y++) for (let x = 4; x < 8; x++) pathing[y][x] = 1;
+      const map = new PathingMap({ pathing, resolution: 2 });
+      for (let y = 0; y < 24; y++) {
+        for (let x = 0; x < 24; x++) map.getTile(x, y);
+      }
+      return map;
+    };
+    const target = { x: 6, y: 6 };
+    const walker = () => ({
+      id: "walker",
+      radius: 0.5,
+      pathing: 1,
+      position: { x: 0.5, y: 1.5 },
+    });
+
+    const searched = newMap();
+    searched.path(
+      { id: "earlier", radius: 0.5, pathing: 1, position: { x: 0.5, y: 0.5 } },
+      target,
+    );
+
+    expect(searched.path(walker(), target)).toEqual(
+      newMap().path(walker(), target),
+    );
+  });
+
   it("should handle distance to target corner", () => {
     const sheep = {
       id: "sheep-0",
