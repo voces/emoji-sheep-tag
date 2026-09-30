@@ -20,6 +20,9 @@ const spiritsVar = makeVar<Entity[]>([]);
 const structuresByOwner: Record<string, Set<Entity>> = {};
 const structuresByOwnerVar = makeVar(structuresByOwner);
 
+export const useMainTimerExpiration = () =>
+  useReactiveVar(timersVar, (timers) => timers[0]?.buffs?.[0]?.expiration);
+
 app.addSystem({
   props: ["isTimer", "buffs"],
   onAdd: (e) => timersVar([...timersVar(), e]),
@@ -340,10 +343,7 @@ const Scoreboard = (
 };
 
 export const GameStatusPanel = () => {
-  const expiration = useReactiveVar(
-    timersVar,
-    (timers) => timers[0]?.buffs?.[0]?.expiration,
-  );
+  const expiration = useMainTimerExpiration();
   const lobbySettings = useReactiveVar(lobbySettingsVar);
   const practice = useReactiveVar(practiceVar);
   const players = usePlayers(["sheepTime", "team"]);
