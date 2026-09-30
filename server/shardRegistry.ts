@@ -8,7 +8,7 @@ import type {
 import { zShardToServerMessage } from "@/shared/shard.ts";
 import { undoDraft } from "./st/roundHelpers.ts";
 import { lobbyContext } from "./contexts.ts";
-import { lobbies, type Lobby } from "./lobby.ts";
+import { findLobby, lobbies, type Lobby } from "./lobby.ts";
 import { processRoundEnd, send, sendRoundEndMessages } from "./lobbyApi.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
 import { emitRoundEnded, notifyStatusChange } from "./statusStream.ts";
@@ -195,7 +195,7 @@ export const endShardRound = (
     startLocations?: Record<string, { x: number; y: number; map: string }>;
   },
 ) => {
-  const lobby = Array.from(lobbies).find((l) => l.name === lobbyId);
+  const lobby = findLobby(lobbyId);
   if (!lobby) {
     console.log(
       new Date(),
@@ -245,9 +245,7 @@ export const endShardRound = (
 
       if (lobby.settings.mode !== "switch") {
         for (const playerId of options.round.sheep) {
-          const player = Array.from(lobby.players).find((p) =>
-            p.id === playerId
-          );
+          const player = lobby.players.values().find((p) => p.id === playerId);
           if (player) {
             player.sheepCount = (player.sheepCount ?? 0) + 1;
           }
@@ -276,7 +274,7 @@ export const endShardRound = (
       for (
         const [playerId, position] of Object.entries(options.startLocations)
       ) {
-        const player = Array.from(lobby.players).find((p) => p.id === playerId);
+        const player = lobby.players.values().find((p) => p.id === playerId);
         if (player) {
           player.startLocation = position;
         }
@@ -406,9 +404,7 @@ export const handleShardSocket = (
 
         // Ensure unique name+region combination
         const isNameTaken = (n: string) =>
-          Array.from(shards.values()).some((s) =>
-            s.name === n && s.region === region
-          );
+          shards.values().some((s) => s.name === n && s.region === region);
 
         let uniqueName = name;
         if (isNameTaken(uniqueName)) {
@@ -486,11 +482,9 @@ export const handleShardSocket = (
 
       case "updateStartLocation": {
         if (!shard) return;
-        const lobby = Array.from(lobbies).find((l) =>
-          l.name === message.lobbyId
-        );
+        const lobby = findLobby(message.lobbyId);
         if (!lobby) return;
-        const player = Array.from(lobby.players).find((p) =>
+        const player = lobby.players.values().find((p) =>
           p.id === message.playerId
         );
         if (player) {
@@ -613,7 +607,7 @@ const buildShardInfoList = (
       const existingMachineId = getFlyMachineForRegion(region.code);
       if (existingMachineId) {
         // There's a machine, check if shard is registered
-        const existingShard = Array.from(shards.values()).find(
+        const existingShard = shards.values().find(
           (s) => s.flyMachineId === existingMachineId,
         );
         if (existingShard) {
@@ -719,7 +713,7 @@ export const getShardLabel = (id: string): string | undefined => {
 export const getShardByMachineId = (
   machineId: string,
 ): RegisteredShard | undefined =>
-  Array.from(shards.values()).find((s) => s.flyMachineId === machineId);
+  shards.values().find((s) => s.flyMachineId === machineId);
 
 /** Wait for a shard to register for a given machine ID */
 export const waitForShardByMachineId = (
