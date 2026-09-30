@@ -91,12 +91,16 @@ export const useListenToEntityProps = <
     return transformRef.current ? transformRef.current(picked) : (picked as T);
   };
 
-  const isCached = (value: T) =>
-    !!transformRef.current && !!cachedRef.current &&
-    deepEqual(cachedRef.current.value, value);
+  const findCached = (value: T) => {
+    const cached = cachedRef.current;
+    return transformRef.current && cached && deepEqual(cached.value, value)
+      ? cached
+      : undefined;
+  };
 
   const current = read(entity);
-  if (!isCached(current)) cachedRef.current = { value: current };
+  const cached = findCached(current) ??
+    (cachedRef.current = { value: current });
 
   const key = props.join(" | ");
   useEffect(
@@ -105,7 +109,7 @@ export const useListenToEntityProps = <
 
       const { throttledCallback, cleanup } = throttle((e: Entity) => {
         const next = read(e);
-        if (isCached(next)) return;
+        if (findCached(next)) return;
         cachedRef.current = { value: next };
         rerender();
       });
@@ -120,7 +124,7 @@ export const useListenToEntityProps = <
     [entity, key],
   );
 
-  return cachedRef.current!.value;
+  return cached.value;
 };
 
 export const useListenToEntityProp = <P extends keyof Entity, T = Entity[P]>(
