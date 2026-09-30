@@ -15,7 +15,11 @@ type Canvas = { width: number; height: number };
 /**
  * Holds the state a WebGLRenderer keeps between draws, and records each
  * clear with the colour it cleared to, for tests of passes that borrow the
- * main renderer.
+ * main renderer. Like three, `viewport`, `scissor` and `scissorTest` are the
+ * renderer's own (canvas) values the getters return, while `bound` is what
+ * draws actually use: setViewport, setScissor and setScissorTest apply to
+ * whatever is bound, and setRenderTarget rebinds from the target's own
+ * values, or from the renderer's for the canvas.
  */
 export const fakeRenderer = (
   { width = 800, height = 600, pixelRatio = 1, onDraw = () => {} }: {
@@ -33,6 +37,22 @@ export const fakeRenderer = (
     scissorTest: false,
     clearColor: new Color(0x000000),
     clearAlpha: 1,
+    bound: {
+      viewport: new Vector4(0, 0, width, height),
+      scissor: new Vector4(0, 0, width, height),
+      scissorTest: false,
+    },
+  };
+  const bind = (target: WebGLRenderTarget | null) => {
+    if (target) {
+      state.bound.viewport.copy(target.viewport);
+      state.bound.scissor.copy(target.scissor);
+      state.bound.scissorTest = target.scissorTest;
+    } else {
+      state.bound.viewport.copy(state.viewport).multiplyScalar(pixelRatio);
+      state.bound.scissor.copy(state.scissor).multiplyScalar(pixelRatio);
+      state.bound.scissorTest = state.scissorTest;
+    }
   };
   const clears: { color: number; alpha: number; viewport: Vector4 }[] = [];
   const renderer:
@@ -44,6 +64,7 @@ export const fakeRenderer = (
       getRenderTarget: () => state.target,
       setRenderTarget: (target: WebGLRenderTarget | null) => {
         state.target = target;
+        bind(target);
       },
       getViewport: (target: Vector4) => target.copy(state.viewport),
       setViewport: (
@@ -55,16 +76,18 @@ export const fakeRenderer = (
         typeof x === "number"
           ? state.viewport.set(x, y ?? 0, w ?? 0, h ?? 0)
           : state.viewport.copy(x);
+        state.bound.viewport.copy(state.viewport).multiplyScalar(pixelRatio);
       },
       getScissor: (target: Vector4) => target.copy(state.scissor),
       setScissor: (x: Vector4 | number, y?: number, w?: number, h?: number) => {
         typeof x === "number"
           ? state.scissor.set(x, y ?? 0, w ?? 0, h ?? 0)
           : state.scissor.copy(x);
+        state.bound.scissor.copy(state.scissor).multiplyScalar(pixelRatio);
       },
       getScissorTest: () => state.scissorTest,
       setScissorTest: (enabled: boolean) => {
-        state.scissorTest = enabled;
+        state.scissorTest = state.bound.scissorTest = enabled;
       },
       getClearColor: (target: Color) => target.copy(state.clearColor),
       setClearColor: (color: Color | number, alpha = 1) => {
@@ -76,7 +99,7 @@ export const fakeRenderer = (
         clears.push({
           color: state.clearColor.getHex(),
           alpha: state.clearAlpha,
-          viewport: state.viewport.clone(),
+          viewport: state.bound.viewport.clone(),
         });
       },
       render: (scene: Object3D) => onDraw(scene),

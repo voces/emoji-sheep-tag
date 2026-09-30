@@ -29,6 +29,25 @@ it("puts back every piece of renderer state, even when the pass throws", () => {
   expect(renderer.autoClear).toBe(true);
 });
 
+it("leaves a restored render target drawing with its own viewport and scissor", () => {
+  const { renderer, state } = fakeRenderer();
+  const target = new WebGLRenderTarget(64, 32);
+  target.scissor.set(8, 8, 16, 16);
+  target.scissorTest = true;
+  renderer.setRenderTarget(target);
+
+  withRendererState(renderer, () => {
+    renderer.setRenderTarget(null);
+    renderer.setViewport(1, 2, 3, 4);
+  });
+
+  expect(state.bound).toEqual({
+    viewport: new Vector4(0, 0, 64, 32),
+    scissor: new Vector4(8, 8, 16, 16),
+    scissorTest: true,
+  });
+});
+
 it("draws into the canvas's bottom-left corner and copies that rect out", () => {
   const { renderer, state } = fakeRenderer({
     width: 800,

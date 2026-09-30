@@ -51,13 +51,18 @@ const takeSnapshot = (renderer: StatefulRenderer) => {
   return snapshot;
 };
 
+/**
+ * The viewport, scissor and scissor test apply to whichever target is bound,
+ * so the target goes back last: binding it re-applies its own viewport and
+ * scissor, or the canvas's just restored ones.
+ */
 const restoreSnapshot = (renderer: StatefulRenderer, snapshot: Snapshot) => {
-  renderer.setRenderTarget(snapshot.target);
   renderer.setViewport(snapshot.viewport);
   renderer.setScissor(snapshot.scissor);
   renderer.setScissorTest(snapshot.scissorTest);
   renderer.setClearColor(snapshot.clearColor, snapshot.clearAlpha);
   renderer.autoClear = snapshot.autoClear;
+  renderer.setRenderTarget(snapshot.target);
 };
 
 /**
