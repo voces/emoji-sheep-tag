@@ -20,7 +20,7 @@ export const usePlayers = (
 ): readonly Player[] => {
   const set = playerEntities();
   const version = useSet(set);
-  const players = useMemo(() => set.filterToArray(isRealPlayer), [
+  const players = useMemo(() => Array.from(set).filter(isRealPlayer), [
     set,
     version,
   ]);

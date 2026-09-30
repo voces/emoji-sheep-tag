@@ -2,7 +2,7 @@ import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import { useEffect, useRef, useState } from "react";
 
 /** Rerenders when items are added to or removed from the set; returns a version that changes with each update. */
-export const useSet = (set: ExtendedSet<unknown>) => {
+export const useSet = <T>(set: ExtendedSet<T>) => {
   const [version, next] = useState(0);
   const pendingUpdate = useRef(false);
 
