@@ -2,6 +2,7 @@ import { expect } from "@std/expect";
 import { describe, it } from "@std/testing/bdd";
 import {
   facingToQuadrant,
+  footprintForFacing,
   getRotatedFootprint,
   isRotationOf,
 } from "./rotateFootprint.ts";
@@ -86,5 +87,34 @@ describe("rotateFootprint", () => {
     expect(isRotationOf(r, f)).toBe(true);
     expect(isRotationOf(f, f)).toBe(true);
     expect(isRotationOf({ ...f }, f)).toBe(false);
+  });
+
+  describe("footprintForFacing follows the sprite, which mirrors rather than turning upside down", () => {
+    it("keeps the drawn footprint when unturned or facing back", () => {
+      const f = fp();
+      expect(footprintForFacing(f, undefined)).toBe(f);
+      expect(footprintForFacing(f, Math.PI)).toBe(f);
+    });
+
+    it("mirrors, not rotates, when a flip faces it forward", () => {
+      const r = footprintForFacing(fp(), 0);
+      expect(r.left).toBe(-2);
+      expect(r.top).toBe(0);
+      expect(r.map).toEqual([2, 1]);
+    });
+
+    it("turns a mirrored footprint by the facing on the forward side", () => {
+      const f = fp();
+      const r = footprintForFacing(f, Math.PI / 4 + 0.5);
+      expect(r).toEqual(getRotatedFootprint(footprintForFacing(f, 0), 1));
+      expect(isRotationOf(r, f)).toBe(true);
+    });
+
+    it("turns the drawn footprint by the facing plus a half turn on the back side", () => {
+      const f = fp();
+      expect(footprintForFacing(f, Math.PI / 2)).toBe(
+        getRotatedFootprint(f, 3),
+      );
+    });
   });
 });
