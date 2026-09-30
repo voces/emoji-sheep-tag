@@ -12,7 +12,7 @@ import {
   Point,
 } from "@/shared/pathing/math.ts";
 import { isPathingEntity } from "@/shared/pathing/util.ts";
-import { Buff, Entity, Item, Order, SystemEntity } from "@/shared/types.ts";
+import { Buff, Entity, Item, SystemEntity } from "@/shared/types.ts";
 import { computeUnitSightRadius } from "@/shared/api/unit.ts";
 import {
   calcPath,
@@ -25,6 +25,7 @@ import {
 import { buffs, items, prefabs } from "@/shared/data.ts";
 import { getOrder } from "../orders/index.ts";
 import { addBuff } from "../orders/effects.ts";
+import { queueOrReplaceOrder } from "../orders/queue.ts";
 import { findAction } from "@/shared/util/actionLookup.ts";
 import { BUILD_REFUND_RATE, FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
@@ -170,14 +171,6 @@ export const newUnit = (
   extra?: Partial<Entity>,
 ): Entity => addEntity(tempUnit(owner, type, x, y, extra));
 
-const processOrder = (entity: Entity, order: Order, queue: boolean) => {
-  if (queue) entity.queue = [...entity.queue ?? [], order];
-  else {
-    delete entity.queue;
-    entity.order = order;
-  }
-};
-
 export const orderMove = (
   mover: Entity,
   target: Entity | Point,
@@ -322,7 +315,11 @@ export const orderAttack = (
     // If within attack range..
     if (canSwing(attacker, target)) {
       delete attacker.swing;
-      processOrder(attacker, { type: "attack", targetId: target.id }, queue);
+      queueOrReplaceOrder(
+        attacker,
+        { type: "attack", targetId: target.id },
+        queue,
+      );
       return true;
     }
 
@@ -333,7 +330,11 @@ export const orderAttack = (
     }
 
     delete attacker.swing;
-    processOrder(attacker, { type: "attack", targetId: target.id }, queue);
+    queueOrReplaceOrder(
+      attacker,
+      { type: "attack", targetId: target.id },
+      queue,
+    );
     return true;
   }
 
@@ -349,7 +350,7 @@ export const orderAttack = (
 
     // If this is a ground attack command, attack the ground
     if (isGroundAttack) {
-      processOrder(attacker, { type: "attack", target }, queue);
+      queueOrReplaceOrder(attacker, { type: "attack", target }, queue);
       return true;
     }
 
@@ -375,7 +376,7 @@ export const orderAttack = (
       )[0];
 
     if (validTarget) {
-      processOrder(
+      queueOrReplaceOrder(
         attacker,
         { type: "attack", targetId: validTarget.id },
         queue,
@@ -387,7 +388,7 @@ export const orderAttack = (
     return false;
   }
 
-  processOrder(attacker, { type: "attackMove", target }, queue);
+  queueOrReplaceOrder(attacker, { type: "attackMove", target }, queue);
   return true;
 };
 
@@ -438,7 +439,7 @@ export const orderBuild = (
     )
   ) return false;
 
-  processOrder(builder, { type: "build", x, y, unitType: type }, queue);
+  queueOrReplaceOrder(builder, { type: "build", x, y, unitType: type }, queue);
   return true;
 };
 
@@ -455,7 +456,7 @@ export const orderUpgrade = (
   );
   if (!action) return false;
 
-  processOrder(unit, { type: "upgrade", prefab: prefabId }, queue);
+  queueOrReplaceOrder(unit, { type: "upgrade", prefab: prefabId }, queue);
   return true;
 };
 

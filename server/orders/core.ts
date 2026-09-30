@@ -1,6 +1,7 @@
 import { OrderOverride } from "./types.ts";
 import { handleMove } from "../actions/move.ts";
 import { handleAttack } from "../actions/attack.ts";
+import { queueOrReplaceOrder } from "./queue.ts";
 
 /**
  * Core control verbs. They don't use the cast lifecycle (no precast/cooldown/
@@ -43,12 +44,8 @@ export const stopOrder = {
 
 export const holdOrder = {
   onIssue: (unit, _target, queue) => {
-    if (queue) unit.queue = [...unit.queue ?? [], { type: "hold" }];
-    else {
-      delete unit.queue;
-      if (unit.swing) delete unit.swing;
-      unit.order = { type: "hold" };
-    }
+    if (!queue && unit.swing) delete unit.swing;
+    queueOrReplaceOrder(unit, { type: "hold" }, queue);
     return "ordered";
   },
 } satisfies OrderOverride;

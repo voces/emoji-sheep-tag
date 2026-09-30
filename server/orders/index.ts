@@ -3,6 +3,7 @@ import { Point } from "@/shared/pathing/math.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { OrderDefinition, OrderOverride } from "./types.ts";
 import { applyOrderEffects, resolveOrderTarget } from "./effects.ts";
+import { queueOrReplaceOrder } from "./queue.ts";
 
 import { mirrorImageOrder } from "./mirrorImage.ts";
 import { destroyLastFarmOrder } from "./destroyLastFarm.ts";
@@ -61,12 +62,7 @@ const genericOnIssue = (
       : {}),
   };
 
-  if (queue) unit.queue = [...unit.queue ?? [], order];
-  else {
-    delete unit.queue;
-    unit.order = order;
-  }
-
+  queueOrReplaceOrder(unit, order, queue);
   return "ordered";
 };
 
