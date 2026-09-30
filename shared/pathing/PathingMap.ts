@@ -126,14 +126,8 @@ export class PathingMap {
     return Math.max(MIN_UNIT_BUDGET, PLAYER_PATHING_BUDGET - used);
   }
 
-  getPathingStats(): Map<string, number> {
-    return this.pathingIterationsPerPlayer;
-  }
-
-  resetPathingStats(): Map<string, number> {
-    const stats = new Map(this.pathingIterationsPerPlayer);
+  resetPathingBudgets(): void {
     this.pathingIterationsPerPlayer.clear();
-    return stats;
   }
 
   constructor({
