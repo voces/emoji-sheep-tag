@@ -34,7 +34,12 @@ export const resolveOrderTarget = (unit: Entity): EffectTarget => {
   return unit.order.target;
 };
 
-const addOrReplaceBuff = (
+/** Appends a buff, leaving any existing buff of the same name in place. */
+export const addBuff = (entity: Pick<Entity, "buffs">, buff: Buff) =>
+  entity.buffs = [...(entity.buffs ?? []), buff];
+
+/** Appends a buff, or swaps it in for an existing buff with the same name. */
+export const addOrReplaceBuff = (
   entity: Entity,
   buff: Buff,
   replaceByName?: boolean,
@@ -46,7 +51,7 @@ const addOrReplaceBuff = (
       return;
     }
   }
-  entity.buffs = [...(entity.buffs ?? []), buff];
+  addBuff(entity, buff);
 };
 
 const resolveSpawnPosition = (
@@ -110,14 +115,11 @@ const applyEffect = (
           if (placed.facing !== undefined) spawned.facing = placed.facing;
         }
         if (effect.lifetime) {
-          spawned.buffs = [
-            ...(spawned.buffs ?? []),
-            {
-              remainingDuration: effect.lifetime,
-              totalDuration: effect.lifetime,
-              expiration: effect.prefab,
-            },
-          ];
+          addBuff(spawned, {
+            remainingDuration: effect.lifetime,
+            totalDuration: effect.lifetime,
+            expiration: effect.prefab,
+          });
         }
         if (effect.inheritColor && caster.trueOwner) {
           spawned.trueOwner = caster.trueOwner;

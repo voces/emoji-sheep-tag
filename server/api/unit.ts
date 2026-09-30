@@ -24,6 +24,7 @@ import {
 } from "../systems/pathing.ts";
 import { buffs, items, prefabs } from "@/shared/data.ts";
 import { getOrder } from "../orders/index.ts";
+import { addBuff } from "../orders/effects.ts";
 import { findAction } from "@/shared/util/actionLookup.ts";
 import { BUILD_REFUND_RATE, FOLLOW_DISTANCE } from "@/shared/constants.ts";
 import { getEntitiesInRange } from "@/shared/systems/kd.ts";
@@ -48,10 +49,7 @@ export const translocateUnit = (
 
   // Add cooldown buff to prevent rapid translocations by this gate
   const buffName = gateId ? `Translocated:${gateId}` : "Translocated";
-  target.buffs = [
-    ...(target.buffs ?? []),
-    { name: buffName, remainingDuration: 1, totalDuration: 1 },
-  ];
+  addBuff(target, { name: buffName, remainingDuration: 1, totalDuration: 1 });
 
   playSoundAt(target.position, "poof1");
 
@@ -668,10 +666,7 @@ export const applyAndConsumeBuffs = (
           );
         }
       } else {
-        target.buffs = [
-          ...(target.buffs ?? []),
-          buffToApply,
-        ];
+        addBuff(target, buffToApply);
       }
     }
   }
