@@ -53,18 +53,17 @@ const shaderRefs = new WeakMap<
   Material,
   WebGLProgramParametersWithUniforms[]
 >();
-const shaderReadyCallbacks = new Map<Material, () => void>();
+const shaderReadyCallbacks = new WeakMap<Material, (() => void)[]>();
 
 export const getShaderRefs = (
   material: Material,
 ): WebGLProgramParametersWithUniforms[] => shaderRefs.get(material) ?? [];
 
 export const onShaderReady = (material: Material, callback: () => void) => {
-  if (shaderRefs.has(material)) {
-    callback();
-  } else {
-    shaderReadyCallbacks.set(material, callback);
-  }
+  if (shaderRefs.has(material)) return callback();
+  const callbacks = shaderReadyCallbacks.get(material);
+  if (callbacks) callbacks.push(callback);
+  else shaderReadyCallbacks.set(material, [callback]);
 };
 
 const PROJECT_VERTEX = `
@@ -186,11 +185,9 @@ export const createAnimatedMeshMaterial = (
     // with different shader objects (for different render targets/cameras)
     if (!existing) {
       shaderRefs.set(material, [shader]);
-      const callback = shaderReadyCallbacks.get(material);
-      if (callback) {
-        shaderReadyCallbacks.delete(material);
-        callback();
-      }
+      const callbacks = shaderReadyCallbacks.get(material);
+      shaderReadyCallbacks.delete(material);
+      if (callbacks) { for (const callback of callbacks) callback(); }
     } else if (!existing.includes(shader)) existing.push(shader);
     addAnimationUniforms(shader);
     addWaterRippleUniforms(shader);
