@@ -7,7 +7,6 @@ import {
   offset,
   Point,
 } from "./math.ts";
-import { memoize } from "./memoize.ts";
 import { Tile } from "./Tile.ts";
 import { Footprint, Pathing, PathingEntity, TargetEntity } from "./types.ts";
 import {
@@ -76,9 +75,6 @@ type Cache = {
   _pathable: (
     ...args: Parameters<typeof PathingMap.prototype._pathable>
   ) => ReturnType<typeof PathingMap.prototype._pathable>;
-  pointToTilemap: (
-    ...args: Parameters<typeof PathingMap.prototype.pointToTilemap>
-  ) => ReturnType<typeof PathingMap.prototype.pointToTilemap>;
 };
 
 // Estimated cost remaining
@@ -824,7 +820,6 @@ export class PathingMap {
         pathableCache.set(key, result);
         return result;
       },
-      pointToTilemap: memoize((...args) => this.pointToTilemap(...args)),
     };
 
     this._losCtx = {
@@ -893,7 +888,7 @@ export class PathingMap {
       ? entity.pathing
       : entity.requiresPathing;
     if (pathing === undefined) throw new Error("entity has no pathing");
-    const minimalTilemap = cache.pointToTilemap(
+    const minimalTilemap = this.pointToTilemap(
       entity.radius,
       entity.radius,
       entity.radius,
