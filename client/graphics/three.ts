@@ -414,24 +414,19 @@ const animate = () => {
   ) {
     // A program is built for the target it draws into, so each scene compiles
     // against the one it renders to
-    const gl = renderer, target = renderTarget;
-    const compileWorld = () => {
-      markCompiled(scene);
-      gl.setRenderTarget(target);
-      const world = gl.compileAsync(scene, camera);
-      gl.setRenderTarget(null);
-      return world;
-    };
-    markCompiled(healthbarScene);
-    markCompiled(floatingTextScene);
+    for (const root of [scene, healthbarScene, floatingTextScene]) {
+      markCompiled(root);
+    }
     const programs = renderer.info.programs?.length ?? 0;
-    const first = [
-      compileWorld(),
+    renderer.setRenderTarget(renderTarget);
+    const world = renderer.compileAsync(scene, camera);
+    renderer.setRenderTarget(null);
+    const compiling = Promise.all([
+      world,
       fogPass.compileAsync(renderer, renderTarget),
       renderer.compileAsync(healthbarScene, camera),
       renderer.compileAsync(floatingTextScene, camera),
-    ];
-    const compiling = Promise.all(first).catch(() => {});
+    ]).catch(() => {});
     // New materials whose programs were built before need no waiting for
     if ((renderer.info.programs?.length ?? 0) > programs) {
       programsCompiling = compiling.then(() => {
