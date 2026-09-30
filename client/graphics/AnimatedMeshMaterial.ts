@@ -18,7 +18,6 @@ import {
 import {
   WATER_SHADER_CAUSTICS,
   WATER_SHADER_CONSTANTS,
-  WATER_SHADER_ENTITY_TINT,
   WATER_SHADER_ENTITY_VARYINGS,
   WATER_SHADER_ENTITY_VERTEX,
   WATER_SHADER_MOTION,
@@ -26,6 +25,12 @@ import {
   WATER_SHADER_RIPPLES,
 } from "./waterShader.ts";
 import { waterRippleUniforms } from "./waterRipples.ts";
+import {
+  SPRITE_COLOR_FRAGMENT,
+  SPRITE_MINIMAP_MASK_DECODE,
+  SPRITE_PLAYER_COLOR_BLEND,
+  SPRITE_VERTEX_COLOR_INIT,
+} from "./spriteShaderChunks.ts";
 import {
   PART_DEPTH_GLSL,
   SORTED_PROJECT_VERTEX,
@@ -175,10 +180,7 @@ export const createAnimatedMeshMaterial = (
       void main() {
         float partID = partInfo.x;
         vInstanceAlpha = instanceAlpha;
-        // instanceMinimapMask packs the minimap flag as a +4 offset on top of
-        // submergence (stored as a float in [0, 4), not a quantized 0..1).
-        vInstanceMinimapMask = instanceMinimapMask >= 4.0 ? 1.0 : 0.0;
-        float submergence = instanceMinimapMask - vInstanceMinimapMask * 4.0;
+        ${SPRITE_MINIMAP_MASK_DECODE}
         vPlayerMask = playerMask;
         vPlayerColor = instancePlayerColor;
         vTint = instanceTint;
@@ -232,35 +234,11 @@ export const createAnimatedMeshMaterial = (
     shader.vertexShader = shader.vertexShader.replace(
       /#include <color_vertex>/,
       `
-      #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
-        vColor = vec4( 1.0 );
-      #endif
-      #ifdef USE_COLOR
-        vColor.rgb *= color;
-      #endif
-
+      ${SPRITE_VERTEX_COLOR_INIT}
       if (vPlayerMask < 0.5) {
         vColor.rgb *= vTint;
       }
-
-      if (vPlayerMask > 0.5) {
-        vec3 srgb = mix(
-          vColor.rgb * 12.92,
-          pow(vColor.rgb, vec3(1.0 / 2.4)) * 1.055 - 0.055,
-          step(0.0031308, vColor.rgb)
-        );
-        float lum = (srgb.r + srgb.g + srgb.b) / 3.0;
-        if (lum < 0.5) {
-          vColor.rgb = instancePlayerColor * (lum * 2.0);
-        } else {
-          vColor.rgb = mix(instancePlayerColor, vec3(1.0), (lum - 0.5) * 2.0);
-        }
-      }
-      #ifdef USE_INSTANCING_COLOR
-      else {
-        vColor.rgb *= instanceColor.rgb;
-      }
-      #endif
+      ${SPRITE_PLAYER_COLOR_BLEND}
       `,
     );
 
@@ -290,12 +268,7 @@ export const createAnimatedMeshMaterial = (
 
     shader.fragmentShader = shader.fragmentShader.replace(
       /#include <color_fragment>/,
-      `
-      #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA ) || defined( USE_INSTANCING_COLOR )
-        diffuseColor *= vInstanceMinimapMask > 0.5 ? vec4(vPlayerColor, 1.0) : vColor;
-      #endif
-      ${WATER_SHADER_ENTITY_TINT}
-      `,
+      SPRITE_COLOR_FRAGMENT,
     );
   };
 
