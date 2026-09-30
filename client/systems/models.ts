@@ -211,9 +211,11 @@ type EstmeConfig = {
   options?: Omit<Parameters<typeof loadEstbModel>[2], "zOrder">;
 };
 
-type ModelConfig = SvgConfig | EstmeConfig;
-
 export type ModelCollection = InstancedSvg | AnimatedInstancedMesh;
+
+type PrebuiltConfig = { type: "prebuilt"; collection: ModelCollection };
+
+type ModelConfig = SvgConfig | EstmeConfig | PrebuiltConfig;
 
 const svg = (
   svgText: string,
@@ -227,7 +229,12 @@ const estme = (
   options?: Omit<Parameters<typeof loadEstbModel>[2], "scale" | "zOrder">,
 ): EstmeConfig => ({ type: "estme", data, options: { ...options, scale } });
 
-const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
+const prebuilt = (collection: ModelCollection): PrebuiltConfig => ({
+  type: "prebuilt",
+  collection,
+});
+
+const modelConfigs = {
   // World sprites sort by position: whichever stands further south draws in
   // front. Order here only breaks ties and orders the see-through pass.
   flowers: svg(flowers, 0.25, { layer: 2 }),
@@ -247,7 +254,7 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   crate: svg(crate, 0.6, { layer: 2 }),
   cart: svg(cart, 0.13, { layer: 2, yOffset: 0.2 }),
   wagon: svg(wagon, 0.13, { layer: 2 }),
-  glow,
+  glow: prebuilt(glow),
 
   sentry: svg(sentry, 0.03),
   sheep: estme(sheep.buffer, 0.0005),
@@ -320,46 +327,48 @@ const modelConfigs: Record<string, ModelConfig | ModelCollection> = {
   // Top-layer indicators (render above everything)
   ring: svg(ring, 0.08, { layer: 2, overlay: true }),
   gravity: svg(gravity, 2, { layer: 2, overlay: true }),
-};
+} satisfies Record<string, ModelConfig>;
 
-// Pre-assign render orders based on the order in modelConfigs
-const modelRenderOrders = new Map<string, number>(
+type ModelName = keyof typeof modelConfigs;
+
+const isModelName = (model: PropertyKey): model is ModelName =>
+  Object.hasOwn(modelConfigs, model);
+
+// Render orders follow declaration order in modelConfigs
+const modelRenderOrders = new Map(
   Object.keys(modelConfigs).map((key, index) => [key, index]),
 );
 
-const isLoadedCollection = (v: unknown): v is ModelCollection =>
-  v instanceof InstancedSvg || v instanceof AnimatedInstancedMesh;
-
-const getCollection = (model: string): ModelCollection | undefined => {
-  const config = modelConfigs[model];
-  if (!config) return undefined;
-  if (isLoadedCollection(config)) return config;
-
+const loadCollection = (model: ModelName): ModelCollection => {
+  const config: ModelConfig = modelConfigs[model];
+  if (config.type === "prebuilt") return config.collection;
   const zOrder = modelRenderOrders.get(model)!;
+  return config.type === "estme"
+    ? loadEstbModel(config.data, model, { ...config.options, zOrder })
+    : loadSvg(config.svg, config.scale, config.options, zOrder);
+};
 
-  let collection: ModelCollection;
-  if (config.type === "estme") {
-    collection = loadEstbModel(config.data, model, {
-      ...config.options,
-      zOrder,
-    });
-  } else {
-    collection = loadSvg(config.svg, config.scale, config.options, zOrder);
+const loadedCollections = new Map<ModelName, ModelCollection>();
+
+const getCollection = (model: PropertyKey): ModelCollection | undefined => {
+  if (!isModelName(model)) return;
+  let collection = loadedCollections.get(model);
+  if (!collection) {
+    collection = loadCollection(model);
+    loadedCollections.set(model, collection);
   }
-
-  modelConfigs[model] = collection;
   return collection;
 };
 
 export const getModelScale = (model: string): number | undefined => {
-  const config = modelConfigs[model];
-  if (!config || isLoadedCollection(config) || config.type !== "svg") return;
-  return config.scale;
+  if (!isModelName(model)) return;
+  const config: ModelConfig = modelConfigs[model];
+  return config.type === "svg" ? config.scale : undefined;
 };
 
 export const collections: Record<string, ModelCollection | undefined> =
   new Proxy(
     {} as Record<string, ModelCollection | undefined>,
-    { get: (_target, prop: string) => getCollection(prop) },
+    { get: (_target, prop) => getCollection(prop) },
   );
 Object.assign(globalThis, { collections });

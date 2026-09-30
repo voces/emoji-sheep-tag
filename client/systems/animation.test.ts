@@ -1,7 +1,7 @@
 import "@/client-testing/setup.ts";
 import { describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { computeAnimationParams } from "./animation.ts";
+import { computeAnimationParams, getCurrentAnimation } from "./animation.ts";
 import { Entity } from "../ecs.ts";
 
 // The build branch never reads the collection, but the signature wants one.
@@ -32,5 +32,35 @@ describe("computeAnimationParams - build/upgrade", () => {
 
     expect(speed).toBeGreaterThan(0);
     expect(speed).toBeCloseTo(1 / 2, 5);
+  });
+});
+
+describe("getCurrentAnimation - model lookup", () => {
+  const swing = {
+    remaining: 1,
+    source: { x: 0, y: 0 },
+    target: { x: 1, y: 0 },
+  };
+
+  it("animates an entity by its model, falling back to its prefab", () => {
+    expect(getCurrentAnimation({ id: "m", model: "wolf", swing })).toBe(
+      "attack",
+    );
+    expect(getCurrentAnimation({ id: "p", prefab: "wolf", swing })).toBe(
+      "attack",
+    );
+  });
+
+  it("prefers the model over the prefab", () =>
+    expect(
+      getCurrentAnimation({ id: "t", model: "tree", prefab: "wolf", swing }),
+    ).toBeUndefined());
+
+  it("leaves svg, unknown and missing models unanimated", () => {
+    expect(getCurrentAnimation({ id: "s", model: "tree", swing }))
+      .toBeUndefined();
+    expect(getCurrentAnimation({ id: "u", model: "nope", swing }))
+      .toBeUndefined();
+    expect(getCurrentAnimation({ id: "n", swing })).toBeUndefined();
   });
 });
