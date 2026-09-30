@@ -1,62 +1,49 @@
-import { Buff } from "@/shared/types.ts";
+import { Buff, Entity } from "@/shared/types.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { OrderOverride } from "./types.ts";
 import { appContext } from "@/shared/context.ts";
+import { addBuff } from "./effects.ts";
 
-const findMirror = (unit: { owner?: string }) =>
-  Array.from(appContext.current.entities).find((e) =>
-    e.isMirror && e.owner === unit.owner && e.position
-  );
+const findMirror = (unit: Entity) => {
+  for (const e of appContext.current.entities) {
+    if (e.isMirror && e.owner === unit.owner && e.position) return e;
+  }
+};
+
+const swappingBuff = (remainingDuration: number): Buff => ({
+  name: "Swapping",
+  description: "Preparing to swap positions",
+  remainingDuration,
+  model: "swap",
+});
 
 export const swapOrder = {
   // Swap requires an existing mirror image to swap with (mana is checked generically).
-  canExecute: (unit) => {
-    const mirror = findMirror(unit);
-    return !!(mirror && mirror.position && unit.position);
-  },
+  canExecute: (unit) => !!(unit.position && findMirror(unit)),
 
   onCastStart: (unit) => {
     const action = findActionByOrder(unit, "swap");
-    if (!action || action.type !== "auto") return;
+    if (!action || action.type !== "auto" || !unit.position) return;
 
     const mirror = findMirror(unit);
-    if (!mirror || !mirror.position || !unit.position) return;
+    if (!mirror) return;
 
-    // Add buff to mirror with swap model for visual effect during cast
+    // Both units show the swap model for the duration of the cast
     const buffDuration = action.castDuration ?? 1.5;
-    mirror.buffs = [
-      ...(mirror.buffs ?? []),
-      {
-        name: "Swapping",
-        description: "Preparing to swap positions",
-        remainingDuration: buffDuration,
-        model: "swap",
-      },
-    ];
-
-    unit.buffs = [
-      ...(unit.buffs ?? []),
-      {
-        name: "Swapping",
-        description: "Preparing to swap positions",
-        remainingDuration: buffDuration,
-        model: "swap",
-      },
-    ];
+    addBuff(mirror, swappingBuff(buffDuration));
+    addBuff(unit, swappingBuff(buffDuration));
   },
 
   onCastComplete: (unit) => {
     const action = findActionByOrder(unit, "swap");
-    if (!action || action.type !== "auto") return false;
+    if (!action || action.type !== "auto" || !unit.position) return false;
 
     const mirror = findMirror(unit);
-    if (!mirror || !mirror.position || !unit.position) return false;
+    if (!mirror?.position) return false;
 
     // Remove the swap buff from mirror
     if (mirror.buffs) {
-      mirror.buffs = mirror.buffs.filter((buff: Buff) =>
-        buff.expiration !== "Swap"
-      );
+      mirror.buffs = mirror.buffs.filter((buff) => buff.expiration !== "Swap");
     }
 
     // Store target positions
