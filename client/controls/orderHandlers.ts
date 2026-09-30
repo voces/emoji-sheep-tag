@@ -1,3 +1,4 @@
+import { groupBy } from "../util/groupBy.ts";
 import { send } from "../messaging.ts";
 import { Entity } from "../ecs.ts";
 import { selection } from "../systems/selection.ts";
@@ -138,7 +139,7 @@ export const handleSmartTarget = (e: TargetClick): boolean => {
 
   if (!orders.length) return false;
 
-  const groupedOrders = Map.groupBy(orders, ([, action]) => action.order);
+  const groupedOrders = groupBy(orders, ([, action]) => action.order);
 
   let targetTarget = false;
 

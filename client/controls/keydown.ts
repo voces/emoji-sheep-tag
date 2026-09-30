@@ -1,3 +1,4 @@
+import { groupBy } from "../util/groupBy.ts";
 import { Entity } from "../ecs.ts";
 import { mouse } from "../mouse.ts";
 import { selection } from "../systems/selection.ts";
@@ -50,7 +51,7 @@ const getGroupKey = (entity: Entity): string =>
 
 const cycleSelectionFocus = () => {
   const current = selectionFocusVar();
-  const groups = Map.groupBy(selection, getGroupKey);
+  const groups = groupBy(selection, getGroupKey);
   if (groups.size <= 1) return;
 
   const keys = [...groups.keys()];

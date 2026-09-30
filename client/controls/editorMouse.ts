@@ -1,3 +1,4 @@
+import { groupBy } from "../util/groupBy.ts";
 import { MouseButtonEvent, MouseMoveEvent } from "../mouse.ts";
 import { Entity } from "../ecs.ts";
 import { terrain } from "../graphics/three.ts";
@@ -167,7 +168,7 @@ const buildBatchedChanges = (
   const tileIndex = tileDefs.findIndex((t) => t.color === tool.color);
   if (tileIndex < 0) return null;
   const grid = terrain.masks.groundTile;
-  const groups = Map.groupBy(
+  const groups = groupBy(
     cells.filter(([x, y]) => {
       const oldTile = grid[y]?.[x];
       return oldTile !== undefined && oldTile !== tileIndex;
