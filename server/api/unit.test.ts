@@ -1,6 +1,12 @@
 import { afterEach, describe } from "@std/testing/bdd";
 import { expect } from "@std/expect";
-import { addItem, damageEntity, newUnit } from "./unit.ts";
+import {
+  acquireTarget,
+  addItem,
+  damageEntity,
+  newUnit,
+  prioritizeTarget,
+} from "./unit.ts";
 import { Entity } from "@/shared/types.ts";
 import { items } from "@/shared/data.ts";
 import { cleanupTest, it } from "@/server-testing/setup.ts";
@@ -276,5 +282,43 @@ describe("damageEntity", () => {
     damageEntity(attacker, target, undefined, false);
 
     expect(target.health).toBe(19); // 20 - 1
+  });
+});
+
+describe("acquireTarget", () => {
+  it("prefers the nearest enemy of equal priority", {
+    wolves: ["wolf-player"],
+    sheep: ["sheep-player"],
+  }, function* () {
+    const wolf = newUnit("wolf-player", "wolf", 25, 20);
+    const near = newUnit("sheep-player", "sheep", 26.5, 20);
+    newUnit("sheep-player", "sheep", 28, 20);
+    yield;
+
+    expect(acquireTarget(wolf)).toBe(near);
+  });
+
+  it("passes over enemies busy attacking or biting their own allies", {
+    wolves: ["wolf-player"],
+    sheep: ["sheep-player"],
+  }, function* () {
+    const wolf = newUnit("wolf-player", "wolf", 25, 20);
+    const ally = newUnit("sheep-player", "hut", 25, 25);
+    const attacking = newUnit("sheep-player", "sheep", 26.5, 20);
+    const biting = newUnit("sheep-player", "sheep", 27, 20);
+    const idle = newUnit("sheep-player", "sheep", 28, 20);
+    yield;
+
+    attacking.order = { type: "attack", targetId: ally.id };
+    biting.order = {
+      type: "cast",
+      orderId: "bite",
+      remaining: 1,
+      targetId: ally.id,
+    };
+
+    expect(prioritizeTarget(attacking)).toBe(prioritizeTarget(idle) - 10);
+    expect(prioritizeTarget(biting)).toBe(prioritizeTarget(idle) - 10);
+    expect(acquireTarget(wolf)).toBe(idle);
   });
 });

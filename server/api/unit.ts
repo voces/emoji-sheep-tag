@@ -246,13 +246,13 @@ export const prioritizeTarget = (target: Entity): number => {
 
   // Currently biting or attacking an ally: -10
   const order = target.order;
-  if (order?.type === "cast" && order.orderId === "bite" && order.targetId) {
-    const orderTarget = lookup(order.targetId);
-    if (orderTarget && isAlly(target, orderTarget)) priority -= 10;
-  } else if (order?.type === "attack" && "targetId" in order) {
-    const orderTarget = lookup(order.targetId);
-    if (orderTarget && isAlly(target, orderTarget)) priority -= 10;
-  }
+  const orderTargetId = order?.type === "cast" && order.orderId === "bite"
+    ? order.targetId
+    : order?.type === "attack" && "targetId" in order
+    ? order.targetId
+    : undefined;
+  const orderTarget = orderTargetId ? lookup(orderTargetId) : undefined;
+  if (orderTarget && isAlly(target, orderTarget)) priority -= 10;
 
   return priority;
 };
@@ -273,13 +273,14 @@ export const acquireTarget = (e: Entity) => {
       testClassification(e, e2, e.attack?.targetsAllowed)
     )
     .map((e2) =>
-      [e2, distanceBetweenPoints(attacker.position, e2.position)] as const
+      [
+        e2,
+        distanceBetweenPoints(attacker.position, e2.position),
+        prioritizeTarget(e2),
+      ] as const
     )
-    .sort((a, b) => {
-      const priorityDiff = prioritizeTarget(b[0]) - prioritizeTarget(a[0]);
-      if (priorityDiff !== 0) return priorityDiff;
-      return a[1] - b[1];
-    }).find(([e2]) =>
+    .sort((a, b) => b[2] - a[2] || a[1] - b[1])
+    .find(([e2]) =>
       // canSee checks LOS and invisibility (requires ally with trueVision to see invisible)
       canSee(e, e2) && isReachableTarget(e, e2)
     )?.[0];
