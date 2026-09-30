@@ -2,40 +2,18 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { styled } from "styled-components";
 import { AlertTriangle, X } from "lucide-react";
-import { renderer } from "../../graphics/three.ts";
-import { isSoftwareRenderer } from "../../util/gpu.ts";
+import { type GpuInfo, gpuInfo as readGpuInfo } from "../../util/gpu.ts";
 
 const DISMISSED_KEY = "emoji-sheep-tag-gpu-warning-dismissed";
 
-type GPUInfo = {
-  renderer: string;
-  vendor: string;
-  isSoftwareRenderer: boolean;
-};
-
-const useGPUDetection = (): GPUInfo | null => {
-  const [gpuInfo, setGpuInfo] = useState<GPUInfo | null>(null);
+const useGPUDetection = (): GpuInfo | null => {
+  const [gpuInfo, setGpuInfo] = useState<GpuInfo | null>(null);
 
   useEffect(() => {
-    if (!renderer) return;
-
-    const gl = renderer.getContext();
-    const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-
-    if (debugInfo) {
-      const rendererInfo = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-      const vendorInfo = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-
-      const softwareRenderer = isSoftwareRenderer();
-
-      setGpuInfo({
-        renderer: rendererInfo,
-        vendor: vendorInfo,
-        isSoftwareRenderer: softwareRenderer,
-      });
-
-      if (softwareRenderer) console.warn("Software rendering detected!");
-    }
+    const info = readGpuInfo();
+    if (!info) return;
+    setGpuInfo(info);
+    if (info.software) console.warn("Software rendering detected!");
   }, []);
 
   return gpuInfo;
@@ -123,7 +101,7 @@ export const PerformanceWarning = () => {
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    if (gpuInfo && !gpuInfo.isSoftwareRenderer) {
+    if (gpuInfo && !gpuInfo.software) {
       localStorage.removeItem(DISMISSED_KEY);
       return;
     }
@@ -137,7 +115,7 @@ export const PerformanceWarning = () => {
     setIsDismissed(true);
   };
 
-  if (!gpuInfo?.isSoftwareRenderer || isDismissed) return null;
+  if (!gpuInfo?.software || isDismissed) return null;
 
   return (
     <Banner>
