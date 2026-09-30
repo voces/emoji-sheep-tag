@@ -59,6 +59,12 @@ export class BinaryHeap<T> extends Array<T> {
     return this.indexMap.get(element) ?? -1;
   }
 
+  /** Restores heap order after `element`'s score has been lowered. */
+  decrease(element: T): void {
+    const index = this.indexMap.get(element);
+    if (index !== undefined) this.bubbleUp(index);
+  }
+
   bubbleUp(index: number): void {
     const element = this[index];
     const score = this.scoreFunc(element);

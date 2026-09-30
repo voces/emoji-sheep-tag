@@ -130,6 +130,143 @@ describe("PathingMap", () => {
     expect(() => solver.updateEntity(entity)).not.toThrow();
   });
 
+  it("updateEntity frees tiles left behind and blocks tiles moved onto", () => {
+    const solver = new PathingMap({
+      pathing: Array.from({ length: 4 }, () => [0, 0, 0, 0]),
+      resolution: 2,
+    });
+    const entity = {
+      id: "mover",
+      radius: 0.5,
+      position: { x: 1, y: 1 },
+      pathing: 1,
+    };
+    solver.addEntity(entity);
+    const before = new Set(solver.getEntityTiles(entity));
+
+    entity.position = { x: 1.5, y: 1 };
+    solver.updateEntity(entity);
+    const after = new Set(solver.getEntityTiles(entity));
+
+    const left = [...before].filter((t) => !after.has(t));
+    const entered = [...after].filter((t) => !before.has(t));
+    const kept = [...after].filter((t) => before.has(t));
+    expect(left.length).toBeGreaterThan(0);
+    expect(entered.length).toBeGreaterThan(0);
+    expect(kept.length).toBeGreaterThan(0);
+    for (const tile of left) {
+      expect(tile.entities.has(entity)).toBe(false);
+      expect(tile.pathing).toBe(0);
+    }
+    for (const tile of [...entered, ...kept]) {
+      expect(tile.entities.get(entity)).toBe(1);
+      expect(tile.pathing).toBe(1);
+    }
+  });
+
+  it("path restores the entity and lifted movers when the search throws", () => {
+    const solver = new PathingMap({
+      pathing: Array.from({ length: 8 }, () => Array(8).fill(0)),
+    });
+    const walker = { id: "walker", radius: 0.5, position: { x: 2.5, y: 2.5 } };
+    const mover = {
+      id: "mover",
+      radius: 0.5,
+      pathing: 1,
+      position: { x: 6.5, y: 6.5 },
+      order: {
+        type: "walk" as const,
+        target: { x: 7, y: 1 },
+        path: [{ x: 7, y: 1 }],
+      },
+    };
+    solver.addEntity(walker);
+    solver.addEntity(mover);
+
+    expect(() => solver.path(walker, { x: 5.5, y: 5.5 })).toThrow(
+      "entity has no pathing",
+    );
+
+    expect(solver.getEntityTiles(walker)).toBeDefined();
+    expect(solver.getEntityTiles(mover)).toBeDefined();
+    expect(solver.getExistingTile(6, 6)?.pathing).toBe(1);
+  });
+
+  it("path restores the entity and lifted movers when keepMoving throws", () => {
+    const solver = new PathingMap({
+      pathing: Array.from({ length: 8 }, () => Array(8).fill(0)),
+    });
+    const walker = {
+      id: "walker",
+      radius: 0.5,
+      pathing: 1,
+      position: { x: 2.5, y: 2.5 },
+    };
+    const mover = (id: string, x: number) => ({
+      id,
+      radius: 0.5,
+      pathing: 1,
+      position: { x, y: 6.5 },
+      order: {
+        type: "walk" as const,
+        target: { x: 7, y: 1 },
+        path: [{ x: 7, y: 1 }],
+      },
+    });
+    const movers = [mover("a", 0.5), mover("b", 3.5), mover("c", 6.5)];
+    solver.addEntity(walker);
+    for (const m of movers) solver.addEntity(m);
+
+    let calls = 0;
+    expect(() =>
+      solver.path(walker, { x: 5.5, y: 5.5 }, {
+        keepMoving: () => {
+          if (++calls === 2) throw new Error("keepMoving failed");
+          return false;
+        },
+      })
+    ).toThrow("keepMoving failed");
+
+    for (const entity of [walker, ...movers]) {
+      expect(solver.getEntityTiles(entity)).toBeDefined();
+      expect(
+        solver.getExistingTile(
+          Math.floor(entity.position.x),
+          Math.floor(entity.position.y),
+        )?.pathing,
+      ).toBe(1);
+    }
+  });
+
+  it("an unpathable target's route does not depend on earlier searches", () => {
+    const newMap = () => {
+      const pathing = Array.from({ length: 12 }, () => Array(12).fill(0));
+      for (let y = 4; y < 8; y++) for (let x = 4; x < 8; x++) pathing[y][x] = 1;
+      const map = new PathingMap({ pathing, resolution: 2 });
+      for (let y = 0; y < 24; y++) {
+        for (let x = 0; x < 24; x++) map.getTile(x, y);
+      }
+      return map;
+    };
+    const target = { x: 6, y: 6 };
+    const walker = () => ({
+      id: "walker",
+      radius: 0.5,
+      pathing: 1,
+      position: { x: 0.5, y: 1.5 },
+    });
+
+    const searched = newMap();
+    searched.path(
+      { id: "earlier", radius: 0.5, pathing: 1, position: { x: 0.5, y: 0.5 } },
+      target,
+    );
+
+    expect(searched.path(walker(), target)).toEqual(
+      newMap().path(walker(), target),
+    );
+  });
+
   it("should handle distance to target corner", () => {
     const sheep = {
       id: "sheep-0",

@@ -59,7 +59,6 @@ const applyPatchedPathing = (
       const gridY = pathingY * tilesPerPathingCell;
       for (let gy = gridY; gy < gridY + tilesPerPathingCell; gy++) {
         for (let gx = gridX; gx < gridX + tilesPerPathingCell; gx++) {
-          // @ts-ignore - getTile is private but we need direct access
           const tile = pathingMap.getTile(gx, gy);
           if (tile) {
             tile.originalPathing = pathing;

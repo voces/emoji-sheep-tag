@@ -373,7 +373,7 @@ addSystem((app) => {
       if (e.pathing) updatePathing(e);
     },
     onRemove: (e) => pathingMap.removeEntity(e as PathingEntity),
-    update: () => pathingMap.resetPathingStats(),
+    update: () => pathingMap.resetPathingBudgets(),
   };
 });
 

@@ -1,6 +1,18 @@
 import { Entity } from "../types.ts";
 import { Pathing, PathingEntity } from "./types.ts";
 
+/** A tile's state within one direction of PathingMap#path's search. */
+export type SearchNode = {
+  /** The search this state belongs to; any other tag means stale state. */
+  tag: number;
+  realCostFromOrigin: number;
+  estimatedCostRemaining: number;
+  realPlusEstimatedCost: number;
+  visited: boolean;
+  closed: boolean;
+  parent: Tile | null;
+};
+
 export class Tile {
   x: number;
   y: number;
@@ -15,21 +27,9 @@ export class Tile {
   __np?: number;
   __npTag?: number;
 
-  // path
-  __startRealPlusEstimatedCost?: number;
-  __startTag?: number;
-  __startRealCostFromOrigin?: number;
-  __startEstimatedCostRemaining?: number;
-  __startVisited?: boolean;
-  __startClosed?: boolean;
-  __startParent?: Tile | null;
-  __endRealPlusEstimatedCost?: number;
-  __endTag?: number;
-  __endRealCostFromOrigin?: number;
-  __endEstimatedCostRemaining?: number;
-  __endVisited?: boolean;
-  __endClosed?: boolean;
-  __endParent?: Tile | null;
+  // path: one node per search direction, reused across searches
+  __start?: SearchNode;
+  __end?: SearchNode;
 
   /** Maps an entity to their pathing on this tile */
   entities: Map<PathingEntity, Pathing> = new Map();
