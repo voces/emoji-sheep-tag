@@ -3,6 +3,7 @@ import { Point } from "@/shared/pathing/math.ts";
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { OrderDefinition, OrderOverride } from "./types.ts";
 import { applyOrderEffects, resolveOrderTarget } from "./effects.ts";
+import { queueOrReplaceOrder } from "./queue.ts";
 
 import { mirrorImageOrder } from "./mirrorImage.ts";
 import { destroyLastFarmOrder } from "./destroyLastFarm.ts";
@@ -12,8 +13,7 @@ import { locateSheepOrder } from "./locateSheep.ts";
 import { cancelUpgradeOrder } from "./cancelUpgrade.ts";
 import { swapOrder } from "./swap.ts";
 import { dodgeOrder } from "./dodge.ts";
-import { giveToEnemyOrder } from "./giveToEnemy.ts";
-import { reclaimFromEnemyOrder } from "./reclaimFromEnemy.ts";
+import { giveToEnemyOrder, reclaimFromEnemyOrder } from "./practiceEnemy.ts";
 import { hayTrapOrder } from "./hayTrap.ts";
 import { beamOrder } from "./beam.ts";
 import { translocateOrder } from "./translocate.ts";
@@ -62,12 +62,7 @@ const genericOnIssue = (
       : {}),
   };
 
-  if (queue) unit.queue = [...unit.queue ?? [], order];
-  else {
-    delete unit.queue;
-    unit.order = order;
-  }
-
+  queueOrReplaceOrder(unit, order, queue);
   return "ordered";
 };
 

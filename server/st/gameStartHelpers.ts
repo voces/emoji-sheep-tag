@@ -5,6 +5,7 @@ import type { LoadedMap } from "@/shared/map.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { generateDoodads, getMapCenter } from "@/shared/map.ts";
 import { newUnit } from "../api/unit.ts";
+import { addBuff } from "../orders/effects.ts";
 import { playSoundAt } from "../api/sound.ts";
 import {
   getSheepSpawn,
@@ -336,10 +337,7 @@ const setupVipMode = <T extends PlayerLike>(
     ? sheepPool.find((s) => s.owner === sheepCaptainId) ??
       sheepPool[Math.floor(Math.random() * sheepPool.length)]
     : sheepPool[Math.floor(Math.random() * sheepPool.length)];
-  vip.buffs = [...(vip.buffs ?? []), {
-    model: "vip",
-    modelOffset: { y: 0.5 },
-  }];
+  addBuff(vip, { model: "vip", modelOffset: { y: 0.5 } });
   round.vip = vip.owner;
   send({ type: "vip", playerId: vip.owner! });
 

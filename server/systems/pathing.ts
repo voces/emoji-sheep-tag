@@ -34,6 +34,47 @@ export const withPathingMap = <T>(fn: (pathingMap: PathingMap) => T) =>
 const solidWhileMoving = (entity: Entity, target?: Entity) => (other: Entity) =>
   other !== target && !isAlly(entity, other);
 
+const hasPosition = (entity: Entity | undefined): entity is TargetEntity =>
+  !!entity?.position;
+
+/**
+ * Where a path should head and how close it must get. A chased entity is led
+ * (by default) so the path ends within attack range of where it is heading.
+ */
+const resolvePathGoal = (
+  entity: Entity,
+  target: string | { x: number; y: number },
+  distanceFromTarget: number | undefined,
+  lead = true,
+) => {
+  // Extract only {x, y} from target to avoid passing extra properties
+  // (e.g., order objects have type, unitType, path etc. that shouldn't be in the path)
+  if (typeof target !== "string") {
+    return {
+      goal: { x: target.x, y: target.y },
+      distanceFromTarget,
+      keepMoving: solidWhileMoving(entity),
+    };
+  }
+
+  const targetEntity = lookup(target);
+  if (!hasPosition(targetEntity)) return;
+
+  return {
+    goal: targetEntity,
+    distanceFromTarget: lead
+      ? Math.max(
+        0,
+        (distanceFromTarget ?? entity.attack?.range ?? 0) -
+          (targetEntity.order?.type === "walk"
+            ? (targetEntity.movementSpeed ?? 0) * 0.2
+            : 0),
+      )
+      : distanceFromTarget,
+    keepMoving: solidWhileMoving(entity, targetEntity),
+  };
+};
+
 export const calcPath = (
   entity: Entity,
   target: string | { x: number; y: number },
@@ -46,61 +87,26 @@ export const calcPath = (
   if (!isPathingEntity(entity)) return [];
   if (!pathingMap().pathable(entity)) return [];
   if (typeof entity.movementSpeed !== "number") return [];
-  if (typeof target === "string") {
-    const targetEntity = lookup(target);
-    if (!targetEntity?.position) return [];
 
-    // Default lead to true for entity targets
-    const shouldLead = lead ?? true;
+  const resolved = resolvePathGoal(entity, target, distanceFromTarget, lead);
+  if (!resolved) return [];
 
-    try {
-      const path = pathingMap().path(
-        entity,
-        targetEntity as TargetEntity,
-        {
-          distanceFromTarget: shouldLead
-            ? Math.max(
-              0,
-              (distanceFromTarget ?? entity.attack?.range ?? 0) -
-                (targetEntity.order?.type === "walk"
-                  ? (targetEntity.movementSpeed ?? 0) * 0.2
-                  : 0),
-            )
-            : distanceFromTarget,
-          removeMovingEntities,
-          keepMoving: solidWhileMoving(entity, targetEntity),
-        },
-      ).slice(1);
-
-      if (
-        path.at(-1)?.x === entity.position.x &&
-        path.at(-1)?.y === entity.position.y
-      ) path.pop();
-
-      return path;
-    } catch {
-      return [];
-    }
-  }
-
-  // Extract only {x, y} from target to avoid passing extra properties
-  // (e.g., order objects have type, unitType, path etc. that shouldn't be in the path)
-  const path = pathingMap().path(
-    entity,
-    { x: target.x, y: target.y },
-    {
-      distanceFromTarget,
+  try {
+    const path = pathingMap().path(entity, resolved.goal, {
+      distanceFromTarget: resolved.distanceFromTarget,
       removeMovingEntities,
-      keepMoving: solidWhileMoving(entity),
-    },
-  ).slice(1);
+      keepMoving: resolved.keepMoving,
+    }).slice(1);
 
-  if (
-    path.at(-1)?.x === entity.position.x &&
-    path.at(-1)?.y === entity.position.y
-  ) path.pop();
+    if (
+      path.at(-1)?.x === entity.position.x &&
+      path.at(-1)?.y === entity.position.y
+    ) path.pop();
 
-  return path;
+    return path;
+  } catch {
+    return [];
+  }
 };
 
 export const pathable = (

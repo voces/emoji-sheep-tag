@@ -1,6 +1,7 @@
 import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { OrderOverride } from "./types.ts";
 import { newUnit } from "../api/unit.ts";
+import { addBuff } from "./effects.ts";
 import {
   DEFAULT_FACING,
   PATHING_NONE,
@@ -18,12 +19,12 @@ export const dodgeOrder = {
     }
 
     // Add dodge buff
-    unit.buffs = [...(unit.buffs || []), {
+    addBuff(unit, {
       name: "Dodge",
       description: "Prevents frost effects",
       remainingDuration: action.buffDuration,
       preventsBuffs: ["frostEffect"],
-    }];
+    });
 
     if (!unit.owner || !unit.prefab || !unit.position) return;
 
