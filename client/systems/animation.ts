@@ -19,6 +19,15 @@ const blendingCollections = new Set<AnimatedInstancedMesh>();
 const mirrorCastOverride = new Set<Entity>();
 const MIRROR_CAST_EXTENSION_MS = 100;
 
+const animatedCollectionOf = (
+  e: Entity,
+): AnimatedInstancedMesh | undefined => {
+  const model = e.model ?? e.prefab;
+  if (!model) return;
+  const collection = collections[model];
+  return collection instanceof AnimatedInstancedMesh ? collection : undefined;
+};
+
 // Track collections that have had their shader ready callback set up
 const shaderReadySetup = new WeakSet<AnimatedInstancedMesh>();
 
@@ -30,21 +39,16 @@ const setupShaderReadyCallback = (collection: AnimatedInstancedMesh) => {
     // Clear cached animation state for all entities using this collection
     // so animations get re-applied with the now-ready shader
     for (const e of appContext.current.entities) {
-      const model = e.model ?? e.prefab;
-      if (model && collections[model] === collection) {
-        entityAnimationState.delete(e);
-        updateAnimationState(e);
-      }
+      if (animatedCollectionOf(e) !== collection) continue;
+      entityAnimationState.delete(e);
+      updateAnimationState(e);
     }
   };
 };
 
 export const getCurrentAnimation = (e: Entity): string | undefined => {
-  const model = e.model ?? e.prefab;
-  if (!model) return;
-
-  const collection = collections[model];
-  if (!(collection instanceof AnimatedInstancedMesh)) return;
+  const collection = animatedCollectionOf(e);
+  if (!collection) return;
 
   if (
     e.order && "path" in e.order && e.order.path?.length &&
@@ -113,30 +117,34 @@ const variantCache = new WeakMap<
   Map<string, string[]>
 >();
 
+type Cache<K, V> = {
+  get: (key: K) => V | undefined;
+  set: (key: K, value: V) => unknown;
+};
+
+const memo = <K, V>(cache: Cache<K, V>, key: K, compute: () => V): V => {
+  const cached = cache.get(key);
+  if (cached !== undefined) return cached;
+  const value = compute();
+  cache.set(key, value);
+  return value;
+};
+
 const getVariants = (
   collection: AnimatedInstancedMesh,
   base: string,
 ): string[] => {
-  let cache = variantCache.get(collection);
-  if (!cache) {
-    cache = new Map();
-    variantCache.set(collection, cache);
-  }
-  let variants = cache.get(base);
-  if (variants) return variants;
-
-  variants = [];
-  if (!collection.animationData) return variants;
-  for (const name of collection.animationData.clips.keys()) {
-    if (
-      name !== base && name.startsWith(base) &&
-      /^\d+$/.test(name.slice(base.length))
-    ) {
-      variants.push(name);
-    }
-  }
-  cache.set(base, variants);
-  return variants;
+  const clips = collection.animationData?.clips;
+  if (!clips) return [];
+  return memo(
+    memo(variantCache, collection, () => new Map<string, string[]>()),
+    base,
+    () =>
+      [...clips.keys()].filter((name) =>
+        name !== base && name.startsWith(base) &&
+        /^\d+$/.test(name.slice(base.length))
+      ),
+  );
 };
 
 /** Returns the resolved animation name (including variants) for an entity. */
@@ -171,11 +179,8 @@ const applyAnimation = (
 };
 
 export const updateAnimationState = (e: Entity) => {
-  const model = e.model ?? e.prefab;
-  if (!model) return;
-
-  const collection = collections[model];
-  if (!(collection instanceof AnimatedInstancedMesh)) return;
+  const collection = animatedCollectionOf(e);
+  if (!collection) return;
 
   setupShaderReadyCallback(collection);
 
@@ -255,10 +260,8 @@ addSystem({
         entityVariants.delete(e);
         continue;
       }
-      const model = e.model ?? e.prefab;
-      if (!model) continue;
-      const collection = collections[model];
-      if (!(collection instanceof AnimatedInstancedMesh)) continue;
+      const collection = animatedCollectionOf(e);
+      if (!collection) continue;
       const variants = getVariants(collection, v.base);
       const isVariant = v.resolved !== v.base;
       const next = isVariant || Math.random() > VARIANT_CHANCE
