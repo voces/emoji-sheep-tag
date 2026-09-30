@@ -1,4 +1,4 @@
-import { lobbies, type Lobby } from "./lobby.ts";
+import { findLobby, type Lobby } from "./lobby.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
 import type { Mode } from "@/shared/round.ts";
 import { getShardLabel } from "./shardRegistry.ts";
@@ -64,7 +64,7 @@ export const buildLobbyMetaTags = (
     ], fullUrl);
   }
 
-  const lobby = Array.from(lobbies).find((l) => l.name === lobbyName);
+  const lobby = findLobby(lobbyName);
   if (!lobby) {
     const title = `${lobbyName} — ${SITE_NAME}`;
     const desc =

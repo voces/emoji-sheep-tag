@@ -103,6 +103,9 @@ export const lobbies = new Set<Lobby>();
 
 Object.assign(globalThis, { lobbies });
 
+export const findLobby = (name: string) =>
+  lobbies.values().find((l) => l.name === name);
+
 export const deleteLobby = (lobby: Lobby) => {
   lobbies.delete(lobby);
   lobby.round?.clearInterval();

@@ -25,13 +25,8 @@ import { emitRoundEnded, notifyStatusChange } from "./statusStream.ts";
 import type { Round as SharedRound } from "@/shared/shard.ts";
 
 export const convertPendingPlayersToTeams = (lobby: Lobby) => {
-  const pendingPlayers = Array.from(lobby.players).filter((p) =>
-    p.team === "pending"
-  );
-  if (pendingPlayers.length === 0) return;
-
-  for (const player of pendingPlayers) {
-    player.team = autoAssignSheepOrWolf(lobby);
+  for (const player of lobby.players) {
+    if (player.team === "pending") player.team = autoAssignSheepOrWolf(lobby);
   }
 };
 
@@ -134,18 +129,33 @@ export const createRoundSummary = () => {
   );
   if (duration <= 0) return undefined;
   const summary: SharedRound = {
-    sheep: Array.from(lobby.players).filter((p) => p.team === "sheep").map((
-      p,
-    ) => p.id),
-    wolves: Array.from(lobby.players).filter((p) => p.team === "wolf").map((
-      p,
-    ) => p.id),
+    sheep: lobby.players.values().filter((p) => p.team === "sheep").map((p) =>
+      p.id
+    ).toArray(),
+    wolves: lobby.players.values().filter((p) => p.team === "wolf").map((p) =>
+      p.id
+    ).toArray(),
     duration,
     mode: lobby.settings.mode,
   };
   const events = lobby.round?.events;
   if (events && events.length > 0) summary.events = [...events];
   return summary;
+};
+
+/** Append a finished round to the lobby's history and announce it if it ran */
+export const recordRound = (lobby: Lobby, round: SharedRound) => {
+  lobby.rounds.push(round);
+  if (round.duration <= 0) return;
+  const nameById = new Map(lobby.players.values().map((p) => [p.id, p.name]));
+  emitRoundEnded({
+    lobby: lobby.name,
+    mode: lobby.settings.mode,
+    sheep: round.sheep.map((id) => nameById.get(id) ?? id),
+    wolves: round.wolves.map((id) => nameById.get(id) ?? id),
+    durationMs: round.duration,
+    endedAt: Date.now(),
+  });
 };
 
 export const endRound = (canceled = false) => {
@@ -186,20 +196,7 @@ export const endRound = (canceled = false) => {
   });
 
   lobby.status = "lobby";
-  if (round) {
-    lobby.rounds.push(round);
-    const nameById = new Map(
-      Array.from(lobby.players).map((p) => [p.id, p.name]),
-    );
-    emitRoundEnded({
-      lobby: lobby.name,
-      mode: lobby.settings.mode,
-      sheep: round.sheep.map((id) => nameById.get(id) ?? id),
-      wolves: round.wolves.map((id) => nameById.get(id) ?? id),
-      durationMs: round.duration,
-      endedAt: Date.now(),
-    });
-  }
+  if (round) recordRound(lobby, round);
   notifyStatusChange();
 
   sendRoundEndMessages(round, captainsPhaseChanged, inSecondCaptainsRound, {
@@ -353,15 +350,10 @@ export const leave = (clientArg?: Client) => {
 
   // End round if team now empty (but not in practice mode)
   if (lobby.round && client.team && !lobby.round.practice) {
-    const sheep = Array.from(lobby.players).filter((p) =>
-      p.team === "sheep" && p !== client
-    );
-    const wolves = Array.from(lobby.players).filter((p) =>
-      p.team === "wolf" && p !== client
-    );
+    const hasTeam = (team: "sheep" | "wolf") =>
+      lobby.players.values().some((p) => p.team === team && p !== client);
     if (
-      sheep.length === 0 || wolves.length === 0 ||
-      lobby.round.vip === client.id
+      !hasTeam("sheep") || !hasTeam("wolf") || lobby.round.vip === client.id
     ) endRound(!lobby.round.start || Date.now() - lobby.round.start < 10_000);
   }
 

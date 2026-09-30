@@ -1,6 +1,6 @@
 import { colors } from "@/shared/data.ts";
 import type { Lobby } from "./lobby.ts";
-import { setSome } from "@/shared/util/set.ts";
+import { pickFreeColor } from "./playerColor.ts";
 import type { Entity } from "@/shared/types.ts";
 import { ServerToClientMessage } from "../client/schemas.ts";
 import type { Socket } from "./util/socketHandler.ts";
@@ -36,9 +36,7 @@ export class ComputerPlayer implements Entity {
     this.name = `Computer ${index}`;
 
     // Assign first available color
-    this.playerColor =
-      colors.find((c) => !setSome(lobby.players, (p) => p.playerColor === c)) ??
-        colors[0];
+    this.playerColor = pickFreeColor(lobby) ?? colors[0];
 
     // Make non-enumerable properties to prevent JSON serialization issues
     Object.defineProperty(this, "lobby", {

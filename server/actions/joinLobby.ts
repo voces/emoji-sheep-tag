@@ -2,10 +2,10 @@ import { z } from "zod";
 import type { Client } from "../client.ts";
 import { broadcastLobbyList, leaveHub } from "../hub.ts";
 import { lobbyContext } from "../contexts.ts";
-import { lobbies } from "../lobby.ts";
+import { findLobby } from "../lobby.ts";
 import { send, sendJoinMessage } from "../lobbyApi.ts";
 import { colors } from "@/shared/data.ts";
-import { setSome } from "@/shared/util/set.ts";
+import { pickFreeColor } from "../playerColor.ts";
 import { addPlayerToPracticeGame } from "../api/player.ts";
 import { appContext } from "@/shared/context.ts";
 import { flushUpdates } from "../updates.ts";
@@ -30,7 +30,7 @@ export const joinLobby = (
   { lobbyName }: z.TypeOf<typeof zJoinLobby>,
 ) => {
   // Find the lobby
-  const lobby = Array.from(lobbies).find((l) => l.name === lobbyName);
+  const lobby = findLobby(lobbyName);
   if (!lobby) {
     console.error(`Lobby ${lobbyName} not found`);
     return;
@@ -62,9 +62,7 @@ export const joinLobby = (
   // Add to lobby
   client.lobby = lobby;
   lobbyContext.with(lobby, () => {
-    client.playerColor = colors.find((c) =>
-      !setSome(lobby.players, (p) => p.playerColor === c)
-    ) ?? client.playerColor;
+    client.playerColor = pickFreeColor(lobby) ?? client.playerColor;
 
     // Initialize the player in the smart drafting algorithm
     const allPlayerIds = Array.from(lobby.players, (p) => p.id);

@@ -1,4 +1,4 @@
-import { lobbies } from "../lobby.ts";
+import { findLobby } from "../lobby.ts";
 
 const adjectives = [
   // Rots
@@ -52,9 +52,7 @@ const nouns = [
 ];
 
 /** Check if a lobby name is already in use */
-const isNameTaken = (name: string): boolean => {
-  return Array.from(lobbies).some((lobby) => lobby.name === name);
-};
+const isNameTaken = (name: string): boolean => findLobby(name) !== undefined;
 
 /** Generate a random lobby name */
 const generateRandomName = (): string => {
