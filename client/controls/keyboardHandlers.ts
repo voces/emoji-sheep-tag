@@ -1,6 +1,7 @@
 import { UnitDataAction } from "@/shared/types.ts";
 import { ALT_SEPARATOR, SLOT_COUNT } from "../ui/util/shortcutUtils.ts";
 import { shortcutSettingsVar } from "../ui/vars/shortcutSettings.ts";
+import { shortcutsVar } from "../ui/vars/shortcuts.ts";
 import { absurd } from "@/shared/util/absurd.ts";
 import { Entity } from "../ecs.ts";
 import { selection } from "../systems/selection.ts";
@@ -98,6 +99,9 @@ export const checkShortcut = (
   }
   return 0;
 };
+
+export const isQueueModifierHeld = () =>
+  checkShortcut(shortcutsVar().misc, "queueModifier") > 0;
 
 const checkWithAlts = (
   primary: readonly string[] | undefined,

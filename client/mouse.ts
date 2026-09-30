@@ -6,12 +6,19 @@ import { AnimatedInstancedMesh } from "./graphics/AnimatedInstancedMesh.ts";
 import { Entity } from "./ecs.ts";
 import { lookup } from "./systems/lookup.ts";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
-import { checkShortcut } from "./controls/keyboardHandlers.ts";
-import { shortcutsVar } from "@/vars/shortcuts.ts";
+import { isQueueModifierHeld } from "./controls/keyboardHandlers.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { addSystem } from "@/shared/context.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import { isTauri } from "./isTauri.ts";
+
+export type MouseButton = "left" | "right" | "middle";
+
+export const mouseButtonFromIndex = (index: number): MouseButton =>
+  index === 0 ? "left" : index === 1 ? "middle" : "right";
+
+export const mouseButtonIndex = (button: MouseButton) =>
+  button === "left" ? 0 : button === "middle" ? 1 : 2;
 
 export class MouseEvent extends Event {
   readonly pixels: Vector2;
@@ -19,9 +26,9 @@ export class MouseEvent extends Event {
   readonly world: Vector2;
   readonly angle: number;
   readonly intersects: ExtendedSet<Entity>;
-  readonly element: Element | null;
-  readonly elements: Element[];
   readonly queue: boolean;
+  #element: Element | null | undefined;
+  #elements: Element[] | undefined;
 
   constructor(name: string) {
     super(name);
@@ -30,10 +37,23 @@ export class MouseEvent extends Event {
     this.percent = mouse.percent.clone();
     this.world = mouse.world.clone();
     this.angle = mouse.angle;
-    this.intersects = new ExtendedSet(mouse.intersects);
-    this.element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
-    this.elements = document.elementsFromPoint(mouse.pixels.x, mouse.pixels.y);
-    this.queue = checkShortcut(shortcutsVar().misc, "queueModifier") > 0;
+    // mouse.intersects is replaced, never mutated, so the event can share it
+    this.intersects = mouse.intersects;
+    this.queue = isQueueModifierHeld();
+  }
+
+  get element(): Element | null {
+    if (this.#element === undefined) {
+      this.#element = document.elementFromPoint(this.pixels.x, this.pixels.y);
+    }
+    return this.#element;
+  }
+
+  get elements(): Element[] {
+    return this.#elements ??= document.elementsFromPoint(
+      this.pixels.x,
+      this.pixels.y,
+    );
   }
 }
 
@@ -43,7 +63,7 @@ export class MouseButtonEvent extends MouseEvent {
 
   constructor(
     direction: "up" | "down",
-    readonly button: "left" | "right" | "middle",
+    readonly button: MouseButton,
   ) {
     super(`mouseButton${direction[0].toUpperCase() + direction.slice(1)}`);
 
@@ -109,6 +129,19 @@ const cameraSpace = new Vector2();
 const plane = new Plane(new Vector3(0, 0, 1), 0);
 
 const world3 = new Vector3();
+
+const screenRaycaster = new Raycaster();
+const screenSpace = new Vector2();
+const screenWorld3 = new Vector3();
+
+/** Projects a viewport pixel onto the ground plane (z = 0). */
+export const screenToWorld = (x: number, y: number, target = new Vector2()) => {
+  screenSpace.x = (x / globalThis.innerWidth) * 2 - 1;
+  screenSpace.y = -(y / globalThis.innerHeight) * 2 + 1;
+  screenRaycaster.setFromCamera(screenSpace, camera);
+  screenRaycaster.ray.intersectPlane(plane, screenWorld3);
+  return target.set(screenWorld3.x, screenWorld3.y);
+};
 
 let lastIntersectUpdate = performance.now() / 1000;
 
@@ -193,6 +226,16 @@ const commitMouseMove = () => {
   mouse.dispatchTypedEvent("mouseMove", new MouseMoveEvent());
 };
 
+// Pointer moves only record pixels; the raycast and mouseMove dispatch happen
+// at most once per frame, or sooner when a button or key needs fresh state.
+let movePending = false;
+
+const flushMouseMove = () => {
+  if (!movePending) return;
+  movePending = false;
+  commitMouseMove();
+};
+
 // While raw mouse input is active (Windows desktop), the cursor is driven by raw
 // deltas (rawMouse.ts) and we ignore the OS pointer position entirely.
 let rawMouseActive = false;
@@ -212,7 +255,9 @@ export const applyRawMouseDelta = (dx: number, dy: number) => {
     mouse.pixels.y + dy * sensitivity,
     globalThis.innerHeight,
   );
-  commitMouseMove();
+  // Raw deltas are already polled once per frame, so commit them straight away
+  movePending = true;
+  flushMouseMove();
 };
 
 globalThis.addEventListener("pointermove", (event) => {
@@ -237,29 +282,29 @@ globalThis.addEventListener("pointermove", (event) => {
     mouse.pixels.x = event.clientX;
     mouse.pixels.y = event.clientY;
   }
-  commitMouseMove();
+  movePending = true;
 });
 
 globalThis.addEventListener("pointerdown", (event) => {
   event.preventDefault();
   event.stopPropagation();
+  flushMouseMove();
   mouse.dispatchTypedEvent(
     "mouseButtonDown",
-    new MouseButtonEvent(
-      "down",
-      event.button === 0 ? "left" : event.button === 1 ? "middle" : "right",
-    ),
+    new MouseButtonEvent("down", mouseButtonFromIndex(event.button)),
   );
 });
 
-globalThis.addEventListener("pointerup", (event) =>
+globalThis.addEventListener("pointerup", (event) => {
+  flushMouseMove();
   mouse.dispatchTypedEvent(
     "mouseButtonUp",
-    new MouseButtonEvent(
-      "up",
-      event.button === 0 ? "left" : event.button === 1 ? "middle" : "right",
-    ),
-  ));
+    new MouseButtonEvent("up", mouseButtonFromIndex(event.button)),
+  );
+});
+
+// Key handlers read mouse.world (build/ping at cursor), so bring it up to date
+globalThis.addEventListener("keydown", flushMouseMove, { capture: true });
 
 globalThis.addEventListener("contextmenu", (e) => e.preventDefault());
 
@@ -317,5 +362,8 @@ globalThis.addEventListener(
 );
 
 addSystem({
-  update: (_, time) => (time - lastIntersectUpdate > 0.2) && updateIntersects(),
+  update: (_, time) => {
+    if (movePending) flushMouseMove();
+    else if (time - lastIntersectUpdate > 0.2) updateIntersects();
+  },
 });

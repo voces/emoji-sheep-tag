@@ -1,4 +1,4 @@
-import { mouse, MouseButtonEvent } from "./mouse.ts";
+import { mouse, MouseButtonEvent, mouseButtonIndex } from "./mouse.ts";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { send } from "./messaging.ts";
 import { Entity } from "./ecs.ts";
@@ -284,7 +284,7 @@ mouse.addEventListener("mouseButtonDown", (e) => {
         view: window,
         bubbles: true,
         cancelable: true,
-        button: e.button === "left" ? 0 : e.button === "middle" ? 1 : 2,
+        button: mouseButtonIndex(e.button),
       }),
     );
     if (!passThrough) return;
@@ -830,7 +830,7 @@ mouse.addEventListener("mouseButtonUp", (e) => {
         view: window,
         bubbles: true,
         cancelable: true,
-        button: e.button === "left" ? 0 : e.button === "middle" ? 1 : 2,
+        button: mouseButtonIndex(e.button),
       }),
     );
     if (e.button === "right") {
