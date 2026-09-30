@@ -1676,11 +1676,12 @@ stateVar.subscribe((state) => {
 for (const event of ["pointerdown", "keydown", "contextmenu"]) {
   globalThis.document.body.addEventListener(event, async () => {
     if (
-      !document.pointerLockElement && !isSoftwareRenderer() &&
+      !document.pointerLockElement &&
       gameplaySettingsVar().pointerLock === "always" &&
       // Round-scoped locking is a Tauri-only behavior; the browser keeps its
       // existing gesture-driven lock so we don't churn enter/exit there.
-      (!isTauri || stateVar() === "playing")
+      (!isTauri || stateVar() === "playing") &&
+      !isSoftwareRenderer()
     ) {
       try {
         // Ensure body has focus before requesting pointer lock
