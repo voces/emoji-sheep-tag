@@ -146,6 +146,8 @@ export const NumericSettingInput = ({
     const startValue = propsRef.current.value;
     let scrubbing = false;
     let lastApplied = startValue;
+    const listeners = new AbortController();
+    const { signal } = listeners;
 
     const onMove = (_ev: MouseMoveEvent) => {
       const dx = mouse.pixels.x - startX;
@@ -168,8 +170,7 @@ export const NumericSettingInput = ({
 
     const onUp = (ev: MouseButtonEvent) => {
       if (ev.button !== "left") return;
-      mouse.removeEventListener("mouseMove", onMove);
-      mouse.removeEventListener("mouseButtonUp", onUp);
+      listeners.abort();
       if (scrubbing) {
         document.body.style.cursor = "";
       } else if (ev.element === input) {
@@ -178,8 +179,8 @@ export const NumericSettingInput = ({
       }
     };
 
-    mouse.addEventListener("mouseMove", onMove);
-    mouse.addEventListener("mouseButtonUp", onUp);
+    mouse.addEventListener("mouseMove", onMove, { signal });
+    mouse.addEventListener("mouseButtonUp", onUp, { signal });
   };
 
   const showReset = isAuto === false && onResetToAuto;

@@ -175,13 +175,11 @@ export const Slider = ({
       updateValue(mouse.pixels.x);
     };
 
-    mouse.addEventListener("mouseButtonUp", handleMouseUp);
-    mouse.addEventListener("mouseMove", handleMouseMove);
-
-    return () => {
-      mouse.removeEventListener("mouseButtonUp", handleMouseUp);
-      mouse.removeEventListener("mouseMove", handleMouseMove);
-    };
+    const listeners = new AbortController();
+    const { signal } = listeners;
+    mouse.addEventListener("mouseButtonUp", handleMouseUp, { signal });
+    mouse.addEventListener("mouseMove", handleMouseMove, { signal });
+    return () => listeners.abort();
   }, [isDragging, updateValue, onChange, localValue]);
 
   // Handle hover state - only check on mouse move, not every frame

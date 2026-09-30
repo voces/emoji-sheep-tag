@@ -67,16 +67,17 @@ export const createMinimapRaycast = (
     pointerDownWasOnMinimap = false;
   };
 
-  globalThis.addEventListener("pointerdown", handlePointerDown);
-  globalThis.addEventListener("pointerup", handlePointerUp);
+  const listeners = new AbortController();
+  const { signal } = listeners;
+  globalThis.addEventListener("pointerdown", handlePointerDown, { signal });
+  globalThis.addEventListener("pointerup", handlePointerUp, { signal });
 
   mouse.customRaycast = minimapRaycast;
 
   return {
     dispose: () => {
       mouse.customRaycast = undefined;
-      globalThis.removeEventListener("pointerdown", handlePointerDown);
-      globalThis.removeEventListener("pointerup", handlePointerUp);
+      listeners.abort();
     },
   };
 };
