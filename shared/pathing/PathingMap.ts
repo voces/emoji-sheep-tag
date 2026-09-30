@@ -55,22 +55,6 @@ const trueMaxXRaw = (
 const PLAYER_PATHING_BUDGET = 5000;
 const MIN_UNIT_BUDGET = 50;
 
-let debugging = false;
-// const elems: HTMLElement[] = [];
-// export const toggleDebugging = (): void => {
-// 	if (debugging) elems.forEach((elem) => arena.removeChild(elem));
-
-// 	debugging = !debugging;
-// };
-try {
-  Object.defineProperty(globalThis, "debugging", {
-    set: (value) => (debugging = value),
-    get: () => debugging,
-  });
-} catch {
-  /* do nothing */
-}
-
 const DEFAULT_RESOLUTION = 1;
 
 const MAX_TRIES = 3481; // 59**2
@@ -85,22 +69,7 @@ const MAX_TRIES = 3481; // 59**2
 const SPIRAL_START_DIRECTION = DIRECTION.UP;
 const EPSILON = Number.EPSILON * 100;
 
-// interface BaseEntity {
-//   radius: number;
-//   blocksPathing?: Pathing;
-//   tilemap?: Footprint;
-//   pathing?: Pathing;
-//   requiresPathing?: Pathing;
-//   tilemap?: Footprint;
-//   structure?: boolean;
-// }
-
-// type SimpleEntity = BaseEntity & { x: number; y: number };
-// type ComplexEntity = BaseEntity & { position: { x: number; y: number } };
-
-// type Entity = SimpleEntity | ComplexEntity;
-
-interface Cache {
+type Cache = {
   _linearPathable: (
     ...args: Parameters<typeof PathingMap.prototype._linearPathable>
   ) => ReturnType<typeof PathingMap.prototype._linearPathable>;
@@ -110,32 +79,7 @@ interface Cache {
   pointToTilemap: (
     ...args: Parameters<typeof PathingMap.prototype.pointToTilemap>
   ) => ReturnType<typeof PathingMap.prototype.pointToTilemap>;
-}
-
-//   0,   0, 255 = 0
-//   0, 255, 255 = 0.25
-//   0, 255,   0 = 0.5
-// 255, 255,   0 = 0.75
-// 255,   0,   0 = 1
-// const r = (v: number) => (v < 0.5 ? 0 : v < 0.75 ? (v - 0.5) * 4 : 1);
-// const g = (v: number) => (v < 0.25 ? v * 4 : v < 0.75 ? 1 : (1 - v) * 4);
-// const b = (v: number) => (v < 0.25 ? 1 : v < 0.5 ? (0.5 - v) * 4 : 0);
-
-// const placeTile = (x: number, y: number, v: number) => {
-// 	const div = document.createElement("div");
-// 	div.style.position = "absolute";
-// 	div.style.top = y * 16 + "px";
-// 	div.style.left = x * 16 + "px";
-// 	div.style.zIndex = "10000";
-// 	div.style.width = "16px";
-// 	div.style.height = "16px";
-// 	div.style.background = `rgba(${r(v) * 255}, ${g(v) * 255}, ${
-// 		b(v) * 255
-// 	}, 0.5)`;
-// 	// div.cell = this.grid[ y ][ x ];
-// 	arena.appendChild(div);
-// 	elems.push(div);
-// };
+};
 
 // Estimated cost remaining
 const h = (a: Point, b: Point) =>
@@ -151,9 +95,6 @@ export class PathingMap {
   readonly widthMap: number;
   readonly grid: (Tile | undefined)[][];
   private readonly pathing: Pathing[][];
-
-  // debugging
-  // private _elem?: HTMLDivElement;
 
   // Maps entities to tiles
   private readonly entities: Map<PathingEntity, Tile[]> = new Map();
@@ -229,20 +170,6 @@ export class PathingMap {
     this.grid = [];
     for (let y = 0; y < this.heightMap; y++) {
       this.grid[y] = [];
-    }
-
-    if (debugging) {
-      const oldPath = this.path;
-      this.path = (...args) => {
-        const ret = oldPath.call(this, ...args);
-        return ret;
-      };
-
-      const oldRecheck = this.recheck;
-      this.recheck = (...args) => {
-        const ret = oldRecheck.call(this, ...args);
-        return ret;
-      };
     }
   }
 
@@ -837,60 +764,6 @@ export class PathingMap {
     return Math.max(Math.min(xIndex, this.widthMap - 1), 0);
   }
 
-  // step(
-  //   entity: PathingEntity,
-  //   target: TargetEntity | Readonly<Point>,
-  //   distance: number,
-  // ) {
-  //   const removed = this.entities.has(entity);
-  //   if (removed) this.removeEntity(entity);
-
-  //   // We assume an entity shoved into the top left corner is good
-  //   const pathing = entity.requiresPathing === undefined
-  //     ? entity.pathing
-  //     : entity.requiresPathing;
-  //   if (pathing === undefined) throw new Error("entity has no pathing");
-  //   // const minimalTilemap = this.pointToTilemap(
-  //   //   entity.radius,
-  //   //   entity.radius,
-  //   //   entity.radius,
-  //   //   { type: pathing },
-  //   // );
-
-  //   // const offset = entity.radius % (1 / this.resolution);
-  //   // const startReal = {
-  //   //   x: entity.position.x * this.resolution,
-  //   //   y: entity.position.y * this.resolution,
-  //   // };
-
-  //   const targetPosition = "x" in target ? target : target.position;
-
-  //   // const startTile = this.entityToTile(entity);
-
-  //   const angle = Math.atan2(
-  //     targetPosition.y - entity.position.y,
-  //     targetPosition.x - entity.position.x,
-  //   );
-
-  //   // Simple: diag
-  //   {
-  //     const diag = {
-  //       x: entity.position.x + distance * Math.cos(angle),
-  //       y: entity.position.y + distance * Math.sin(angle),
-  //     };
-  //     if (this.linearPathable(entity, entity.position, diag)) return diag;
-  //   }
-
-  //   const dirs = closestCardinalDirections(angle);
-  //   for (const [x, y] of dirs) {
-  //     const point = {
-  //       x: entity.position.x + distance * x,
-  //       y: entity.position.y + distance * y,
-  //     };
-  //     if (this.linearPathable(entity, entity.position, point)) return point;
-  //   }
-  // }
-
   // Adapted from https://github.com/bgrins/javascript-astar/blob/master/astar.js
   // towards Theta*
   // This gets really sad when a path is not possible
@@ -923,7 +796,6 @@ export class PathingMap {
       typeof distanceFromTarget === "number" && "position" in target &&
       distanceBetweenEntities(entity, target, distanceFromTarget) <
         distanceFromTarget
-      // Should I return start?
     ) return [];
 
     if (distanceFromTarget) distanceFromTarget *= this.resolution;
@@ -1436,7 +1308,7 @@ export class PathingMap {
 
         const gScore = (endCurrent.__endRealCostFromOrigin ?? 0) + 1;
 
-        // Line of sight test (this is laggy, so disabled ATM)
+        // Line of sight test (this is laggy)
         if (
           endCurrent.__endParent &&
           cache._linearPathable(
@@ -1511,71 +1383,6 @@ export class PathingMap {
       }
     }
 
-    // if (debugging) {
-    // 	elems.forEach((elem) => arena.removeChild(elem));
-    // 	elems.splice(0);
-    // 	const max = this.grid.reduce(
-    // 		(max, row) =>
-    // 			row.reduce(
-    // 				(max, cell) =>
-    // 					Math.max(
-    // 						max,
-    // 						cell.__startTag === startTag &&
-    // 							cell.__startVisited
-    // 							? cell.__startRealPlusEstimatedCost ?? 0
-    // 							: cell.__endTag === endTag &&
-    // 							  cell.__endVisited
-    // 							? cell.__endRealPlusEstimatedCost ?? 0
-    // 							: -Infinity,
-    // 					),
-    // 				max,
-    // 			),
-    // 		-Infinity,
-    // 	);
-    // 	const min = this.grid.reduce(
-    // 		(min, row) =>
-    // 			row.reduce(
-    // 				(min, cell) =>
-    // 					Math.min(
-    // 						min,
-    // 						cell.__startTag === startTag &&
-    // 							cell.__startVisited
-    // 							? cell.__startRealPlusEstimatedCost ?? 0
-    // 							: cell.__endTag === endTag &&
-    // 							  cell.__endVisited
-    // 							? cell.__endRealPlusEstimatedCost ?? 0
-    // 							: Infinity,
-    // 					),
-    // 				min,
-    // 			),
-    // 		Infinity,
-    // 	);
-    // 	const d = max - min;
-    // 	for (let y = 0; y < this.grid.length; y++)
-    // 		for (let x = 0; x < this.grid[y].length; x++)
-    // 			if (
-    // 				(this.grid[y][x].__startTag === startTag &&
-    // 					this.grid[y][x].__startVisited) ||
-    // 				(this.grid[y][x].__endTag === endTag &&
-    // 					this.grid[y][x].__endVisited)
-    // 			)
-    // 				placeTile(
-    // 					x,
-    // 					y,
-    // 					((this.grid[y][x].__startTag === startTag &&
-    // 					this.grid[y][x].__startVisited
-    // 						? this.grid[y][x]
-    // 								.__startRealPlusEstimatedCost ?? 0
-    // 						: this.grid[y][x].__endTag === endTag &&
-    // 						  this.grid[y][x].__endVisited
-    // 						? this.grid[y][x].__endRealPlusEstimatedCost ??
-    // 						  0
-    // 						: Infinity) -
-    // 						min) /
-    // 						d,
-    // 				);
-    // }
-
     const pathTiles: Tile[] = [];
     let startCurrent: Tile | null | undefined = startBest;
     while (startCurrent) {
@@ -1607,15 +1414,6 @@ export class PathingMap {
       (pathWorld[0].x !== start.x || pathWorld[0].y !== start.y) &&
       !this.linearPathable(entity, start, pathWorld[1])
     ) path.push(pathWorld[0]);
-
-    // const path = pathWorld.length > 1 &&
-    //     (pathWorld[0].x !== start.x || pathWorld[0].y !== start.y)
-    //   ? this.linearPathable(entity, start, pathWorld[1])
-    //     // Can skip first tile since we can path directly to the second
-    //     ? [{ x: start.x, y: start.y }]
-    //     // Must go through first tile since we cannot path directly to the second
-    //     : [{ x: start.x, y: start.y }, pathWorld[0]]
-    //   : [pathWorld[0]];
 
     path.push(...pathWorld.slice(1, -1));
 
@@ -1953,7 +1751,6 @@ export class PathingMap {
     };
   }
 
-  // BAD?
   entityToTile(entity: PathingEntity, position: Point = entity.position): Tile {
     const { x, y } = this.entityToTileCoordsBounded(entity, position);
     const tile = this.getTile(x, y);
@@ -2489,87 +2286,4 @@ export class PathingMap {
   getEntityTiles(entity: PathingEntity): readonly Tile[] | undefined {
     return this.entities.get(entity);
   }
-
-  // paint(): void {
-  // 	const host =
-  // 		this._elem ||
-  // 		(this._elem = (() => {
-  // 			const elem = document.createElement("div");
-  // 			arena.appendChild(elem);
-
-  // 			return elem;
-  // 		})());
-
-  // 	emptyElement(host);
-  // 	const cellSize = 32 / this.resolution;
-
-  // 	for (let y = 0; y < this.heightMap; y++)
-  // 		for (let x = 0; x < this.widthMap; x++) {
-  // 			const cell = document.createElement("div");
-  // 			Object.assign(cell.style, {
-  // 				zIndex: 10,
-  // 				position: "absolute",
-  // 				top: `${y * cellSize}px`,
-  // 				left: `${x * cellSize}px`,
-  // 				width: `${cellSize}px`,
-  // 				height: `${cellSize}px`,
-  // 				background: `rgba(${
-  // 					this.grid[y][x].pathing & 1 ? 255 : 0
-  // 				}, 0, ${this.grid[y][x].pathing & 2 ? 255 : 0}, 0.4)`,
-  // 			});
-  // 			host.appendChild(cell);
-  // 		}
-  // }
-
-  // paintMap(map: Footprint, xTile: number, yTile: number): void {
-  // 	const host =
-  // 		this._elem ||
-  // 		(this._elem = (() => {
-  // 			const elem = document.createElement("div");
-  // 			arena.appendChild(elem);
-
-  // 			return elem;
-  // 		})());
-
-  // 	const cellSize = 32 / this.resolution;
-
-  // 	let i = 0;
-
-  // 	for (let y = yTile + map.top; y < yTile + map.height + map.top; y++)
-  // 		for (
-  // 			let x = xTile + map.left;
-  // 			x < xTile + map.width + map.left;
-  // 			x++, i++
-  // 		) {
-  // 			const cell = document.createElement("div");
-  // 			Object.assign(cell.style, {
-  // 				zIndex: 10,
-  // 				position: "absolute",
-  // 				top: `${y * cellSize}px`,
-  // 				left: `${x * cellSize}px`,
-  // 				width: `${cellSize}px`,
-  // 				height: `${cellSize}px`,
-  // 				background:
-  // 					this.grid[y] === undefined ||
-  // 					this.grid[y][x] === undefined ||
-  // 					this.grid[y][x].pathing & map.map[i]
-  // 						? "rgba(255,0,0,0.5)"
-  // 						: "rgba(0,255,0,0.5)",
-  // 			});
-  // 			cell.setAttribute("x", x.toString());
-  // 			cell.setAttribute("y", y.toString());
-  // 			cell.setAttribute("i", i.toString());
-  // 			cell.setAttribute(
-  // 				"grid",
-  // 				(this.grid[y] === undefined
-  // 					? "no-y"
-  // 					: this.grid[y][x] === undefined
-  // 					? "no-x"
-  // 					: this.grid[y][x].pathing
-  // 				).toString(),
-  // 			);
-  // 			cell.setAttribute("map", map.map[i].toString());
-  // 			host.appendChild(cell);
-  // 		}
-  // }
 }
