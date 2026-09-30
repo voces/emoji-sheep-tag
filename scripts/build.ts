@@ -61,15 +61,16 @@ const getRemoteImports = (
 const buildDenoResolveMap = async (
   entryPoints: string[],
 ): Promise<Map<string, string>> => {
-  const map = new Map<string, string>();
-  for (const entry of entryPoints) {
-    const cmd = new Deno.Command(Deno.execPath(), {
+  const infos = await Promise.all(entryPoints.map(async (entry) => {
+    const { stdout } = await new Deno.Command(Deno.execPath(), {
       args: ["info", "--json", entry],
       stdout: "piped",
       stderr: "null",
-    });
-    const { stdout } = await cmd.output();
-    const info = JSON.parse(new TextDecoder().decode(stdout));
+    }).output();
+    return JSON.parse(new TextDecoder().decode(stdout));
+  }));
+  const map = new Map<string, string>();
+  for (const info of infos) {
     for (const m of info.modules) {
       if (m.local && m.specifier.startsWith("https://")) {
         map.set(m.specifier, m.local);
@@ -164,8 +165,6 @@ export const buildOptions = async (
     ],
     alias: buildAliasFromImportMap(imports),
     jsx: "automatic",
-    jsxFactory: "React.createElement",
-    jsxFragment: "React.Fragment",
     jsxImportSource: "react",
     define: {
       "process.env.NODE_ENV": JSON.stringify(
