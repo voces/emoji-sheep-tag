@@ -95,11 +95,21 @@ const TEAM_ENTITY_IDS = {
   wolf: "team-wolf",
 } as const;
 
+export type GoldTeam = keyof typeof TEAM_ENTITY_IDS;
+
+export const toGoldTeam = (team: string | undefined): GoldTeam | undefined =>
+  team === "sheep" || team === "wolf" ? team : undefined;
+
+export const getTeamEntity = (team: string | undefined) => {
+  const goldTeam = toGoldTeam(team);
+  return goldTeam ? lookup(TEAM_ENTITY_IDS[goldTeam]) : undefined;
+};
+
 /**
  * Check if team gold is enabled for the current game
  * @param team - Optional team to check. In vamp mode, wolves have team gold but sheep don't.
  */
-export const isTeamGoldEnabled = (team?: "sheep" | "wolf"): boolean => {
+export const isTeamGoldEnabled = (team?: GoldTeam): boolean => {
   if (practiceVar()) return false;
   const settings = lobbySettingsVar();
   if (settings.mode === "vip") return true;
@@ -120,22 +130,11 @@ export const getEffectivePlayerGold = (
   const player = getPlayer(playerId);
   if (!player) return 0;
 
-  const team = player.team === "wolf" || player.team === "sheep"
-    ? player.team
-    : undefined;
-  if (!isTeamGoldEnabled(team)) {
-    return player.gold ?? 0;
-  }
+  const team = toGoldTeam(player.team);
+  if (!isTeamGoldEnabled(team)) return player.gold ?? 0;
 
-  const teamEntityId = team ? TEAM_ENTITY_IDS[team] : undefined;
-  const teamEntity = teamEntityId ? lookup(teamEntityId) : undefined;
-  const teamGold = teamEntity?.gold ?? 0;
-
-  if (player.team === "wolf") {
-    return teamGold;
-  } else if (player.team === "sheep") {
-    return (player.gold ?? 0) + teamGold;
-  }
-
+  const teamGold = getTeamEntity(team)?.gold ?? 0;
+  if (team === "wolf") return teamGold;
+  if (team === "sheep") return (player.gold ?? 0) + teamGold;
   return player.gold ?? 0;
 };
