@@ -88,6 +88,7 @@ export class FogPass {
   private smoothMaterial: ShaderMaterial;
   private previousFogTarget: WebGLRenderTarget;
   private currentFogTarget: WebGLRenderTarget;
+  private maskTexture: DataTexture;
   renderToScreen = false;
   clear = false;
 
@@ -113,6 +114,7 @@ export class FogPass {
       format: RedFormat,
     });
     const maskTex = buildMaskTexture(mapDimensions.mask);
+    this.maskTexture = maskTex.texture;
     const maskShape = getMaskShapeForBounds(mapDimensions.bounds);
     // Anchor points at the world center of texel (0, 0) — the top-left of the
     // padding ring. With 1 cell of padding, that's one cell outside the
@@ -520,8 +522,8 @@ export class FogPass {
   setMask(mask: number[][], bounds: LoadedMap["bounds"]) {
     const next = buildMaskTexture(mask);
     const shape = getMaskShapeForBounds(bounds);
-    const old = this.material.uniforms.maskMap.value as DataTexture | null;
-    old?.dispose();
+    this.maskTexture.dispose();
+    this.maskTexture = next.texture;
     this.material.uniforms.maskMap.value = next.texture;
     (this.material.uniforms.maskAnchor.value as Vector4).set(
       shape.firstVertexX - 1,
@@ -550,8 +552,14 @@ export class FogPass {
     });
   }
 
+  /** Frees what the pass owns; the fog and depth textures it was given stay. */
   dispose() {
+    this.maskTexture.dispose();
     this.material.dispose();
     this.quad.geometry.dispose();
+    this.smoothMaterial.dispose();
+    this.smoothQuad.geometry.dispose();
+    this.previousFogTarget.dispose();
+    this.currentFogTarget.dispose();
   }
 }
