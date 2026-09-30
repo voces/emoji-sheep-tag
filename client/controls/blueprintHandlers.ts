@@ -73,7 +73,13 @@ export const getBuilderFromBlueprint = () => {
   );
 };
 
-export const createBlueprint = (prefab: string, x: number, y: number) => {
+export const createBlueprint = (
+  prefab: string,
+  x: number,
+  y: number,
+  // Editor panels place as the editor even when a capable builder is selected
+  { editor = false }: { editor?: boolean } = {},
+) => {
   // Special case for ping - no builder required
   if (prefab === "ping") {
     const localPlayer = getLocalPlayer();
@@ -98,8 +104,9 @@ export const createBlueprint = (prefab: string, x: number, y: number) => {
     return blueprint;
   }
 
-  const builder: Entity | undefined =
-    Array.from(selection).find((u) =>
+  const builder: Entity | undefined = editor && editorVar()
+    ? { id: "editor" }
+    : Array.from(selection).find((u) =>
       u.actions?.some((a) => a.type === "build" && a.unitType === prefab)
     ) ?? (editorVar() ? { id: "editor" } : undefined);
 

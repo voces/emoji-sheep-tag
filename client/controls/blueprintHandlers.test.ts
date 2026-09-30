@@ -12,6 +12,7 @@ import {
   normalize,
   updateBlueprint,
 } from "./blueprintHandlers.ts";
+import { editorVar } from "@/vars/editor.ts";
 
 describe("blueprint handlers", () => {
   beforeEach(() => {
@@ -75,6 +76,20 @@ describe("blueprint handlers", () => {
       expect(blueprint?.prefab).toBe("hut");
       expect(blueprint?.position?.x).toBe(10);
       expect(blueprint?.position?.y).toBe(10);
+    });
+
+    it("places as the editor instead of the selected builder when asked", () => {
+      app.addEntity({ id: "player-1", isPlayer: true, playerColor: "#ff0303" });
+      editorVar(true);
+      try {
+        createBlueprint("hut", 10, 10);
+        expect(getBlueprint()?.owner).toBe("player-1");
+
+        createBlueprint("hut", 10, 10, { editor: true });
+        expect(getBlueprint()?.owner).toBeUndefined();
+      } finally {
+        editorVar(false);
+      }
     });
 
     it("should not create blueprint without valid builder", () => {
