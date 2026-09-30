@@ -254,15 +254,25 @@ export const CommandPalette = () => {
     showCommandPaletteVar("open");
   };
 
+  const latest = useRef({ promptCallback, input, filteredCommands, focused });
+  latest.current = { promptCallback, input, filteredCommands, focused };
+
+  // Keyed only on the palette state so a command whose callback changes a
+  // command source is not run again when the list is recomputed.
   useEffect(() => {
     if (showCommandPalette === "sent") {
+      const { promptCallback, input, filteredCommands, focused } =
+        latest.current;
       const run = promptCallback
         ? () => promptCallback(input)
         : filteredCommands.find((c) => c.originalName === focused)?.callback;
       if (run) Promise.resolve(run()).then(applyResult);
       else close();
     } else if (showCommandPalette === "dismissed") close();
-    else if (showCommandPalette === "open") inputRef.current?.focus();
+  }, [showCommandPalette]);
+
+  useEffect(() => {
+    if (showCommandPalette === "open") inputRef.current?.focus();
   }, [showCommandPalette, promptCallback, input, filteredCommands, focused]);
 
   useEffect(() => {

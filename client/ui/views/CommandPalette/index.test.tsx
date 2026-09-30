@@ -8,6 +8,7 @@ import { CommandPalette } from "./index.tsx";
 import { showCommandPaletteVar } from "@/vars/showCommandPalette.ts";
 import { uiSettingsVar } from "@/vars/uiSettings.ts";
 import { ignoredPlayersVar } from "@/vars/ignoredPlayers.ts";
+import { showSettingsVar } from "@/vars/showSettings.ts";
 import { app } from "../../../ecs.ts";
 
 // jsdom does not implement scrolling
@@ -43,6 +44,32 @@ it("runs the focused command on enter and closes", async () => {
 
   expect(uiSettingsVar().showPing).toBe(true);
   expect(showCommandPaletteVar()).toBe("closed");
+});
+
+it("runs a command once when it changes a command source without renaming itself", async () => {
+  let runs = 0;
+  const unsubscribe = showSettingsVar.subscribe((open) => {
+    if (!open) return;
+    runs++;
+    uiSettingsVar({ ...uiSettingsVar(), showFps: !uiSettingsVar().showFps });
+    showSettingsVar(false);
+  });
+  try {
+    render(<CommandPalette />, { wrapper: Wrapper });
+    act(() => {
+      showCommandPaletteVar("open");
+    });
+
+    await userEvent.type(
+      await screen.findByPlaceholderText("Search actions, settings, pages…"),
+      "open settings{Enter}",
+    );
+
+    expect(runs).toBe(1);
+    expect(showCommandPaletteVar()).toBe("closed");
+  } finally {
+    unsubscribe();
+  }
 });
 
 it("opens nested options and runs the chosen one", async () => {
