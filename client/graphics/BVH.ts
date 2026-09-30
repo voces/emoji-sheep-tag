@@ -2,40 +2,59 @@ import { Box3, Ray, Vector3 } from "three";
 
 const tempVec = new Vector3();
 const sizeVec = new Vector3();
+const centreVec = new Vector3();
+const combinedBox = new Box3();
+const childBox = new Box3();
 
-interface BVHNode {
+type BVHNode = {
   parent: number;
   left: number;
   right: number;
   height: number;
   box: Box3;
   index: number; // only valid if leaf
-}
+};
 
 export class BVH {
   private nodes: BVHNode[] = [];
   private root: number = -1;
   private freeList: number = -1;
   private map: number[] = [];
+  private count = 0;
 
   // Batching state
   private pendingUpdates: Map<number, Box3 | null> = new Map(); // null = remove
+  private spareBoxes: Box3[] = [];
   private flushScheduled = false;
   private getBoundingBox?: (index: number) => Box3 | null;
 
-  constructor(readonly name?: string) {
-    // Pre-allocate some nodes if desired, or grow dynamically
-  }
+  constructor(readonly name?: string) {}
 
   /** Set a callback to get bounding boxes for indices during rebuild */
   setGetBoundingBox(fn: (index: number) => Box3 | null) {
     this.getBoundingBox = fn;
   }
 
-  /** Queue an update to be applied in the next microtask */
+  /**
+   * Queue an update to be applied in the next microtask. The box is copied, so
+   * callers may reuse it.
+   */
   queueUpdate(index: number, boundingBox: Box3 | null) {
-    this.pendingUpdates.set(index, boundingBox);
+    const pending = this.pendingUpdates.get(index);
+    if (boundingBox) {
+      this.pendingUpdates.set(
+        index,
+        (pending ?? this.takeBox()).copy(boundingBox),
+      );
+    } else {
+      if (pending) this.spareBoxes.push(pending);
+      this.pendingUpdates.set(index, null);
+    }
     this.scheduleFlush();
+  }
+
+  private takeBox() {
+    return this.spareBoxes.pop() ?? new Box3();
   }
 
   private scheduleFlush() {
@@ -50,7 +69,7 @@ export class BVH {
 
     // Decide whether to rebuild or apply individually
     // Rebuild if > 100 updates or updating > 50% of current entries
-    const currentCount = this.map.filter((x) => x !== undefined).length;
+    const currentCount = this.count;
     const updateCount = this.pendingUpdates.size;
     const shouldRebuild = updateCount > 100 ||
       (currentCount > 0 && updateCount / currentCount > 0.5);
@@ -79,12 +98,17 @@ export class BVH {
           // Not in pending updates, get current bounding box
           const box = this.getBoundingBox(i);
           if (box) {
-            entries.push({ index: i, boundingBox: box });
+            entries.push({ index: i, boundingBox: this.takeBox().copy(box) });
           }
         }
       }
 
       this.rebuild(entries);
+      for (const entry of entries) {
+        if (!this.pendingUpdates.has(entry.index)) {
+          this.spareBoxes.push(entry.boundingBox);
+        }
+      }
     } else {
       // Apply updates individually
       for (const [index, box] of this.pendingUpdates) {
@@ -96,6 +120,9 @@ export class BVH {
       }
     }
 
+    for (const box of this.pendingUpdates.values()) {
+      if (box) this.spareBoxes.push(box);
+    }
     this.pendingUpdates.clear();
   }
 
@@ -106,11 +133,15 @@ export class BVH {
     this.root = -1;
     this.freeList = -1;
     this.map = [];
+    this.count = entries.length;
 
     if (entries.length === 0) return;
 
-    // Build leaf nodes
-    const leaves = entries.map((entry) => {
+    // The tree is empty, so leaves take node ids 0..n-1 and index `centres`
+    const leaves = new Int32Array(entries.length);
+    const centres = new Float64Array(entries.length * 3);
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
       const leaf = this.allocateNode();
       const node = this.nodes[leaf];
       node.box.copy(entry.boundingBox);
@@ -119,46 +150,35 @@ export class BVH {
       node.right = -1;
       node.height = 0;
       this.map[entry.index] = leaf;
-      return leaf;
-    });
+      leaves[i] = leaf;
+      node.box.getCenter(centreVec).toArray(centres, leaf * 3);
+    }
 
     // Build tree top-down using median split
-    this.root = this.buildTopDown(leaves);
+    this.root = this.buildTopDown(leaves, centres);
   }
 
-  private buildTopDown(leaves: number[]): number {
+  private buildTopDown(leaves: Int32Array, centres: Float64Array): number {
     if (leaves.length === 0) return -1;
     if (leaves.length === 1) return leaves[0];
 
     // Compute combined bounding box
-    const combined = new Box3();
-    for (const leaf of leaves) {
-      combined.union(this.nodes[leaf].box);
-    }
+    combinedBox.makeEmpty();
+    for (const leaf of leaves) combinedBox.union(this.nodes[leaf].box);
 
-    // Find longest axis
-    const size = new Vector3();
-    combined.getSize(size);
+    // Find longest axis (0 = x, 1 = y, 2 = z)
+    const size = combinedBox.getSize(sizeVec);
     const axis = size.x > size.y
-      ? (size.x > size.z ? "x" : "z")
-      : (size.y > size.z ? "y" : "z");
+      ? (size.x > size.z ? 0 : 2)
+      : (size.y > size.z ? 1 : 2);
 
     // Sort by center along axis
-    leaves.sort((a, b) => {
-      const centerA = new Vector3();
-      const centerB = new Vector3();
-      this.nodes[a].box.getCenter(centerA);
-      this.nodes[b].box.getCenter(centerB);
-      return centerA[axis] - centerB[axis];
-    });
+    leaves.sort((a, b) => centres[a * 3 + axis] - centres[b * 3 + axis]);
 
     // Split at median
     const mid = Math.floor(leaves.length / 2);
-    const leftLeaves = leaves.slice(0, mid);
-    const rightLeaves = leaves.slice(mid);
-
-    const left = this.buildTopDown(leftLeaves);
-    const right = this.buildTopDown(rightLeaves);
+    const left = this.buildTopDown(leaves.subarray(0, mid), centres);
+    const right = this.buildTopDown(leaves.subarray(mid), centres);
 
     // Create parent node
     const parent = this.allocateNode();
@@ -176,13 +196,9 @@ export class BVH {
 
     const leftBox = left !== -1 ? this.nodes[left].box : null;
     const rightBox = right !== -1 ? this.nodes[right].box : null;
-    if (leftBox && rightBox) {
-      node.box = this.unionBoxes(leftBox, rightBox);
-    } else if (leftBox) {
-      node.box.copy(leftBox);
-    } else if (rightBox) {
-      node.box.copy(rightBox);
-    }
+    if (leftBox && rightBox) node.box.copy(leftBox).union(rightBox);
+    else if (leftBox) node.box.copy(leftBox);
+    else if (rightBox) node.box.copy(rightBox);
 
     return parent;
   }
@@ -194,6 +210,7 @@ export class BVH {
     if (existingNode !== -1) {
       this.removeInstance(index);
     }
+    this.count++;
 
     // Add a new leaf node
     const leaf = this.allocateNode();
@@ -215,6 +232,7 @@ export class BVH {
     this.removeLeaf(leaf);
     this.freeNode(leaf);
     delete this.map[index];
+    this.count--;
   }
 
   // Raycast returns a list of candidate instances whose bounding boxes intersect the ray
@@ -290,10 +308,10 @@ export class BVH {
 
     while (!this.isLeaf(index)) {
       const node = this.nodes[index];
-      const combined = this.unionBoxes(node.box, leafBox);
-
       const oldArea = this.surfaceArea(node.box);
-      const newArea = this.surfaceArea(combined);
+      const newArea = this.surfaceArea(
+        combinedBox.copy(node.box).union(leafBox),
+      );
 
       // Cost of creating a new parent for this node and the new leaf
       const cost = 2 * newArea;
@@ -306,7 +324,7 @@ export class BVH {
 
       if (node.left !== -1) {
         const leftBox = this.nodes[node.left].box;
-        const newLeft = this.unionBoxes(leftBox, leafBox);
+        const newLeft = childBox.copy(leftBox).union(leafBox);
         costLeft = this.surfaceArea(newLeft) - this.surfaceArea(leftBox) +
           inheritanceCost;
       } else {
@@ -315,7 +333,7 @@ export class BVH {
 
       if (node.right !== -1) {
         const rightBox = this.nodes[node.right].box;
-        const newRight = this.unionBoxes(rightBox, leafBox);
+        const newRight = childBox.copy(rightBox).union(leafBox);
         costRight = this.surfaceArea(newRight) - this.surfaceArea(rightBox) +
           inheritanceCost;
       } else {
@@ -338,8 +356,7 @@ export class BVH {
     const oldParent = this.nodes[sibling].parent;
     const newParent = this.allocateNode();
     this.nodes[newParent].parent = oldParent;
-    this.nodes[newParent].box = this.unionBoxes(
-      this.nodes[sibling].box,
+    this.nodes[newParent].box.copy(this.nodes[sibling].box).union(
       this.nodes[leaf].box,
     );
     this.nodes[newParent].height = this.nodes[sibling].height + 1;
@@ -429,13 +446,9 @@ export class BVH {
       const leftBox = (left !== -1) ? this.nodes[left].box : null;
       const rightBox = (right !== -1) ? this.nodes[right].box : null;
 
-      if (leftBox && rightBox) {
-        node.box = this.unionBoxes(leftBox, rightBox);
-      } else if (leftBox) {
-        node.box = leftBox.clone();
-      } else if (rightBox) {
-        node.box = rightBox.clone();
-      }
+      if (leftBox && rightBox) node.box.copy(leftBox).union(rightBox);
+      else if (leftBox) node.box.copy(leftBox);
+      else if (rightBox) node.box.copy(rightBox);
 
       index = node.parent;
     }
@@ -484,16 +497,16 @@ export class BVH {
         C.right = iF;
         A.right = iG;
         G.parent = iA;
-        A.box = this.unionBoxes(B.box, G.box);
-        C.box = this.unionBoxes(A.box, F.box);
+        A.box.copy(B.box).union(G.box);
+        C.box.copy(A.box).union(F.box);
         A.height = 1 + Math.max(B.height, G.height);
         C.height = 1 + Math.max(A.height, F.height);
       } else {
         C.right = iG;
         A.right = iF;
         F.parent = iA;
-        A.box = this.unionBoxes(B.box, F.box);
-        C.box = this.unionBoxes(A.box, G.box);
+        A.box.copy(B.box).union(F.box);
+        C.box.copy(A.box).union(G.box);
         A.height = 1 + Math.max(B.height, F.height);
         C.height = 1 + Math.max(A.height, G.height);
       }
@@ -526,16 +539,16 @@ export class BVH {
         B.right = iD;
         A.left = iE;
         E.parent = iA;
-        A.box = this.unionBoxes(C.box, E.box);
-        B.box = this.unionBoxes(A.box, D.box);
+        A.box.copy(C.box).union(E.box);
+        B.box.copy(A.box).union(D.box);
         A.height = 1 + Math.max(C.height, E.height);
         B.height = 1 + Math.max(A.height, D.height);
       } else {
         B.right = iE;
         A.left = iD;
         D.parent = iA;
-        A.box = this.unionBoxes(C.box, D.box);
-        B.box = this.unionBoxes(A.box, E.box);
+        A.box.copy(C.box).union(D.box);
+        B.box.copy(A.box).union(E.box);
         A.height = 1 + Math.max(C.height, D.height);
         B.height = 1 + Math.max(A.height, E.height);
       }
@@ -551,21 +564,6 @@ export class BVH {
     return 2 *
       (sizeVec.x * sizeVec.y + sizeVec.y * sizeVec.z +
         sizeVec.z * sizeVec.x);
-  }
-
-  private unionBoxes(a: Box3, b: Box3): Box3 {
-    return new Box3(
-      new Vector3(
-        Math.min(a.min.x, b.min.x),
-        Math.min(a.min.y, b.min.y),
-        Math.min(a.min.z, b.min.z),
-      ),
-      new Vector3(
-        Math.max(a.max.x, b.max.x),
-        Math.max(a.max.y, b.max.y),
-        Math.max(a.max.z, b.max.z),
-      ),
-    );
   }
 
   private isLeaf(i: number): boolean {
