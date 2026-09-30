@@ -1,11 +1,7 @@
 import {
   DepthTexture,
-  Mesh,
-  OrthographicCamera,
   type PerspectiveCamera,
-  PlaneGeometry,
-  Scene,
-  ShaderMaterial,
+  type Scene,
   UnsignedInt248Type,
   type WebGLRenderer,
   WebGLRenderTarget,
@@ -44,11 +40,11 @@ export const createMinimapRenderer = (
     samples: 4,
   });
 
-  const fogOutputTarget = new WebGLRenderTarget(renderWidth, renderHeight);
-
+  // The fog pass draws straight into the corner of the main canvas that is
+  // copied out to the minimap
   const createMinimapFogPass = () => {
     const map = getMap();
-    return new FogPass(
+    const pass = new FogPass(
       visibilityGrid.fogTexture,
       sceneRenderTarget.depthTexture!,
       camera,
@@ -59,6 +55,8 @@ export const createMinimapRenderer = (
         mask: map.mask,
       },
     );
+    pass.renderToScreen = true;
+    return pass;
   };
 
   let minimapFogPass = createMinimapFogPass();
@@ -69,30 +67,6 @@ export const createMinimapRenderer = (
     minimapFogPass = createMinimapFogPass();
     minimapFogPass.setDisableFogOfWar(fogDisabled);
   });
-
-  const blitScene = new Scene();
-  const blitCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const blitMaterial = new ShaderMaterial({
-    uniforms: {
-      tDiffuse: { value: fogOutputTarget.texture },
-    },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform sampler2D tDiffuse;
-      varying vec2 vUv;
-      void main() {
-        gl_FragColor = texture2D(tDiffuse, vUv);
-      }
-    `,
-  });
-  const blitQuad = new Mesh(new PlaneGeometry(2, 2), blitMaterial);
-  blitScene.add(blitQuad);
 
   const renderScene = () => {
     const scaledEntities: Array<{ entity: Entity; originalScale: number }> = [];
@@ -137,10 +111,13 @@ export const createMinimapRenderer = (
     for (const entity of maskedEntities) setMinimapMask(entity, false);
   };
 
-  // The minimap has no renderer of its own: it borrows the main one, composites
-  // into the corner of its drawing buffer and copies that out to its own 2D
-  // canvas
-  const present = (ctx: CanvasRenderingContext2D) => {
+  // The minimap has no renderer of its own: it borrows the main one, draws its
+  // fogged scene into the corner of its drawing buffer and copies that out to
+  // its own 2D canvas
+  const renderFogAndOverlay = (
+    delta: number,
+    ctx: CanvasRenderingContext2D,
+  ) => {
     const source = renderer.domElement;
     const target = ctx.canvas;
     if (!target.width || !target.height || !source.width || !source.height) {
@@ -151,31 +128,23 @@ export const createMinimapRenderer = (
       source.width / target.width,
       source.height / target.height,
     );
-    renderInCorner(
-      renderer,
-      ctx,
-      { width: target.width * scale, height: target.height * scale },
-      () => renderer.render(blitScene, blitCamera),
-    );
-  };
 
-  const renderFogAndOverlay = (
-    delta: number,
-    ctx: CanvasRenderingContext2D,
-  ) => {
     // Sync fog texture in case visibilityGrid was recreated
     minimapFogPass.setFogTexture(visibilityGrid.fogTexture);
     minimapFogPass.updateCamera(camera);
 
-    minimapFogPass.render(
+    renderInCorner(
       renderer,
-      fogOutputTarget,
-      sceneRenderTarget,
-      delta,
+      ctx,
+      { width: target.width * scale, height: target.height * scale },
+      () =>
+        minimapFogPass.render(
+          renderer,
+          sceneRenderTarget,
+          sceneRenderTarget,
+          delta,
+        ),
     );
-
-    blitMaterial.uniforms.tDiffuse.value = fogOutputTarget.texture;
-    present(ctx);
   };
 
   return {
@@ -188,10 +157,7 @@ export const createMinimapRenderer = (
     dispose: () => {
       unsubscribeFog();
       sceneRenderTarget.dispose();
-      fogOutputTarget.dispose();
       minimapFogPass.dispose();
-      blitMaterial.dispose();
-      blitQuad.geometry.dispose();
     },
   };
 };
