@@ -12,7 +12,8 @@ const isRealPlayer = (player: Player) => player.id !== "practice-enemy";
 /**
  * Returns all player entities from the ECS, excluding synthetic players like
  * "practice-enemy". Rerenders when players are added or removed, and when any
- * of the given props change on a player.
+ * of the given props change on a player; the array keeps its identity between
+ * those changes.
  */
 export const usePlayers = (
   props: (keyof Entity)[] = [],
@@ -23,8 +24,8 @@ export const usePlayers = (
     set,
     version,
   ]);
-  useListenToEntities(players, props);
-  return players;
+  const propsVersion = useListenToEntities(players, props);
+  return useMemo(() => [...players], [players, propsVersion]);
 };
 
 /**

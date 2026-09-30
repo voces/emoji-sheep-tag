@@ -4,6 +4,8 @@ import { expect } from "@std/expect";
 import { act, renderHook } from "@testing-library/react";
 import { app, type Entity } from "../../ecs.ts";
 import { usePlayers } from "./usePlayers.ts";
+import { usePlayerStats } from "../views/Lobby/usePlayerStats.ts";
+import type { Round } from "@/shared/round.ts";
 
 const waitForFlush = () =>
   act(() => new Promise((resolve) => setTimeout(resolve, 150)));
@@ -43,4 +45,40 @@ it("rerenders when a listed player prop changes", async () => {
     player.team = "wolf";
   });
   expect(renders).toBe(1);
+});
+
+it("returns a new array when a listed player prop changes so memoised stats refresh", async () => {
+  app.addEntity({ id: "player-0", isPlayer: true, team: "sheep" });
+  const switcher: Entity = app.addEntity({
+    id: "player-1",
+    isPlayer: true,
+    team: "sheep",
+  });
+  const rounds: Round[] = [
+    {
+      sheep: ["player-0", "player-1"],
+      wolves: [],
+      duration: 100,
+      mode: "survival",
+    },
+    {
+      sheep: ["player-0"],
+      wolves: ["player-1"],
+      duration: 50,
+      mode: "survival",
+    },
+  ];
+
+  const { result } = renderHook(() =>
+    usePlayerStats(usePlayers(["team"]), rounds)
+  );
+  await waitForFlush();
+  expect([...result.current.longestRoundIds]).toEqual(["player-0", "player-1"]);
+
+  act(() => {
+    switcher.team = "wolf";
+  });
+  await waitForFlush();
+
+  expect([...result.current.longestRoundIds]).toEqual(["player-0"]);
 });

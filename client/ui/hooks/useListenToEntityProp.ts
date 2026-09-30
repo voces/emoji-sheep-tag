@@ -141,8 +141,8 @@ export const useListenToEntityProp = <P extends keyof Entity, T = Entity[P]>(
 export const useListenToEntities = (
   entities: ReadonlySet<Entity> | ReadonlyArray<Entity>,
   props: (keyof Entity)[],
-) => {
-  const [, setValue] = useState(0);
+): number => {
+  const [version, setValue] = useState(0);
   useEffect(
     () => {
       const { throttledCallback, cleanup } = throttle(
@@ -160,4 +160,5 @@ export const useListenToEntities = (
     },
     [Array.from(entities, (e) => e.id).join(" | "), props.join(" | ")],
   );
+  return version;
 };
