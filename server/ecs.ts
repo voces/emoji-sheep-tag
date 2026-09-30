@@ -9,7 +9,7 @@ export type Game = App<Entity> & {
   tick: number;
 };
 
-function makeLoopGuard(
+export function makeLoopGuard(
   label: string,
   warnIters = 100,
   throwIters = 10_000,
@@ -17,7 +17,7 @@ function makeLoopGuard(
   let i = 0, lastWarn = 0;
   return (progressInfo?: string) => {
     i++;
-    if (i >= warnIters || (i > warnIters && i - lastWarn >= warnIters)) {
+    if (i === warnIters || (i > warnIters && i - lastWarn >= warnIters)) {
       lastWarn = i;
       console.warn(
         new Error(
