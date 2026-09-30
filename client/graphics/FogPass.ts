@@ -470,7 +470,7 @@ export class FogPass {
   }
 
   render(
-    renderer: WebGLRenderer,
+    renderer: Pick<WebGLRenderer, "setRenderTarget" | "clear" | "render">,
     writeBuffer: WebGLRenderTarget,
     readBuffer: WebGLRenderTarget,
     deltaTime?: number,

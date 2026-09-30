@@ -11,16 +11,33 @@ import { visibilityGrid } from "../../../systems/fog.ts";
 import { FogPass } from "../../../graphics/FogPass.ts";
 import { type Entity } from "../../../ecs.ts";
 import { setMinimapMask } from "../../../systems/three.ts";
+import { collections } from "../../../systems/models.ts";
 import { terrain } from "../../../graphics/three.ts";
 import {
+  type CornerContext,
+  type CornerRenderer,
   renderInCorner,
   withRendererState,
 } from "../../../graphics/rendererState.ts";
 
 const BACKGROUND_COLOR = 0x333333;
+const UNIT_SCALE = 5;
+const FADED_ALPHA_BOOST = 4;
 
-export const createMinimapRenderer = (
-  renderer: WebGLRenderer,
+const collectionOf = (entity: Entity) =>
+  collections[entity.model ?? entity.prefab ?? ""];
+
+const isFaded = (entity: Entity): entity is Entity & { alpha: number } =>
+  !!entity.alpha && entity.alpha < 1;
+
+type MinimapRenderer<Source extends { width: number; height: number }> =
+  & CornerRenderer<Source>
+  & Pick<WebGLRenderer, "clear" | "render">;
+
+export const createMinimapRenderer = <
+  Source extends { width: number; height: number },
+>(
+  renderer: MinimapRenderer<Source>,
   camera: PerspectiveCamera,
   scene: Scene,
   minimapUnits: Set<Entity>,
@@ -68,26 +85,24 @@ export const createMinimapRenderer = (
     minimapFogPass.setDisableFogOfWar(fogDisabled);
   });
 
+  // Units drawn larger and faded entities more solid so they read at minimap
+  // size. Set on their instances directly and put back after, never on the
+  // entities, so no system or UI sees the change
   const renderScene = () => {
-    const scaledEntities: Array<{ entity: Entity; originalScale: number }> = [];
-    const boostedAlphaEntities: Array<
-      { entity: Entity; originalAlpha: number }
-    > = [];
-    const maskedEntities: Entity[] = [];
-
     for (const entity of minimapUnits) {
-      const originalScale = entity.modelScale ?? 1;
-      scaledEntities.push({ entity, originalScale });
-      entity.modelScale = originalScale * 5;
+      collectionOf(entity)?.setScaleAt(
+        entity.id,
+        (entity.modelScale ?? 1) * UNIT_SCALE,
+        entity.aspectRatio,
+      );
     }
-
     for (const entity of minimapPlayerEntities) {
       setMinimapMask(entity, true);
-      maskedEntities.push(entity);
-      if (entity.alpha && entity.alpha < 1) {
-        const originalAlpha = entity.alpha;
-        boostedAlphaEntities.push({ entity, originalAlpha });
-        entity.alpha = Math.min(1, originalAlpha * 4);
+      if (isFaded(entity)) {
+        collectionOf(entity)?.setAlphaAt(
+          entity.id,
+          Math.min(1, entity.alpha * FADED_ALPHA_BOOST),
+        );
       }
     }
 
@@ -100,15 +115,19 @@ export const createMinimapRenderer = (
     });
     terrain.setDecalsEnabled(true);
 
-    for (const { entity, originalScale } of scaledEntities) {
-      entity.modelScale = originalScale;
+    for (const entity of minimapUnits) {
+      collectionOf(entity)?.setScaleAt(
+        entity.id,
+        entity.modelScale ?? 1,
+        entity.aspectRatio,
+      );
     }
-
-    for (const { entity, originalAlpha } of boostedAlphaEntities) {
-      entity.alpha = originalAlpha;
+    for (const entity of minimapPlayerEntities) {
+      if (isFaded(entity)) {
+        collectionOf(entity)?.setAlphaAt(entity.id, entity.alpha);
+      }
+      setMinimapMask(entity, false);
     }
-
-    for (const entity of maskedEntities) setMinimapMask(entity, false);
   };
 
   // The minimap has no renderer of its own: it borrows the main one, draws its
@@ -116,7 +135,7 @@ export const createMinimapRenderer = (
   // its own 2D canvas
   const renderFogAndOverlay = (
     delta: number,
-    ctx: CanvasRenderingContext2D,
+    ctx: CornerContext<Source>,
   ) => {
     const source = renderer.domElement;
     const target = ctx.canvas;
