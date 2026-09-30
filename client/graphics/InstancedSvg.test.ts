@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { InstancedSvg } from "./InstancedSvg.ts";
-import { BoxGeometry, BufferAttribute, MeshBasicMaterial } from "three";
+import { BoxGeometry, BufferAttribute, Color, MeshBasicMaterial } from "three";
 
 const createTestGeometry = () => {
   const geometry = new BoxGeometry(1, 1, 1);
@@ -101,4 +101,26 @@ Deno.test("InstancedSvg bounding sphere excludes infinite instances", () => {
     true,
     "radius should be reasonable (< 20)",
   );
+});
+
+Deno.test("InstancedSvg draws tinted or not with one program, so an unused one compiles what a tinted one draws with", () => {
+  const unused = new InstancedSvg(
+    [createTestGeometry()],
+    new MeshBasicMaterial(),
+    0,
+    "test",
+  );
+  // three builds a separate program for instanced meshes with instance colours
+  assertEquals(unused.instanceColor !== null, true);
+
+  const tinted = new InstancedSvg(
+    [createTestGeometry()],
+    new MeshBasicMaterial(),
+    0,
+    "test",
+  );
+  tinted.setPositionAt("a", 0, 0);
+  tinted.setVertexColorAt("a", new Color(1, 0, 0));
+  assertEquals(tinted.instanceColor?.getX(0), 1);
+  assertEquals(tinted.instanceColor?.getY(0), 0);
 });

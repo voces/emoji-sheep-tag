@@ -7,6 +7,7 @@
  * - Shader samples transform/opacity textures based on uTime
  */
 
+import { staticInstances } from "./staticMeshes.ts";
 import {
   Box3,
   BufferGeometry,
@@ -85,6 +86,7 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     },
   ) {
     super(geometry, material, count);
+    staticInstances(this);
 
     this.sort = options?.sort;
     this.hasAnimatedOpacity = Array.from(
@@ -109,7 +111,9 @@ export class AnimatedInstancedMesh extends InstancedMesh {
     this.patchBounds();
 
     const depthMaterial = createDepthMaterial();
-    this.depthMesh = new InstancedMesh(geometry, depthMaterial, count);
+    this.depthMesh = staticInstances(
+      new InstancedMesh(geometry, depthMaterial, count),
+    );
     this.depthMesh.instanceMatrix = this.instanceMatrix;
     this.depthMesh.renderOrder = 0;
     this.depthMesh.frustumCulled = false;
@@ -121,10 +125,12 @@ export class AnimatedInstancedMesh extends InstancedMesh {
       }
     };
 
-    this.translucentMesh = new InstancedMesh(
-      geometry,
-      options?.translucentMaterial ?? material,
-      count,
+    this.translucentMesh = staticInstances(
+      new InstancedMesh(
+        geometry,
+        options?.translucentMaterial ?? material,
+        count,
+      ),
     );
     this.translucentMesh.frustumCulled = false;
     this.translucentMesh.raycast = () => {};
