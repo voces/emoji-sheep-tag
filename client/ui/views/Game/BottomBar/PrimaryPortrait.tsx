@@ -8,19 +8,8 @@ import { VStack } from "@/components/layout/Layout.tsx";
 import { useEntityIconProps } from "@/hooks/useEntityIconProps.ts";
 import { isAlly } from "@/shared/api/unit.ts";
 import { useLocalPlayer } from "@/hooks/usePlayers.ts";
-import {
-  startFollowingEntity,
-  stopFollowingEntity,
-} from "../../../../api/camera.ts";
-import { mouse, MouseButtonEvent } from "../../../../mouse.ts";
-import {
-  getActiveOrder,
-  handleTargetOrder,
-} from "../../../../controls/orderHandlers.ts";
-import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
-import { useEffect, useMemo, useRef } from "react";
-import { playSound } from "../../../../api/sound.ts";
-import { pick } from "../../../../util/pick.ts";
+import { useMemo } from "react";
+import { useTargetOrFollow } from "@/hooks/useTargetOrFollow.ts";
 import { AnimatedInstancedMesh } from "../../../../graphics/AnimatedInstancedMesh.ts";
 import { collections } from "../../../../systems/models.ts";
 import { PortraitCanvas } from "@/components/game/PortraitCanvas.tsx";
@@ -126,20 +115,7 @@ export const PrimaryPortrait = () => {
   const selection = useReactiveVar(selectionFocusVar);
   const iconProps = useEntityIconProps(selection);
   useListenToEntityProps(selection, ["icon", "model", "prefab"]);
-  const startedFollowingRef = useRef(false);
-
-  // Handle mouse up on global mouse - stop following only if we started it
-  useEffect(() => {
-    const handleMouseUp = () => {
-      if (startedFollowingRef.current) {
-        stopFollowingEntity();
-        startedFollowingRef.current = false;
-      }
-    };
-
-    mouse.addEventListener("mouseButtonUp", handleMouseUp);
-    return () => mouse.removeEventListener("mouseButtonUp", handleMouseUp);
-  }, []);
+  const handleClick = useTargetOrFollow(selection);
 
   const icon = selection?.icon || selection?.model || selection?.prefab;
   const modelName = selection?.model ?? selection?.prefab;
@@ -148,31 +124,6 @@ export const PrimaryPortrait = () => {
     const col = collections[modelName];
     return col instanceof AnimatedInstancedMesh && col.cameras.length > 0;
   }, [modelName]);
-
-  const handleClick = () => {
-    const activeOrder = getActiveOrder();
-    if (activeOrder && selection) {
-      // If there's an active order, create a synthetic mouse event to execute it on this entity
-      const syntheticEvent = Object.assign(
-        new MouseButtonEvent("down", "left"),
-        {
-          intersects: new ExtendedSet([selection]),
-          world: {
-            x: selection.position?.x ?? 0,
-            y: selection.position?.y ?? 0,
-          },
-        },
-      );
-      const result = handleTargetOrder(syntheticEvent);
-      if (!result.success) {
-        playSound("ui", pick("error1"), { volume: 0.3 });
-      }
-    } else {
-      // Otherwise, start following the entity
-      startFollowingEntity(selection);
-      startedFollowingRef.current = true;
-    }
-  };
 
   return (
     <PrimaryPortraitContainer>

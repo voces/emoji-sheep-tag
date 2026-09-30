@@ -1,8 +1,7 @@
 import { Command } from "@/components/game/Command.tsx";
 import { Grid } from "./common.ts";
 import { CollapsiblePanel } from "./CollapsiblePanel.tsx";
-import { createBlueprint } from "../../../../controls/blueprintHandlers.ts";
-import { mouse } from "../../../../mouse.ts";
+import { startTerrainTool } from "../../../../editor/terrainTools.ts";
 import { tileDefs } from "@/shared/data.ts";
 import {
   editorActiveActionVar,
@@ -12,7 +11,6 @@ import {
   editorBrushSizeVar,
   editorPickWaterLevelVar,
   editorTerrainSelectionVar,
-  editorTileModeVar,
   editorWaterLevelVar,
   type EditorWaterView,
   editorWaterViewVar,
@@ -110,6 +108,36 @@ const brushShapeI18n: Record<EditorBrushShape, string> = {
   circle: "editor.brushShapeCircle",
 };
 
+const cliffAndMaskTools: {
+  kind: "raise" | "lower" | "ramp" | "plateau" | "water" | "mask" | "unmask";
+  name: string;
+  description?: string;
+  Icon: typeof Minus;
+}[] = [
+  { kind: "raise", name: "editor.raiseCliff", Icon: ArrowUpFromLine },
+  { kind: "lower", name: "editor.lowerCliff", Icon: ArrowDownFromLine },
+  { kind: "ramp", name: "editor.ramp", Icon: TriangleRight },
+  {
+    kind: "plateau",
+    name: "editor.plateau",
+    description: "editor.plateauDescription",
+    Icon: Minus,
+  },
+  { kind: "water", name: "editor.paintWater", Icon: Droplet },
+  {
+    kind: "mask",
+    name: "editor.addMask",
+    description: "editor.addMaskDescription",
+    Icon: EyeOff,
+  },
+  {
+    kind: "unmask",
+    name: "editor.removeMask",
+    description: "editor.removeMaskDescription",
+    Icon: Eye,
+  },
+];
+
 const brushSizeLabel = (
   size: EditorBrushSize,
   t: (key: string) => string,
@@ -188,7 +216,7 @@ export const TerrainPanel = () => {
         <Section>
           <SectionLabel>{t("editor.tilesLabel")}</SectionLabel>
           <Grid>
-            {tileDefs.map(({ name, color, pathing }) =>
+            {tileDefs.map(({ name, color }) =>
               name === "Water" ? null : (
                 <Command
                   key={name}
@@ -204,173 +232,23 @@ export const TerrainPanel = () => {
                   iconScale={0.85}
                   pressed={activeAction?.kind === "tile" &&
                     activeAction.color === color}
-                  onClick={() => {
-                    editorTileModeVar("tile");
-                    const blueprint = createBlueprint(
-                      "tile",
-                      mouse.world.x,
-                      mouse.world.y,
-                    );
-                    if (!blueprint) return;
-                    blueprint.vertexColor = color;
-                    blueprint.isDoodad = true;
-                    blueprint.pathing = pathing;
-                    blueprint.alpha = 0;
-                    editorActiveActionVar({ kind: "tile", color });
-                  }}
+                  onClick={() => startTerrainTool({ kind: "tile", color })}
                 />
               )
             )}
-            <Command
-              name={t("editor.raiseCliff")}
-              pressed={activeAction?.kind === "raise"}
-              onClick={() => {
-                editorTileModeVar("tile");
-                const blueprint = createBlueprint(
-                  "tile",
-                  mouse.world.x,
-                  mouse.world.y,
-                );
-                if (!blueprint) return;
-                blueprint.vertexColor = 0xff01ff;
-                blueprint.isDoodad = true;
-                blueprint.alpha = 0;
-                editorActiveActionVar({ kind: "raise" });
-              }}
-            >
-              <ToolIcon>
-                <ArrowUpFromLine />
-              </ToolIcon>
-            </Command>
-            <Command
-              name={t("editor.lowerCliff")}
-              pressed={activeAction?.kind === "lower"}
-              onClick={() => {
-                editorTileModeVar("tile");
-                const blueprint = createBlueprint(
-                  "tile",
-                  mouse.world.x,
-                  mouse.world.y,
-                );
-                if (!blueprint) return;
-                blueprint.vertexColor = 0xff02ff;
-                blueprint.isDoodad = true;
-                blueprint.alpha = 0;
-                editorActiveActionVar({ kind: "lower" });
-              }}
-            >
-              <ToolIcon>
-                <ArrowDownFromLine />
-              </ToolIcon>
-            </Command>
-            <Command
-              name={t("editor.ramp")}
-              pressed={activeAction?.kind === "ramp"}
-              onClick={() => {
-                editorTileModeVar("tile");
-                const blueprint = createBlueprint(
-                  "tile",
-                  mouse.world.x,
-                  mouse.world.y,
-                );
-                if (!blueprint) return;
-                blueprint.vertexColor = 0xff03ff;
-                blueprint.isDoodad = true;
-                blueprint.alpha = 0;
-                editorActiveActionVar({ kind: "ramp" });
-              }}
-            >
-              <ToolIcon>
-                <TriangleRight />
-              </ToolIcon>
-            </Command>
-            <Command
-              name={t("editor.plateau")}
-              description={t("editor.plateauDescription")}
-              pressed={activeAction?.kind === "plateau"}
-              onClick={() => {
-                editorTileModeVar("tile");
-                const blueprint = createBlueprint(
-                  "tile",
-                  mouse.world.x,
-                  mouse.world.y,
-                );
-                if (!blueprint) return;
-                blueprint.vertexColor = 0xff04ff;
-                blueprint.isDoodad = true;
-                blueprint.alpha = 0;
-                editorActiveActionVar({ kind: "plateau" });
-              }}
-            >
-              <ToolIcon>
-                <Minus />
-              </ToolIcon>
-            </Command>
-            <Command
-              name={waterPaintLabel}
-              pressed={activeAction?.kind === "water"}
-              onClick={() => {
-                editorTileModeVar("paintWater");
-                const blueprint = createBlueprint(
-                  "tile",
-                  mouse.world.x,
-                  mouse.world.y,
-                );
-                if (!blueprint) return;
-                blueprint.vertexColor = 0x385670;
-                blueprint.isDoodad = true;
-                blueprint.alpha = 0;
-                editorActiveActionVar({ kind: "water" });
-              }}
-            >
-              <ToolIcon>
-                <Droplet />
-              </ToolIcon>
-            </Command>
-            <Command
-              name={t("editor.addMask")}
-              description={t("editor.addMaskDescription")}
-              pressed={activeAction?.kind === "mask"}
-              onClick={() => {
-                editorTileModeVar("paintMask");
-                const blueprint = createBlueprint(
-                  "tile",
-                  mouse.world.x,
-                  mouse.world.y,
-                );
-                if (!blueprint) return;
-                blueprint.vertexColor = 0xff07ff;
-                blueprint.isDoodad = true;
-                blueprint.alpha = 0;
-                editorActiveActionVar({ kind: "mask" });
-              }}
-            >
-              <ToolIcon>
-                <EyeOff />
-              </ToolIcon>
-            </Command>
-            <Command
-              name={t("editor.removeMask")}
-              description={t("editor.removeMaskDescription")}
-              pressed={activeAction?.kind === "unmask"}
-              onClick={() => {
-                editorTileModeVar("paintMask");
-                const blueprint = createBlueprint(
-                  "tile",
-                  mouse.world.x,
-                  mouse.world.y,
-                );
-                if (!blueprint) return;
-                blueprint.vertexColor = 0xff08ff;
-                blueprint.isDoodad = true;
-                blueprint.alpha = 0;
-                editorActiveActionVar({ kind: "unmask" });
-              }}
-            >
-              <ToolIcon>
-                <Eye />
-              </ToolIcon>
-            </Command>
+            {cliffAndMaskTools.map(({ kind, name, description, Icon }) => (
+              <Command
+                key={kind}
+                name={kind === "water" ? waterPaintLabel : t(name)}
+                description={description && t(description)}
+                pressed={activeAction?.kind === kind}
+                onClick={() => startTerrainTool({ kind })}
+              >
+                <ToolIcon>
+                  <Icon />
+                </ToolIcon>
+              </Command>
+            ))}
             <Command
               name={t("editor.selectArea")}
               description={t("editor.selectAreaDescription")}
@@ -385,19 +263,7 @@ export const TerrainPanel = () => {
                   editorTerrainSelectionVar(undefined);
                   return;
                 }
-                editorTileModeVar("tile");
-                const blueprint = createBlueprint(
-                  "tile",
-                  mouse.world.x,
-                  mouse.world.y,
-                );
-                if (!blueprint) return;
-                // Sentinel: not used for terrain edits, just routes the click
-                // through the tile-blueprint path so we get drag handling.
-                blueprint.vertexColor = 0xff05ff;
-                blueprint.isDoodad = true;
-                blueprint.alpha = 0;
-                editorActiveActionVar({ kind: "select" });
+                startTerrainTool({ kind: "select" });
               }}
             >
               <ToolIcon>

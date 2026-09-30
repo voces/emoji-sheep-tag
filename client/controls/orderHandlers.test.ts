@@ -16,7 +16,6 @@ import {
   getTestServerMessages,
   getTestServerPort,
 } from "@/client-testing/integration-setup.ts";
-import { MouseButtonEvent } from "../mouse.ts";
 import { Vector2 } from "three";
 import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
 import {
@@ -25,6 +24,7 @@ import {
   handleSmartTarget,
   playOrderSound,
   setActiveOrder,
+  type TargetClick,
 } from "./orderHandlers.ts";
 import { newTestUnit } from "@/client-testing/utils.tsx";
 import { addEntity } from "@/shared/api/entity.ts";
@@ -129,16 +129,11 @@ describe("order handlers", () => {
       (wolf as Entity).selected = true;
 
       // Mock mouse event for ground click (no intersections)
-      const mockMouseEvent = {
+      const mockMouseEvent: TargetClick = {
         intersects: new ExtendedSet(),
         world: new Vector2(20, 20),
-        button: "right",
-        pixels: new Vector2(0, 0),
-        percent: new Vector2(0, 0),
-        angle: 0,
-        element: null,
-        elements: [],
-      } as unknown as MouseButtonEvent;
+        queue: false,
+      };
 
       const result = handleSmartTarget(mockMouseEvent);
 
@@ -171,16 +166,11 @@ describe("order handlers", () => {
 
       // Mock mouse event for enemy structure click
       const mockIntersects = new ExtendedSet([enemyHut]);
-      const mockMouseEvent = {
+      const mockMouseEvent: TargetClick = {
         intersects: mockIntersects,
         world: new Vector2(15, 15),
-        button: "right",
-        pixels: new Vector2(0, 0),
-        percent: new Vector2(0, 0),
-        angle: 0,
-        element: null,
-        elements: [],
-      } as unknown as MouseButtonEvent;
+        queue: false,
+      };
 
       const result = handleSmartTarget(mockMouseEvent);
 
@@ -213,16 +203,11 @@ describe("order handlers", () => {
 
       // Mock mouse event for enemy unit click
       const mockIntersects = new ExtendedSet([enemySheep]);
-      const mockMouseEvent = {
+      const mockMouseEvent: TargetClick = {
         intersects: mockIntersects,
         world: new Vector2(12, 12),
-        button: "right",
-        pixels: new Vector2(0, 0),
-        percent: new Vector2(0, 0),
-        angle: 0,
-        element: null,
-        elements: [],
-      } as unknown as MouseButtonEvent;
+        queue: false,
+      };
 
       const result = handleSmartTarget(mockMouseEvent);
 
@@ -338,17 +323,11 @@ describe("order handlers", () => {
       (wolf as Entity).selected = true;
 
       // Mock mouse event with queue flag
-      const mockMouseEvent = {
+      const mockMouseEvent: TargetClick = {
         intersects: new ExtendedSet(),
         world: new Vector2(20, 20),
-        button: "right",
-        pixels: new Vector2(0, 0),
-        percent: new Vector2(0, 0),
-        angle: 0,
-        element: null,
-        elements: [],
         queue: true, // Simulate shift held
-      } as unknown as MouseButtonEvent;
+      };
 
       const result = handleSmartTarget(mockMouseEvent);
       expect(result).toBe(true);
@@ -377,17 +356,11 @@ describe("order handlers", () => {
       (wolf as Entity).selected = true;
 
       // Mock mouse event without queue flag
-      const mockMouseEvent = {
+      const mockMouseEvent: TargetClick = {
         intersects: new ExtendedSet(),
         world: new Vector2(20, 20),
-        button: "right",
-        pixels: new Vector2(0, 0),
-        percent: new Vector2(0, 0),
-        angle: 0,
-        element: null,
-        elements: [],
         queue: false, // No shift
-      } as unknown as MouseButtonEvent;
+      };
 
       const result = handleSmartTarget(mockMouseEvent);
       expect(result).toBe(true);
@@ -417,17 +390,11 @@ describe("order handlers", () => {
 
       // Mock mouse event with queue flag
       const mockIntersects = new ExtendedSet([enemySheep]);
-      const mockMouseEvent = {
+      const mockMouseEvent: TargetClick = {
         intersects: mockIntersects,
         world: new Vector2(15, 15),
-        button: "right",
-        pixels: new Vector2(0, 0),
-        percent: new Vector2(0, 0),
-        angle: 0,
-        element: null,
-        elements: [],
         queue: true, // Queue the attack
-      } as unknown as MouseButtonEvent;
+      };
 
       const result = handleSmartTarget(mockMouseEvent);
       expect(result).toBe(true);
@@ -459,17 +426,11 @@ describe("order handlers", () => {
       (wolf2 as Entity).selected = true;
 
       // Mock mouse event with queue flag
-      const mockMouseEvent = {
+      const mockMouseEvent: TargetClick = {
         intersects: new ExtendedSet(),
         world: new Vector2(25, 25),
-        button: "right",
-        pixels: new Vector2(0, 0),
-        percent: new Vector2(0, 0),
-        angle: 0,
-        element: null,
-        elements: [],
         queue: true,
-      } as unknown as MouseButtonEvent;
+      };
 
       const result = handleSmartTarget(mockMouseEvent);
       expect(result).toBe(true);

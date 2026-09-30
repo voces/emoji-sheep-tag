@@ -34,7 +34,7 @@ const SliderRail = styled.div`
   background: ${({ theme }) => theme.surface[3]};
 `;
 
-const SliderThumb = styled.div<{ $position: number; $hover: boolean }>`
+const SliderThumb = styled.div<{ $position: number; $dragging: boolean }>`
   position: absolute;
   left: ${({ $position }) => `calc(${$position * 100}% - ${$position * 16}px)`};
   width: 16px;
@@ -47,7 +47,11 @@ const SliderThumb = styled.div<{ $position: number; $hover: boolean }>`
   user-select: none;
   transition: transform ${({ theme }) => theme.motion.fast} ${({ theme }) =>
     theme.motion.easeOut};
-  transform: ${({ $hover }) => $hover ? "scale(1.15)" : "scale(1)"};
+  transform: ${({ $dragging }) => $dragging ? "scale(1.15)" : "scale(1)"};
+
+  .hover > & {
+    transform: scale(1.15);
+  }
 `;
 
 const SliderValue = styled.span`
@@ -77,9 +81,7 @@ export const Slider = ({
   disabled?: boolean;
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
-  const thumbRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const rafRef = useRef<number>(undefined);
 
@@ -117,36 +119,13 @@ export const Slider = ({
     });
   }, [min, max, step, onChange]);
 
-  const checkHover = () => {
-    if (trackRef.current) {
-      const rect = trackRef.current.getBoundingClientRect();
-      const mouseX = mouse.pixels.x;
-      const mouseY = mouse.pixels.y;
-
-      if (
-        mouseX >= rect.left && mouseX <= rect.right &&
-        mouseY >= rect.top && mouseY <= rect.bottom
-      ) return true;
-    }
-
-    if (thumbRef.current) {
-      const rect = thumbRef.current.getBoundingClientRect();
-      const mouseX = mouse.pixels.x;
-      const mouseY = mouse.pixels.y;
-
-      if (
-        mouseX >= rect.left && mouseX <= rect.right &&
-        mouseY >= rect.top && mouseY <= rect.bottom
-      ) return true;
-    }
-
-    return false;
-  };
+  const isOverTrack = (e: MouseButtonEvent) =>
+    !!e.element && !!trackRef.current?.contains(e.element);
 
   // Handle mouse down (only when hovering)
   useEffect(() => {
     const handleMouseDown = (e: MouseButtonEvent) => {
-      if (e.button === "left" && checkHover()) {
+      if (e.button === "left" && isOverTrack(e)) {
         setIsDragging(true);
         updateValue(mouse.pixels.x);
       }
@@ -182,16 +161,6 @@ export const Slider = ({
     return () => listeners.abort();
   }, [isDragging, updateValue, onChange, localValue]);
 
-  // Handle hover state - only check on mouse move, not every frame
-  useEffect(() => {
-    const handleMouseMove = () => {
-      setIsHovering(checkHover());
-    };
-
-    mouse.addEventListener("mouseMove", handleMouseMove);
-    return () => mouse.removeEventListener("mouseMove", handleMouseMove);
-  }, []);
-
   const displayValue = isDragging ? localValue : value;
   const normalizedValue = Math.max(
     0,
@@ -207,9 +176,8 @@ export const Slider = ({
       <SliderTrack ref={trackRef}>
         <SliderRail />
         <SliderThumb
-          ref={thumbRef}
           $position={normalizedValue}
-          $hover={isHovering || isDragging}
+          $dragging={isDragging}
         />
       </SliderTrack>
     </SliderContainer>

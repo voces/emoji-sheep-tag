@@ -11,20 +11,8 @@ import { styled } from "styled-components";
 import { Entity } from "../../../ecs.ts";
 import { svgs } from "../../../systems/models.ts";
 import { useEntityIconProps } from "@/hooks/useEntityIconProps.ts";
-import {
-  startFollowingEntity,
-  stopFollowingEntity,
-} from "../../../api/camera.ts";
-import { selectionFocusVar as selectionVar } from "@/vars/selectionFocus.ts";
-import { mouse, MouseButtonEvent } from "../../../mouse.ts";
-import {
-  getActiveOrder,
-  handleTargetOrder,
-} from "../../../controls/orderHandlers.ts";
-import { ExtendedSet } from "@/shared/util/ExtendedSet.ts";
-import { useEffect, useMemo, useRef } from "react";
-import { playSound } from "../../../api/sound.ts";
-import { pick } from "../../../util/pick.ts";
+import { useMemo } from "react";
+import { useTargetOrFollow } from "@/hooks/useTargetOrFollow.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 
 const MiniIconWrapper = styled.div<{ $rows: number; $size: number }>`
@@ -164,7 +152,7 @@ export const Avatar = (
 
   const iconProps = useEntityIconProps(entity);
   const ownerColor = getPlayer(entity.owner)?.playerColor ?? undefined;
-  const startedFollowingRef = useRef(false);
+  const handleClick = useTargetOrFollow(entity, { focus: true });
 
   // Get expiring buffs for timers
   const expiringBuffs = useMemo(
@@ -174,39 +162,6 @@ export const Avatar = (
       ) ?? [],
     [entity.buffs],
   );
-
-  const handleClick = () => {
-    const activeOrder = getActiveOrder();
-    if (activeOrder) {
-      // If there's an active order, create a synthetic mouse event to execute it on this entity
-      const syntheticEvent = Object.assign(
-        new MouseButtonEvent("down", "left"),
-        {
-          intersects: new ExtendedSet([entity]),
-          world: { x: entity.position?.x ?? 0, y: entity.position?.y ?? 0 },
-        },
-      );
-      const result = handleTargetOrder(syntheticEvent);
-      if (!result.success) playSound("ui", pick("error1"), { volume: 0.3 });
-    } else {
-      selectionVar(entity);
-      startFollowingEntity(entity);
-      startedFollowingRef.current = true;
-    }
-  };
-
-  // Handle mouse up on global mouse - stop following only if we started it
-  useEffect(() => {
-    const handleMouseUp = () => {
-      if (startedFollowingRef.current) {
-        stopFollowingEntity();
-        startedFollowingRef.current = false;
-      }
-    };
-
-    mouse.addEventListener("mouseButtonUp", handleMouseUp);
-    return () => mouse.removeEventListener("mouseButtonUp", handleMouseUp);
-  }, []);
 
   return (
     <HStack $gap={1}>
