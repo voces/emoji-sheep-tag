@@ -1,3 +1,4 @@
+import { staticInstances } from "./staticMeshes.ts";
 import {
   Box3,
   BufferGeometry,
@@ -65,6 +66,7 @@ export class InstancedSvg extends InstancedMesh {
     }
 
     super(mergedGeometry, material, count);
+    staticInstances(this);
 
     this.sort = options?.sort;
     this.hasTranslucentShapes = geometries.some((geo) => {
@@ -72,10 +74,12 @@ export class InstancedSvg extends InstancedMesh {
       return !!opacities &&
         Array.from(opacities).some((o) => (o > 1 ? o - 2 : o) < 0.999);
     });
-    this.translucentMesh = new InstancedMesh(
-      mergedGeometry,
-      options?.translucentMaterial ?? material,
-      count,
+    this.translucentMesh = staticInstances(
+      new InstancedMesh(
+        mergedGeometry,
+        options?.translucentMaterial ?? material,
+        count,
+      ),
     );
     this.translucentMesh.frustumCulled = false;
     this.translucentMesh.raycast = () => {};
@@ -124,6 +128,16 @@ export class InstancedSvg extends InstancedMesh {
     }
     instancePlayerColorAttr.setUsage(DynamicDrawUsage);
     mergedGeometry.setAttribute("instancePlayerColor", instancePlayerColorAttr);
+
+    // Tints from the start, all white: three builds instanced meshes with and
+    // without a tint separate programs, and one compiled ahead untinted would
+    // leave the tinted one, a build ghost say, to compile as it first draws
+    this.instanceColor = new InstancedBufferAttribute(
+      new Float32Array(count * 3).fill(1),
+      3,
+    );
+    this.instanceColor.setUsage(DynamicDrawUsage);
+    this.syncTranslucentMesh();
 
     // Patch bounding box/sphere computation
     this.patchBounds();

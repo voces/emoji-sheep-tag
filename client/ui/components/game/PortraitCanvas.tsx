@@ -5,6 +5,7 @@ import { type Entity } from "../../../ecs.ts";
 import { AnimatedInstancedMesh } from "../../../graphics/AnimatedInstancedMesh.ts";
 import { createAnimatedMeshMaterial } from "../../../graphics/AnimatedMeshMaterial.ts";
 import { onRender, renderer } from "../../../graphics/three.ts";
+import { timed } from "../../../graphics/gpuTimings.ts";
 import { collections } from "../../../systems/models.ts";
 import {
   computeAnimationParams,
@@ -74,6 +75,19 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
     mesh.translucentMesh.renderOrder = 1;
     portraitScene.add(mesh, mesh.depthMesh, mesh.translucentMesh);
 
+    // Drawn straight to the screen, the portrait's programs are its own; where
+    // the driver compiles in parallel they compile before its first draw, the
+    // portrait staying blank meanwhile, rather than stalling that frame
+    let ready = !renderer.extensions.has("KHR_parallel_shader_compile");
+    if (!ready) {
+      const previousTarget = renderer.getRenderTarget();
+      renderer.setRenderTarget(null);
+      renderer.compileAsync(portraitScene, camera).catch(() => {}).then(() => {
+        ready = true;
+      });
+      renderer.setRenderTarget(previousTarget);
+    }
+
     const geo = mesh.geometry;
     geo.computeBoundingBox();
     geo.computeBoundingSphere();
@@ -113,7 +127,7 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
 
     const disposeRender = onRender((delta) => {
       const ctx = ctx2dRef.current;
-      if (!ctx || !renderer) return;
+      if (!ctx || !renderer || !ready) return;
 
       syncAnimation();
       syncColors();
@@ -135,8 +149,11 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
       renderer.setScissor(0, 0, PORTRAIT_SIZE, PORTRAIT_SIZE);
       renderer.setScissorTest(true);
       renderer.setClearColor(0x222222, 1);
-      renderer.clear();
-      renderer.render(portraitScene, camera);
+      const gl = renderer;
+      timed("portrait", () => {
+        gl.clear();
+        gl.render(portraitScene, camera);
+      });
 
       // Blit from WebGL canvas to 2D canvas (GPU-composited, no pipeline stall)
       // Flip vertically: WebGL origin is bottom-left, canvas origin is top-left

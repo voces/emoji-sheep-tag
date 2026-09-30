@@ -20,33 +20,37 @@ export type AnimationData = {
   opacityTexture: DataTexture;
 };
 
-const float16ToFloat = (h: number): number => {
-  const sign = (h >> 15) & 0x1;
-  const exp = (h >> 10) & 0x1f;
-  const frac = h & 0x3ff;
-
-  if (exp === 0) {
-    if (frac === 0) return sign ? -0 : 0;
-    let e = -14;
-    let m = frac;
-    while ((m & 0x400) === 0) {
-      m <<= 1;
-      e--;
+/** Every half float's value, indexed by its bits, so decoding one is a lookup. */
+const HALF_FLOATS = (() => {
+  const values = new Float32Array(0x10000);
+  const bits = new Int32Array(values.buffer);
+  for (let h = 0; h < 0x10000; h++) {
+    const sign = (h >> 15) & 0x1;
+    const exp = (h >> 10) & 0x1f;
+    const frac = h & 0x3ff;
+    if (exp === 0) {
+      if (frac === 0) {
+        values[h] = sign ? -0 : 0;
+        continue;
+      }
+      // Subnormal: shift the fraction up until its leading bit is implicit
+      let e = -14;
+      let m = frac;
+      while ((m & 0x400) === 0) {
+        m <<= 1;
+        e--;
+      }
+      bits[h] = (sign << 31) | ((e + 127) << 23) | ((m & 0x3ff) << 13);
+    } else if (exp === 31) {
+      values[h] = frac ? NaN : sign ? -Infinity : Infinity;
+    } else {
+      bits[h] = (sign << 31) | ((exp - 15 + 127) << 23) | (frac << 13);
     }
-    m &= 0x3ff;
-    const floatView = new Float32Array(1);
-    const int32View = new Int32Array(floatView.buffer);
-    int32View[0] = (sign << 31) | ((e + 127) << 23) | (m << 13);
-    return floatView[0];
   }
+  return values;
+})();
 
-  if (exp === 31) return frac ? NaN : (sign ? -Infinity : Infinity);
-
-  const floatView = new Float32Array(1);
-  const int32View = new Int32Array(floatView.buffer);
-  int32View[0] = (sign << 31) | ((exp - 15 + 127) << 23) | (frac << 13);
-  return floatView[0];
-};
+const float16ToFloat = (h: number): number => HALF_FLOATS[h];
 
 class BinaryReader {
   private view: DataView;
@@ -174,6 +178,33 @@ const sampleBezier = (
   };
 };
 
+/** How far, in world units, a curve's straight steps may stray from it. */
+const FLATNESS = 0.0005;
+/** The most straight steps a curve is cut into, however bent. */
+const MAX_CURVE_STEPS = 32;
+
+/**
+ * How many equal steps keep `seg` within `tolerance` of the curve: flattened
+ * so, a cubic strays at most three quarters of its largest control point
+ * second difference over the steps squared.
+ */
+const flatteningSteps = (seg: CubicSegment, tolerance: number) => {
+  const bend = Math.max(
+    Math.hypot(
+      seg.p0.x - 2 * seg.c0.x + seg.c1.x,
+      seg.p0.y - 2 * seg.c0.y + seg.c1.y,
+    ),
+    Math.hypot(
+      seg.c0.x - 2 * seg.c1.x + seg.p1.x,
+      seg.c0.y - 2 * seg.c1.y + seg.p1.y,
+    ),
+  );
+  return Math.min(
+    MAX_CURVE_STEPS,
+    Math.max(1, Math.ceil(Math.sqrt(0.75 * bend / tolerance))),
+  );
+};
+
 const lerpRgb = (
   a: { r: number; g: number; b: number },
   b: { r: number; g: number; b: number },
@@ -186,39 +217,43 @@ const lerpRgb = (
 
 const defaultPropertyValues = { tx: 0, ty: 0, rot: 0, scale: 1, opacity: 1 };
 
-const getPropertyValue = (
-  keyframes: ParsedKeyframe[] | undefined,
-  property: "tx" | "ty" | "rot" | "scale" | "opacity",
-  t: number,
-): number => {
-  if (!keyframes || keyframes.length === 0) {
-    return defaultPropertyValues[property];
-  }
+type Property = keyof typeof defaultPropertyValues;
+const PROPERTIES: readonly Property[] = ["tx", "ty", "rot", "scale", "opacity"];
 
-  const relevantKeyframes = keyframes.filter((kf) =>
-    kf[property] !== undefined
-  );
-  if (relevantKeyframes.length === 0) return defaultPropertyValues[property];
-  if (relevantKeyframes.length === 1) return relevantKeyframes[0][property]!;
+/** One property's keyframes: their times and values, in keyframe order. */
+type Track = { ts: number[]; vs: number[] };
 
-  let left = relevantKeyframes[0];
-  let right = relevantKeyframes[relevantKeyframes.length - 1];
+/** Each property's track among `keyframes`, split out once rather than per sample. */
+const tracksOf = (keyframes: readonly ParsedKeyframe[]) =>
+  Object.fromEntries(PROPERTIES.map((property) => {
+    const ts: number[] = [], vs: number[] = [];
+    for (const kf of keyframes) {
+      const v = kf[property];
+      if (v === undefined) continue;
+      ts.push(kf.t);
+      vs.push(v);
+    }
+    return [property, ts.length ? { ts, vs } : undefined];
+  })) as Record<Property, Track | undefined>;
 
-  for (let i = 0; i < relevantKeyframes.length - 1; i++) {
-    if (relevantKeyframes[i].t <= t && relevantKeyframes[i + 1].t >= t) {
-      left = relevantKeyframes[i];
-      right = relevantKeyframes[i + 1];
+/** A track's value at `t`, held at its ends and eased linearly between keys. */
+const valueAt = (track: Track | undefined, property: Property, t: number) => {
+  if (!track) return defaultPropertyValues[property];
+  const { ts, vs } = track;
+  if (ts.length === 1) return vs[0];
+  let left = 0, right = ts.length - 1;
+  for (let i = 0; i < ts.length - 1; i++) {
+    if (ts[i] <= t && ts[i + 1] >= t) {
+      left = i;
+      right = i + 1;
       break;
     }
   }
-
-  if (t <= left.t) return left[property]!;
-  if (t >= right.t) return right[property]!;
-
-  const dt = right.t - left.t;
-  if (dt === 0) return left[property]!;
-  const alpha = (t - left.t) / dt;
-  return left[property]! + (right[property]! - left[property]!) * alpha;
+  if (t <= ts[left]) return vs[left];
+  if (t >= ts[right]) return vs[right];
+  const dt = ts[right] - ts[left];
+  if (dt === 0) return vs[left];
+  return vs[left] + (vs[right] - vs[left]) * (t - ts[left]) / dt;
 };
 
 const getPivotOffset = (pivot: Point, rot: number, scale: number): Point => {
@@ -523,22 +558,27 @@ const buildGeometry = (
       const first = path.segments[0].p0;
       shape.moveTo(first.x * scale, first.y * scale);
 
+      // Each curve in as few straight steps as keep it within the flatness,
+      // rather than a fixed many: most of the art's edges are straight or
+      // gently bent, and every point costs triangulating
+      const tolerance = FLATNESS / scale;
       for (const seg of path.segments) {
-        shape.bezierCurveTo(
-          seg.c0.x * scale,
-          seg.c0.y * scale,
-          seg.c1.x * scale,
-          seg.c1.y * scale,
-          seg.p1.x * scale,
-          seg.p1.y * scale,
-        );
+        const steps = flatteningSteps(seg, tolerance);
+        for (let i = 1; i <= steps; i++) {
+          const { x, y } = sampleBezier(
+            seg.p0,
+            seg.c0,
+            seg.c1,
+            seg.p1,
+            i / steps,
+          );
+          shape.lineTo(x * scale, y * scale);
+        }
       }
       shape.closePath();
     }
 
-    const shapeGeo = hasVertexColors
-      ? new ShapeGeometry(shape)
-      : new ShapeGeometry(shape, 32);
+    const shapeGeo = new ShapeGeometry(shape);
 
     const positions = shapeGeo.attributes.position;
     const vertexCount = positions.count;
@@ -660,18 +700,7 @@ const buildAnimationData = (
   // +1 for the default clip
   const clipCount = clips.length + 1;
 
-  const getAncestorChain = (path: ParsedPath): ParsedGroup[] => {
-    const chain: ParsedGroup[] = [];
-    let parentIdx = path.parentIdx;
-    while (parentIdx !== null && parentIdx < groups.length) {
-      const parent = groups[parentIdx];
-      chain.unshift(parent);
-      parentIdx = parent.parentIdx;
-    }
-    return chain;
-  };
-
-  const getPathTransformPoint = (path: ParsedPath): Point => {
+  const pivotOf = (path: ParsedPath): Point => {
     if (path.transformPoint) return path.transformPoint;
     if (path.segments.length === 0) return { x: 0, y: 0 };
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -684,6 +713,29 @@ const buildAnimationData = (
       }
     }
     return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+  };
+
+  // What stays the same from sample to sample, worked out once: each part's
+  // groups outermost first, where it turns about, and each animation's tracks
+  const ancestors = paths.map((path) => {
+    const chain: number[] = [];
+    for (
+      let parentIdx = path.parentIdx;
+      parentIdx !== null && parentIdx < groups.length;
+      parentIdx = groups[parentIdx].parentIdx
+    ) chain.unshift(parentIdx);
+    return chain;
+  });
+  const pivots = paths.map(pivotOf);
+  const trackCache = new Map<
+    readonly ParsedKeyframe[],
+    Record<Property, Track | undefined>
+  >();
+  const tracks = (keyframes: readonly ParsedKeyframe[] | undefined) => {
+    if (!keyframes?.length) return undefined;
+    let found = trackCache.get(keyframes);
+    if (!found) trackCache.set(keyframes, found = tracksOf(keyframes));
+    return found;
   };
 
   const totalSamples = sampleCount * partCount * clipCount;
@@ -707,6 +759,8 @@ const buildAnimationData = (
   for (let clipIdx = 0; clipIdx < clips.length; clipIdx++) {
     const clip = clips[clipIdx];
     const clipOffset = (clipIdx + 1) * partCount * sampleCount;
+    const groupTracks = groups.map((_, g) => tracks(clip.parts.get(-(g + 1))));
+    const partTracks = paths.map((_, p) => tracks(clip.parts.get(p)));
 
     for (let sampleIdx = 0; sampleIdx < sampleCount; sampleIdx++) {
       // Shader samples using normalized time t in [0,1], so we bake at normalized time
@@ -716,7 +770,6 @@ const buildAnimationData = (
 
       for (let partIdx = 0; partIdx < partCount; partIdx++) {
         const path = paths[partIdx];
-        const ancestorChain = getAncestorChain(path);
 
         let combinedTx = 0,
           combinedTy = 0,
@@ -728,71 +781,54 @@ const buildAnimationData = (
         let anyAncestorHasOpacityKeyframes = false;
 
         // Apply ancestor transforms
-        for (let gi = 0; gi < ancestorChain.length; gi++) {
-          const ancestor = ancestorChain[gi];
-          // Find the group's index to look up animation
-          let groupIdx = -1;
-          for (let i = 0; i < groups.length; i++) {
-            if (groups[i] === ancestor) {
-              groupIdx = i;
-              break;
-            }
-          }
-          if (groupIdx < 0) continue;
+        for (const groupIdx of ancestors[partIdx]) {
+          const ancestorTracks = groupTracks[groupIdx];
+          if (!ancestorTracks) continue;
+          const aTx = valueAt(ancestorTracks.tx, "tx", t);
+          const aTy = valueAt(ancestorTracks.ty, "ty", t);
+          const aRot = valueAt(ancestorTracks.rot, "rot", t);
+          const aScale = valueAt(ancestorTracks.scale, "scale", t);
+          // For opacity: use animated value if keyframes exist, otherwise treat as 1
+          // (parent opacity controls children, but only if explicitly animated)
+          if (ancestorTracks.opacity) anyAncestorHasOpacityKeyframes = true;
+          const aOpacity = ancestorTracks.opacity
+            ? valueAt(ancestorTracks.opacity, "opacity", t)
+            : 1;
 
-          const ancestorAnim = clip.parts.get(-(groupIdx + 1));
-          if (ancestorAnim && ancestorAnim.length > 0) {
-            const aTx = getPropertyValue(ancestorAnim, "tx", t);
-            const aTy = getPropertyValue(ancestorAnim, "ty", t);
-            const aRot = getPropertyValue(ancestorAnim, "rot", t);
-            const aScale = getPropertyValue(ancestorAnim, "scale", t);
-            // For opacity: use animated value if keyframes exist, otherwise treat as 1
-            // (parent opacity controls children, but only if explicitly animated)
-            const hasAncestorOpacityKeyframes = ancestorAnim.some((kf) =>
-              kf.opacity !== undefined
-            );
-            if (hasAncestorOpacityKeyframes) {
-              anyAncestorHasOpacityKeyframes = true;
-            }
-            const aOpacity = hasAncestorOpacityKeyframes
-              ? getPropertyValue(ancestorAnim, "opacity", t)
-              : 1;
+          const pivot = groups[groupIdx].transformPoint ?? { x: 0, y: 0 };
+          const pivotOffset = getPivotOffset(pivot, aRot, aScale);
 
-            const pivot = ancestor.transformPoint ?? { x: 0, y: 0 };
-            const pivotOffset = getPivotOffset(pivot, aRot, aScale);
+          const cos = Math.cos(aRot);
+          const sin = Math.sin(aRot);
+          const rotatedTx = combinedTx * cos - combinedTy * sin;
+          const rotatedTy = combinedTx * sin + combinedTy * cos;
 
-            const cos = Math.cos(aRot);
-            const sin = Math.sin(aRot);
-            const rotatedTx = combinedTx * cos - combinedTy * sin;
-            const rotatedTy = combinedTx * sin + combinedTy * cos;
-
-            combinedTx = rotatedTx * aScale + aTx + pivotOffset.x;
-            combinedTy = rotatedTy * aScale + aTy + pivotOffset.y;
-            combinedRot += aRot;
-            combinedScale *= aScale;
-            combinedOpacity *= aOpacity;
-          }
+          combinedTx = rotatedTx * aScale + aTx + pivotOffset.x;
+          combinedTy = rotatedTy * aScale + aTy + pivotOffset.y;
+          combinedRot += aRot;
+          combinedScale *= aScale;
+          combinedOpacity *= aOpacity;
         }
 
         // Apply path's own animation
-        const partAnim = clip.parts.get(partIdx);
-        const pathTx = getPropertyValue(partAnim, "tx", t);
-        const pathTy = getPropertyValue(partAnim, "ty", t);
-        const pathRot = getPropertyValue(partAnim, "rot", t);
-        const pathScale = getPropertyValue(partAnim, "scale", t);
+        const own = partTracks[partIdx];
+        const pathTx = valueAt(own?.tx, "tx", t);
+        const pathTy = valueAt(own?.ty, "ty", t);
+        const pathRot = valueAt(own?.rot, "rot", t);
+        const pathScale = valueAt(own?.scale, "scale", t);
         // For opacity:
         // - If path has opacity keyframes, use animated value (first keyframe as initial)
         // - If no keyframes but ancestor has opacity keyframes, use 1 (fully controlled by ancestor)
         // - If no one in the chain has opacity keyframes, use base path opacity
-        const hasOpacityKeyframes = partAnim?.some((kf) =>
-          kf.opacity !== undefined
-        ) ?? false;
-        const pathOpacity = hasOpacityKeyframes
-          ? getPropertyValue(partAnim, "opacity", t)
+        const pathOpacity = own?.opacity
+          ? valueAt(own.opacity, "opacity", t)
           : (anyAncestorHasOpacityKeyframes ? 1 : path.opacity);
 
-        const pathPivot = getPathTransformPoint(path);
-        const pathPivotOffset = getPivotOffset(pathPivot, pathRot, pathScale);
+        const pathPivotOffset = getPivotOffset(
+          pivots[partIdx],
+          pathRot,
+          pathScale,
+        );
 
         const cos = Math.cos(combinedRot);
         const sin = Math.sin(combinedRot);

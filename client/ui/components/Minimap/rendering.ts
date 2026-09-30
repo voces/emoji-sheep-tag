@@ -1,9 +1,6 @@
 import {
-  BufferGeometry,
   Color,
   DepthTexture,
-  Line,
-  LineBasicMaterial,
   Mesh,
   OrthographicCamera,
   type PerspectiveCamera,
@@ -11,7 +8,6 @@ import {
   Scene,
   ShaderMaterial,
   UnsignedInt248Type,
-  Vector3,
   Vector4,
   type WebGLRenderer,
   WebGLRenderTarget,
@@ -36,7 +32,6 @@ export const createMinimapRenderer = (
   minimapUnits: Set<Entity>,
   minimapPlayerEntities: Set<Entity>,
   pixelRatio: number,
-  showCameraBox = true,
 ) => {
   const renderWidth = 260 * pixelRatio;
   const renderHeight = 260 * pixelRatio;
@@ -100,13 +95,6 @@ export const createMinimapRenderer = (
   });
   const blitQuad = new Mesh(new PlaneGeometry(2, 2), blitMaterial);
   blitScene.add(blitQuad);
-
-  const viewportIndicatorScene = new Scene();
-  const viewportIndicator = new Line(
-    new BufferGeometry(),
-    new LineBasicMaterial({ color: 0xffffff, linewidth: 2 }),
-  );
-  viewportIndicatorScene.add(viewportIndicator);
 
   const renderScene = () => {
     const scaledEntities: Array<{ entity: Entity; originalScale: number }> = [];
@@ -206,30 +194,11 @@ export const createMinimapRenderer = (
 
   const renderFogAndOverlay = (
     delta: number,
-    mainCamera: PerspectiveCamera,
     ctx: CanvasRenderingContext2D,
   ) => {
     // Sync fog texture in case visibilityGrid was recreated
     minimapFogPass.setFogTexture(visibilityGrid.fogTexture);
     minimapFogPass.updateCamera(camera);
-
-    const aspect = mainCamera.aspect;
-    const vFov = (mainCamera.fov * Math.PI) / 180;
-    const height = 2 * Math.tan(vFov / 2) * mainCamera.position.z;
-    const width = height * aspect;
-
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-    const x = mainCamera.position.x;
-    const y = mainCamera.position.y;
-
-    const points = [
-      new Vector3(x - halfWidth, y - halfHeight, 0),
-      new Vector3(x + halfWidth, y - halfHeight, 0),
-      new Vector3(x + halfWidth, y + halfHeight, 0),
-      new Vector3(x - halfWidth, y + halfHeight, 0),
-      new Vector3(x - halfWidth, y - halfHeight, 0),
-    ];
 
     minimapFogPass.render(
       renderer,
@@ -237,14 +206,6 @@ export const createMinimapRenderer = (
       sceneRenderTarget,
       delta,
     );
-
-    if (showCameraBox) {
-      viewportIndicator.geometry.setFromPoints(points);
-      renderer.setRenderTarget(fogOutputTarget);
-      renderer.autoClear = false;
-      renderer.render(viewportIndicatorScene, camera);
-      renderer.autoClear = true;
-    }
 
     blitMaterial.uniforms.tDiffuse.value = fogOutputTarget.texture;
     present(ctx);
@@ -264,7 +225,6 @@ export const createMinimapRenderer = (
       minimapFogPass.dispose();
       blitMaterial.dispose();
       blitQuad.geometry.dispose();
-      viewportIndicator.geometry.dispose();
     },
   };
 };

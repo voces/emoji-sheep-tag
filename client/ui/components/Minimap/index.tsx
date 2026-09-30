@@ -14,6 +14,8 @@ import { addSystem } from "@/shared/context.ts";
 import { createCameraMovement } from "./cameraMovement.ts";
 import { createMinimapRaycast } from "./raycasting.ts";
 import { createMinimapRenderer } from "./rendering.ts";
+import { cameraBoxOnMinimap } from "./cameraBox.ts";
+import { timed } from "../../../graphics/gpuTimings.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 
 const minimapUnits = new Set<Entity>();
@@ -35,6 +37,9 @@ addSystem({
 });
 
 const Container = styled.div`
+  position: relative;
+  overflow: hidden;
+
   & > canvas {
     position: static;
     width: 100%;
@@ -42,6 +47,17 @@ const Container = styled.div`
     aspect-ratio: 1;
     cursor: pointer;
     display: block;
+  }
+
+  /* Where the main camera looks, moved every frame without redrawing the map */
+  & > [data-camera-box] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 1px solid white;
+    box-sizing: border-box;
+    pointer-events: none;
+    will-change: transform;
   }
 `;
 
@@ -64,8 +80,17 @@ export const Minimap = (
     if (!ctx) return;
     container.appendChild(canvas);
 
+    const cameraBox = showCameraBox ? document.createElement("div") : null;
+    if (cameraBox) {
+      cameraBox.setAttribute("data-camera-box", "");
+      container.appendChild(cameraBox);
+    }
+
     const pixelRatio = Math.min(globalThis.devicePixelRatio, 2);
+    const shown = { width: canvas.clientWidth, height: canvas.clientHeight };
     const resize = (width: number, height: number) => {
+      shown.width = width;
+      shown.height = height;
       const w = Math.max(1, Math.round(width * pixelRatio));
       const h = Math.max(1, Math.round(height * pixelRatio));
       if (canvas.width === w && canvas.height === h) return;
@@ -102,8 +127,23 @@ export const Minimap = (
       minimapUnits,
       minimapPlayerEntities,
       pixelRatio,
-      showCameraBox,
     );
+
+    let placed = "";
+    const placeCameraBox = () => {
+      if (!cameraBox) return;
+      const { left, top, width, height } = cameraBoxOnMinimap(
+        mainCamera,
+        camera,
+        shown,
+      );
+      const next = [left, top, width, height].map((v) => v.toFixed(1)).join();
+      if (next === placed) return;
+      placed = next;
+      cameraBox.style.transform = `translate(${left}px, ${top}px)`;
+      cameraBox.style.width = `${width}px`;
+      cameraBox.style.height = `${height}px`;
+    };
 
     minimapRenderer.setDisableFogOfWar(disableFog || lobbySettingsVar().view);
     const unsubscribeLobbySettings = disableFog
@@ -124,17 +164,29 @@ export const Minimap = (
     const targetFPS = 15;
     const frameTime = 1 / targetFPS;
     let timeSinceLastSceneRender = 0;
+    // The fog and the copy out to the minimap's canvas each cost the GPU a
+    // pass; a minimap needs nothing like every frame of a fast display
+    const overlayFrameTime = 1 / 60;
+    let timeSinceLastOverlay = overlayFrameTime;
 
     const disposeRender = onRender((delta) => {
       cameraMovement?.updateCameraSmooth(delta);
+      placeCameraBox();
 
       timeSinceLastSceneRender += delta;
       if (timeSinceLastSceneRender >= frameTime) {
-        minimapRenderer.renderScene();
+        timed("minimap scene", minimapRenderer.renderScene);
         timeSinceLastSceneRender -= frameTime;
       }
 
-      minimapRenderer.renderFogAndOverlay(delta, mainCamera, ctx);
+      timeSinceLastOverlay += delta;
+      if (timeSinceLastOverlay >= overlayFrameTime) {
+        timed(
+          "minimap fog and copy",
+          () => minimapRenderer.renderFogAndOverlay(timeSinceLastOverlay, ctx),
+        );
+        timeSinceLastOverlay = 0;
+      }
     });
 
     return () => {
@@ -146,6 +198,7 @@ export const Minimap = (
       raycast?.dispose();
       minimapRenderer.dispose();
       canvas.remove();
+      cameraBox?.remove();
     };
   }, []);
 

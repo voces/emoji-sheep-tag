@@ -452,6 +452,20 @@ export class FogPass {
     this.camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
   }
 
+  /**
+   * Compiles both passes' programs for the targets they draw into, `target`
+   * being where the final pass draws when not to the screen.
+   */
+  compileAsync(renderer: WebGLRenderer, target: WebGLRenderTarget | null) {
+    const previous = renderer.getRenderTarget();
+    renderer.setRenderTarget(this.currentFogTarget);
+    const smooth = renderer.compileAsync(this.smoothScene, this.camera);
+    renderer.setRenderTarget(this.renderToScreen ? null : target);
+    const final = renderer.compileAsync(this.scene, this.camera);
+    renderer.setRenderTarget(previous);
+    return Promise.all([smooth, final]);
+  }
+
   render(
     renderer: WebGLRenderer,
     writeBuffer: WebGLRenderTarget,

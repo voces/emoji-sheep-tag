@@ -2,6 +2,8 @@ import {
   AudioListener,
   Color,
   DepthTexture,
+  type Material,
+  type Object3D,
   PerspectiveCamera,
   Scene,
   UnsignedInt248Type,
@@ -14,6 +16,14 @@ import { stats } from "../util/Stats.ts";
 import { prefabs, tileDefs } from "@/shared/data.ts";
 import { type DoodadPoint, Terrain2D } from "./Terrain2D.ts";
 import { FogPass } from "./FogPass.ts";
+import { gpuInfoOf } from "../util/gpu.ts";
+import { placeListenerWhenMoved } from "./audioPlacement.ts";
+import {
+  gpuTimingsFrame,
+  isTimingGpu,
+  startGpuTimings,
+  timed,
+} from "./gpuTimings.ts";
 import { floatingTextScene } from "../systems/floatingText.ts";
 import { healthbarScene } from "../systems/healthbars.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
@@ -57,6 +67,11 @@ const createTerrainMasks = (map: LoadedMap = getMap()) => ({
 const canvas = document.querySelector("canvas") ?? undefined;
 
 export const scene = new Scene();
+// The scenes never move; recomputing one's matrix each render would force every
+// object in it to recompute its own, the many that never move included
+for (const still of [scene, healthbarScene, floatingTextScene]) {
+  still.matrixAutoUpdate = false;
+}
 export const camera = new PerspectiveCamera(
   75,
   globalThis.innerWidth / globalThis.innerHeight,
@@ -76,9 +91,13 @@ export const setFogPass = (pass: FogPass) => {
 if (!("Deno" in globalThis)) {
   renderer = new WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(globalThis.devicePixelRatio);
-  renderer.setClearColor(new Color(0x333333));
+  // The dark grass past the map's edge, shown wherever nothing has drawn
+  renderer.setClearColor(new Color(0x020a00));
   renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
   document.body.appendChild(renderer.domElement);
+  // Asked now, before any shader is sent to compile, the driver answers at once
+  gpuInfoOf(renderer.getContext());
+  Object.assign(globalThis, { renderer });
 
   const width = globalThis.innerWidth * globalThis.devicePixelRatio;
   const height = globalThis.innerHeight * globalThis.devicePixelRatio;
@@ -99,7 +118,7 @@ camera.position.y = initialMap.center.y;
 camera.layers.enableAll();
 
 export const listener = "AudioListener" in globalThis
-  ? new AudioListener()
+  ? placeListenerWhenMoved(new AudioListener())
   : undefined;
 
 export type Channel = "master" | "sfx" | "ui" | "ambience";
@@ -164,12 +183,15 @@ if (listener) {
   import("@/vars/audioSettings.ts");
 }
 
+/** The layer the terrain draws on, apart from the sprites. */
+const TERRAIN_LAYER = 3;
+
 export const terrain = new Terrain2D(
   createTerrainMasks(initialMap),
   terrainTilePalette,
   extractDoodads(initialMap),
 );
-terrain.layers.set(3);
+terrain.layers.set(TERRAIN_LAYER);
 terrain.position.z = -0.002;
 terrain.scale.setScalar(0.5);
 scene.add(terrain);
@@ -199,6 +221,7 @@ const getTerrainData = () => ({
   groundTile: terrain.masks.groundTile,
   water: terrain.masks.water,
   doodads: terrain.doodads,
+  cliffField: terrain.cliffField,
 });
 
 let flowerDebounce: number | undefined;
@@ -305,10 +328,60 @@ export const onRender = (fn: RenderListener) => {
   };
 };
 
+// Per-pass GPU times and draws, when the page is opened with `?gpu-timings`
+const timedContext = renderer?.getContext();
+if (
+  renderer && timedContext && "createQuery" in timedContext &&
+  new URLSearchParams(globalThis.location?.search).has("gpu-timings")
+) {
+  startGpuTimings(timedContext, renderer, (averages) => {
+    Object.assign(globalThis, { gpuTimings: averages });
+    console.table(averages);
+  });
+}
+
 let last = performance.now() / 1000;
 const frameTimes: number[] = [];
 let fps = 0;
 let nightAmount = 0;
+/** Materials whose programs have been sent to compile ahead. */
+const compiledMaterials = new WeakSet<Material>();
+
+const drawsWithMaterial = (
+  object: Object3D,
+): object is Object3D & { material: Material | Material[] } =>
+  "material" in object && !!object.material;
+
+const isCompiled = (material: Material) => compiledMaterials.has(material);
+
+/** Whether anything under `root` draws with a material not yet compiled. */
+const hasUncompiled = (root: Object3D) => {
+  const stack: Object3D[] = [root];
+  for (let object = stack.pop(); object; object = stack.pop()) {
+    if (drawsWithMaterial(object)) {
+      const { material } = object;
+      if (
+        Array.isArray(material)
+          ? !material.every(isCompiled)
+          : !isCompiled(material)
+      ) return true;
+    }
+    for (let i = 0; i < object.children.length; i++) {
+      stack.push(object.children[i]);
+    }
+  }
+  return false;
+};
+
+const markCompiled = (root: Object3D) =>
+  root.traverse((object) => {
+    if (!drawsWithMaterial(object)) return;
+    for (const material of [object.material].flat()) {
+      compiledMaterials.add(material);
+    }
+  });
+
+let programsCompiling: Promise<void> | undefined;
 const animate = () => {
   const time = performance.now() / 1000;
   const delta = time - last;
@@ -327,6 +400,49 @@ const animate = () => {
   terrain.setTime(time);
 
   if (!renderer || !fogPass || !renderTarget) return;
+
+  // Where the driver compiles in parallel, programs compile before they are
+  // first drawn, off the main thread, rather than one after another as a frame
+  // draws: for the first frame, and whenever something brings a material not
+  // yet compiled, such as the first healthbar. The last frame stays up and the
+  // game runs on meanwhile. Elsewhere that would only compile hidden materials
+  // early, so they compile as first drawn
+  if (
+    !programsCompiling &&
+    renderer.extensions.has("KHR_parallel_shader_compile") &&
+    [scene, healthbarScene, floatingTextScene].some(hasUncompiled)
+  ) {
+    // A program is built for the target it draws into, so each scene compiles
+    // against the one it renders to
+    const gl = renderer, target = renderTarget;
+    const compileWorld = () => {
+      markCompiled(scene);
+      gl.setRenderTarget(target);
+      const world = gl.compileAsync(scene, camera);
+      gl.setRenderTarget(null);
+      return world;
+    };
+    markCompiled(healthbarScene);
+    markCompiled(floatingTextScene);
+    const programs = renderer.info.programs?.length ?? 0;
+    const first = [
+      compileWorld(),
+      fogPass.compileAsync(renderer, renderTarget),
+      renderer.compileAsync(healthbarScene, camera),
+      renderer.compileAsync(floatingTextScene, camera),
+    ];
+    const compiling = Promise.all(first).catch(() => {});
+    // New materials whose programs were built before need no waiting for
+    if ((renderer.info.programs?.length ?? 0) > programs) {
+      programsCompiling = compiling.then(() => {
+        programsCompiling = undefined;
+      });
+    }
+  }
+  // While programs compile, the passes that may draw with them hold off, and
+  // the fog pass shows the last world drawn: a frame or two stale, rather than
+  // stalled, or blank where only the minimap and portrait drew
+  const holding = !!programsCompiling;
 
   fogPass.updateCamera(camera);
   fogPass.setDisableFogOfWar(
@@ -347,19 +463,43 @@ const animate = () => {
   }
 
   // Render scene to non-MSAA target with depth
-  renderer.setRenderTarget(renderTarget);
-  renderer.clear();
-  renderer.render(scene, camera);
+  const gl = renderer, target = renderTarget, fog = fogPass;
+  gl.setRenderTarget(target);
+  if (!holding) {
+    gl.clear();
+    if (isTimingGpu()) {
+      // Drawn in two only to time them apart: the terrain on its own layer,
+      // then the rest over it
+      const layers = camera.layers.mask;
+      timed("terrain", () => {
+        camera.layers.set(TERRAIN_LAYER);
+        gl.render(scene, camera);
+      });
+      timed("sprites", () => {
+        camera.layers.mask = layers;
+        camera.layers.disable(TERRAIN_LAYER);
+        gl.autoClear = false;
+        gl.render(scene, camera);
+        gl.autoClear = true;
+      });
+      camera.layers.mask = layers;
+    } else gl.render(scene, camera);
+  }
 
   // Apply fog pass (includes boundary fog, fog of war optional)
-  fogPass.render(renderer, renderTarget, renderTarget, delta);
-  renderer.setRenderTarget(null);
+  timed("fog", () => fog.render(gl, target, target, delta));
+  gl.setRenderTarget(null);
+
+  if (holding) return;
 
   // Render healthbars and floating text on top
-  renderer.autoClear = false;
-  renderer.render(healthbarScene, camera);
-  renderer.render(floatingTextScene, camera);
-  renderer.autoClear = true;
+  timed("healthbars and text", () => {
+    gl.autoClear = false;
+    gl.render(healthbarScene, camera);
+    gl.render(floatingTextScene, camera);
+    gl.autoClear = true;
+  });
+  gpuTimingsFrame(time);
 
   stats.end();
 };
