@@ -153,6 +153,32 @@ describe("buffs system", () => {
     },
   );
 
+  it("counts down item buffs on an entity without direct buffs", function* ({
+    ecs,
+  }) {
+    const entity = ecs.addEntity<Entity>({
+      id: "test-entity",
+      inventory: [{
+        id: "charm",
+        name: "Charm",
+        gold: 0,
+        binding: [],
+        buffs: [
+          { remainingDuration: 5, movementSpeedBonus: 0.5 },
+          { remainingDuration: 1, attackSpeedMultiplier: 1.1 },
+          { movementSpeedMultiplier: 1.2 },
+        ],
+      }],
+    });
+    yield* yieldFor(2);
+
+    const itemBuffs = entity.inventory![0].buffs!;
+    expect(itemBuffs.length).toBe(2);
+    expect(itemBuffs[0].remainingDuration).toBeCloseTo(3);
+    expect(itemBuffs[1]).toEqual({ movementSpeedMultiplier: 1.2 });
+    expect(entity.buffs).toBeFalsy();
+  });
+
   it("spawnPrefab spawns entity and removes source on expiration", function* ({
     ecs,
   }) {
