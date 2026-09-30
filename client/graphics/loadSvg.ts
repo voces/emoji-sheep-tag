@@ -12,7 +12,7 @@ import { SVGLoader } from "three/SVGLoader";
 import { InstancedSvg } from "./InstancedSvg.ts";
 import { scene } from "./three.ts";
 import { svgs } from "../systems/models.ts";
-import { getAnimationTime } from "./AnimatedMeshMaterial.ts";
+import { animationTimeUniform } from "./AnimatedMeshMaterial.ts";
 import {
   WATER_SHADER_CAUSTICS,
   WATER_SHADER_CONSTANTS,
@@ -39,13 +39,10 @@ import {
   TRANSLUCENT_RENDER_ORDER,
 } from "./depthSort.ts";
 
-const instancedSvgShaders = new Set<WebGLProgramParametersWithUniforms>();
-
 const loader = new SVGLoader();
 
 const addInstanceAlpha = (shader: WebGLProgramParametersWithUniforms) => {
-  instancedSvgShaders.add(shader);
-  shader.uniforms.uTime = { value: 0 };
+  shader.uniforms.uTime = animationTimeUniform;
   shader.uniforms.waterRippleCount = waterRippleUniforms.waterRippleCount;
   shader.uniforms.waterRipples = waterRippleUniforms.waterRipples;
 
@@ -153,12 +150,6 @@ const createMaterial = (pass: SpritePass) => {
   material.defines = { SPRITE_PASS: SPRITE_PASS_DEFINES[pass] };
   material.customProgramCacheKey = () => `instanceAlpha-${pass}`;
   material.onBeforeCompile = addInstanceAlpha;
-  material.onBeforeRender = () => {
-    const now = getAnimationTime();
-    for (const shader of instancedSvgShaders) {
-      shader.uniforms.uTime.value = now;
-    }
-  };
   return material;
 };
 

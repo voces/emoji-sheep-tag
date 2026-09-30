@@ -40,13 +40,14 @@ import {
   SpritePass,
 } from "./depthSort.ts";
 
-let animationTime = 0;
+/** Shared by every sprite shader, so advancing it once animates them all. */
+export const animationTimeUniform = { value: 0 };
 
 export const updateAnimationTime = (delta: number) => {
-  animationTime += delta;
+  animationTimeUniform.value += delta;
 };
 
-export const getAnimationTime = () => animationTime;
+export const getAnimationTime = () => animationTimeUniform.value;
 
 const shaderRefs = new WeakMap<
   Material,
@@ -118,8 +119,41 @@ const ANIMATION_FUNCTIONS = `
   }
 `;
 
+/**
+ * Moves `transformed` by the instance's animation, blending clip A into clip B
+ * by `instanceAnimB.w`, and writes the blended part opacity to `opacityOut`.
+ */
+const animateTransformed = (opacityOut: string) => `
+  {
+    vec3 posA = transformed * animA.a;
+    float cosA = cos(animA.b);
+    float sinA = sin(animA.b);
+    posA = vec3(posA.x * cosA - posA.y * sinA, posA.x * sinA + posA.y * cosA, posA.z);
+    posA.x += animA.r;
+    posA.y += animA.g;
+
+    if (wB > 0.001) {
+      vec4 animB = sampleAnimation(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
+      float opacityB = sampleOpacity(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
+      ${opacityOut} = mix(opacityA, opacityB, wB);
+
+      vec3 posB = transformed * animB.a;
+      float cosB = cos(animB.b);
+      float sinB = sin(animB.b);
+      posB = vec3(posB.x * cosB - posB.y * sinB, posB.x * sinB + posB.y * cosB, posB.z);
+      posB.x += animB.r;
+      posB.y += animB.g;
+
+      transformed = mix(posA, posB, wB);
+    } else {
+      transformed = posA;
+      ${opacityOut} = opacityA;
+    }
+  }
+`;
+
 const addAnimationUniforms = (shader: WebGLProgramParametersWithUniforms) => {
-  shader.uniforms.uTime = { value: 0 };
+  shader.uniforms.uTime = animationTimeUniform;
   shader.uniforms.uTransformTex = { value: null };
   shader.uniforms.uOpacityTex = { value: null };
   shader.uniforms.uSampleCount = { value: 1 };
@@ -197,32 +231,7 @@ export const createAnimatedMeshMaterial = (
       "#include <begin_vertex>",
       `
       #include <begin_vertex>
-      {
-        vec3 posA = transformed * animA.a;
-        float cosA = cos(animA.b);
-        float sinA = sin(animA.b);
-        posA = vec3(posA.x * cosA - posA.y * sinA, posA.x * sinA + posA.y * cosA, posA.z);
-        posA.x += animA.r;
-        posA.y += animA.g;
-
-        if (wB > 0.001) {
-          vec4 animB = sampleAnimation(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
-          float opacityB = sampleOpacity(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
-          vAnimOpacity = mix(opacityA, opacityB, wB);
-
-          vec3 posB = transformed * animB.a;
-          float cosB = cos(animB.b);
-          float sinB = sin(animB.b);
-          posB = vec3(posB.x * cosB - posB.y * sinB, posB.x * sinB + posB.y * cosB, posB.z);
-          posB.x += animB.r;
-          posB.y += animB.g;
-
-          transformed = mix(posA, posB, wB);
-        } else {
-          transformed = posA;
-          vAnimOpacity = opacityA;
-        }
-      }
+      ${animateTransformed("vAnimOpacity")}
       `,
     );
 
@@ -272,15 +281,6 @@ export const createAnimatedMeshMaterial = (
     );
   };
 
-  material.onBeforeRender = () => {
-    const refs = shaderRefs.get(material);
-    if (refs) {
-      for (const shaderRef of refs) {
-        shaderRef.uniforms.uTime.value = animationTime;
-      }
-    }
-  };
-
   return material;
 };
 
@@ -324,35 +324,10 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
       "#include <begin_vertex>",
       `
       #include <begin_vertex>
-      {
-        vec3 posA = transformed * animA.a;
-        float cosA = cos(animA.b);
-        float sinA = sin(animA.b);
-        posA = vec3(posA.x * cosA - posA.y * sinA, posA.x * sinA + posA.y * cosA, posA.z);
-        posA.x += animA.r;
-        posA.y += animA.g;
-        float animOpacity;
-
-        if (wB > 0.001) {
-          vec4 animBVal = sampleAnimation(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
-          float opacityB = sampleOpacity(partID, instanceAnimB.x, instanceAnimB.y, instanceAnimB.z);
-          animOpacity = mix(opacityA, opacityB, wB);
-
-          vec3 posB = transformed * animBVal.a;
-          float cosB = cos(animBVal.b);
-          float sinB = sin(animBVal.b);
-          posB = vec3(posB.x * cosB - posB.y * sinB, posB.x * sinB + posB.y * cosB, posB.z);
-          posB.x += animBVal.r;
-          posB.y += animBVal.g;
-
-          transformed = mix(posA, posB, wB);
-        } else {
-          transformed = posA;
-          animOpacity = opacityA;
-        }
-        vFinalOpacity = instanceAlpha * animOpacity;
-        vInstanceAlpha = instanceAlpha;
-      }
+      float animOpacity;
+      ${animateTransformed("animOpacity")}
+      vFinalOpacity = instanceAlpha * animOpacity;
+      vInstanceAlpha = instanceAlpha;
       `,
     );
 
@@ -376,15 +351,6 @@ export const createDepthMaterial = (): MeshBasicMaterial => {
         if (vFinalOpacity < 0.01) discard;
       `,
     );
-  };
-
-  material.onBeforeRender = () => {
-    const refs = shaderRefs.get(material);
-    if (refs) {
-      for (const shaderRef of refs) {
-        shaderRef.uniforms.uTime.value = animationTime;
-      }
-    }
   };
 
   return material;
