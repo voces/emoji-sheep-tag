@@ -43,6 +43,7 @@ import { copySelectedDoodads, startPaste } from "../editor/clipboard.ts";
 import { cancelOrder } from "./cancelOrder.ts";
 import { handleAction } from "./actions.ts";
 import { cancelEditorPickOrPaste } from "./editorMouse.ts";
+import { startTerrainTool } from "../editor/terrainTools.ts";
 
 const getGroupKey = (entity: Entity): string =>
   entity.unique ? `unique:${entity.id}` : `prefab:${entity.prefab ?? "none"}`;
@@ -137,21 +138,10 @@ document.addEventListener("keydown", (e) => {
     }
     if (e.code === "KeyV") {
       e.preventDefault();
-      if (editorTerrainClipboardVar()) {
-        // Switch to terrain paste mode — a hidden tile blueprint tracks the
-        // cursor so the SelectionOverlay's stamp follows it.
-        const blueprint = createBlueprint(
-          "tile",
-          mouse.world.x,
-          mouse.world.y,
-        );
-        if (blueprint) {
-          blueprint.vertexColor = 0xff06ff;
-          blueprint.isDoodad = true;
-          blueprint.alpha = 0;
-          editorActiveActionVar({ kind: "paste" });
-        }
-      } else startPaste();
+      // Terrain paste: a hidden tile blueprint tracks the cursor so the
+      // SelectionOverlay's stamp follows it
+      if (editorTerrainClipboardVar()) startTerrainTool({ kind: "paste" });
+      else startPaste();
       return false;
     }
   }

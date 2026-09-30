@@ -4,14 +4,8 @@ import { terrain } from "../graphics/three.ts";
 import { selection } from "../systems/selection.ts";
 import { selectEntity } from "../api/selection.ts";
 import { getBlueprint, normalizeBuildPosition } from "./blueprintHandlers.ts";
+import { getCliffs, getMask } from "@/shared/map.ts";
 import {
-  getCliffs,
-  getMap,
-  getMask,
-  getMaskShapeForBounds,
-} from "@/shared/map.ts";
-import {
-  editorActiveActionVar,
   editorBrushShapeVar,
   editorBrushSizeVar,
   editorPickWaterLevelVar,
@@ -20,12 +14,21 @@ import {
   editorVar,
   editorWaterLevelVar,
 } from "@/vars/editor.ts";
+import { type Cell } from "../editor/brush.ts";
 import {
-  type Cell,
-  getAllCells,
-  getBrushCells,
-  getFloodFillCells,
-} from "../editor/brush.ts";
+  fillsByCliff,
+  getMaskAnchor,
+  getMaskCells,
+  getTileCells,
+  getTileGridSize,
+} from "../editor/terrainCells.ts";
+import {
+  getLevelTarget,
+  getRegionTarget,
+  getTerrainTool,
+  isCliffTool,
+  type TerrainTool,
+} from "../editor/terrainTools.ts";
 import {
   clearTerrainSelection,
   clipCellsToSelection,
@@ -36,7 +39,6 @@ import { WATER_LEVEL_SCALE } from "@/shared/constants.ts";
 import { pickDoodad } from "../ui/views/Game/Editor/DoodadsPanel.tsx";
 import { tileDefs } from "@/shared/data.ts";
 import {
-  batchCommand,
   type BulkSetCliffsCommand,
   bulkSetCliffsCommand,
   type BulkSetMasksCommand,
@@ -51,6 +53,7 @@ import {
   mergeDragCommands,
   moveEntitiesCommand,
   recordCommand,
+  wrapBatch,
 } from "../editor/commands.ts";
 import {
   cancelPaste,
@@ -100,23 +103,12 @@ type TileBlueprint = NonNullable<ReturnType<typeof getBlueprint>>;
 const computeWaterTarget = () =>
   Math.max(0, Math.round(editorWaterLevelVar() * WATER_LEVEL_SCALE));
 
-const wrapBatch = (commands: EditorCommand[]): EditorCommand | null => {
-  if (commands.length === 0) return null;
-  if (commands.length === 1) return commands[0];
-  return batchCommand(commands);
-};
-
-const getMaskDimensions = () => {
-  const grid = terrain.masks.groundTile;
-  return { width: grid[0]?.length ?? 0, height: grid.length };
-};
-
-// Build a single bulk command for the current blueprint operation across the
-// supplied cells. `targetCliff` is honored for raise/lower/ramp when set
-// (plateau behavior); for ramp without a target it falls back to per-cell
-// toggle. Returns null if nothing actually changes.
+// Build a single bulk command for the active terrain tool across the supplied
+// cells. `targetCliff` is honored for raise/lower/ramp when set (plateau
+// behavior); for ramp without a target it falls back to per-cell toggle.
+// Returns null if nothing actually changes.
 const buildBatchedChanges = (
-  blueprint: TileBlueprint,
+  tool: TerrainTool | undefined,
   cellsIn: Cell[],
   targetCliff: number | "r" | undefined,
 ): EditorCommand | null => {
@@ -136,10 +128,8 @@ const buildBatchedChanges = (
     return updates.length ? bulkSetWatersCommand(updates) : null;
   }
 
-  const vc = blueprint.vertexColor;
-  if (
-    vc === 0xff01ff || vc === 0xff02ff || vc === 0xff03ff || vc === 0xff04ff
-  ) {
+  const kind = tool?.kind;
+  if (isCliffTool(kind)) {
     const cliffs = getCliffs();
     const updates: BulkSetCliffsCommand["cells"] = [];
     for (const [x, y] of cells) {
@@ -148,12 +138,12 @@ const buildBatchedChanges = (
       if (currentCliff === undefined) continue;
       const oldHeight = terrain.getCliff(x, y);
       let newCliff: number | "r";
-      if (vc === 0xff01ff || vc === 0xff02ff) {
+      if (kind === "raise" || kind === "lower") {
         newCliff = typeof targetCliff === "number"
           ? targetCliff
-          : oldHeight + (vc === 0xff01ff ? 1 : -1);
+          : oldHeight + (kind === "raise" ? 1 : -1);
         if (newCliff < 0) continue;
-      } else if (vc === 0xff04ff) {
+      } else if (kind === "plateau") {
         // Plateau: every cell in the brush gets the start cell's height.
         if (typeof targetCliff !== "number") continue;
         newCliff = targetCliff;
@@ -170,98 +160,64 @@ const buildBatchedChanges = (
 
   // Regular tile painting — group cells by their original tile so each
   // fillTilesCommand keeps a single (oldTile -> newTile) pair for undo.
-  const tileIndex = tileDefs.findIndex((t) => t.color === vc);
+  if (tool?.kind !== "tile") return null;
+  const tileIndex = tileDefs.findIndex((t) => t.color === tool.color);
   if (tileIndex < 0) return null;
   const grid = terrain.masks.groundTile;
-  const newPathing = blueprint.pathing!;
-  const groups = new Map<number, Cell[]>();
-  for (const [x, y] of cells) {
-    const oldTile = grid[y]?.[x];
-    if (oldTile === undefined || oldTile === tileIndex) continue;
-    const list = groups.get(oldTile);
-    if (list) list.push([x, y]);
-    else groups.set(oldTile, [[x, y]]);
-  }
-  const subs = [...groups].map(([oldTile, gcells]) =>
-    fillTilesCommand(
-      gcells,
-      oldTile,
-      tileIndex,
-      tileDefs[oldTile]?.pathing ?? 0,
-      newPathing,
-    )
+  const groups = Map.groupBy(
+    cells.filter(([x, y]) => {
+      const oldTile = grid[y]?.[x];
+      return oldTile !== undefined && oldTile !== tileIndex;
+    }),
+    ([x, y]) => grid[y][x],
   );
-  return wrapBatch(subs);
+  return wrapBatch(
+    [...groups].map(([oldTile, gcells]) =>
+      fillTilesCommand(
+        gcells,
+        oldTile,
+        tileIndex,
+        tileDefs[oldTile]?.pathing ?? 0,
+        tileDefs[tileIndex].pathing,
+      )
+    ),
+  );
 };
 
 // Build the command for "fill" or "all" at a click. "fill" selects cells
 // matching the source value at the start cell (same tile, water level, or
 // starting cliff height). "all" applies to every cell on the map.
 const buildRegionCommand = (
-  blueprint: TileBlueprint,
+  tool: TerrainTool | undefined,
   startX: number,
   startY: number,
   size: "fill" | "all",
 ): EditorCommand | null => {
-  const { width, height } = getMaskDimensions();
+  const { width, height } = getTileGridSize();
   if (width === 0 || height === 0) return null;
 
-  let cells: Cell[];
-  if (size === "all") {
-    cells = getAllCells(width, height);
-  } else if (
-    editorTileModeVar() === "paintWater" ||
-    blueprint.vertexColor === 0xff01ff ||
-    blueprint.vertexColor === 0xff02ff ||
-    blueprint.vertexColor === 0xff03ff ||
-    blueprint.vertexColor === 0xff04ff
-  ) {
-    // Both water and cliff/ramp fills follow cliff height — water fill walks
-    // the basin defined by surrounding cliffs, not the existing water mask.
-    cells = getFloodFillCells(
-      startX,
-      startY,
-      width,
-      height,
-      (x, y) => terrain.getCliff(x, y),
-    );
-  } else {
-    const grid = terrain.masks.groundTile;
-    cells = getFloodFillCells(
-      startX,
-      startY,
-      width,
-      height,
-      (x, y) => grid[y][x],
-    );
-  }
-
+  const cells = getTileCells(
+    size,
+    editorBrushShapeVar(),
+    startX,
+    startY,
+    fillsByCliff(editorTileModeVar(), tool?.kind),
+  );
   return buildBatchedChanges(
-    blueprint,
+    tool,
     cells,
-    computeFillTargetCliff(blueprint, startX, startY),
+    getRegionTarget(tool?.kind, startX, startY),
   );
 };
 
-// Plateau target for cliff/ramp ops anchored at the start cell.
-const computeFillTargetCliff = (
-  blueprint: TileBlueprint,
-  startX: number,
-  startY: number,
-): number | "r" | undefined => {
-  const vc = blueprint.vertexColor;
-  if (vc === 0xff01ff) return terrain.getCliff(startX, startY) + 1;
-  if (vc === 0xff02ff) return terrain.getCliff(startX, startY) - 1;
-  if (vc === 0xff04ff) return terrain.getCliff(startX, startY);
-  if (vc === 0xff03ff) {
-    const cliffs = getCliffs();
-    const startMapY = cliffs.length - 1 - startY;
-    const startCurrent = cliffs[startMapY]?.[startX];
-    if (startCurrent === undefined) return undefined;
-    return startCurrent === "r" ? terrain.getCliff(startX, startY) : "r";
-  }
-  return undefined;
-};
+// Cells not yet painted during the current drag, marking them painted
+const takeUnvisited = (cells: Cell[]) =>
+  cells.filter(([x, y]) => {
+    const key = `${x},${y}`;
+    if (editorTileDrag?.visited.has(key)) return false;
+    editorTileDrag?.visited.add(key);
+    return true;
+  });
 
 // Apply a brush stroke (size 1-5) at the given world position, executing one
 // bulk command and returning it (or null if no cells changed).
@@ -273,102 +229,50 @@ const applyEditorTileChange = (
   if (!blueprint || blueprint.prefab !== "tile" || blueprint.owner) return null;
 
   if (editorTileModeVar() === "paintMask") {
-    return applyEditorMaskChange(blueprint, worldX, worldY);
+    return applyEditorMaskChange(worldX, worldY);
   }
 
   const [normX, normY] = normalizeBuildPosition(worldX, worldY, "tile");
-  const cx = normX - 0.5;
-  const cy = normY - 0.5;
 
-  const { width, height } = getMaskDimensions();
+  const { width, height } = getTileGridSize();
   if (width === 0 || height === 0) return null;
 
   const size = editorBrushSizeVar();
-  const brushSize = typeof size === "number" ? size : 1;
-  const cells = getBrushCells(
-    cx,
-    cy,
-    brushSize,
+  const cells = getTileCells(
+    typeof size === "number" ? size : 1,
     editorBrushShapeVar(),
-    width,
-    height,
+    normX - 0.5,
+    normY - 0.5,
+    false,
   );
 
-  const newCells: Cell[] = [];
-  for (const cell of cells) {
-    const key = `${cell[0]},${cell[1]}`;
-    if (editorTileDrag?.visited.has(key)) continue;
-    editorTileDrag?.visited.add(key);
-    newCells.push(cell);
-  }
-
   const cmd = buildBatchedChanges(
-    blueprint,
-    newCells,
+    getTerrainTool(),
+    takeUnvisited(cells),
     editorTileDrag?.targetCliff,
   );
   if (cmd) doExecute(cmd);
   return cmd;
 };
 
-/**
- * Mask paint mode is special: cells live on cliff vertices anchored to the
- * boundary, not on tile centers. World (worldX, worldY) maps to the nearest
- * vertex (round to integer), then to mask-array indices via the bounds anchor.
- * Brush sizes paint in mask-grid space; out-of-array cells (outside the
- * boundary) are silently dropped — that's the documented "noop outside
- * boundary" rule.
- */
+// Mask paint works in mask-grid space (see getMaskAnchor). Out-of-array cells
+// (outside the boundary) are silently dropped — the documented "noop outside
+// boundary" rule.
 const applyEditorMaskChange = (
-  blueprint: ReturnType<typeof getBlueprint>,
   worldX: number,
   worldY: number,
 ): EditorCommand | null => {
-  const map = getMap();
-  const shape = getMaskShapeForBounds(map.bounds);
-  if (shape.width === 0 || shape.height === 0) return null;
-
-  const vx = Math.round(worldX);
-  const vy = Math.round(worldY);
-  const centerMapX = vx - shape.firstVertexX;
-  const centerMapY = shape.topVertexY - vy;
+  const anchor = getMaskAnchor(worldX, worldY);
+  if (anchor.shape.width === 0 || anchor.shape.height === 0) return null;
 
   const size = editorBrushSizeVar();
-  const newValue = blueprint?.vertexColor === 0xff07ff ? 1 : 0;
+  const newValue = getTerrainTool()?.kind === "mask" ? 1 : 0;
   const mask = getMask();
 
-  let cells: Cell[];
-  if (size === "all") {
-    cells = getAllCells(shape.width, shape.height);
-  } else if (size === "fill") {
-    if (
-      centerMapX < 0 || centerMapX >= shape.width ||
-      centerMapY < 0 || centerMapY >= shape.height
-    ) return null;
-    cells = getFloodFillCells(
-      centerMapX,
-      centerMapY,
-      shape.width,
-      shape.height,
-      (x, y) => mask[y]?.[x] ?? 0,
-    );
-  } else {
-    const brushSize = typeof size === "number" ? size : 1;
-    cells = getBrushCells(
-      centerMapX,
-      centerMapY,
-      brushSize,
-      editorBrushShapeVar(),
-      shape.width,
-      shape.height,
-    );
-  }
+  const cells = getMaskCells(size, editorBrushShapeVar(), anchor);
 
   const updates: BulkSetMasksCommand["cells"] = [];
-  for (const [mapX, mapY] of cells) {
-    const key = `${mapX},${mapY}`;
-    if (editorTileDrag?.visited.has(key)) continue;
-    editorTileDrag?.visited.add(key);
+  for (const [mapX, mapY] of takeUnvisited(cells)) {
     const old = mask[mapY]?.[mapX] ?? 0;
     if (old === newValue) continue;
     updates.push({ mapX, mapY, oldValue: old, newValue });
@@ -439,7 +343,7 @@ export const tryStartEditorDoodadDrag = (clickedEntity: Entity): boolean => {
 /** Handles a click with an editor (ownerless) blueprint: places a doodad or starts a terrain tool. */
 export const handleEditorBlueprintClick = (
   e: MouseButtonEvent,
-  blueprint: TileBlueprint,
+  blueprint: NonNullable<ReturnType<typeof getBlueprint>>,
 ) => {
   const { id: _, position, isEffect: _e, preserveCursor: _p, ...entity } =
     blueprint;
@@ -464,7 +368,7 @@ export const handleEditorBlueprintClick = (
   const x = normX - 0.5;
   const y = normY - 0.5;
 
-  const action = editorActiveActionVar()?.kind;
+  const action = getTerrainTool()?.kind;
   if (action === "select") {
     // Stash the previous selection so a click-without-drag can clear it on
     // mouseUp. Don't mutate the selection yet — that way an unmoved click
@@ -484,29 +388,21 @@ export const handleEditorBlueprintClick = (
   }
 
   const brushSize = editorBrushSizeVar();
-  const isMaskPaint = editorTileModeVar() === "paintMask";
+  const tool = getTerrainTool();
 
   // Mask paint handles its own fill/all (it operates in vertex/mask-grid
   // space, not tile-cell space) so don't route through buildRegionCommand.
-  if (!isMaskPaint && (brushSize === "fill" || brushSize === "all")) {
-    const command = buildRegionCommand(blueprint, x, y, brushSize);
+  if (
+    editorTileModeVar() !== "paintMask" &&
+    (brushSize === "fill" || brushSize === "all")
+  ) {
+    const command = buildRegionCommand(tool, x, y, brushSize);
     if (command) executeCommand(command);
     return;
   }
 
-  // Plateau target for raise/lower/plateau brushes (ramp drag toggles per
-  // cell, so it intentionally leaves targetCliff undefined). Irrelevant for
-  // mask paint.
-  let targetCliff: number | undefined;
-  if (!isMaskPaint) {
-    if (blueprint.vertexColor === 0xff01ff) {
-      targetCliff = terrain.getCliff(x, y) + 1;
-    } else if (blueprint.vertexColor === 0xff02ff) {
-      targetCliff = terrain.getCliff(x, y) - 1;
-    } else if (blueprint.vertexColor === 0xff04ff) {
-      targetCliff = terrain.getCliff(x, y);
-    }
-  }
+  // Ramp drags toggle per cell, so only raise/lower/plateau level to a target
+  const targetCliff = getLevelTarget(tool?.kind, x, y);
 
   editorTileDrag = {
     commands: [],

@@ -972,3 +972,11 @@ export const batchCommand = (commands: EditorCommand[]): BatchCommand => ({
   type: "batch",
   commands,
 });
+
+/** One command for several: none, the single command, or a batch. */
+export const wrapBatch = (commands: EditorCommand[]): EditorCommand | null =>
+  commands.length === 0
+    ? null
+    : commands.length === 1
+    ? commands[0]
+    : batchCommand(commands);
