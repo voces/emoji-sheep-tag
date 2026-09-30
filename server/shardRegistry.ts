@@ -151,7 +151,7 @@ export const fetchClientGeoAndBroadcast = (client: Client) => {
 };
 
 export const sendToShard = (
-  shard: RegisteredShard,
+  shard: Pick<RegisteredShard, "socket">,
   message: ServerToShardMessage,
 ) => {
   if (shard.socket.readyState !== WebSocket.OPEN) return;
@@ -295,6 +295,205 @@ export const cleanupShardForDeletedLobby = (
   removeLobbyFromFlyMachine(undefined, lobbyId);
 };
 
+type ShardMessage<T extends ShardToServerMessage["type"]> = Extract<
+  ShardToServerMessage,
+  { type: T }
+>;
+
+/** Check if a public URL points at a Fly.io machine (has ?machine= param) */
+const getFlyMachineId = (publicUrl: string) => {
+  try {
+    const url = new URL(publicUrl);
+    const machine = url.searchParams.get("machine");
+    return machine && url.hostname.endsWith(".fly.dev") ? machine : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/** Fly.io region for managed machines, otherwise IP geolocation */
+const locateShard = async (
+  remoteIp: string,
+  flyMachineId: string | undefined,
+): Promise<{ region?: string; coordinates?: Coordinates }> => {
+  const regionCode = flyMachineId
+    ? getFlyRegionForMachine(flyMachineId)
+    : undefined;
+  if (regionCode) {
+    const flyRegion = getFlyRegions().find((r) => r.code === regionCode);
+    // Use short display name for consistency with pre-launch region names
+    const region = getRegionDisplayName(
+      regionCode,
+      flyRegion?.name ?? regionCode,
+    );
+    if (region) {
+      return {
+        region,
+        coordinates: flyRegion
+          ? { lat: flyRegion.latitude, lon: flyRegion.longitude }
+          : undefined,
+      };
+    }
+  }
+  const geo = await geolocateIp(remoteIp);
+  return { region: geo.name, coordinates: geo.coordinates };
+};
+
+/** Ensure unique name+region combination */
+const uniqueShardName = (name: string, region: string | undefined) => {
+  const isNameTaken = (n: string) =>
+    shards.values().some((s) => s.name === n && s.region === region);
+  if (!isNameTaken(name)) return name;
+  let counter = 2;
+  while (isNameTaken(`${name} ${counter}`)) counter++;
+  return `${name} ${counter}`;
+};
+
+const registerShard = async (
+  socket: Socket,
+  remoteIp: string,
+  primaryIsSecure: boolean,
+  message: ShardMessage<"register">,
+): Promise<RegisteredShard | undefined> => {
+  // Derive public URL - use same scheme as primary server
+  const scheme = primaryIsSecure ? "wss" : "ws";
+  // For IPv6, wrap in brackets; don't include port for standard ports (443/80)
+  const ipForUrl = remoteIp.includes(":") ? `[${remoteIp}]` : remoteIp;
+  const publicUrl = message.publicUrl ??
+    `${scheme}://${ipForUrl}:${message.port}`;
+
+  const flyMachineId = getFlyMachineId(publicUrl);
+
+  // Derive name from provided name, publicUrl hostname, or remote IP
+  const deriveHostname = () => {
+    try {
+      return new URL(publicUrl).hostname;
+    } catch {
+      return remoteIp;
+    }
+  };
+  const name = message.name ?? deriveHostname();
+
+  // Validate connectivity before accepting registration
+  console.log(
+    new Date(),
+    `[Shard] Validating shard connectivity at ${publicUrl}...`,
+  );
+
+  const validationError = await validateShardConnectivity(publicUrl);
+  if (validationError) {
+    console.log(
+      new Date(),
+      `[Shard] Shard ${name} rejected: ${validationError}`,
+    );
+    sendToShard({ socket }, { type: "rejected", reason: validationError });
+    return;
+  }
+
+  const { region, coordinates } = await locateShard(remoteIp, flyMachineId);
+
+  const id = `shard-${shardIndex++}`;
+  const shard: RegisteredShard = {
+    id,
+    name: uniqueShardName(name, region),
+    region,
+    coordinates,
+    publicUrl,
+    socket,
+    lobbyCount: 0,
+    playerCount: 0,
+    lobbies: new Set(),
+    flyMachineId,
+  };
+  shards.set(id, shard);
+
+  // Link to Fly machine tracking if this is a managed machine
+  if (flyMachineId) setShardIdForFlyMachine(flyMachineId, id);
+
+  console.log(
+    new Date(),
+    `[Shard] Shard registered: ${shard.name} (${id}) at ${publicUrl}${
+      flyMachineId ? ` [fly:${flyMachineId}]` : ""
+    }`,
+  );
+
+  sendToShard(shard, { type: "registered", shardId: id });
+  broadcastShards();
+  notifyStatusChange();
+  return shard;
+};
+
+const updateShardStatus = (
+  shard: RegisteredShard,
+  message: ShardMessage<"status">,
+) => {
+  shard.lobbyCount = message.lobbies;
+  shard.playerCount = message.players;
+  notifyStatusChange();
+};
+
+const handleLobbyEnded = (
+  shard: RegisteredShard,
+  message: ShardMessage<"lobbyEnded">,
+) => {
+  shard.lobbies.delete(message.lobbyId);
+
+  if (shard.flyMachineId) {
+    removeLobbyFromFlyMachine(shard.flyMachineId, message.lobbyId);
+  }
+
+  endShardRound(message.lobbyId, {
+    canceled: message.canceled,
+    practice: message.practice,
+    sheepWon: message.sheepWon,
+    round: message.round,
+    startLocations: message.startLocations,
+  });
+
+  console.log(
+    new Date(),
+    `[Shard] Lobby ${message.lobbyId} ended on shard ${shard.name}${
+      message.canceled ? " (canceled)" : ""
+    }`,
+  );
+};
+
+const updateStartLocation = (message: ShardMessage<"updateStartLocation">) => {
+  const player = findLobby(message.lobbyId)?.players.values().find((p) =>
+    p.id === message.playerId
+  );
+  if (player) player.startLocation = message.startLocation;
+};
+
+const handleShardDisconnected = (shard: RegisteredShard) => {
+  console.log(
+    new Date(),
+    `[Shard] Shard disconnected: ${shard.name} (${shard.id})`,
+  );
+
+  // Snapshot the lobby ids — endShardRound mutates shard.lobbies via
+  // removeLobbyFromFlyMachine + shard.lobbies.delete. Iterating the live
+  // Set would skip entries.
+  const lobbyIds = Array.from(shard.lobbies);
+  for (const lobbyId of lobbyIds) {
+    endShardRound(lobbyId, {
+      canceled: true,
+      cancelMessage: `Round canceled (${shard.name} disconnected).`,
+    });
+    console.log(
+      new Date(),
+      `[Shard] Round ended in ${lobbyId} due to shard disconnect`,
+    );
+  }
+
+  shards.delete(shard.id);
+
+  if (shard.flyMachineId) onFlyShardDisconnected(shard.id, lobbyIds);
+
+  broadcastShards();
+  notifyStatusChange();
+};
+
 export const handleShardSocket = (
   socket: Socket,
   remoteIp: string,
@@ -314,208 +513,25 @@ export const handleShardSocket = (
     }
 
     switch (message.type) {
-      case "register": {
-        // Derive public URL - use same scheme as primary server
-        const scheme = primaryIsSecure ? "wss" : "ws";
-        // For IPv6, wrap in brackets; don't include port for standard ports (443/80)
-        const ipForUrl = remoteIp.includes(":") ? `[${remoteIp}]` : remoteIp;
-        const publicUrl = message.publicUrl ??
-          `${scheme}://${ipForUrl}:${message.port}`;
-
-        // Check if this is a Fly.io machine (has ?machine= param)
-        let flyMachineId: string | undefined;
-        try {
-          const urlObj = new URL(publicUrl);
-          const machineParam = urlObj.searchParams.get("machine");
-          if (machineParam && urlObj.hostname.endsWith(".fly.dev")) {
-            flyMachineId = machineParam;
-          }
-        } catch {
-          // Not a valid URL, ignore
-        }
-
-        // Derive name from provided name, publicUrl hostname, or remote IP
-        const deriveHostname = () => {
-          try {
-            return new URL(publicUrl).hostname;
-          } catch {
-            return remoteIp;
-          }
-        };
-        const name = message.name ?? deriveHostname();
-
-        // Validate connectivity before accepting registration
-        console.log(
-          new Date(),
-          `[Shard] Validating shard connectivity at ${publicUrl}...`,
-        );
-
-        const validationError = await validateShardConnectivity(publicUrl);
-        if (validationError) {
-          console.log(
-            new Date(),
-            `[Shard] Shard ${name} rejected: ${validationError}`,
-          );
-          sendToShard({ socket } as RegisteredShard, {
-            type: "rejected",
-            reason: validationError,
-          });
-          return;
-        }
-
-        // Look up region - use Fly.io region for managed machines, otherwise IP geolocation
-        let region: string | undefined;
-        let coordinates: Coordinates | undefined;
-        if (flyMachineId) {
-          const regionCode = getFlyRegionForMachine(flyMachineId);
-          if (regionCode) {
-            const flyRegion = getFlyRegions().find((r) =>
-              r.code === regionCode
-            );
-            // Use short display name for consistency with pre-launch region names
-            region = getRegionDisplayName(
-              regionCode,
-              flyRegion?.name ?? regionCode,
-            );
-            if (flyRegion) {
-              coordinates = {
-                lat: flyRegion.latitude,
-                lon: flyRegion.longitude,
-              };
-            }
-          }
-        }
-        if (!region) {
-          const geo = await geolocateIp(remoteIp);
-          region = geo.name;
-          coordinates = geo.coordinates;
-        }
-
-        // Ensure unique name+region combination
-        const isNameTaken = (n: string) =>
-          shards.values().some((s) => s.name === n && s.region === region);
-
-        let uniqueName = name;
-        if (isNameTaken(uniqueName)) {
-          let counter = 2;
-          while (isNameTaken(`${name} ${counter}`)) counter++;
-          uniqueName = `${name} ${counter}`;
-        }
-
-        const id = `shard-${shardIndex++}`;
-        shard = {
-          id,
-          name: uniqueName,
-          region,
-          coordinates,
-          publicUrl,
-          socket,
-          lobbyCount: 0,
-          playerCount: 0,
-          lobbies: new Set(),
-          flyMachineId,
-        };
-        shards.set(id, shard);
-
-        // Link to Fly machine tracking if this is a managed machine
-        if (flyMachineId) {
-          setShardIdForFlyMachine(flyMachineId, id);
-        }
-
-        console.log(
-          new Date(),
-          `[Shard] Shard registered: ${shard.name} (${id}) at ${publicUrl}${
-            flyMachineId ? ` [fly:${flyMachineId}]` : ""
-          }`,
-        );
-
-        sendToShard(shard, { type: "registered", shardId: id });
-        broadcastShards();
-        notifyStatusChange();
+      case "register":
+        shard =
+          await registerShard(socket, remoteIp, primaryIsSecure, message) ??
+            shard;
         break;
-      }
-
-      case "status": {
-        if (!shard) return;
-        shard.lobbyCount = message.lobbies;
-        shard.playerCount = message.players;
-        notifyStatusChange();
+      case "status":
+        if (shard) updateShardStatus(shard, message);
         break;
-      }
-
-      case "lobbyEnded": {
-        if (!shard) return;
-        shard.lobbies.delete(message.lobbyId);
-
-        // Clean up Fly machine tracking
-        if (shard.flyMachineId) {
-          removeLobbyFromFlyMachine(shard.flyMachineId, message.lobbyId);
-        }
-
-        endShardRound(message.lobbyId, {
-          canceled: message.canceled,
-          practice: message.practice,
-          sheepWon: message.sheepWon,
-          round: message.round,
-          startLocations: message.startLocations,
-        });
-
-        console.log(
-          new Date(),
-          `[Shard] Lobby ${message.lobbyId} ended on shard ${shard.name}${
-            message.canceled ? " (canceled)" : ""
-          }`,
-        );
+      case "lobbyEnded":
+        if (shard) handleLobbyEnded(shard, message);
         break;
-      }
-
-      case "updateStartLocation": {
-        if (!shard) return;
-        const lobby = findLobby(message.lobbyId);
-        if (!lobby) return;
-        const player = lobby.players.values().find((p) =>
-          p.id === message.playerId
-        );
-        if (player) {
-          player.startLocation = message.startLocation;
-        }
+      case "updateStartLocation":
+        if (shard) updateStartLocation(message);
         break;
-      }
     }
   });
 
   socket.addEventListener("close", () => {
-    if (shard) {
-      console.log(
-        new Date(),
-        `[Shard] Shard disconnected: ${shard.name} (${shard.id})`,
-      );
-
-      // Snapshot the lobby ids — endShardRound mutates shard.lobbies via
-      // removeLobbyFromFlyMachine + shard.lobbies.delete. Iterating the live
-      // Set would skip entries.
-      const lobbyIds = Array.from(shard.lobbies);
-      for (const lobbyId of lobbyIds) {
-        endShardRound(lobbyId, {
-          canceled: true,
-          cancelMessage: `Round canceled (${shard.name} disconnected).`,
-        });
-        console.log(
-          new Date(),
-          `[Shard] Round ended in ${lobbyId} due to shard disconnect`,
-        );
-      }
-
-      shards.delete(shard.id);
-
-      // Clean up Fly machine tracking
-      if (shard.flyMachineId) {
-        onFlyShardDisconnected(shard.id, lobbyIds);
-      }
-
-      broadcastShards();
-      notifyStatusChange();
-    }
+    if (shard) handleShardDisconnected(shard);
   });
 };
 
