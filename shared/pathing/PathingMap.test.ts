@@ -164,6 +164,34 @@ describe("PathingMap", () => {
     }
   });
 
+  it("path restores the entity and lifted movers when the search throws", () => {
+    const solver = new PathingMap({
+      pathing: Array.from({ length: 8 }, () => Array(8).fill(0)),
+    });
+    const walker = { id: "walker", radius: 0.5, position: { x: 2.5, y: 2.5 } };
+    const mover = {
+      id: "mover",
+      radius: 0.5,
+      pathing: 1,
+      position: { x: 6.5, y: 6.5 },
+      order: {
+        type: "walk" as const,
+        target: { x: 7, y: 1 },
+        path: [{ x: 7, y: 1 }],
+      },
+    };
+    solver.addEntity(walker);
+    solver.addEntity(mover);
+
+    expect(() => solver.path(walker, { x: 5.5, y: 5.5 })).toThrow(
+      "entity has no pathing",
+    );
+
+    expect(solver.getEntityTiles(walker)).toBeDefined();
+    expect(solver.getEntityTiles(mover)).toBeDefined();
+    expect(solver.getExistingTile(6, 6)?.pathing).toBe(1);
+  });
+
   it("should handle distance to target corner", () => {
     const sheep = {
       id: "sheep-0",
