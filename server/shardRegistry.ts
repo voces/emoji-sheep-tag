@@ -9,9 +9,14 @@ import { zShardToServerMessage } from "@/shared/shard.ts";
 import { undoDraft } from "./st/roundHelpers.ts";
 import { lobbyContext } from "./contexts.ts";
 import { findLobby, lobbies, type Lobby } from "./lobby.ts";
-import { processRoundEnd, send, sendRoundEndMessages } from "./lobbyApi.ts";
+import {
+  processRoundEnd,
+  recordRound,
+  send,
+  sendRoundEndMessages,
+} from "./lobbyApi.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
-import { emitRoundEnded, notifyStatusChange } from "./statusStream.ts";
+import { notifyStatusChange } from "./statusStream.ts";
 import {
   type FlyRegion,
   getFlyMachineForRegion,
@@ -241,30 +246,14 @@ export const endShardRound = (
 
     // Record round result and update sheep counts if not canceled
     if (options.round && !options.canceled) {
-      lobby.rounds.push(options.round);
-
       if (lobby.settings.mode !== "switch") {
         for (const playerId of options.round.sheep) {
           const player = lobby.players.values().find((p) => p.id === playerId);
-          if (player) {
-            player.sheepCount = (player.sheepCount ?? 0) + 1;
-          }
+          if (player) player.sheepCount = (player.sheepCount ?? 0) + 1;
         }
       }
 
-      if (options.round.duration > 0) {
-        const nameById = new Map(
-          Array.from(lobby.players).map((p) => [p.id, p.name]),
-        );
-        emitRoundEnded({
-          lobby: lobby.name,
-          mode: lobby.settings.mode,
-          sheep: options.round.sheep.map((id) => nameById.get(id) ?? id),
-          wolves: options.round.wolves.map((id) => nameById.get(id) ?? id),
-          durationMs: options.round.duration,
-          endedAt: Date.now(),
-        });
-      }
+      recordRound(lobby, options.round);
     }
 
     notifyStatusChange();

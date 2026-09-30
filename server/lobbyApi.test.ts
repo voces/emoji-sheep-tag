@@ -7,6 +7,8 @@ import { getTeamGold } from "./api/teamGold.ts";
 import { newUnit } from "./api/unit.ts";
 import { getPlayer } from "@/shared/api/player.ts";
 import { lobbyContext } from "./contexts.ts";
+import { endShardRound } from "./shardRegistry.ts";
+import { onRoundEnded, type RoundEndedEvent } from "./statusStream.ts";
 
 afterEach(cleanupTest);
 
@@ -165,6 +167,97 @@ describe("endRound - captains draft round summary", () => {
       const wolf1 = Array.from(lobby.players).find((p) => p.id === "wolf1");
       expect(sheep1?.team).toBe("wolf");
       expect(wolf1?.team).toBe("sheep");
+    },
+  );
+});
+
+describe("round recording", () => {
+  const captureRoundEnded = () => {
+    const events: RoundEndedEvent[] = [];
+    const off = onRoundEnded((e) => events.push(e));
+    return { events, [Symbol.dispose]: () => void off() };
+  };
+
+  const shardRound = (duration: number) => ({
+    sheep: ["sheep1"],
+    wolves: ["wolf1", "gone"],
+    duration,
+    mode: "survival" as const,
+  });
+
+  it(
+    "endRound records the round and announces it by player name",
+    { sheep: ["sheep1"], wolves: ["wolf1"] },
+    function* ({ lobby }) {
+      using captured = captureRoundEnded();
+      lobby.round!.start = Date.now() - 5_000;
+      yield;
+
+      endRound(false);
+
+      expect(lobby.rounds).toHaveLength(1);
+      expect(captured.events).toHaveLength(1);
+      expect(captured.events[0]).toMatchObject({
+        lobby: lobby.name,
+        mode: "survival",
+        sheep: ["sheep1"],
+        wolves: ["wolf1"],
+      });
+    },
+  );
+
+  it(
+    "endShardRound records the round, counts sheep turns and announces it",
+    { sheep: ["sheep1"], wolves: ["wolf1"] },
+    ({ lobby }) => {
+      using captured = captureRoundEnded();
+      lobby.round = undefined;
+      lobby.status = "playing";
+      const sheep1 = lobby.players.values().find((p) => p.id === "sheep1")!;
+      const before = sheep1.sheepCount;
+
+      endShardRound(lobby.name, { round: shardRound(5_000) });
+
+      expect(lobby.status).toBe("lobby");
+      expect(lobby.rounds).toHaveLength(1);
+      expect(sheep1.sheepCount).toBe(before + 1);
+      expect(captured.events).toHaveLength(1);
+      expect(captured.events[0]).toMatchObject({
+        lobby: lobby.name,
+        sheep: ["sheep1"],
+        wolves: ["wolf1", "gone"],
+        durationMs: 5_000,
+      });
+    },
+  );
+
+  it(
+    "endShardRound records a zero-length round without announcing it",
+    { sheep: ["sheep1"], wolves: ["wolf1"] },
+    ({ lobby }) => {
+      using captured = captureRoundEnded();
+      lobby.round = undefined;
+      lobby.status = "playing";
+
+      endShardRound(lobby.name, { round: shardRound(0) });
+
+      expect(lobby.rounds).toHaveLength(1);
+      expect(captured.events).toHaveLength(0);
+    },
+  );
+
+  it(
+    "endShardRound does not record a canceled round",
+    { sheep: ["sheep1"], wolves: ["wolf1"] },
+    ({ lobby }) => {
+      using captured = captureRoundEnded();
+      lobby.round = undefined;
+      lobby.status = "playing";
+
+      endShardRound(lobby.name, { canceled: true, round: shardRound(5_000) });
+
+      expect(lobby.rounds).toHaveLength(0);
+      expect(captured.events).toHaveLength(0);
     },
   );
 });
