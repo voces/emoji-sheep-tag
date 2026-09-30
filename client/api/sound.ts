@@ -1,3 +1,4 @@
+import { placeOnlyWhenMoved } from "../graphics/audioPlacement.ts";
 import { Audio, AudioLoader, PositionalAudio } from "three";
 import { Channel, channels, listener, scene } from "../graphics/three.ts";
 import { Entity } from "../ecs.ts";
@@ -29,7 +30,7 @@ export const playSoundAt = (
 ) => {
   if (!listener) return;
   const soundPath = sounds[soundKey];
-  const sound = new PositionalAudio(listener);
+  const sound = placeOnlyWhenMoved(new PositionalAudio(listener));
   scene.add(sound);
 
   const setupSound = () => {
