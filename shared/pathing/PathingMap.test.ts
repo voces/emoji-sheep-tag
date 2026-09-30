@@ -130,6 +130,40 @@ describe("PathingMap", () => {
     expect(() => solver.updateEntity(entity)).not.toThrow();
   });
 
+  it("updateEntity frees tiles left behind and blocks tiles moved onto", () => {
+    const solver = new PathingMap({
+      pathing: Array.from({ length: 4 }, () => [0, 0, 0, 0]),
+      resolution: 2,
+    });
+    const entity = {
+      id: "mover",
+      radius: 0.5,
+      position: { x: 1, y: 1 },
+      pathing: 1,
+    };
+    solver.addEntity(entity);
+    const before = new Set(solver.getEntityTiles(entity));
+
+    entity.position = { x: 1.5, y: 1 };
+    solver.updateEntity(entity);
+    const after = new Set(solver.getEntityTiles(entity));
+
+    const left = [...before].filter((t) => !after.has(t));
+    const entered = [...after].filter((t) => !before.has(t));
+    const kept = [...after].filter((t) => before.has(t));
+    expect(left.length).toBeGreaterThan(0);
+    expect(entered.length).toBeGreaterThan(0);
+    expect(kept.length).toBeGreaterThan(0);
+    for (const tile of left) {
+      expect(tile.entities.has(entity)).toBe(false);
+      expect(tile.pathing).toBe(0);
+    }
+    for (const tile of [...entered, ...kept]) {
+      expect(tile.entities.get(entity)).toBe(1);
+      expect(tile.pathing).toBe(1);
+    }
+  });
+
   it("should handle distance to target corner", () => {
     const sheep = {
       id: "sheep-0",

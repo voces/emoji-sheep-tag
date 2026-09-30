@@ -1935,12 +1935,10 @@ export class PathingMap {
     return true;
   }
 
-  /**
-   * Adds an entity to the PathingMap, adding it to any tiles it intersects
-   * with.
-   */
-  addEntity(entity: PathingEntity): void {
-    const tiles = [];
+  /** The tiles an entity's footprint covers and its pathing on each. */
+  private footprintTiles(
+    entity: PathingEntity,
+  ): { tiles: Tile[]; pathing: Pathing[] } {
     const position = entity.position;
     const { map, top, left, width, height } = entity.tilemap ??
       this.pointToTilemap(position.x, position.y, entity.radius, {
@@ -1948,23 +1946,26 @@ export class PathingMap {
       });
     const tileX = this.xWorldToTile(position.x);
     const tileY = this.yWorldToTile(position.y);
+    const tiles: Tile[] = [];
+    const pathing: Pathing[] = [];
     for (let y = top; y < top + height; y++) {
       for (let x = left; x < left + width; x++) {
-        const tx = tileX + x;
-        const ty = tileY + y;
-        if (ty < 0 || ty >= this.heightMap || tx < 0 || tx >= this.widthMap) {
-          continue;
-        }
-        const tile = this.getTile(tx, ty);
+        const tile = this.getTile(tileX + x, tileY + y);
         if (!tile) continue;
         tiles.push(tile);
-        tile.addEntity(
-          entity,
-          map[(y - top) * width + (x - left)],
-        );
+        pathing.push(map[(y - top) * width + (x - left)]);
       }
     }
+    return { tiles, pathing };
+  }
 
+  /**
+   * Adds an entity to the PathingMap, adding it to any tiles it intersects
+   * with.
+   */
+  addEntity(entity: PathingEntity): void {
+    const { tiles, pathing } = this.footprintTiles(entity);
+    tiles.forEach((tile, i) => tile.addEntity(entity, pathing[i]));
     this.entities.set(entity, tiles);
   }
 
@@ -1976,49 +1977,21 @@ export class PathingMap {
    * entity's pathing type is treated as immutable.
    */
   updateEntity(entity: PathingEntity): void {
-    if (!this.entities.has(entity)) return;
-    const oldTiles: Tile[] = this.entities.get(entity) ?? [];
-    const newTiles: Tile[] = [];
-    const newTileMapValues: number[] = [];
-    const position = entity.position;
-    const { map, top, left, width, height } = entity.tilemap ??
-      this.pointToTilemap(position.x, position.y, entity.radius, {
-        type: entity.blocksPathing ?? entity.pathing,
-      });
-    const tileX = this.xWorldToTile(position.x);
-    const tileY = this.yWorldToTile(position.y);
-    for (let y = top; y < top + height; y++) {
-      for (let x = left; x < left + width; x++) {
-        const gridY = tileY + y;
-        const gridX = tileX + x;
-        // Check bounds before accessing grid
-        if (
-          gridY >= 0 && gridY < this.heightMap &&
-          gridX >= 0 && gridX < this.widthMap
-        ) {
-          const tile = this.getTile(gridX, gridY);
-          if (tile) {
-            newTiles.push(tile);
-            newTileMapValues.push(map[(y - top) * width + (x - left)]);
-          }
-        }
-      }
-    }
+    const oldTiles = this.entities.get(entity);
+    if (!oldTiles) return;
+    const { tiles, pathing } = this.footprintTiles(entity);
 
-    // Tiles that the entity no longer occupies
-    oldTiles
-      .filter((t) => !newTiles.includes(t))
-      .forEach((tile) => tile.removeEntity(entity));
+    const kept = new Set(tiles);
+    for (const tile of oldTiles) if (!kept.has(tile)) tile.removeEntity(entity);
 
-    newTiles.forEach((tile, index) => {
-      // Tiles the entity continues to occupy
-      if (oldTiles.includes(tile)) {
-        tile.updateEntity(entity, newTileMapValues[index]);
-      } // Tiles the entity now occupies
-      else tile.addEntity(entity, newTileMapValues[index]);
-    });
+    const previous = new Set(oldTiles);
+    tiles.forEach((tile, i) =>
+      previous.has(tile)
+        ? tile.updateEntity(entity, pathing[i])
+        : tile.addEntity(entity, pathing[i])
+    );
 
-    this.entities.set(entity, newTiles);
+    this.entities.set(entity, tiles);
   }
 
   /**
