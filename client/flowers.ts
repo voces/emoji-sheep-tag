@@ -3,6 +3,7 @@ import { appContext } from "@/shared/context.ts";
 import { Entity } from "@/shared/types.ts";
 import {
   buildCliffDistanceField,
+  type CliffDistanceField,
   type CliffMask,
   type DoodadPoint,
   type WaterMask,
@@ -59,6 +60,8 @@ type TerrainData = {
   groundTile: number[][];
   water: WaterMask;
   doodads: DoodadPoint[];
+  /** The terrain's own, when it has one, to save working it out again. */
+  cliffField?: CliffDistanceField;
 };
 
 export const regenerateFlowers = (td: TerrainData) => {
@@ -66,7 +69,7 @@ export const regenerateFlowers = (td: TerrainData) => {
   const mapH = td.cliff.length;
   if (!mapW || !mapH) return;
 
-  const cliffField = buildCliffDistanceField(td.cliff);
+  const cliffField = td.cliffField ?? buildCliffDistanceField(td.cliff);
 
   const cellsX = Math.ceil(mapW / CELL_SIZE);
   const cellsY = Math.ceil(mapH / CELL_SIZE);

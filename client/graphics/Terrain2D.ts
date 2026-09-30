@@ -326,8 +326,12 @@ export const buildCliffDistanceField = (
   return { dist, w, h, scale };
 };
 
-export const buildCliffTexture = (cliffMask: CliffMask): DataTexture => {
-  const { dist, w, h } = buildCliffDistanceField(cliffMask);
+export type CliffDistanceField = ReturnType<typeof buildCliffDistanceField>;
+
+export const buildCliffTexture = (
+  cliffMask: CliffMask,
+  { dist, w, h }: CliffDistanceField = buildCliffDistanceField(cliffMask),
+): DataTexture => {
   const data = new Uint8Array(w * h);
   for (let i = 0; i < dist.length; i++) {
     data[i] = Math.min(255, Math.round(dist[i] / 2.0 * 255));
@@ -442,6 +446,7 @@ export type DoodadPoint = { x: number; y: number; radius: number };
 const buildDoodadTexture = (
   cliffMask: CliffMask,
   doodads: DoodadPoint[],
+  cliffField: CliffDistanceField,
 ): DataTexture => {
   const h = cliffMask.length * 2;
   const w = cliffMask[0].length * 2;
@@ -450,7 +455,6 @@ const buildDoodadTexture = (
   // Build cliff edge proximity at 2× resolution.
   // Use the 4× cliff distance field to identify edge texels (dist < 0.5),
   // then compute our own wider distance field from those edges.
-  const cliffField = buildCliffDistanceField(cliffMask);
   const cliffInfluence = 7; // texels at 2× (~3.5 world units)
 
   // Mark edge texels at 2× by checking if any sub-texel in the 4× field is near an edge
@@ -1577,6 +1581,8 @@ export class Terrain2D extends Mesh {
   masks: TerrainMasks;
   tiles: TileDef[];
   doodads: DoodadPoint[];
+  /** How far each point is from a cliff edge, rebuilt when the cliffs change. */
+  cliffField: CliffDistanceField;
   onChange?: () => void;
   declare material: ShaderMaterial;
 
@@ -1590,11 +1596,12 @@ export class Terrain2D extends Mesh {
     const geometry = new PlaneGeometry(w, h);
     geometry.translate(w / 2, h / 2, 0);
 
+    const cliffField = buildCliffDistanceField(masks.cliff);
     const heightTex = buildHeightTexture(masks.cliff);
-    const cliffTex = buildCliffTexture(masks.cliff);
+    const cliffTex = buildCliffTexture(masks.cliff, cliffField);
     const tileColorTex = buildTileColorTexture(masks.groundTile, tiles);
     const tileFieldTex = buildTileFieldTexture(tiles);
-    const doodadTex = buildDoodadTexture(masks.cliff, doodads);
+    const doodadTex = buildDoodadTexture(masks.cliff, doodads, cliffField);
     const waterTex = buildWaterTexture(masks.water);
 
     const material = new ShaderMaterial({
@@ -1625,6 +1632,7 @@ export class Terrain2D extends Mesh {
     this.masks = masks;
     this.tiles = tiles;
     this.doodads = doodads;
+    this.cliffField = cliffField;
   }
 
   private rebuildTextures() {
@@ -1638,8 +1646,12 @@ export class Terrain2D extends Mesh {
     uniforms.doodadMap.value.dispose();
     uniforms.waterMap.value.dispose();
 
+    this.cliffField = buildCliffDistanceField(this.masks.cliff);
     uniforms.heightMap.value = buildHeightTexture(this.masks.cliff);
-    uniforms.cliffMap.value = buildCliffTexture(this.masks.cliff);
+    uniforms.cliffMap.value = buildCliffTexture(
+      this.masks.cliff,
+      this.cliffField,
+    );
     uniforms.tileColorMap.value = buildTileColorTexture(
       this.masks.groundTile,
       this.tiles,
@@ -1653,6 +1665,7 @@ export class Terrain2D extends Mesh {
     uniforms.doodadMap.value = buildDoodadTexture(
       this.masks.cliff,
       this.doodads,
+      this.cliffField,
     );
     uniforms.waterMap.value = buildWaterTexture(this.masks.water);
 
@@ -1786,7 +1799,11 @@ export class Terrain2D extends Mesh {
     this.doodads = doodads;
     const uniforms = this.material.uniforms;
     uniforms.doodadMap.value.dispose();
-    uniforms.doodadMap.value = buildDoodadTexture(this.masks.cliff, doodads);
+    uniforms.doodadMap.value = buildDoodadTexture(
+      this.masks.cliff,
+      doodads,
+      this.cliffField,
+    );
     this.onChange?.();
   }
 
