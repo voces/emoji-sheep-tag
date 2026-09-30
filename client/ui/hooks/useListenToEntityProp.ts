@@ -71,6 +71,14 @@ const pickProps = <P extends keyof Entity>(
     P
   >;
 
+const shallowEqual = (a: unknown, b: unknown) => {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== "object" || typeof b !== "object" || !a || !b) return false;
+  const aKeys = Object.keys(a);
+  return aKeys.length === Object.keys(b).length &&
+    aKeys.every((k) => Object.is(Reflect.get(a, k), Reflect.get(b, k)));
+};
+
 export const useListenToEntityProps = <
   P extends keyof Entity,
   T = PropsOf<P>,
@@ -93,9 +101,9 @@ export const useListenToEntityProps = <
 
   const findCached = (value: T) => {
     const cached = cachedRef.current;
-    return transformRef.current && cached && deepEqual(cached.value, value)
-      ? cached
-      : undefined;
+    if (!cached) return undefined;
+    const equal = transformRef.current ? deepEqual : shallowEqual;
+    return equal(cached.value, value) ? cached : undefined;
   };
 
   const current = read(entity);

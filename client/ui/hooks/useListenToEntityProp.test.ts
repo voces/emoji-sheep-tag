@@ -62,6 +62,25 @@ it("throttles updates and delivers the latest value after the window", async () 
   expect(result.current).toBe(3);
 });
 
+it("keeps the untransformed value stable until the entity changes", async () => {
+  const entity: Entity = app.addEntity({ id: "stable-holder", mana: 1 });
+  const { result, rerender } = renderHook(() =>
+    useListenToEntityProps(entity, ["mana"])
+  );
+  await waitForFlush();
+  const first = result.current;
+  expect(first).toEqual({ mana: 1 });
+
+  rerender();
+  expect(result.current).toBe(first);
+
+  act(() => {
+    entity.mana = 2;
+  });
+  expect(result.current).not.toBe(first);
+  expect(result.current).toEqual({ mana: 2 });
+});
+
 it("applies the latest transform closure on rerender", () => {
   const entity: Entity = app.addEntity({ id: "mana-cost", mana: 5 });
   const { result, rerender } = renderHook(
