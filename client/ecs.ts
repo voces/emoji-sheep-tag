@@ -40,15 +40,11 @@ export const listen = <P extends keyof Entity>(
 ) => {
   const listeners = allListeners.get(entity);
   if (!listeners) return () => {};
-  for (const prop of Array.isArray(props) ? props : [props]) {
-    const set = listeners[prop] ?? (listeners[prop] = new Set());
-    set.add(fn as (entity: Entity, prev: unknown) => void);
-  }
+  const propList = Array.isArray(props) ? props : [props];
+  const listener = fn as (entity: Entity, prev: unknown) => void;
+  for (const prop of propList) (listeners[prop] ??= new Set()).add(listener);
   return () => {
-    for (const prop of Array.isArray(props) ? props : [props]) {
-      const set = listeners[prop];
-      set?.delete(fn as (entity: Entity, prev: unknown) => void);
-    }
+    for (const prop of propList) listeners[prop]?.delete(listener);
   };
 };
 
@@ -61,8 +57,7 @@ export const app = newApp<Entity>({
       set: (target, prop, value) => {
         const prev = target[prop as keyof Entity];
         if (prev === value) return true;
-        // deno-lint-ignore no-explicit-any
-        (target as any)[prop] = value;
+        Reflect.set(target, prop, value);
         app.queueEntityChange(proxy, prop as keyof Entity);
         listeners[prop as keyof Entity]?.forEach((fn) => fn(proxy, prev));
         return true;
@@ -70,8 +65,7 @@ export const app = newApp<Entity>({
       deleteProperty: (target, prop) => {
         const prev = target[prop as keyof Entity];
         if (prev == null) return true;
-        // deno-lint-ignore no-explicit-any
-        delete (target as any)[prop];
+        Reflect.deleteProperty(target, prop);
         app.queueEntityChange(proxy, prop as keyof Entity);
         listeners[prop as keyof Entity]?.forEach((fn) => fn(proxy, prev));
         return true;
@@ -94,6 +88,11 @@ onRender((delta, time) => app.update(delta * getSpeedMultiplier(), time));
 
 export const map: Record<string, Entity> = {};
 
+export const removeTracked = (entity: Entity) => {
+  app.removeEntity(entity);
+  delete map[entity.id];
+};
+
 let fogResetter: (() => void) | undefined;
 export const registerFogReset = (fn: () => void) => {
   fogResetter = fn;
@@ -110,16 +109,14 @@ export const unloadEcs = (
       }
       if (entity.isPlayer) continue;
 
-      app.removeEntity(entity);
-      delete map[entity.id];
+      removeTracked(entity);
     }
     for (const entity of app.entities) {
       if (
         !entity.isPlayer || (entity.id !== "practice-enemy" && !includePlayers)
       ) continue;
 
-      app.removeEntity(entity);
-      delete map[entity.id];
+      removeTracked(entity);
     }
     fogResetter?.();
   });
