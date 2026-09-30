@@ -6,7 +6,7 @@ import { actionToShortcutKey } from "../util/actionToShortcutKey.ts";
 
 const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
   const shortcuts = shortcutsVar()[e.prefab];
-  if (!shortcuts) return e;
+  if (!shortcuts) return;
   let overridden = false;
 
   const overrideAction = (
@@ -31,7 +31,7 @@ const shortcutOverrides = (e: SystemEntity<"prefab" | "actions">) => {
 
     if (updatedAction.type === "menu") {
       const menuName = actionToShortcutKey(updatedAction);
-      const menuAction = updatedAction as UnitDataAction & { type: "menu" };
+      const menuAction = updatedAction;
       const updatedSubActions = menuAction.actions.map((subAction) =>
         overrideAction(subAction, menuName)
       );

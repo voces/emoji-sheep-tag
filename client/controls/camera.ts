@@ -1,5 +1,5 @@
-import { Plane, Raycaster, Vector2, Vector3 } from "three";
-import { mouse } from "../mouse.ts";
+import { Vector2 } from "three";
+import { mouse, screenToWorld } from "../mouse.ts";
 import { addSystem } from "@/shared/context.ts";
 import { camera, getSpeedMultiplier } from "../graphics/three.ts";
 import { updateCursor } from "../graphics/cursor.ts";
@@ -37,6 +37,8 @@ globalThis.addEventListener("wheel", (e) => {
 
 // Camera panning
 let startPan: number | undefined;
+const grabWorld = new Vector2();
+const cursorWorld = new Vector2();
 
 addSystem({
   update: (scaledDelta, time) => {
@@ -51,30 +53,10 @@ addSystem({
 
     // Handle middle-click panning using raycaster approach
     if (panGrabPixels) {
-      const raycaster = new Raycaster();
-      const plane = new Plane(new Vector3(0, 0, 1), 0);
-
-      // Calculate previous world position
-      const prevCameraSpace = new Vector2(
-        (panGrabPixels.x / globalThis.innerWidth) * 2 - 1,
-        -(panGrabPixels.y / globalThis.innerHeight) * 2 + 1,
-      );
-      raycaster.setFromCamera(prevCameraSpace, camera);
-      const prevWorld3 = new Vector3();
-      raycaster.ray.intersectPlane(plane, prevWorld3);
-
-      // Calculate current world position
-      const currCameraSpace = new Vector2(
-        (mouse.pixels.x / globalThis.innerWidth) * 2 - 1,
-        -(mouse.pixels.y / globalThis.innerHeight) * 2 + 1,
-      );
-      raycaster.setFromCamera(currCameraSpace, camera);
-      const currWorld3 = new Vector3();
-      raycaster.ray.intersectPlane(plane, currWorld3);
-
-      // Calculate world movement delta
-      const worldDeltaX = currWorld3.x - prevWorld3.x;
-      const worldDeltaY = currWorld3.y - prevWorld3.y;
+      screenToWorld(panGrabPixels.x, panGrabPixels.y, grabWorld);
+      screenToWorld(mouse.pixels.x, mouse.pixels.y, cursorWorld);
+      const worldDeltaX = cursorWorld.x - grabWorld.x;
+      const worldDeltaY = cursorWorld.y - grabWorld.y;
 
       // Move camera opposite to maintain cursor lock on world
       camera.position.x = Math.min(
@@ -87,7 +69,8 @@ addSystem({
       );
 
       // Update grab position for next frame
-      panGrabPixels = { x: mouse.pixels.x, y: mouse.pixels.y };
+      panGrabPixels.x = mouse.pixels.x;
+      panGrabPixels.y = mouse.pixels.y;
 
       // Skip arrow/edge panning
       updateCursor();

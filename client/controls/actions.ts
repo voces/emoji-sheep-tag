@@ -8,7 +8,6 @@ import { absurd } from "@/shared/util/absurd.ts";
 import { findAutoTarget } from "@/shared/util/autoTargeting.ts";
 import { playSound } from "../api/sound.ts";
 import { pick } from "../util/pick.ts";
-import { showFeedback } from "@/vars/feedback.ts";
 import { shortcutsVar } from "@/vars/shortcuts.ts";
 import { selectPrimaryUnit } from "../api/selection.ts";
 import {
@@ -18,17 +17,51 @@ import {
   openMenu,
 } from "@/vars/menuState.ts";
 import { createBlueprint } from "./blueprintHandlers.ts";
-import { playOrderSound, queued, setActiveOrder } from "./orderHandlers.ts";
+import {
+  playOrderSound,
+  queued,
+  rejectAction,
+  setActiveOrder,
+} from "./orderHandlers.ts";
 import { checkShortcut } from "./keyboardHandlers.ts";
 import { cancelOrder } from "./cancelOrder.ts";
 import { editorVar } from "@/vars/editor.ts";
 import {
-  batchCommand,
   deleteEntityCommand,
-  type EditorCommand,
   executeCommand,
   keyboardMoveCommand,
+  wrapBatch,
 } from "../editor/commands.ts";
+
+// Properties an editor delete snapshots so undo can recreate the entity
+const DELETE_SNAPSHOT_PROPS = [
+  "prefab",
+  "position",
+  "facing",
+  "modelScale",
+  "playerColor",
+  "vertexColor",
+  "model",
+  "isDoodad",
+  "radius",
+  "type",
+] as const satisfies readonly (keyof Entity)[];
+
+const copyProp = <K extends keyof Entity>(
+  from: Entity,
+  to: Partial<Entity>,
+  key: K,
+) => {
+  to[key] = from[key];
+};
+
+const pickDefined = (entity: Entity, keys: readonly (keyof Entity)[]) => {
+  const picked: Partial<Entity> = {};
+  for (const key of keys) {
+    if (entity[key] !== undefined) copyProp(entity, picked, key);
+  }
+  return picked;
+};
 
 export const handleAction = (action: UnitDataAction, units: Entity[]) => {
   const queue = checkShortcut(shortcutsVar().misc, "queueModifier") > 0;
@@ -44,24 +77,21 @@ export const handleAction = (action: UnitDataAction, units: Entity[]) => {
     return canExecute;
   });
   if (!units.length) {
-    playSound("ui", pick("error1"), { volume: 0.3 });
-    showFeedback(i18next.t("hud.unitIsBusy"));
+    rejectAction(i18next.t("hud.unitIsBusy"));
     return;
   }
 
   const manaCost = ("manaCost" in action ? action.manaCost : undefined) ?? 0;
   units = units.filter((unit) => (unit.mana ?? 0) >= manaCost);
   if (!units.length) {
-    playSound("ui", pick("error1"), { volume: 0.3 });
-    showFeedback(i18next.t("hud.notEnoughMana"));
+    rejectAction(i18next.t("hud.notEnoughMana"));
     return;
   }
 
   if ("goldCost" in action && action.goldCost && units.length) {
     const playerGold = getEffectivePlayerGold(units[0].owner);
     if (playerGold < action.goldCost) {
-      playSound("ui", pick("error1"), { volume: 0.3 });
-      showFeedback(i18next.t("hud.notEnoughGold"));
+      rejectAction(i18next.t("hud.notEnoughGold"));
       return;
     }
   }
@@ -136,34 +166,12 @@ const handleAutoAction = (
 
     // Editor delete - batch multiple deletes into one command
     if (order === "editorRemoveEntity") {
-      const commands: EditorCommand[] = units.map((unit) => {
-        // Only include safe properties for delete command
-        const entityData: Record<string, unknown> = {};
-        const safeProps = [
-          "prefab",
-          "position",
-          "facing",
-          "modelScale",
-          "playerColor",
-          "vertexColor",
-          "model",
-          "isDoodad",
-          "radius",
-          "type",
-        ];
-        for (const prop of safeProps) {
-          if ((unit as Record<string, unknown>)[prop] !== undefined) {
-            entityData[prop] = (unit as Record<string, unknown>)[prop];
-          }
-        }
-        return deleteEntityCommand(unit.id, entityData);
-      });
-
-      if (commands.length > 0) {
-        executeCommand(
-          commands.length === 1 ? commands[0] : batchCommand(commands),
-        );
-      }
+      const command = wrapBatch(
+        units.map((unit) =>
+          deleteEntityCommand(unit.id, pickDefined(unit, DELETE_SNAPSHOT_PROPS))
+        ),
+      );
+      if (command) executeCommand(command);
       return;
     }
 
@@ -178,22 +186,19 @@ const handleAutoAction = (
       ? "right"
       : null;
     if (moveDir) {
-      const commands: EditorCommand[] = units
-        .filter((unit) => unit.position)
-        .map((unit) =>
-          keyboardMoveCommand(
-            unit.id,
-            moveDir,
-            unit.position!.x,
-            unit.position!.y,
-          )
-        );
-
-      if (commands.length > 0) {
-        executeCommand(
-          commands.length === 1 ? commands[0] : batchCommand(commands),
-        );
-      }
+      const command = wrapBatch(
+        units.flatMap((unit) =>
+          unit.position
+            ? [keyboardMoveCommand(
+              unit.id,
+              moveDir,
+              unit.position.x,
+              unit.position.y,
+            )]
+            : []
+        ),
+      );
+      if (command) executeCommand(command);
       return;
     }
   }
@@ -217,8 +222,7 @@ const handleAutoAction = (
       localPlayer.id,
     );
     if (!target) {
-      playSound("ui", pick("error1"), { volume: 0.3 });
-      showFeedback(i18next.t("hud.noValidTargets"));
+      rejectAction(i18next.t("hud.noValidTargets"));
       return;
     }
 

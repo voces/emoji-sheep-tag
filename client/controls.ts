@@ -7,9 +7,6 @@ import { formatTargeting } from "@/shared/util/formatTargeting.ts";
 import { findAction } from "@/shared/util/actionLookup.ts";
 import { canBuild } from "./api/unit.ts";
 import { updateCursor } from "./graphics/cursor.ts";
-import { playSound } from "./api/sound.ts";
-import { pick } from "./util/pick.ts";
-import { showFeedback } from "@/vars/feedback.ts";
 import { gameplaySettingsVar } from "@/vars/gameplaySettings.ts";
 import {
   cancelBlueprint,
@@ -26,6 +23,7 @@ import {
   handleTargetOrder,
   playOrderSound,
   queued,
+  rejectAction,
 } from "./controls/orderHandlers.ts";
 import {
   cleanupSelectionState,
@@ -118,6 +116,12 @@ mouse.addEventListener("mouseButtonDown", (e) => {
   }
 });
 
+// A click that is not on an entity breaks any double-click sequence
+const forgetLastClick = () => {
+  setLastClickedEntity(null);
+  setLastEntityClickTime(0);
+};
+
 const handleLeftClick = (e: MouseButtonEvent) => {
   if (handleEditorLeftClick(e)) return;
 
@@ -129,20 +133,17 @@ const handleLeftClick = (e: MouseButtonEvent) => {
 
   if (blueprint) {
     handleBlueprintClick(e);
-    setLastClickedEntity(null);
-    setLastEntityClickTime(0);
+    forgetLastClick();
   } else if (getActiveOrder()) {
     const result = handleTargetOrder(e);
     if (!result.success) {
-      playSound("ui", pick("error1"), { volume: 0.3 });
-      showFeedback(
+      rejectAction(
         result.reason === "out-of-range"
           ? "Target is out of range"
           : getTargetingMessage(getActiveOrder()!.order),
       );
     }
-    setLastClickedEntity(null);
-    setLastEntityClickTime(0);
+    forgetLastClick();
   } else if (e.intersects.size && !isMinimapClick) {
     const clickedEntity = e.intersects.first()!;
     const now = performance.now();
@@ -163,8 +164,7 @@ const handleLeftClick = (e: MouseButtonEvent) => {
     setDragStart({ x: e.world.x, y: e.world.y });
   } else if (!isMinimapClick) {
     setDragStart({ x: e.world.x, y: e.world.y });
-    setLastClickedEntity(null);
-    setLastEntityClickTime(0);
+    forgetLastClick();
   }
 };
 
@@ -190,8 +190,7 @@ const handleBlueprintClick = (e: MouseButtonEvent) => {
   const [x, y] = normalizeBuildPosition(e.world.x, e.world.y, prefab);
 
   if (!canBuild(unit, prefab, x, y)) {
-    playSound("ui", pick("error1"), { volume: 0.3 });
-    showFeedback(i18next.t("hud.cannotBuildThere"));
+    rejectAction(i18next.t("hud.cannotBuildThere"));
     return;
   }
 

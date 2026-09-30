@@ -100,6 +100,9 @@ let editorPasteDrag:
 
 type TileBlueprint = NonNullable<ReturnType<typeof getBlueprint>>;
 
+// Placed and moved doodads keep positions to three decimals
+const roundCoord = (value: number) => Math.round(value * 1000) / 1000;
+
 const computeWaterTarget = () =>
   Math.max(0, Math.round(editorWaterLevelVar() * WATER_LEVEL_SCALE));
 
@@ -352,8 +355,8 @@ export const handleEditorBlueprintClick = (
       {
         ...entity,
         position: {
-          x: Math.round(position!.x * 1000) / 1000,
-          y: Math.round(position!.y * 1000) / 1000,
+          x: roundCoord(position!.x),
+          y: roundCoord(position!.y),
         },
       },
       entity.prefab,
@@ -464,8 +467,8 @@ export const handleEditorMouseUp = (): boolean => {
             entityId: entity.id,
             fromX: startPos.x,
             fromY: startPos.y,
-            toX: Math.round(entity.position!.x * 1000) / 1000,
-            toY: Math.round(entity.position!.y * 1000) / 1000,
+            toX: roundCoord(entity.position!.x),
+            toY: roundCoord(entity.position!.y),
           })),
         ),
       );

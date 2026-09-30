@@ -50,13 +50,7 @@ const getGroupKey = (entity: Entity): string =>
 
 const cycleSelectionFocus = () => {
   const current = selectionFocusVar();
-  const groups = new Map<string, Entity[]>();
-  for (const entity of selection) {
-    const key = getGroupKey(entity);
-    const group = groups.get(key) ?? [];
-    group.push(entity);
-    groups.set(key, group);
-  }
+  const groups = Map.groupBy(selection, getGroupKey);
   if (groups.size <= 1) return;
 
   const keys = [...groups.keys()];
@@ -222,12 +216,14 @@ const handleUIShortcuts = (
     return true;
   }
 
-  // Chat
+  // Everything below is for the running game, outside chat and the palette
+  if (
+    showChatBoxVar() === "open" || showCommandPaletteVar() !== "closed" ||
+    stateVar() !== "playing"
+  ) return false;
+
   if (
     checkShortcut(shortcuts.misc, "openChat", e.code) &&
-    showChatBoxVar() !== "open" &&
-    showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing" &&
     !uiSettingsVar().disableMessaging
   ) {
     e.preventDefault();
@@ -235,21 +231,11 @@ const handleUIShortcuts = (
     return true;
   }
 
-  // Control groups
-  if (
-    showChatBoxVar() !== "open" &&
-    showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
-  ) {
-    handleControlGroupKey(e);
-  }
+  handleControlGroupKey(e);
 
   // Cycle selection focus through prefab groups
   if (
     checkShortcut(shortcuts.misc, "cycleSelection", e.code) &&
-    showChatBoxVar() !== "open" &&
-    showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing" &&
     selection.size > 1
   ) {
     e.preventDefault();
@@ -258,21 +244,10 @@ const handleUIShortcuts = (
   }
 
   if (
-    checkShortcut(shortcuts.misc, "jumpToPing", e.code) &&
-    showChatBoxVar() !== "open" &&
-    showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing"
-  ) {
-    if (jumpToNextPing()) e.preventDefault();
-  }
+    checkShortcut(shortcuts.misc, "jumpToPing", e.code) && jumpToNextPing()
+  ) e.preventDefault();
 
-  if (
-    checkShortcut(shortcuts.misc, "applyZoom", e.code) &&
-    showChatBoxVar() !== "open" &&
-    showCommandPaletteVar() === "closed" &&
-    stateVar() === "playing" &&
-    !editorVar()
-  ) {
+  if (checkShortcut(shortcuts.misc, "applyZoom", e.code) && !editorVar()) {
     e.preventDefault();
     applyZoom();
   }
