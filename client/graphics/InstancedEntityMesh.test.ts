@@ -203,6 +203,18 @@ for (const [name, create] of Object.entries(meshes)) {
       expect(visibleFrom(mesh, 120, 120)).toBe(true);
     });
 
+    it("keeps culling by current bounds once its instances span the map", async () => {
+      const mesh = create(4);
+      mesh.setPositionAt("a", -10000, -10000);
+      mesh.setPositionAt("b", 10000, 10000);
+      await tick();
+      expect(visibleFrom(mesh, 10000, 10000)).toBe(true);
+
+      mesh.setPositionAt("b", 30000, 30000);
+      await tick();
+      expect(visibleFrom(mesh, 30000, 30000)).toBe(true);
+    });
+
     it("picks instances where they are", async () => {
       const mesh = create(4);
       mesh.setPositionAt("a", 0, 0);

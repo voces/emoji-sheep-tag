@@ -35,8 +35,6 @@ export class InstancedSvg extends InstancedEntityMesh {
     count: number = 1,
     readonly svgName?: string,
     options?: {
-      skipBoundsRecalc?: boolean;
-      mapUtilizationThreshold?: number;
       /** Sorts instances by position; unsorted meshes draw in render order. */
       sort?: SpriteSort;
       translucentMaterial?: Material;
@@ -49,8 +47,6 @@ export class InstancedSvg extends InstancedEntityMesh {
       name: svgName,
       attributes: [],
       sort: options?.sort,
-      skipBoundsRecalc: options?.skipBoundsRecalc,
-      mapUtilizationThreshold: options?.mapUtilizationThreshold,
     });
     staticInstances(this);
 

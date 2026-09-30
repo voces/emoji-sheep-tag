@@ -20,7 +20,6 @@ import { normalizeAngle } from "@/shared/pathing/math.ts";
 import { BVH } from "./BVH.ts";
 import { editorVar } from "@/vars/editor.ts";
 import { instanceZ, type SpriteSort } from "./depthSort.ts";
-import { getMapBounds } from "@/shared/map.ts";
 
 /** A per-instance attribute and the value each new instance starts with. */
 export type InstanceAttribute = {
@@ -92,35 +91,21 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
   private readonly instanceAttributes: readonly InstanceAttribute[];
   protected readonly sort: SpriteSort | undefined;
   protected translucentInstances = 0;
-  private readonly skipBoundsRecalc: boolean;
-  private readonly mapUtilizationThreshold: number;
-  private debouncingBoundingBox = false;
-  private debouncingBoundingSphere = false;
 
   constructor(
     geometry: BufferGeometry,
     material: Material,
     count: number,
-    {
-      name,
-      attributes,
-      sort,
-      skipBoundsRecalc = false,
-      mapUtilizationThreshold = 0.5,
-    }: {
+    { name, attributes, sort }: {
       name?: string;
       /** Per-instance attributes beyond alpha, minimap mask and player colour. */
       attributes: readonly InstanceAttribute[];
       sort?: SpriteSort;
-      skipBoundsRecalc?: boolean;
-      mapUtilizationThreshold?: number;
     },
   ) {
     super(geometry, material, count);
     this.innerCount = count;
     this.sort = sort;
-    this.skipBoundsRecalc = skipBoundsRecalc;
-    this.mapUtilizationThreshold = mapUtilizationThreshold;
     this.instanceAttributes = [...SHARED_ATTRIBUTES, ...attributes];
     for (const attribute of this.instanceAttributes) {
       geometry.setAttribute(
@@ -247,6 +232,7 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
   private setMatrixAtIndex(index: number, matrix: Matrix4) {
     this.setMatrixAt(index, matrix);
     this.instanceMatrix.needsUpdate = true;
+    this.invalidateBounds();
     this.updateBvhInstance(index, matrix);
   }
 
@@ -259,36 +245,13 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
     );
   }
 
-  private shouldSkipBoundsRecalc(): boolean {
-    if (this.skipBoundsRecalc) return true;
-
-    if (!this.boundingBox) this.computeBoundingBox();
-    if (!this.boundingBox || this.boundingBox.isEmpty()) return false;
-
-    const bbox = this.boundingBox;
-    const bboxArea = (bbox.max.x - bbox.min.x) * (bbox.max.y - bbox.min.y);
-    const bounds = getMapBounds();
-    const mapArea = (bounds.max.x - bounds.min.x) *
-      (bounds.max.y - bounds.min.y);
-
-    return bboxArea / mapArea > this.mapUtilizationThreshold;
-  }
-
-  private debouncedComputeBounds() {
-    if (this.shouldSkipBoundsRecalc()) return;
-    if (!this.debouncingBoundingBox) {
-      this.debouncingBoundingBox = true;
-      queueMicrotask(() => {
-        this.debouncingBoundingBox = false;
-        this.computeBoundingBox();
-      });
-    }
-    if (this.shouldSkipBoundsRecalc() || this.debouncingBoundingSphere) return;
-    this.debouncingBoundingSphere = true;
-    queueMicrotask(() => {
-      this.debouncingBoundingSphere = false;
-      this.computeBoundingSphere();
-    });
+  /**
+   * Drops the mesh-wide bounds, so the renderer recomputes them once, when it
+   * next culls, however many instances moved since.
+   */
+  private invalidateBounds() {
+    this.boundingBox = null;
+    this.boundingSphere = null;
   }
 
   override computeBoundingBox() {
@@ -356,7 +319,6 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
     dummy.updateMatrix();
 
     this.setMatrixAtIndex(index, dummy.matrix);
-    this.debouncedComputeBounds();
   }
 
   getPositionAt(index: number | string) {
@@ -384,7 +346,6 @@ export abstract class InstancedEntityMesh extends InstancedMesh {
     dummy.updateMatrix();
 
     this.setMatrixAtIndex(index, dummy.matrix);
-    this.debouncedComputeBounds();
   }
 
   /** Colours the vertices marked as the player's. */

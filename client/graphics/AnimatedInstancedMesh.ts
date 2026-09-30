@@ -56,8 +56,6 @@ export class AnimatedInstancedMesh extends InstancedEntityMesh {
     options?: {
       cameras?: ParsedCamera[];
       modelScale?: number;
-      skipBoundsRecalc?: boolean;
-      mapUtilizationThreshold?: number;
       /** Sorts instances by position; unsorted meshes draw in render order. */
       sort?: SpriteSort;
       translucentMaterial?: Material;
@@ -67,8 +65,6 @@ export class AnimatedInstancedMesh extends InstancedEntityMesh {
       name: modelName,
       attributes: ANIMATION_ATTRIBUTES,
       sort: options?.sort,
-      skipBoundsRecalc: options?.skipBoundsRecalc,
-      mapUtilizationThreshold: options?.mapUtilizationThreshold,
     });
     staticInstances(this);
 
