@@ -1,7 +1,7 @@
 import type { Game } from "../ecs.ts";
 import { newEcs } from "../ecs.ts";
 import type { Entity } from "@/shared/types.ts";
-import type { LoadedMap } from "@/shared/map.ts";
+import type { LoadedMap, PackedMap } from "@/shared/map.ts";
 import { addEntity, removeEntity } from "@/shared/api/entity.ts";
 import { generateDoodads, getMapCenter } from "@/shared/map.ts";
 import { newUnit } from "../api/unit.ts";
@@ -25,6 +25,14 @@ import { send } from "../lobbyApi.ts";
 import type { Round } from "../lobby.ts";
 import { timeout } from "../api/timing.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
+import { cosmeticRandom, simRandom } from "@/shared/util/simRandom.ts";
+import {
+  finishRecording,
+  recordTick,
+  recordWinner,
+  replayDir,
+  startRecording,
+} from "../replay/recorder.ts";
 
 const tryGetClient = () => {
   try {
@@ -44,6 +52,7 @@ const MAX_CATCHUP_TICKS = 5;
 const realtimeInterval = (
   cb: () => void,
   seconds: number,
+  afterTick: () => void,
 ): () => void => {
   const lobby = lobbyContext.current;
   const ecs = appContext.current;
@@ -87,6 +96,7 @@ const realtimeInterval = (
               });
             } else if (ecs.flushScheduled) cb();
             else ecs.batch(cb);
+            afterTick();
           });
         };
 
@@ -335,8 +345,8 @@ const setupVipMode = <T extends PlayerLike>(
 ) => {
   const vip = sheepCaptainId
     ? sheepPool.find((s) => s.owner === sheepCaptainId) ??
-      sheepPool[Math.floor(Math.random() * sheepPool.length)]
-    : sheepPool[Math.floor(Math.random() * sheepPool.length)];
+      sheepPool[Math.floor(simRandom() * sheepPool.length)]
+    : sheepPool[Math.floor(simRandom() * sheepPool.length)];
   addBuff(vip, { model: "vip", modelOffset: { y: 0.5 } });
   round.vip = vip.owner;
   send({ type: "vip", playerId: vip.owner! });
@@ -353,7 +363,7 @@ const spawnWolves = <T extends { id: string }>(wolves: T[]) => {
   for (const owner of wolves) {
     newUnit(owner.id, "wolf", center.x, center.y);
   }
-  playSoundAt(center, Math.random() < 0.5 ? "howl1" : "howl2");
+  playSoundAt(center, cosmeticRandom() < 0.5 ? "howl1" : "howl2");
 };
 
 const broadcastCountdown = (duration: number) => {
@@ -455,6 +465,34 @@ type InitializeGameOptions<T extends PlayerLike> = {
   onSheepWin: () => void;
   onWolvesWin: () => void;
   sheepCaptainId?: string;
+  /** Seeds the round; a replay passes the recorded seed. */
+  seed?: number;
+  /**
+   * Skip the realtime tick loop; the caller advances ticks itself with
+   * `stepGame`. Used to replay a round headlessly.
+   */
+  manualTicks?: boolean;
+  /** Record the round to REPLAY_DIR, when set. */
+  recording?: {
+    host: "primary" | "shard";
+    packedMap: PackedMap;
+    /** Record even without REPLAY_DIR; collect it with `takeRecording`. */
+    always?: boolean;
+  };
+};
+
+const advanceTick = (ecs: Game) => {
+  ecs.tick++;
+  ecs.update(TICK_RATE);
+};
+
+/**
+ * Runs one tick of a `manualTicks` round, as the realtime loop would. The
+ * caller provides the lobby and app contexts.
+ */
+export const stepGame = (ecs: Game) => {
+  ecs.batch(() => advanceTick(ecs));
+  recordTick(ecs);
 };
 
 export const initializeGame = <T extends PlayerLike>(
@@ -467,14 +505,49 @@ export const initializeGame = <T extends PlayerLike>(
     wolves,
     practice,
     editor,
-    onSheepWin,
-    onWolvesWin,
     sheepCaptainId,
+    seed,
+    manualTicks = false,
+    recording,
   } = options;
 
   clearUpdatesCache();
 
-  const ecs = newEcs(map);
+  const ecs = newEcs(map, seed);
+
+  const lobby = lobbyContext.current;
+  if (recording && !editor && (recording.always || replayDir())) {
+    startRecording(ecs, lobby.name, {
+      host: recording.host,
+      map: { id: map.id, name: map.name, packed: recording.packedMap },
+      settings: lobby.settings,
+      players: Array.from(lobby.players, (p) => ({
+        id: p.id,
+        name: p.name,
+        playerColor: p.playerColor,
+        team: p.team,
+        handicap: p.handicap,
+        sheepCount: p.sheepCount,
+        startLocation: p.startLocation,
+        isComputer: "isComputer" in p ? p.isComputer : undefined,
+      })),
+      sheep: sheep.map((p) => p.id),
+      wolves: wolves.map((p) => p.id),
+      practice,
+      tickClient: tryGetClient()?.id,
+      hostId: lobby.host?.id,
+      sheepCaptainId,
+    });
+  }
+
+  const onSheepWin = () => {
+    recordWinner(ecs, "sheep");
+    options.onSheepWin();
+  };
+  const onWolvesWin = () => {
+    recordWinner(ecs, "wolves");
+    options.onWolvesWin();
+  };
 
   // Create round object that will be returned and can be checked/mutated by timeouts
   const round: Round & { active: boolean } = {
@@ -485,20 +558,24 @@ export const initializeGame = <T extends PlayerLike>(
     clearInterval: () => {
       round.active = false;
       clearIntervalFn();
+      finishRecording(ecs);
     },
   };
 
   // Set round early so isEditor() works during entity generation
-  lobbyContext.current.round = round;
+  lobby.round = round;
 
-  let clearIntervalFn: () => void;
+  let clearIntervalFn: () => void = () => {};
 
   appContext.with(ecs, () =>
     ecs.batch(() => {
-      clearIntervalFn = realtimeInterval(() => {
-        ecs.tick++;
-        ecs.update(TICK_RATE);
-      }, TICK_RATE);
+      if (!manualTicks) {
+        clearIntervalFn = realtimeInterval(
+          () => advanceTick(ecs),
+          TICK_RATE,
+          () => recordTick(ecs),
+        );
+      }
 
       generateDoodads(editor ? undefined : ["static", "dynamic"]);
 
@@ -583,6 +660,8 @@ export const initializeGame = <T extends PlayerLike>(
         }, practice ? 0 : settings.mode === "switch" ? 5 : 21);
       }
     }));
+
+  recordTick(ecs);
 
   return round;
 };

@@ -1,10 +1,6 @@
 import defaultPackedMap from "@/shared/maps/revo.json" with { type: "json" };
 
-import {
-  buildLoadedMap,
-  type LoadedMap,
-  type PackedMap,
-} from "@/shared/map.ts";
+import { type PackedMap } from "@/shared/map.ts";
 import { getMapMeta, MAPS } from "@/shared/maps/manifest.ts";
 import { getCustomMapForLobby } from "./actions/uploadCustomMap.ts";
 import type { Lobby } from "./lobby.ts";
@@ -58,18 +54,16 @@ const readPackedMap = (map: string): PackedMap => {
   return packed;
 };
 
-export const createServerMap = (
+/** The packed source of a map id, and its display name. */
+export const resolveServerMap = (
   map: string,
   lobby?: Lobby,
-): LoadedMap => {
+): { packed: PackedMap; name?: string } => {
   if (map.startsWith("local:") && lobby) {
     const customMap = getCustomMapForLobby(lobby, map);
     if (!customMap) throw new Error(`Custom map "${map}" not found in lobby`);
-    const localId = map.replace("local:", "");
-    return buildLoadedMap(map, customMap, { name: localId });
+    return { packed: customMap, name: map.replace("local:", "") };
   }
 
-  const packed = readPackedMap(map);
-  const meta = getMapMeta(map);
-  return buildLoadedMap(map, packed, { name: meta?.name });
+  return { packed: readPackedMap(map), name: getMapMeta(map)?.name };
 };

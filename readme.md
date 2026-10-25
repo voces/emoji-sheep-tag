@@ -24,3 +24,21 @@ Currently persistently hosted at https://est.w3x.io/ in Ohio.
    ```bash
    deno task dev
    ```
+
+## Replays
+
+Set `REPLAY_DIR` to have the server record every round (seed, setup, and each
+player input with the tick it arrived on) as a gzipped JSONL file:
+
+```bash
+REPLAY_DIR=replays deno task dev
+```
+
+Re-run recordings headlessly, verify them against the state hashes recorded
+live, and time the simulation:
+
+```bash
+deno task replay --repeat 3 --systems replays/*.jsonl.gz
+```
+
+Chat and ping messages are not recorded.

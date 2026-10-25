@@ -8,6 +8,7 @@ import { findActionByOrder } from "@/shared/util/actionLookup.ts";
 import { removeEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { getPlayer } from "@/shared/api/player.ts";
+import { simRandom } from "@/shared/util/simRandom.ts";
 
 export const mirrorImageOrder = {
   onCastStart: (unit) => {
@@ -84,7 +85,7 @@ export const mirrorImageOrder = {
       }
 
       // Randomize positions
-      if (Math.random() < 0.5) {
+      if (simRandom() < 0.5) {
         // Place them in outer space so they don't block each other
         const swap1 = unit.position;
         unit.position = { x: -Infinity, y: -Infinity };

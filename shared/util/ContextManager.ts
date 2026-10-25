@@ -38,6 +38,10 @@ export class ContextManager<Context extends object> {
     this.currentContext = newContext;
   }
 
+  get maybeCurrent(): Context | undefined {
+    return this.currentContext;
+  }
+
   /**
    * Sets the current context for the duration of the function. Restores the
    * previous context upon completion.

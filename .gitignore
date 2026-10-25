@@ -4,3 +4,4 @@ client/testing/test-port-registry.json
 node_modules
 .vapid.json
 src-tauri/target/
+replays/
