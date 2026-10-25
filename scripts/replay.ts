@@ -6,11 +6,9 @@
  *
  * Exits non-zero when any replay diverges from its recording.
  */
-import { readFile } from "node:fs/promises";
 import process from "node:process";
 import { parseArgs } from "node:util";
-import { gunzipSync } from "node:zlib";
-import { parseReplay } from "../server/replay/format.ts";
+import { loadReplay } from "../server/replay/load.ts";
 import { type ReplayResult, replayRound } from "../server/replay/replay.ts";
 import { TICK_RATE } from "@/shared/constants.ts";
 import { systemsLoaded } from "../server/ecs.ts";
@@ -71,11 +69,7 @@ await systemsLoaded;
 let diverged = false;
 
 for (const path of positionals) {
-  const bytes = await readFile(path);
-  const text = path.endsWith(".gz")
-    ? gunzipSync(bytes).toString("utf8")
-    : bytes.toString("utf8");
-  const replay = parseReplay(text);
+  const replay = await loadReplay(path);
   const { header } = replay;
 
   console.log(

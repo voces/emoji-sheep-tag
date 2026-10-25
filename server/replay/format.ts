@@ -56,10 +56,14 @@ export type ReplayEvent =
 
 export type Replay = { header: ReplayHeader; events: ReplayEvent[] };
 
-/** Message types that cannot change simulation state are not recorded. */
+/**
+ * Message types not recorded: they cannot change simulation state, or, like
+ * `cancel`, their effect is the round's `end` event.
+ */
 export const UNRECORDED_MESSAGES: ReadonlySet<string> = new Set([
   "chat",
   "ping",
+  "cancel",
 ]);
 
 /** One JSON document per line: the header, then each event. */
