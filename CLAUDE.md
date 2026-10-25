@@ -115,3 +115,20 @@ applies to every tool invocation regardless of apparent independence.
   (`tweenSwing.ts`)
 - Attack completion logic exists in multiple places - ensure consistency across
   all damage paths
+
+## Determinism and Replays
+
+- A round is a pure function of its seed and inputs, so it can be recorded and
+  replayed exactly (`server/replay/`). Keep it that way:
+  - Use `simRandom()` (gameplay) or `cosmeticRandom()` (sounds, visuals) from
+    `shared/util/simRandom.ts`, never `Math.random()`, inside a round
+  - Let `addEntity`/`id()` assign entity ids; don't build ids from `Date.now()`
+  - Measure game time in ticks (`getTick`, `timeout`, `interval`), not wall
+    clock
+  - New client-to-server messages that change round state must be dispatched by
+    `handleMessage`, and replayable messages belong in the shard's `gameActions`
+- `REPLAY_DIR=<dir>` makes the server record every round there;
+  `deno task replay <file>...` re-runs recordings, checks them against their
+  recorded state hashes, and times the simulation (`--systems`, `--repeat N`)
+- Code that builds a game outside the running server (scripts, tests that
+  record) must `await systemsLoaded` from `server/ecs.ts` first

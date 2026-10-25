@@ -10,6 +10,7 @@ import { colorName, getPlayer } from "@/shared/api/player.ts";
 import { getSheep } from "./collections.ts";
 import { isPractice } from "../api/st.ts";
 import { App } from "@verit/ecs";
+import { id } from "@/shared/util/id.ts";
 
 const PARTICLE_COUNT = 16;
 const PARTICLE_LIFETIME = 0.6;
@@ -26,7 +27,7 @@ const isInEndArea = (x: number, y: number): boolean =>
 /** Spawn a brief sparkle emitter; the buff dies in BURST_DURATION but particles outlive it via particleLifetime. */
 const burstParticles = (cx: number, cy: number, ownerId: string) => {
   addEntity({
-    id: `bulldog-burst-${Date.now()}-${Math.random()}`,
+    id: id("bulldog-burst"),
     owner: ownerId,
     position: { x: cx, y: cy },
     isDoodad: true,

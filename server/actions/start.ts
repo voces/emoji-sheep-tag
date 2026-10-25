@@ -12,7 +12,8 @@ import {
 } from "../st/roundHelpers.ts";
 import { initializeGame } from "../st/gameStartHelpers.ts";
 import { Lobby } from "../lobby.ts";
-import { createServerMap } from "../maps.ts";
+import { resolveServerMap } from "../maps.ts";
+import { buildLoadedMap } from "@/shared/map.ts";
 import {
   broadcastShards,
   getFlyRegionDisplayName,
@@ -373,7 +374,11 @@ export const start = async (
     }`,
   );
 
-  const map = createServerMap(lobby.settings.map, lobby);
+  const { packed, name: mapName } = resolveServerMap(
+    lobby.settings.map,
+    lobby,
+  );
+  const map = buildLoadedMap(lobby.settings.map, packed, { name: mapName });
 
   // Get sheep captain for VIP mode
   const draft = lobby.captainsDraft;
@@ -400,5 +405,6 @@ export const start = async (
       endRound();
     },
     sheepCaptainId,
+    recording: { host: "primary", packedMap: packed },
   });
 };

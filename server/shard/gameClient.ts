@@ -96,7 +96,7 @@ export class GameClient {
   }
 }
 
-const zGameMessage = z.discriminatedUnion("type", [
+export const zGameMessage = z.discriminatedUnion("type", [
   zBuild,
   zUpgrade,
   zOrderEvent,
@@ -108,7 +108,7 @@ const zGameMessage = z.discriminatedUnion("type", [
   zUpdateSelection,
 ]);
 
-const gameActions = {
+export const gameActions = {
   build,
   upgrade,
   unitOrder,

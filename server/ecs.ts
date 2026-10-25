@@ -4,9 +4,12 @@ import { newEntity, remove, update } from "./updates.ts";
 import { appContext, initApp } from "@/shared/context.ts";
 import { buildDefaultMap, type LoadedMap, setMapForApp } from "@/shared/map.ts";
 import { id } from "@/shared/util/id.ts";
+import { randomSeed, seedApp } from "@/shared/util/simRandom.ts";
 
 export type Game = App<Entity> & {
   tick: number;
+  /** Seeds the round's randomness and entity ids; see `seedApp`. */
+  seed: number;
 };
 
 type Message = () => string;
@@ -51,7 +54,10 @@ const allPresent = (entity: Entity, props: Iterable<keyof Entity>) => {
   return true;
 };
 
-export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
+export const newEcs = (
+  map: LoadedMap = buildDefaultMap(),
+  seed = randomSeed(),
+) => {
   const initializeEntity = (input: Partial<Entity>) => {
     if (!input.id) input.id = id(input.prefab);
     const entity = input as Entity;
@@ -189,6 +195,8 @@ export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
 
   // Add custom properties and override removeEntity to handle networking
   app.tick = 0;
+  app.seed = seed;
+  seedApp(app, seed);
 
   const originalRemoveEntity = app.removeEntity.bind(app);
   app.removeEntity = (entity: Entity) => {
@@ -204,30 +212,35 @@ export const newEcs = (map: LoadedMap = buildDefaultMap()) => {
   return app;
 };
 
-import("./api/timing.ts");
-import("./systems/clearFlags.ts");
-import("./systems/action/action.ts");
-import("./systems/actionCooldowns.ts");
-import("./systems/auras.ts");
-import("./systems/autoAttack.ts");
-import("./systems/buffs.ts");
-import("./systems/death.ts");
-import("./systems/editor.ts");
-import("./systems/goldGeneration.ts");
-import("./systems/lookup.ts");
-import("./systems/tilemapRotation.ts");
-import("./systems/pathing.ts");
-import("./systems/playerEntities.ts");
-import("./systems/practiceMode.ts");
-import("./systems/projectile.ts");
-import("./systems/queues.ts");
-import("./systems/regen.ts");
-import("./systems/spiritPen.ts");
-import("./systems/autocast.ts");
-import("./systems/tickDamage.ts");
-import("./systems/sheepTime.ts");
-import("./systems/bulldog.ts");
-import("@/shared/systems/mapCenterMarker.ts");
-import("@/shared/systems/vision.ts");
-import("@/shared/dayNight.ts");
-import("./orders/index.ts");
+// Systems register on import. They are imported dynamically, so a caller
+// that builds a game before the server has warmed up (a script, a test) must
+// await this first, or the game runs with no systems.
+export const systemsLoaded = Promise.all([
+  import("./api/timing.ts"),
+  import("./systems/clearFlags.ts"),
+  import("./systems/action/action.ts"),
+  import("./systems/actionCooldowns.ts"),
+  import("./systems/auras.ts"),
+  import("./systems/autoAttack.ts"),
+  import("./systems/buffs.ts"),
+  import("./systems/death.ts"),
+  import("./systems/editor.ts"),
+  import("./systems/goldGeneration.ts"),
+  import("./systems/lookup.ts"),
+  import("./systems/tilemapRotation.ts"),
+  import("./systems/pathing.ts"),
+  import("./systems/playerEntities.ts"),
+  import("./systems/practiceMode.ts"),
+  import("./systems/projectile.ts"),
+  import("./systems/queues.ts"),
+  import("./systems/regen.ts"),
+  import("./systems/spiritPen.ts"),
+  import("./systems/autocast.ts"),
+  import("./systems/tickDamage.ts"),
+  import("./systems/sheepTime.ts"),
+  import("./systems/bulldog.ts"),
+  import("@/shared/systems/mapCenterMarker.ts"),
+  import("@/shared/systems/vision.ts"),
+  import("@/shared/dayNight.ts"),
+  import("./orders/index.ts"),
+]);

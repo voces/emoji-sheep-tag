@@ -2,6 +2,7 @@ import { z } from "zod";
 import { appContext } from "@/shared/context.ts";
 import { flushUpdates } from "../updates.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
+import { recordMessage } from "../replay/recorder.ts";
 
 // Shared socket types
 export type SocketEventMap = {
@@ -84,6 +85,7 @@ export const handleMessage = <
         }
         const json = JSON.parse(e.data);
         const message = schema.parse(json) as { type: string };
+        recordMessage(message.type, e.data);
         try {
           actions[message.type](client, message);
         } catch (err) {

@@ -1,6 +1,7 @@
 import { Point } from "@/shared/pathing/math.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { Entity } from "@/shared/types.ts";
+import { id } from "@/shared/util/id.ts";
 
 export const newSfx = (
   position: Point,
@@ -12,7 +13,7 @@ export const newSfx = (
   extra?: Partial<Entity>,
 ) =>
   addEntity({
-    id: `sfx-${Date.now()}-${Math.random()}`,
+    id: id("sfx"),
     position: { x: position.x, y: position.y },
     model: modelName,
     facing,

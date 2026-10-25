@@ -7,6 +7,7 @@ import {
   PATHING_NONE,
   PATHING_SOLID,
 } from "@/shared/constants.ts";
+import { simRandom } from "@/shared/util/simRandom.ts";
 
 export const dodgeOrder = {
   onCastComplete: (unit) => {
@@ -29,7 +30,7 @@ export const dodgeOrder = {
     if (!unit.owner || !unit.prefab || !unit.position) return;
 
     const facing = unit.facing ?? DEFAULT_FACING;
-    const angleOffset = (Math.random() - 0.5) * (Math.PI / 3); // 60 degrees total range
+    const angleOffset = (simRandom() - 0.5) * (Math.PI / 3); // 60 degrees total range
     const moveAngle = facing + angleOffset;
 
     const walkDistance = 5;

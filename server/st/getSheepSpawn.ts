@@ -6,6 +6,7 @@ import { getMap, getMapCenter } from "@/shared/map.ts";
 import { lobbyContext } from "../contexts.ts";
 import { newUnit } from "../api/unit.ts";
 import { START_TILE } from "@/shared/maps/tags.ts";
+import { simRandom } from "@/shared/util/simRandom.ts";
 
 const MAX_ATTEMPTS = 50;
 const MIN_DISTANCE_FROM_PEN = 1;
@@ -212,28 +213,28 @@ const getRandomPointAroundRectangle = (
   minDistance: number,
   maxDistance: number,
 ): [x: number, y: number] => {
-  const side = Math.floor(Math.random() * 4);
-  const distance = minDistance + Math.random() * (maxDistance - minDistance);
+  const side = Math.floor(simRandom() * 4);
+  const distance = minDistance + simRandom() * (maxDistance - minDistance);
 
   switch (side) {
     case 0: {
-      const x = rect.x + Math.random() * rect.width;
+      const x = rect.x + simRandom() * rect.width;
       const y = rect.y - distance;
       return [x, y];
     }
     case 1: {
       const x = rect.x + rect.width + distance;
-      const y = rect.y + Math.random() * rect.height;
+      const y = rect.y + simRandom() * rect.height;
       return [x, y];
     }
     case 2: {
-      const x = rect.x + Math.random() * rect.width;
+      const x = rect.x + simRandom() * rect.width;
       const y = rect.y + rect.height + distance;
       return [x, y];
     }
     default: {
       const x = rect.x - distance;
-      const y = rect.y + Math.random() * rect.height;
+      const y = rect.y + simRandom() * rect.height;
       return [x, y];
     }
   }
@@ -245,10 +246,10 @@ const getRandomPointInRectangle = (
 ): [x: number, y: number] => {
   const x = rect.x +
     edgeBuffer +
-    Math.random() * Math.max(0, rect.width - 2 * edgeBuffer);
+    simRandom() * Math.max(0, rect.width - 2 * edgeBuffer);
   const y = rect.y +
     edgeBuffer +
-    Math.random() * Math.max(0, rect.height - 2 * edgeBuffer);
+    simRandom() * Math.max(0, rect.height - 2 * edgeBuffer);
   return [x, y];
 };
 
@@ -262,7 +263,7 @@ const getBulldogSheepSpawn = (): [x: number, y: number] | null => {
   );
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    let random = Math.random() * totalArea;
+    let random = simRandom() * totalArea;
     let selectedArea = startAreas[0];
 
     for (const area of startAreas) {
@@ -356,7 +357,7 @@ export const getSheepSpawn = (): [x: number, y: number] => {
   );
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    let random = Math.random() * totalArea;
+    let random = simRandom() * totalArea;
     let selectedArea = penAreas[0];
 
     for (const area of penAreas) {
@@ -419,7 +420,7 @@ export const getSpiritSpawn = (): [
   }
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    let random = Math.random() * totalArea;
+    let random = simRandom() * totalArea;
     let selectedArea = penAreas[0];
     let selectedIndex = 0;
 

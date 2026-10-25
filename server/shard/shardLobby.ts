@@ -8,6 +8,7 @@ import type { CaptainsDraft, Round } from "../lobby.ts";
 import { buildLoadedMap, type PackedMap } from "@/shared/map.ts";
 import { getMapMeta } from "@/shared/maps/manifest.ts";
 import { initializeGame } from "../st/gameStartHelpers.ts";
+import { recordLeave } from "../replay/recorder.ts";
 import { addEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { lobbyContext } from "../contexts.ts";
@@ -193,6 +194,7 @@ export class ShardLobby {
     if (this.round?.ecs) {
       lobbyContext.with(this, () => {
         appContext.with(this.round!.ecs, () => {
+          recordLeave(client.id);
           this.round!.ecs.batch(() => removePlayerFromEcs(client.id));
 
           // Send leave event to remaining clients
@@ -264,12 +266,10 @@ export class ShardLobby {
     );
 
     // Create map - for custom maps, use the packed data directly
-    const map = this.customMapData
-      ? buildLoadedMap(this.settings.map, this.customMapData as PackedMap)
-      : buildLoadedMap(
-        this.settings.map,
-        this.readPackedMap(this.settings.map),
-      );
+    const packed = this.customMapData
+      ? this.customMapData as PackedMap
+      : this.readPackedMap(this.settings.map);
+    const map = buildLoadedMap(this.settings.map, packed);
 
     // Initialize game using lobbyContext so APIs work correctly
     lobbyContext.with(this, () =>
@@ -282,6 +282,7 @@ export class ShardLobby {
         editor: this.editor,
         onSheepWin: () => this.endRound(false, true),
         onWolvesWin: () => this.endRound(false, false),
+        recording: { host: "shard", packedMap: packed },
       }));
   }
 

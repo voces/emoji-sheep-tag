@@ -4,9 +4,11 @@ import { isEditor } from "./api/st.ts";
 
 let updates: Record<string, Entity & { __delete?: boolean }> = {};
 
+// A copy: later `update`s write into the pending entry, and writing into the
+// entity itself would make its state depend on when updates were last flushed
 export const newEntity = (entity: Entity) => {
   if (entity.type === "static" && !isEditor()) return;
-  updates[entity.id] = entity;
+  updates[entity.id] = { ...entity };
 };
 
 export const update = <K extends keyof Entity>(
