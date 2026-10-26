@@ -7,7 +7,7 @@ import {
   extractFilenames,
 } from "./build.ts";
 import { processSoundAssets } from "./processSoundAssets.ts";
-import { ensureDir } from "@std/fs";
+import { mkdir } from "node:fs/promises";
 
 // deno-lint-ignore no-explicit-any
 const debounce = <T extends (...args: any[]) => Promise<any>>(
@@ -30,7 +30,7 @@ const debounce = <T extends (...args: any[]) => Promise<any>>(
     });
 };
 
-await ensureDir("dist");
+await mkdir("dist", { recursive: true });
 await cleanOldBundles();
 
 const ctx = await esbuild.context(await buildOptions("dev"));

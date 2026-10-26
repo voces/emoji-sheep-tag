@@ -1,6 +1,7 @@
-import { ensureDir } from "@std/fs/ensure-dir";
-import { walk } from "@std/fs/walk";
-import { basename, dirname, extname, join, relative } from "@std/path";
+import { mkdir, readdir } from "node:fs/promises";
+import { basename, dirname, extname, join, relative } from "node:path";
+
+const ensureDir = (dir: string) => mkdir(dir, { recursive: true });
 
 type Category = "sfx" | "music" | "ambience";
 
@@ -64,14 +65,15 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
   const cache = await loadCache(cachePath);
 
   const files: string[] = [];
-  for await (
-    const entry of walk(cfg.inputDir, {
-      includeFiles: true,
-      includeDirs: false,
-    })
-  ) {
-    const ext = extname(entry.path).toLowerCase();
-    if (AUDIO_EXTS.has(ext)) files.push(entry.path);
+  const entries = await readdir(cfg.inputDir, {
+    recursive: true,
+    withFileTypes: true,
+  });
+  for (const entry of entries) {
+    const path = join(entry.parentPath, entry.name);
+    if (entry.isFile() && AUDIO_EXTS.has(extname(path).toLowerCase())) {
+      files.push(path);
+    }
   }
 
   let encoded = 0, skipped = 0;

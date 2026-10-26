@@ -1,4 +1,4 @@
-import { TypedEventTarget } from "typed-event-target";
+import { TypedEventTarget } from "typescript-event-target";
 import { Plane, Raycaster, Vector2, Vector3 } from "three";
 import { camera, scene } from "./graphics/three.ts";
 import { InstancedSvg } from "./graphics/InstancedSvg.ts";

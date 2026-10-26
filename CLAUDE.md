@@ -86,6 +86,9 @@ applies to every tool invocation regardless of apparent independence.
   Elsewhere use web APIs or `node:` modules, never `Deno.*`
 - Modules reachable from `server/local.ts` are also bundled into the browser, so
   they must not import `node:` modules; read files through `nodeFs()` instead
+- Dependencies live in `package.json`; `deno.json` keeps only the `@/` path
+  aliases. JSR packages install through JSR's npm registry (`.npmrc`), aliased
+  to their JSR names, e.g. `"@verit/ecs": "npm:@jsr/verit__ecs@0.7.0"`
 
 # Game System Implementation Patterns
 
