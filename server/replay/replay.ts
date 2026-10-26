@@ -10,7 +10,7 @@ import { gameActions, zGameMessage } from "../shard/gameClient.ts";
 import { initializeGame, stepGame } from "../st/gameStartHelpers.ts";
 import { flushUpdates } from "../updates.ts";
 import { handleMessage, wrapWithContext } from "../util/socketHandler.ts";
-import type { Replay } from "./format.ts";
+import { type Replay, UNRECORDED_MESSAGES } from "./format.ts";
 import { hashState } from "./stateHash.ts";
 
 export type ReplayOptions = {
@@ -197,6 +197,7 @@ export const replayRound = (
 
   const dispatch = (client: Client, data: string) => {
     const { type } = JSON.parse(data) as { type: string };
+    if (UNRECORDED_MESSAGES.has(type)) return;
     if (!(type in gameActions)) {
       result.skipped[type] = (result.skipped[type] ?? 0) + 1;
       return;

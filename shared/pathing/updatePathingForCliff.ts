@@ -62,7 +62,6 @@ const applyPatchedPathing = (
           const tile = pathingMap.getTile(gx, gy);
           if (tile) {
             tile.originalPathing = pathing;
-            tile.recalculatePathing();
           }
         }
       }

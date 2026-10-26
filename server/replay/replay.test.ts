@@ -13,6 +13,7 @@ import { initializeGame, stepGame } from "../st/gameStartHelpers.ts";
 import { handleMessage, wrapWithContext } from "../util/socketHandler.ts";
 import type { Replay } from "./format.ts";
 import { parseReplay, serializeReplay } from "./format.ts";
+import { loadReplay } from "./load.ts";
 import { takeRecording } from "./recorder.ts";
 import { replayRound } from "./replay.ts";
 
@@ -177,4 +178,19 @@ describe("replay", () => {
     expect(result.firstDivergence).toBeDefined();
     expect(result.firstDivergence!.tick).toBeGreaterThanOrEqual(event.t);
   });
+});
+
+// A real recorded round. Its recorded hashes stop matching whenever gameplay
+// changes, so this checks only that it replays the same way every time.
+it("replays a recorded round identically every run", async () => {
+  await systemsLoaded;
+  const replay = await loadReplay(
+    new URL("./fixtures/revo-practice.jsonl.gz", import.meta.url),
+  );
+  const run = () => replayRound(replay, { stopOnDivergence: false });
+  const [first, second] = [run(), run()];
+
+  expect(first.ticks).toBeGreaterThan(1000);
+  expect(second.ticks).toBe(first.ticks);
+  expect(second.hashes).toEqual(first.hashes);
 });

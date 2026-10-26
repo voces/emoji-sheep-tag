@@ -3,11 +3,11 @@ import { BinaryHeap } from "./BinaryHeap.ts";
 import {
   angleDifference,
   distanceBetweenEntities,
-  distanceBetweenPoints,
   offset,
   Point,
 } from "./math.ts";
-import { SearchNode, Tile } from "./Tile.ts";
+import { Tile } from "./Tile.ts";
+import { END, FlatSearch, PLAYER_PATHING_BUDGET, START } from "./FlatSearch.ts";
 import { Footprint, Pathing, PathingEntity, TargetEntity } from "./types.ts";
 import {
   PATHING_WALK_ANGLE_DIFFERENCE,
@@ -22,6 +22,8 @@ import {
   yWorldToTile as worldToTileY,
 } from "./coordinates.ts";
 import { isMoving } from "./util.ts";
+import { FlatGrid } from "./FlatGrid.ts";
+import { DistanceCheck } from "./DistanceCheck.ts";
 
 // Raw-coordinate versions of trueMinX/trueMaxX for tile-native _linearPathable
 // Avoids Point object allocation by accepting px, py directly
@@ -51,7 +53,6 @@ const trueMaxXRaw = (
   return Math.floor(px + Math.sign(squared) * Math.abs(squared) ** 0.5);
 };
 
-const PLAYER_PATHING_BUDGET = 5000;
 const MIN_UNIT_BUDGET = 50;
 
 const DEFAULT_RESOLUTION = 1;
@@ -68,31 +69,35 @@ const MAX_TRIES = 3481; // 59**2
 const SPIRAL_START_DIRECTION = DIRECTION.UP;
 const EPSILON = Number.EPSILON * 100;
 
-type Cache = {
-  _linearPathable: (
-    ...args: Parameters<typeof PathingMap.prototype._linearPathable>
-  ) => ReturnType<typeof PathingMap.prototype._linearPathable>;
-  _pathable: (
-    ...args: Parameters<typeof PathingMap.prototype._pathable>
-  ) => ReturnType<typeof PathingMap.prototype._pathable>;
-};
-
 // Estimated cost remaining
 const h = (a: Point, b: Point) =>
   Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
 
-type SideKey = "__start" | "__end";
-
-/** One direction of path()'s bidirectional search. */
-type SearchSide = {
-  key: SideKey;
-  tag: number;
-  heap: BinaryHeap<Tile>;
-  /** The tile nearest the other end found so far. */
-  best: Tile;
-  /** The point this side's cost estimates aim at, in tile units. */
-  goal: Point;
+/** Everything an entity's footprint is computed from, as of its placement. */
+type Placement = {
+  x: number;
+  y: number;
+  radius: number;
+  tilemap: Footprint | undefined;
+  blocks: Pathing | undefined;
+  /** The entity's pathing on each of its tiles, in footprint order. */
+  pathing: Pathing[];
 };
+
+const placementOf = (entity: PathingEntity, pathing: Pathing[]): Placement => ({
+  x: entity.position.x,
+  y: entity.position.y,
+  radius: entity.radius,
+  tilemap: entity.tilemap,
+  blocks: entity.blocksPathing ?? entity.pathing,
+  pathing,
+});
+
+/** Whether the entity's footprint would compute as it did at `placement`. */
+const isCurrent = (placement: Placement, entity: PathingEntity) =>
+  placement.x === entity.position.x && placement.y === entity.position.y &&
+  placement.radius === entity.radius && placement.tilemap === entity.tilemap &&
+  placement.blocks === (entity.blocksPathing ?? entity.pathing);
 
 /** What path() works out once and hands to each stage of the search. */
 type PathSearch = {
@@ -100,7 +105,6 @@ type PathSearch = {
   target: TargetEntity | Readonly<Point>;
   pathing: Pathing;
   minimalTilemap: Footprint;
-  cache: Cache;
   /** How far an entity's centre sits into its top-left tile, in world units. */
   offset: number;
   start: Point;
@@ -110,95 +114,9 @@ type PathSearch = {
   /** In tile units. */
   distanceFromTarget: number | undefined;
   /** A copy of the entity moved around to measure distances from tiles. */
-  entityAtTile: PathingEntity & { position: Point };
-};
-
-const sideScore: Record<SideKey, (tile: Tile) => number> = {
-  __start: (tile) => tile.__start?.realPlusEstimatedCost ?? 0,
-  __end: (tile) => tile.__end?.realPlusEstimatedCost ?? 0,
-};
-
-const newSide = (
-  key: SideKey,
-  tag: number,
-  best: Tile,
-  goal: Point,
-): SearchSide => ({
-  key,
-  tag,
-  best,
-  goal,
-  heap: new BinaryHeap(sideScore[key]),
-});
-
-const resetNode = (node: SearchNode, tag: number) => {
-  node.tag = tag;
-  node.estimatedCostRemaining = 0;
-  node.realPlusEstimatedCost = 0;
-  node.realCostFromOrigin = 0;
-  node.visited = false;
-  node.closed = false;
-  node.parent = null;
-};
-
-/** The tile's node on `side`, reset first if left over from another search. */
-const searchNode = (tile: Tile, side: SearchSide): SearchNode => {
-  let node = tile[side.key];
-  if (!node) {
-    node = {
-      tag: side.tag,
-      estimatedCostRemaining: 0,
-      realPlusEstimatedCost: 0,
-      realCostFromOrigin: 0,
-      visited: false,
-      closed: false,
-      parent: null,
-    };
-    tile[side.key] = node;
-  } else if (node.tag !== side.tag) resetNode(node, side.tag);
-  return node;
-};
-
-/** Opens `tile` as a starting point of `side`. */
-const seed = (
-  side: SearchSide,
-  tile: Tile,
-  realCostFromOrigin: number,
-  estimatedCostRemaining: number,
-) => {
-  const node = searchNode(tile, side);
-  node.realCostFromOrigin = realCostFromOrigin;
-  node.estimatedCostRemaining = estimatedCostRemaining;
-  node.realPlusEstimatedCost = estimatedCostRemaining + realCostFromOrigin;
-  node.visited = false;
-  node.closed = false;
-  node.parent = null;
-  side.heap.push(tile);
-};
-
-/** Nearer the other end, or as near for less cost. */
-const improvesOn = (node: SearchNode, best: SearchNode | undefined) =>
-  node.estimatedCostRemaining < (best?.estimatedCostRemaining ?? 0) ||
-  (node.estimatedCostRemaining === best?.estimatedCostRemaining &&
-    node.realCostFromOrigin < (best?.realCostFromOrigin ?? 0));
-
-/**
- * The start side's parent chain up to `startBest` and, where the sides met on
- * one tile, the target side's chain on from it.
- */
-const joinSides = (startBest: Tile, endBest: Tile): Tile[] => {
-  const tiles: Tile[] = [];
-  for (
-    let tile: Tile | null | undefined = startBest;
-    tile;
-    tile = tile.__start?.parent
-  ) tiles.unshift(tile);
-  if (startBest === endBest) {
-    for (let tile = startBest.__end?.parent; tile; tile = tile.__end?.parent) {
-      tiles.push(tile);
-    }
-  }
-  return tiles;
+  entityAtTile: Pick<PathingEntity, "id" | "radius" | "tilemap" | "pathing"> & {
+    position: Point;
+  };
 };
 
 export class PathingMap {
@@ -210,10 +128,13 @@ export class PathingMap {
   readonly heightMap: number;
   readonly widthMap: number;
   readonly grid: (Tile | undefined)[][];
-  private readonly pathing: Pathing[][];
+  readonly flat: FlatGrid;
 
   // Maps entities to tiles
   private readonly entities: Map<PathingEntity, Tile[]> = new Map();
+
+  /** What each entity's footprint was computed from, and its pathing per tile. */
+  private readonly placements = new Map<PathingEntity, Placement>();
 
   // Precomputed context for _linearPathable, set during path()
   private _losCtx?: {
@@ -263,7 +184,6 @@ export class PathingMap {
   }) {
     this.resolution = resolution;
     this.tileResolution = tileResolution;
-    this.pathing = pathing;
     this.layers = layers;
 
     // World dimensions: when tileResolution is used, the pathing array is higher resolution
@@ -280,6 +200,15 @@ export class PathingMap {
     this.grid = [];
     for (let y = 0; y < this.heightMap; y++) {
       this.grid[y] = [];
+    }
+    this.flat = new FlatGrid(this.widthMap, this.heightMap);
+    const tilesPerPathingCell = resolution / tileResolution;
+    for (let y = 0; y < this.heightMap; y++) {
+      const row = pathing[Math.floor(y / tilesPerPathingCell)];
+      for (let x = 0; x < this.widthMap; x++) {
+        const cell = row?.[Math.floor(x / tilesPerPathingCell)];
+        if (cell !== undefined) this.flat.terrain[y * this.widthMap + x] = cell;
+      }
     }
   }
 
@@ -299,23 +228,16 @@ export class PathingMap {
     const existing = this.grid[y][x];
     if (existing) return existing;
 
-    // Calculate which pathing cell this tile belongs to
-    const tilesPerPathingCell = this.resolution / this.tileResolution;
-    const pathingX = Math.floor(x / tilesPerPathingCell);
-    const pathingY = Math.floor(y / tilesPerPathingCell);
+    const terrain = this.flat.terrain[y * this.widthMap + x];
+    if (terrain === -1) return undefined;
 
-    // Verify pathing data exists for this tile
-    if (this.pathing[pathingY]?.[pathingX] === undefined) {
-      return undefined;
-    }
-
-    // Create the tile
     const tile = new Tile(
       x,
       y,
       x / this.resolution,
       y / this.resolution,
-      this.pathing[pathingY][pathingX],
+      terrain,
+      this.flat,
     );
     this.grid[y][x] = tile;
 
@@ -366,7 +288,6 @@ export class PathingMap {
         const tile = this.getTile(dx, dy);
         if (!tile) continue;
         tile.originalPathing = pathing;
-        tile.recalculatePathing();
       }
     }
   }
@@ -454,7 +375,31 @@ export class PathingMap {
         type: entity.requiresPathing ?? entity.pathing,
       });
 
-    return this.withoutEntity(entity, () => this._pathable(map, xTile, yTile));
+    const tiles = this.entities.get(entity);
+    const placement = tiles && this.placements.get(entity);
+    if (!tiles || !placement || !isCurrent(placement, entity)) {
+      return this.withoutEntity(
+        entity,
+        () => this._pathable(map, xTile, yTile),
+      );
+    }
+
+    // withoutEntity, for an entity that has not moved since it was placed:
+    // lifting its footprint and placing it again is the same footprint, so
+    // only its counts come off and go back. Its map entries still move to the
+    // end, as a remove and re-add moves them.
+    for (let i = 0; i < tiles.length; i++) {
+      this.flat.remove(tiles[i].index, placement.pathing[i]);
+    }
+    const result = this._pathable(map, xTile, yTile);
+    for (let i = 0; i < tiles.length; i++) {
+      this.flat.add(tiles[i].index, placement.pathing[i]);
+      tiles[i].entities.delete(entity);
+      tiles[i].entities.set(entity, placement.pathing[i]);
+    }
+    this.entities.delete(entity);
+    this.entities.set(entity, tiles);
+    return result;
   }
 
   /**
@@ -982,33 +927,12 @@ export class PathingMap {
     }
   }
 
-  /** Per-search memoisation of the line-of-sight and footprint checks. */
-  private searchCache(): Cache {
-    const losCache = new Map<Tile, Map<Tile, boolean>>();
-    const pathableCache = new Map<number, boolean>();
-    return {
-      _linearPathable: (entity, startTile, endTile) => {
-        let inner = losCache.get(startTile);
-        if (inner) {
-          const cached = inner.get(endTile);
-          if (cached !== undefined) return cached;
-        } else {
-          inner = new Map();
-          losCache.set(startTile, inner);
-        }
-        const result = this._linearPathable(entity, startTile, endTile);
-        inner.set(endTile, result);
-        return result;
-      },
-      _pathable: (map, x, y) => {
-        const key = x * this.heightMap + y;
-        const cached = pathableCache.get(key);
-        if (cached !== undefined) return cached;
-        const result = this._pathable(map, x, y);
-        pathableCache.set(key, result);
-        return result;
-      },
-    };
+  private searchState?: FlatSearch;
+
+  /** The flat search, allocated on first use: it is large, and a client map
+   * that never paths does not need it. */
+  private get flatSearch(): FlatSearch {
+    return this.searchState ??= new FlatSearch(this.flat);
   }
 
   /** The body of path(), run with the entity and movers lifted off the map. */
@@ -1043,7 +967,6 @@ export class PathingMap {
         entity.radius,
         { type: pathing },
       ),
-      cache: this.searchCache(),
       offset: entity.radius % (1 / this.resolution),
       start,
       startReal: { x: start.x * this.resolution, y: start.y * this.resolution },
@@ -1053,8 +976,40 @@ export class PathingMap {
         y: targetPosition.y * this.resolution,
       },
       distanceFromTarget,
-      entityAtTile: { ...entity, position: { x: 0, y: 0 } },
+      // Only what distanceBetweenEntities reads: copying the whole entity
+      // costs more than the search it serves
+      entityAtTile: {
+        id: entity.id,
+        radius: entity.radius,
+        tilemap: entity.tilemap,
+        pathing: entity.pathing,
+        position: { x: 0, y: 0 },
+      },
     };
+
+    const flat = this.flatSearch;
+    const owner = entity.owner;
+    const ownerSpent = owner
+      ? this.pathingIterationsPerPlayer.get(owner) ?? 0
+      : undefined;
+    flat.prepare({
+      pathing,
+      minimalTilemap: search.minimalTilemap,
+      radius: this._losCtx.radius,
+      radiusTileOffset: this._losCtx.radiusTileOffset,
+      distance: typeof distanceFromTarget === "number"
+        ? new DistanceCheck(
+          search.entityAtTile,
+          "position" in target ? target : undefined,
+          "position" in target ? undefined : target,
+          distanceFromTarget,
+          this.resolution,
+        )
+        : undefined,
+      reopenEnd: () => this.reopenEndSide(search),
+      unitBudget: this.getPlayerPathingBudgetRemaining(owner),
+      ownerSpent,
+    });
 
     const startTile = this.resolveStartTile(search);
     if (!startTile) return [];
@@ -1075,36 +1030,45 @@ export class PathingMap {
       ];
     }
 
-    const { end, endTiles } = this.openEndSide(
-      search,
-      targetTile,
-      targetPathable,
-    );
-    const begin = newSide(
-      "__start",
+    this.openEndSide(search, targetTile, targetPathable);
+    flat.begin(
+      START,
       this.nextSearchTag(),
-      startTile,
-      search.targetReal,
+      startTile.index,
+      search.targetReal.x,
+      search.targetReal.y,
     );
-    seed(
-      begin,
-      startTile,
+    flat.seed(
+      START,
+      startTile.index,
       h(search.startReal, startTile),
-      h(startTile, end.best),
+      h(startTile, this.tileAt(flat.best(END))),
     );
 
-    this.bidirectionalSearch(search, begin, end, endTiles, startTile);
+    try {
+      flat.run(startTile.index);
+    } finally {
+      if (owner && flat.spent !== ownerSpent) {
+        this.pathingIterationsPerPlayer.set(owner, flat.spent);
+      }
+    }
 
-    const pathTiles = joinSides(begin.best, end.best);
-    this._smooth(entity, pathTiles, search.cache);
     const path = this.toWorldPath(
       search,
-      pathTiles,
+      flat.path().map((index) => this.tileAt(index)),
       targetTile,
       targetPathable,
     );
     this.stepBackToDistance(search, path);
     return path;
+  }
+
+  /** The tile at a flat index, created if need be. */
+  private tileAt(index: number): Tile {
+    return this.getTile(
+      index % this.widthMap,
+      Math.floor(index / this.widthMap),
+    )!;
   }
 
   /** Where path() aims: the target pulled in far enough to fit on the map. */
@@ -1141,11 +1105,11 @@ export class PathingMap {
    * does. Undefined when that is too far to move to without teleporting.
    */
   private resolveStartTile(search: PathSearch): Tile | undefined {
-    const { entity, start, pathing, minimalTilemap, cache } = search;
+    const { entity, start, pathing } = search;
     const startTile = this.entityToTile(entity);
     if (
       startTile.pathable(pathing) &&
-      cache._pathable(minimalTilemap, startTile.x, startTile.y)
+      this.flatSearch.pathable(startTile.x, startTile.y)
     ) return startTile;
 
     // Entity has already been removed from pathingMap, so we can directly use nearestPathing
@@ -1163,14 +1127,14 @@ export class PathingMap {
   /**
    * Opens the target side of the search: the target tile when the entity fits
    * there, otherwise every spot it fits that is about as near the target as
-   * the nearest such spot. `endTiles` are the tiles that end the search when
-   * the start side reaches one.
+   * the nearest such spot. Returns the tiles that end the search when the
+   * start side reaches one.
    */
   private openEndSide(
     search: PathSearch,
     targetTile: Tile,
     targetPathable: boolean,
-  ): { end: SearchSide; endTiles: Set<Tile> } {
+  ): void {
     const {
       entity,
       target,
@@ -1180,19 +1144,26 @@ export class PathingMap {
       distanceFromTarget,
       entityAtTile,
     } = search;
-    const end = newSide("__end", this.nextSearchTag(), targetTile, startReal);
-    const endTiles = new Set([targetTile]);
+    const flat = this.flatSearch;
+    flat.begin(
+      END,
+      this.nextSearchTag(),
+      targetTile.index,
+      startReal.x,
+      startReal.y,
+    );
+    flat.markEnd(targetTile.index);
 
     if (targetPathable) {
-      seed(
-        end,
-        targetTile,
+      flat.seed(
+        END,
+        targetTile.index,
         distanceFromTarget
           ? Math.max(h(targetReal, targetTile) - distanceFromTarget, 0)
           : h(targetReal, targetTile),
         h(targetTile, startReal),
       );
-      return { end, endTiles };
+      return;
     }
 
     const candidates: Generator<Point, Point, never> = this.nearestPathingGen(
@@ -1202,7 +1173,7 @@ export class PathingMap {
     );
     let next = candidates.next();
     let tile = this.placementTile(search, next.value);
-    if (!tile) return { end, endTiles };
+    if (!tile) return;
 
     const distanceToTarget = (tile: Tile) => {
       if (!("position" in target)) return h(targetReal, tile);
@@ -1214,163 +1185,33 @@ export class PathingMap {
 
     // TODO: This is unbounded and does not scale!
     while (tile && distanceToTarget(tile) <= maxEndEstimate) {
-      if (search.cache._pathable(search.minimalTilemap, tile.x, tile.y)) {
-        endTiles.add(tile);
-        seed(end, tile, 0, h(tile, startReal));
+      if (flat.pathable(tile.x, tile.y)) {
+        flat.markEnd(tile.index);
+        flat.seed(END, tile.index, 0, h(tile, startReal));
       }
 
       if (next.done) break;
       next = candidates.next();
       tile = this.placementTile(search, next.value);
     }
-    end.best = end.heap[0] ?? targetTile;
-
-    return { end, endTiles };
+    const top = flat.endTop();
+    flat.setBest(END, top === -1 ? targetTile.index : top);
   }
 
   /** Restarts an exhausted target side from the nearest spot it has not reached. */
-  private reopenEndSide(search: PathSearch, end: SearchSide): void {
+  private reopenEndSide(search: PathSearch): void {
     const { targetPosition, targetReal, startReal } = search;
+    const flat = this.flatSearch;
     const nearest = this.nearestPathing(
       targetPosition.x,
       targetPosition.y,
       search.entity,
-      (tile) => tile[end.key]?.tag !== end.tag,
+      (tile) => !flat.endReached(tile.index),
     );
     const tile = this.placementTile(search, nearest);
     if (!tile) return;
-    end.best = tile;
-    seed(end, tile, h(targetReal, tile), h(tile, startReal));
-  }
-
-  /**
-   * Alternates expanding the start and target sides until they meet, the
-   * start side comes within `distanceFromTarget`, or the budget runs out.
-   * Leaves each side's `best` as the tile to build the path from.
-   */
-  private bidirectionalSearch(
-    search: PathSearch,
-    begin: SearchSide,
-    end: SearchSide,
-    endTiles: Set<Tile>,
-    startTile: Tile,
-  ): void {
-    let checksSinceBestChange = 0;
-    let unitIterations = 0;
-    const owner = search.entity.owner;
-    const unitBudget = this.getPlayerPathingBudgetRemaining(owner);
-
-    while (begin.heap.length) {
-      // Degenerate case: target is close to start, but ~blocked off
-      if (++checksSinceBestChange > 500) break;
-
-      // Per-unit budget (at least MIN_UNIT_BUDGET, or remaining player budget)
-      const overPlayerBudget = this.trackPathingIteration(owner);
-      if (++unitIterations > unitBudget || overPlayerBudget) break;
-
-      const startCurrent = begin.heap.pop();
-      if (endTiles.has(startCurrent)) {
-        begin.best = startCurrent;
-        break;
-      }
-      if (startCurrent[end.key]?.tag === end.tag) {
-        begin.best = end.best = startCurrent;
-        break;
-      }
-      if (this.withinDistanceFromTarget(search, startCurrent)) {
-        begin.best = startCurrent;
-        break;
-      }
-      if (this.expand(search, begin, startCurrent)) checksSinceBestChange = 0;
-
-      if (!end.heap.length) this.reopenEndSide(search, end);
-      const endCurrent = end.heap.pop();
-      if (endCurrent === startTile) {
-        end.best = startTile;
-        break;
-      }
-      if (endCurrent[begin.key]?.tag === begin.tag) {
-        begin.best = end.best = endCurrent;
-        break;
-      }
-      if (this.expand(search, end, endCurrent)) checksSinceBestChange = 0;
-    }
-  }
-
-  /** Whether the start side can stop at `tile` for `distanceFromTarget`. */
-  private withinDistanceFromTarget(search: PathSearch, tile: Tile): boolean {
-    const { distanceFromTarget, entityAtTile, target } = search;
-    if (typeof distanceFromTarget !== "number") return false;
-    entityAtTile.position.x = tile.xWorld;
-    entityAtTile.position.y = tile.yWorld;
-    return "position" in target
-      ? distanceBetweenEntities(
-            entityAtTile,
-            target,
-            distanceFromTarget / this.resolution,
-          ) * this.resolution < distanceFromTarget
-      : distanceBetweenPoints(entityAtTile.position, target) *
-          this.resolution < distanceFromTarget;
-  }
-
-  /**
-   * Closes `current` on one side of the search and relaxes its neighbours,
-   * letting a neighbour take `current`'s parent as its own where it can see
-   * it (Theta*). Returns whether the side's best tile changed.
-   */
-  private expand(
-    search: PathSearch,
-    side: SearchSide,
-    current: Tile,
-  ): boolean {
-    const { entity, pathing, minimalTilemap, cache } = search;
-    const currentNode = searchNode(current, side);
-    currentNode.closed = true;
-    const parent = currentNode.parent;
-    let improved = false;
-
-    for (const neighbor of this.getNeighbors(current)) {
-      const node = searchNode(neighbor, side);
-      const wasVisited = node.visited;
-
-      if (!wasVisited) {
-        if (node.closed || !neighbor.pathable(pathing)) continue;
-        if (!cache._pathable(minimalTilemap, neighbor.x, neighbor.y)) {
-          node.closed = true;
-          continue;
-        }
-      }
-
-      // Line of sight test (this is laggy)
-      const via = parent && cache._linearPathable(entity, parent, neighbor)
-        ? parent
-        : current;
-      const realCostFromOrigin = via === parent
-        ? (parent[side.key]?.realCostFromOrigin ?? 0) + h(parent, neighbor)
-        : currentNode.realCostFromOrigin + 1;
-
-      // First visit or better score than previously known
-      if (wasVisited && !(realCostFromOrigin < node.realCostFromOrigin)) {
-        continue;
-      }
-
-      node.visited = true;
-      node.parent = via;
-      node.estimatedCostRemaining ||= h(neighbor, side.goal);
-      node.realCostFromOrigin = realCostFromOrigin;
-      node.realPlusEstimatedCost = realCostFromOrigin +
-        node.estimatedCostRemaining;
-
-      if (improvesOn(node, side.best[side.key])) {
-        side.best = neighbor;
-        improved = true;
-      }
-
-      if (wasVisited) side.heap.decrease(neighbor);
-      else side.heap.push(neighbor);
-    }
-
-    return improved;
+    flat.setBest(END, tile.index);
+    flat.seed(END, tile.index, h(targetReal, tile), h(tile, startReal));
   }
 
   /** Turns the searched tiles into world points from `start` to the target. */
@@ -1513,28 +1354,6 @@ export class PathingMap {
     return true;
   }
 
-  private _smooth(
-    entity: PathingEntity,
-    path: Tile[],
-    cache: Cache = this,
-  ): void {
-    for (let skip = path.length - 1; skip > 1; skip--) {
-      for (let index = 0; index < path.length - skip; index++) {
-        if (
-          cache._linearPathable(
-            entity,
-            path[index],
-            path[index + skip],
-          )
-        ) {
-          path.splice(index + 1, skip - 1);
-          skip = path.length;
-          break;
-        }
-      }
-    }
-  }
-
   /**
    * Internals of ParthingMap#linearPathable. Public for testing purposes.
    */
@@ -1568,8 +1387,7 @@ export class PathingMap {
     ) {
       const tileX = Math.floor(startX);
       const tileY = Math.floor(startY);
-      const tile = this.grid[tileY]?.[tileX];
-      return !!tile && tile.pathable(pathing);
+      return this.cellOpen(tileX, tileY, pathing);
     }
 
     // Swap so we're going right
@@ -1706,11 +1524,9 @@ export class PathingMap {
 
       const xEnd = Math.min(xStartMax, xEndMax, xEndTest, maxX);
 
-      const row = this.grid[yCoord];
-      if (!row) return false;
+      if (yCoord < 0 || yCoord >= this.heightMap) return false;
       for (let x = xStart; x <= xEnd; x++) {
-        const tile = row[x];
-        if (!tile || !tile.pathable(pathing)) return false;
+        if (!this.cellOpen(x, yCoord, pathing)) return false;
       }
 
       xStartRaw += finiteAbsTan ? absTan : 0;
@@ -1916,11 +1732,9 @@ export class PathingMap {
 
       const xEnd = Math.min(xStartMax, xEndMax, xEndTest, maxX);
 
-      const row = this.grid[yCoord];
-      if (!row) return false;
+      if (yCoord < 0 || yCoord >= this.heightMap) return false;
       for (let x = xStart; x <= xEnd; x++) {
-        const tile = row[x];
-        if (!tile || !tile.pathable(pathing)) return false;
+        if (!this.cellOpen(x, yCoord, pathing)) return false;
       }
 
       xStartRaw += finiteAbsTan ? absTan : 0;
@@ -1961,6 +1775,7 @@ export class PathingMap {
     const { tiles, pathing } = this.footprintTiles(entity);
     tiles.forEach((tile, i) => tile.addEntity(entity, pathing[i]));
     this.entities.set(entity, tiles);
+    this.placements.set(entity, placementOf(entity, pathing));
   }
 
   /**
@@ -1973,6 +1788,10 @@ export class PathingMap {
   updateEntity(entity: PathingEntity): void {
     const oldTiles = this.entities.get(entity);
     if (!oldTiles) return;
+    // An unchanged placement recomputes to the same footprint and changes
+    // nothing
+    const placement = this.placements.get(entity);
+    if (placement && isCurrent(placement, entity)) return;
     const { tiles, pathing } = this.footprintTiles(entity);
 
     const kept = new Set(tiles);
@@ -1986,6 +1805,7 @@ export class PathingMap {
     );
 
     this.entities.set(entity, tiles);
+    this.placements.set(entity, placementOf(entity, pathing));
   }
 
   /**
@@ -2233,10 +2053,23 @@ export class PathingMap {
     const tiles = this.entities.get(entity as PathingEntity);
     if (tiles) tiles.forEach((tile) => tile.removeEntity(entity));
     this.entities.delete(entity as PathingEntity);
+    this.placements.delete(entity as PathingEntity);
   }
 
   getExistingTile(x: number, y: number): Tile | undefined {
-    return this.grid[y]?.[x];
+    if (x < 0 || y < 0 || x >= this.widthMap || y >= this.heightMap) return;
+    return this.flat.pathing[y * this.widthMap + x] === -1
+      ? undefined
+      : this.getTile(x, y);
+  }
+
+  /** Whether the tile at (x, y) exists and admits `pathing`. */
+  private cellOpen(x: number, y: number, pathing: Pathing): boolean {
+    if (x < 0 || y < 0 || x >= this.widthMap || y >= this.heightMap) {
+      return false;
+    }
+    const cell = this.flat.pathing[y * this.widthMap + x];
+    return cell !== -1 && (cell & pathing) === 0;
   }
 
   getEntityTiles(entity: PathingEntity): readonly Tile[] | undefined {

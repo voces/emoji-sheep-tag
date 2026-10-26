@@ -41,4 +41,5 @@ live, and time the simulation:
 deno task replay --repeat 3 --systems replays/*.jsonl.gz
 ```
 
-Chat and ping messages are not recorded.
+Chat and ping messages are not recorded, nor `cancel` (the round's end event
+covers it).
