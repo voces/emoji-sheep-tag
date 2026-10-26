@@ -121,11 +121,11 @@ export const advanceWalk = (e: Entity, delta: number): number => {
       const targetAngle = Math.atan2(dy, dx);
       const diff = Math.abs(angleDifference(e.facing, targetAngle));
 
-      // Clear order when facing is close enough (within ~0.01 radians)
+      // Clear order when facing is close enough (within ~0.01 radians).
+      // Turning happens in the action loop, against the tick's turn budget;
+      // until it is done there is nothing more to do this tick.
       if (diff < 0.01) delete e.order;
-
-      const maxTurn = e.turnSpeed * delta;
-      return Math.max(0, tweenResult.delta - (diff - maxTurn) / e.turnSpeed);
+      else return 0;
     }
   }
 
