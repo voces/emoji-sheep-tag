@@ -98,12 +98,13 @@ export const tweenAttack = (e: Entity, delta: number) => {
           // Path blocked by something else, try to regenerate
           const currentPath = "path" in e.order ? e.order.path : undefined;
           if (currentPath) {
-            const shouldCancel = handleBlockedPath(e, target.id, currentPath);
-            if (shouldCancel) {
+            const outcome = handleBlockedPath(e, target.id, currentPath);
+            if (outcome === "cancel") {
               repathState.delete(e);
               delete e.order;
               return delta;
             }
+            if (outcome === "wait") return 0;
             // handleBlockedPath computed a new real path
             repathState.set(e, {
               x: target.position.x,

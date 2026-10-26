@@ -55,11 +55,9 @@ export const advanceAttackMove = (e: Entity, delta: number): number => {
 
   if (tweenResult.pathBlocked && e.order.path) {
     if (shouldWaitForBlockers(e, tweenResult.blockers)) return 0;
-    if (handleBlockedPath(e, e.order.target, e.order.path)) {
-      delete e.order;
-      return delta;
-    }
-    return delta;
+    const outcome = handleBlockedPath(e, e.order.target, e.order.path);
+    if (outcome === "cancel") delete e.order;
+    return outcome === "wait" ? 0 : delta;
   }
 
   if (

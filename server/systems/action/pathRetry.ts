@@ -3,6 +3,7 @@ import { isMoving } from "@/shared/pathing/util.ts";
 import { isAlly } from "@/shared/api/unit.ts";
 import { calcPath } from "../pathing.ts";
 import { getTick } from "../../api/timing.ts";
+import { TICK_RATE } from "@/shared/constants.ts";
 
 type CalcPathTarget = Parameters<typeof calcPath>[1];
 type CalcPathOptions = Parameters<typeof calcPath>[2];
@@ -86,51 +87,56 @@ export const shouldRepath = (entity: Entity, currentTime: number): boolean => {
   return (currentTime - entity.order.lastRepath) >= (REPATH_INTERVAL + offset);
 };
 
+/** How long a unit keeps an order whose plan the blocker leaves unchanged. */
+const GIVE_UP_TICKS = Math.round(2 / TICK_RATE);
+
+/** First and latest tick of the entity's current run of failed re-plans. */
+const stuckSince = new WeakMap<Entity, { since: number; last: number }>();
+
+const samePath = (
+  a: readonly { x: number; y: number }[],
+  b: readonly { x: number; y: number }[],
+) =>
+  a.length === b.length && a.every((p, i) => p.x === b[i].x && p.y === b[i].y);
+
 /**
- * Attempts to handle a blocked path by regenerating it with various strategies
- * Returns true if order should be cancelled, false if path was updated
+ * Re-plans a blocked entity's path. "rerouted" means the order now holds a new
+ * path. "wait" means no better plan exists yet: keep the order and stay put
+ * this tick. A blocker on its way off often already reads as clear to the
+ * planner, which works in quarter tiles, so the plan comes back unchanged while
+ * the walker still collides; giving up then would drop orders a moment before
+ * they could proceed. "cancel" once that has lasted GIVE_UP_TICKS.
  */
 export const handleBlockedPath = (
   entity: Entity,
   target: CalcPathTarget,
   currentPath: readonly { x: number; y: number }[],
   options?: CalcPathOptions,
-): boolean => {
-  // First retry: regenerate with default settings (removeMovingEntities=true)
+): "rerouted" | "wait" | "cancel" => {
   const retryPath = calcPath(entity, target, options);
-
-  // If path is the same or empty, try without moving entities
-  if (
-    !retryPath.length ||
-    (retryPath.length === currentPath.length &&
-      retryPath.every((a, i) =>
-        a.x === currentPath[i].x && a.y === currentPath[i].y
-      ))
-  ) {
-    const finalPath = calcPath(entity, target, {
+  const path = retryPath.length && !samePath(retryPath, currentPath)
+    ? retryPath
+    : calcPath(entity, target, {
       ...options,
       lead: false,
       removeMovingEntities: false,
     });
 
-    // If still no path or same path, give up
-    if (
-      !finalPath.length ||
-      JSON.stringify(finalPath) === JSON.stringify(currentPath)
-    ) {
-      return true; // Cancel order
-    }
-
-    // Update with final path
+  if (path.length && !samePath(path, currentPath)) {
+    stuckSince.delete(entity);
     if (entity.order && "path" in entity.order) {
-      entity.order = { ...entity.order, path: finalPath };
+      entity.order = { ...entity.order, path };
     }
-    return false;
+    return "rerouted";
   }
 
-  // Update with retry path
-  if (entity.order && "path" in entity.order) {
-    entity.order = { ...entity.order, path: retryPath };
+  const tick = getTick();
+  const previous = stuckSince.get(entity);
+  const since = previous && previous.last >= tick - 1 ? previous.since : tick;
+  if (tick - since >= GIVE_UP_TICKS) {
+    stuckSince.delete(entity);
+    return "cancel";
   }
-  return false;
+  stuckSince.set(entity, { since, last: tick });
+  return "wait";
 };
