@@ -4,9 +4,7 @@
  */
 
 import { broadcastShards } from "./shardRegistry.ts";
-
-const env = (key: string) =>
-  typeof Deno !== "undefined" ? Deno.env.get(key) : undefined;
+import { env } from "./platform/env.ts";
 
 const FLY_API_TOKEN = env("FLY_API_TOKEN");
 const FLY_APP_NAME = env("FLY_APP_NAME") || "est-shards";
