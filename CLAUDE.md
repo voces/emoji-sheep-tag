@@ -136,7 +136,7 @@ applies to every tool invocation regardless of apparent independence.
 ## Pathing
 
 - `PathingMap` keeps tile state in flat typed arrays (`FlatGrid`) and runs
-  `path()`'s search in `FlatSearch`. Both reproduce the original object-based
-  search exactly, quirks included: an uncreated tile blocks line of sight, and
-  the per-search line-of-sight memo changes answers, not just speed. Check any
-  change with the replay fixture and the pathing tests
+  `path()`'s search in `FlatSearch`. A path depends only on the terrain and the
+  entities on it, never on which tiles earlier searches touched; `Tile` objects
+  are created lazily but are views onto `FlatGrid`, not what makes a tile exist.
+  Check changes with the replay fixture and the pathing tests

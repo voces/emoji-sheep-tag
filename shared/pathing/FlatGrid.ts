@@ -5,40 +5,33 @@ const BITS = 8;
 
 /**
  * A PathingMap's tile state as flat arrays, indexed `y * width + x`, so the
- * search can read it without touching Tile objects.
+ * search can read it without touching Tile objects. `pathing` is -1 where the
+ * map has no terrain, which blocks like the map's edge.
  *
- * `pathing` holds -1 until PathingMap creates the tile: a tile that was never
- * created blocks line of sight, so that is part of the state. Entities
- * contribute pathing bits through per-bit counts, which makes adding and
- * removing one O(1) per tile instead of re-ORing every entity on it.
+ * Entities contribute pathing bits through per-bit counts, which makes adding
+ * and removing one O(1) per tile instead of re-ORing every entity on it.
  */
 export class FlatGrid {
   readonly pathing: Int32Array;
   readonly original: Int32Array;
-  /** Each tile's pathing before entities, or -1 where it has no terrain. */
-  readonly terrain: Int32Array;
   private readonly counts: Uint16Array;
 
   constructor(readonly width: number, readonly height: number) {
     const n = width * height;
     this.pathing = new Int32Array(n).fill(-1);
     this.original = new Int32Array(n);
-    this.terrain = new Int32Array(n).fill(-1);
     this.counts = new Uint16Array(n * BITS);
   }
 
-  /** Creates the tile at `index` if it has terrain; whether it exists. */
-  ensure(index: number): boolean {
-    if (this.pathing[index] !== -1) return true;
-    const terrain = this.terrain[index];
-    if (terrain === -1) return false;
-    this.create(index, terrain);
-    return true;
+  /** Whether the tile at `index` has terrain. */
+  exists(index: number): boolean {
+    return this.pathing[index] !== -1;
   }
 
-  create(index: number, original: Pathing) {
+  /** Gives the tile at `index` its terrain; done once, for every tile. */
+  setTerrain(index: number, original: Pathing) {
     this.original[index] = original;
-    this.pathing[index] = original | this.entityBits(index);
+    this.pathing[index] = original;
   }
 
   setOriginal(index: number, original: Pathing) {

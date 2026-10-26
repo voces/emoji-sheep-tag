@@ -7,6 +7,12 @@ import { FakeTime } from "@std/testing/time";
 import { appContext } from "@/shared/context.ts";
 import { buildDefaultMap } from "@/shared/map.ts";
 
+/**
+ * Every test game shares one seed, so its randomness and entity ids, and so
+ * anything keyed off an id, are the same on every run.
+ */
+export const TEST_SEED = 1;
+
 export type TestSetupOptions = {
   wolves?: string[];
   sheep?: string[];
@@ -29,7 +35,7 @@ export type TestSetup = {
 export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   const { wolves = [], sheep = [], gold = 10, teamGold = false } = options;
 
-  const ecs = newEcs(buildDefaultMap());
+  const ecs = newEcs(buildDefaultMap(), TEST_SEED);
   const clients = new Map<string, Client>();
 
   // Create wolf clients
