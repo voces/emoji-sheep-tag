@@ -228,3 +228,33 @@ it("tweenAbsAngles", () => {
   expect(tweenAbsAngles(Math.PI * 5 / 4, Math.PI * 3 / 4, Math.PI / 4))
     .toEqual(Math.PI);
 });
+
+describe("entityPoints footprint memo", () => {
+  // A radius no other test uses, so this file's first footprint of it is here
+  const radius = 0.3125;
+
+  it("does not share points between entities of one radius but different pathing", () => {
+    const hay = { id: "hay", radius, pathing: 0, position: { x: 2, y: 2 } };
+    const target = { id: "target", radius: 0.25, position: { x: 5, y: 2 } };
+    distanceBetweenEntities(hay, target);
+
+    const wolf = { id: "wolf", radius, pathing: 1, position: { x: 4, y: 2 } };
+    expect(entityPoints(wolf).length).toBeGreaterThan(2);
+    expect(distanceBetweenEntities(wolf, target)).toBeLessThan(1);
+  });
+
+  it("measures a pointless footprint from its center, on or off the grid", () => {
+    const target = { id: "target", radius: 0.25, position: { x: 5, y: 2 } };
+    const onGrid = { id: "a", radius, pathing: 0, position: { x: 3, y: 2 } };
+    const offGrid = {
+      id: "b",
+      radius,
+      pathing: 0,
+      position: { x: 3.01, y: 2 },
+    };
+    expect(entityPoints(onGrid)).toEqual([3, 2]);
+    expect(distanceBetweenEntities(onGrid, target)).toBeCloseTo(
+      distanceBetweenEntities(offGrid, target) + 0.01,
+    );
+  });
+});
