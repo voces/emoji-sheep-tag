@@ -207,16 +207,16 @@ export class PathingMap {
       const row = pathing[Math.floor(y / tilesPerPathingCell)];
       for (let x = 0; x < this.widthMap; x++) {
         const cell = row?.[Math.floor(x / tilesPerPathingCell)];
-        if (cell !== undefined) this.flat.terrain[y * this.widthMap + x] = cell;
+        if (cell !== undefined) {
+          this.flat.setTerrain(y * this.widthMap + x, cell);
+        }
       }
     }
   }
 
   /**
-   * Lazily creates a tile at the given coordinates if it doesn't exist.
-   * Neighbors are NOT set up eagerly to avoid cascading tile creation.
-   * Instead, they're set up lazily via getNeighbors().
-   * Returns undefined if coordinates are out of bounds.
+   * The Tile at the given coordinates, a view onto `flat` created on first
+   * use. Undefined off the map or where there is no terrain.
    */
   getTile(x: number, y: number): Tile | undefined {
     // Check bounds first
@@ -228,15 +228,13 @@ export class PathingMap {
     const existing = this.grid[y][x];
     if (existing) return existing;
 
-    const terrain = this.flat.terrain[y * this.widthMap + x];
-    if (terrain === -1) return undefined;
+    if (!this.flat.exists(y * this.widthMap + x)) return undefined;
 
     const tile = new Tile(
       x,
       y,
       x / this.resolution,
       y / this.resolution,
-      terrain,
       this.flat,
     );
     this.grid[y][x] = tile;

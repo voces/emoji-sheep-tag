@@ -4,11 +4,9 @@ import type { DistanceCheck } from "./DistanceCheck.ts";
 
 /**
  * PathingMap#path's bidirectional Theta* over a FlatGrid, with each tile's
- * search state in typed arrays instead of on Tile objects. It reproduces the
- * object version exactly, quirks included: state left from an earlier search
- * is read where the object version read it, the heap keeps duplicate entries,
- * and tiles are created in the same order, since an uncreated tile blocks line
- * of sight.
+ * search state in typed arrays that persist across searches, each tile's
+ * state tagged with the search that last touched it. The heap keeps duplicate
+ * entries and breaks ties as BinaryHeap does.
  */
 
 type Side = 0 | 1;
@@ -125,10 +123,8 @@ class TileHeap {
 }
 
 /**
- * A map from ordered tile pairs to booleans, cleared in O(1). Line of sight is
- * memoised per search and the memo is load-bearing: the search creates tiles
- * as it goes, and an uncreated tile blocks, so asking again can answer
- * differently.
+ * A map from ordered tile pairs to booleans, cleared in O(1), memoising line
+ * of sight for one search.
  */
 class PairCache {
   /** Four i32s per slot: tag, a, b, answer. */
@@ -363,7 +359,7 @@ export class FlatSearch {
       ) {
         if (y < 0 || y >= height || x < 0 || x >= width) return false;
         const index = y * width + x;
-        if (!grid.ensure(index)) return false;
+        if (!grid.exists(index)) return false;
         if ((grid.pathing[index] & map.map[i]) !== 0) return false;
       }
     }
@@ -507,16 +503,16 @@ export class FlatSearch {
     return true;
   }
 
-  /** Creates the tile's in-bound neighbours, below, right, above, left. */
+  /** The tile's neighbours on the map, below, right, above, left. */
   private neighbors(tile: number, out: Int32Array): number {
     const { width, height, grid } = this;
     const x = tile % width;
     const y = (tile - x) / width;
     let n = 0;
-    if (y + 1 < height && grid.ensure(tile + width)) out[n++] = tile + width;
-    if (x + 1 < width && grid.ensure(tile + 1)) out[n++] = tile + 1;
-    if (y - 1 >= 0 && grid.ensure(tile - width)) out[n++] = tile - width;
-    if (x - 1 >= 0 && grid.ensure(tile - 1)) out[n++] = tile - 1;
+    if (y + 1 < height && grid.exists(tile + width)) out[n++] = tile + width;
+    if (x + 1 < width && grid.exists(tile + 1)) out[n++] = tile + 1;
+    if (y - 1 >= 0 && grid.exists(tile - width)) out[n++] = tile - width;
+    if (x - 1 >= 0 && grid.exists(tile - 1)) out[n++] = tile - 1;
     return n;
   }
 

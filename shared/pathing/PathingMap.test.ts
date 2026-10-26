@@ -3,6 +3,24 @@ import { PathingMap } from "./PathingMap.ts";
 import { expect } from "@std/expect";
 
 describe("PathingMap", () => {
+  it("sees across open ground whether or not anything has touched it", () => {
+    const solver = new PathingMap({
+      pathing: Array.from({ length: 3 }, () => Array(10).fill(0)),
+    });
+    const unit = {
+      id: "0",
+      position: { x: 1.5, y: 1.5 },
+      radius: 0.25,
+      pathing: 1,
+    };
+    const from = { x: 1.5, y: 1.5 };
+    const to = { x: 8.5, y: 1.5 };
+
+    expect(solver.linearPathable(unit, from, to)).toBe(true);
+    solver.path(unit, to);
+    expect(solver.linearPathable(unit, from, to)).toBe(true);
+  });
+
   it("should find path around obstacles", () => {
     const solver = new PathingMap({
       pathing: [[0, 1, 0], [0, 0, 0]],

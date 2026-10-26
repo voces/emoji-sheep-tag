@@ -24,7 +24,6 @@ export class Tile {
     yTile: number,
     xWorld: number,
     yWorld: number,
-    pathing: Pathing,
     grid: FlatGrid,
   ) {
     this.x = xTile;
@@ -33,7 +32,6 @@ export class Tile {
     this.yWorld = yWorld;
     this.grid = grid;
     this.index = yTile * grid.width + xTile;
-    grid.create(this.index, pathing);
     this.nodes = [];
   }
 
