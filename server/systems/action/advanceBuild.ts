@@ -39,13 +39,11 @@ export const advanceBuild = (e: Entity, delta: number): number => {
 
     if (tweenResult.pathBlocked && e.order.path) {
       if (shouldWaitForBlockers(e, tweenResult.blockers)) return 0;
-      if (
-        handleBlockedPath(e, e.order, e.order.path, { distanceFromTarget: d })
-      ) {
-        delete e.order;
-        return delta;
-      }
-      return delta;
+      const outcome = handleBlockedPath(e, e.order, e.order.path, {
+        distanceFromTarget: d,
+      });
+      if (outcome === "cancel") delete e.order;
+      return outcome === "wait" ? 0 : delta;
     }
 
     // Path exhausted but still out of range - cancel order

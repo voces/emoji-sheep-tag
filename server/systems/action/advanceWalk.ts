@@ -82,11 +82,9 @@ export const advanceWalk = (e: Entity, delta: number): number => {
       ? { distanceFromTarget: FOLLOW_DISTANCE }
       : undefined;
 
-    if (handleBlockedPath(e, target, e.order.path, options)) {
-      delete e.order;
-      return delta;
-    }
-    return delta;
+    const outcome = handleBlockedPath(e, target, e.order.path, options);
+    if (outcome === "cancel") delete e.order;
+    return outcome === "wait" ? 0 : delta;
   }
 
   // For moving targets, repath when we make progress or reach path end

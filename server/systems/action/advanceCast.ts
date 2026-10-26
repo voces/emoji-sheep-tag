@@ -66,15 +66,11 @@ export const advanceCast = (e: Entity, delta: number): number => {
         if (shouldWaitForBlockers(e, tweenResult.blockers)) return 0;
 
         const targetRef = "x" in target ? target : target.id;
-        if (
-          handleBlockedPath(e, targetRef, e.order.path, {
-            distanceFromTarget: range,
-          })
-        ) {
-          delete e.order;
-          return delta;
-        }
-        return delta;
+        const outcome = handleBlockedPath(e, targetRef, e.order.path, {
+          distanceFromTarget: range,
+        });
+        if (outcome === "cancel") delete e.order;
+        return outcome === "wait" ? 0 : delta;
       }
 
       if (
