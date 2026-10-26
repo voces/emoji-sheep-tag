@@ -1,5 +1,4 @@
-import { beforeAll, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { beforeAll, describe, expect, it } from "vitest";
 import revo from "@/shared/maps/revo.json" with { type: "json" };
 import { appContext } from "@/shared/context.ts";
 import { buildLoadedMap, type PackedMap } from "@/shared/map.ts";

@@ -2,7 +2,7 @@ import { makeVar } from "@/hooks/useVar.tsx";
 
 export const feedbackVar = makeVar<string | undefined>(undefined);
 
-let feedbackTimeout: number | undefined;
+let feedbackTimeout: ReturnType<typeof setTimeout> | undefined;
 
 export const showFeedback = (message: string) => {
   if (feedbackTimeout) clearTimeout(feedbackTimeout);

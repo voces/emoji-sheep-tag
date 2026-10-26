@@ -1,7 +1,7 @@
-import { expect } from "@std/expect";
+import { expect, test } from "vitest";
 import { ExtendedSet } from "./ExtendedSet.ts";
 
-Deno.test("seeded values do not dispatch and listeners still attach", () => {
+test("seeded values do not dispatch and listeners still attach", () => {
   const set = new ExtendedSet([1, 2]);
   const added: number[] = [];
   set.addEventListener("add", (v) => added.push(v));
@@ -10,7 +10,7 @@ Deno.test("seeded values do not dispatch and listeners still attach", () => {
   expect(set.map((v) => v * 2)).toEqual([2, 4, 6]);
 });
 
-Deno.test("delete dispatches only when the value was present", () => {
+test("delete dispatches only when the value was present", () => {
   const set = new ExtendedSet([1]);
   const deleted: number[] = [];
   set.addEventListener("delete", (v) => deleted.push(v));
@@ -19,7 +19,7 @@ Deno.test("delete dispatches only when the value was present", () => {
   expect(deleted).toEqual([1]);
 });
 
-Deno.test("unsubscribing stops only that listener", () => {
+test("unsubscribing stops only that listener", () => {
   const set = new ExtendedSet<number>();
   const a: number[] = [];
   const b: number[] = [];
@@ -33,7 +33,7 @@ Deno.test("unsubscribing stops only that listener", () => {
   expect(b).toEqual([1, 2]);
 });
 
-Deno.test("predicates receive only the value", () => {
+test("predicates receive only the value", () => {
   const set = new ExtendedSet([5]);
   const arities: number[] = [];
   const record = (...args: unknown[]) => arities.push(args.length) > 0;

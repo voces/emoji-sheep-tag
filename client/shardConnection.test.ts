@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { handlers } from "./messageHandlers.ts";
 import { stateVar } from "@/vars/state.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";

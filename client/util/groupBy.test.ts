@@ -1,5 +1,4 @@
-import { expect } from "@std/expect";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { groupBy } from "./groupBy.ts";
 
 it("groups items by key in first-seen order, keeping each group's order", () => {

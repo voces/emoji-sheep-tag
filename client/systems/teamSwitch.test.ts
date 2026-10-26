@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { expect, it } from "vitest";
 import { app, map } from "../ecs.ts";
 import { visibilityGrid } from "./fog.ts";
 import { addEntity } from "@/shared/api/entity.ts";

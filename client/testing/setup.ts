@@ -1,7 +1,5 @@
-import "./memoryStorage.ts";
-import "global-jsdom/register";
 import "../i18n/index.ts";
-import { afterEach, beforeEach } from "@std/testing/bdd";
+import { afterEach, beforeEach } from "vitest";
 import { cleanup, configure } from "@testing-library/react";
 import { __testing_reset_all_vars } from "@/hooks/useVar.tsx";
 import { __testing_clearBatchFlush } from "@/hooks/useListenToEntityProp.ts";

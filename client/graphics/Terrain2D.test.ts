@@ -1,4 +1,4 @@
-import { expect } from "@std/expect";
+import { expect, test } from "vitest";
 import { buildCliffTexture, type CliffMask, Terrain2D } from "./Terrain2D.ts";
 import type { ShaderMaterial } from "three";
 
@@ -49,7 +49,7 @@ const getTexSize = (terrain: Terrain2D): { w: number; h: number } => {
   return { w: tex.image.width, h: tex.image.height };
 };
 
-Deno.test("Terrain2D creates textures with correct dimensions", () => {
+test("Terrain2D creates textures with correct dimensions", () => {
   const t1 = createTerrain(example1CliffMask);
   const s1 = getTexSize(t1);
   expect(s1.w).toBe(6);
@@ -61,7 +61,7 @@ Deno.test("Terrain2D creates textures with correct dimensions", () => {
   expect(s2.h).toBe(8);
 });
 
-Deno.test("Terrain2D height texture contains correct values for flat terrain", () => {
+test("Terrain2D height texture contains correct values for flat terrain", () => {
   const flatMask: CliffMask = [
     [1, 1],
     [1, 1],
@@ -71,7 +71,7 @@ Deno.test("Terrain2D height texture contains correct values for flat terrain", (
   for (let i = 0; i < data.length; i++) expect(data[i]).toBe(1);
 });
 
-Deno.test("Terrain2D height texture reflects height differences", () => {
+test("Terrain2D height texture reflects height differences", () => {
   const terrain = createTerrain(example3CliffMask);
   const data = getHeightData(terrain);
   const { w } = getTexSize(terrain);
@@ -83,7 +83,7 @@ Deno.test("Terrain2D height texture reflects height differences", () => {
   expect(data[0]).toBe(1);
 });
 
-Deno.test("Terrain2D flat plateau has uniform height", () => {
+test("Terrain2D flat plateau has uniform height", () => {
   const terrain = createTerrain(example3CliffMask);
   const data = getHeightData(terrain);
   const { w } = getTexSize(terrain);
@@ -94,13 +94,13 @@ Deno.test("Terrain2D flat plateau has uniform height", () => {
   expect(data[5 * w + 4]).toBe(2);
 });
 
-Deno.test("Terrain2D getCliff returns correct values", () => {
+test("Terrain2D getCliff returns correct values", () => {
   const terrain = createTerrain(example3CliffMask);
   expect(terrain.getCliff(0, 0)).toBe(1);
   expect(terrain.getCliff(2, 2)).toBe(2);
 });
 
-Deno.test("Terrain2D setCliff updates height", () => {
+test("Terrain2D setCliff updates height", () => {
   const terrain = createTerrain(example3CliffMask);
   expect(terrain.getCliff(2, 2)).toBe(2);
   terrain.setCliff(2, 2, 3);
@@ -111,7 +111,7 @@ Deno.test("Terrain2D setCliff updates height", () => {
   expect(data[4 * w + 4]).toBe(3);
 });
 
-Deno.test("Terrain2D setGroundTile updates tile data", () => {
+test("Terrain2D setGroundTile updates tile data", () => {
   const terrain = createTerrain(example1CliffMask);
   terrain.setGroundTile(0, 0, 1);
   expect(terrain.masks.groundTile[0][0]).toBe(1);
@@ -124,7 +124,7 @@ Deno.test("Terrain2D setGroundTile updates tile data", () => {
   expect(tileData[2]).toBe(65);
 });
 
-Deno.test("Terrain2D load rebuilds with new data", () => {
+test("Terrain2D load rebuilds with new data", () => {
   const terrain = createTerrain(example1CliffMask);
   const newMask: CliffMask = [[2, 2], [2, 2]];
   terrain.load(
@@ -145,7 +145,7 @@ Deno.test("Terrain2D load rebuilds with new data", () => {
   expect(terrain.getCliff(0, 0)).toBe(2);
 });
 
-Deno.test("Terrain2D ramp produces interpolated height", () => {
+test("Terrain2D ramp produces interpolated height", () => {
   const terrain = createTerrain(example1CliffMask);
   const rampHeight = terrain.getCliff(1, 1);
   expect(rampHeight).toBe(1);
@@ -165,7 +165,7 @@ const getCliffData = (
 const cliffAt = (cd: { data: Uint8Array; w: number }, x: number, y: number) =>
   cd.data[y * cd.w + x];
 
-Deno.test("cliff distance field - simple cliff has ring with flat top", () => {
+test("cliff distance field - simple cliff has ring with flat top", () => {
   const cd = getCliffData([
     [1, 1, 1, 1, 1],
     [1, 2, 2, 2, 1],
@@ -185,7 +185,7 @@ Deno.test("cliff distance field - simple cliff has ring with flat top", () => {
   expect(cliffAt(cd, 10, 10)).toBeGreaterThan(threshold);
 });
 
-Deno.test("cliff distance field - nested cliff has separate rings", () => {
+test("cliff distance field - nested cliff has separate rings", () => {
   const cd = getCliffData([
     [1, 1, 1, 1, 1],
     [1, 2, 2, 2, 1],
@@ -206,7 +206,7 @@ Deno.test("cliff distance field - nested cliff has separate rings", () => {
   expect(plateau).toBeGreaterThan(Math.round(0.35 / 2 * 255));
 });
 
-Deno.test("cliff distance field - ramp has walls and open parallel edges", () => {
+test("cliff distance field - ramp has walls and open parallel edges", () => {
   const cd = getCliffData([
     [1, 1, 1],
     [1, "r", 1],
@@ -220,7 +220,7 @@ Deno.test("cliff distance field - ramp has walls and open parallel edges", () =>
   expect(cliffAt(cd, 5, 0)).toBeGreaterThan(threshold);
 });
 
-Deno.test("cliff distance field - ramp walls on perpendicular sides", () => {
+test("cliff distance field - ramp walls on perpendicular sides", () => {
   const cd = getCliffData([
     [1, 1, 1, 1],
     [1, 2, 2, 1],
@@ -239,7 +239,7 @@ Deno.test("cliff distance field - ramp walls on perpendicular sides", () => {
   expect(rampWallBot).toBeLessThan(threshold);
 });
 
-Deno.test("cliff distance field - ramp wall extends into adjacent cell", () => {
+test("cliff distance field - ramp wall extends into adjacent cell", () => {
   const cd = getCliffData([
     [1, 1, 1, 1],
     [1, 2, 2, 1],
@@ -254,7 +254,7 @@ Deno.test("cliff distance field - ramp wall extends into adjacent cell", () => {
   expect(extended).toBeLessThan(threshold);
 });
 
-Deno.test("cliff distance field - perpendicular extension from ramp wall", () => {
+test("cliff distance field - perpendicular extension from ramp wall", () => {
   const cd = getCliffData([
     [1, 1, 1, 1],
     [1, 2, 2, 1],
@@ -269,7 +269,7 @@ Deno.test("cliff distance field - perpendicular extension from ramp wall", () =>
   expect(perpExt).toBeLessThan(threshold);
 });
 
-Deno.test("cliff distance field - side-by-side ramps have no wall between", () => {
+test("cliff distance field - side-by-side ramps have no wall between", () => {
   const cd = getCliffData([
     [1, 1, 1, 1, 1],
     [1, 2, 2, 2, 1],

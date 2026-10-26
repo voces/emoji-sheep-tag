@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ShardLobby } from "./shardLobby.ts";
 import { GameClient } from "./gameClient.ts";
 import { systemsLoaded } from "../ecs.ts";
@@ -45,7 +44,7 @@ const createAssignLobbyMessage = (
   ...overrides,
 });
 
-describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
+describe("ShardLobby", () => {
   let lobby: ShardLobby;
 
   afterEach(() => {

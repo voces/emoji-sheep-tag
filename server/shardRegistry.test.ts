@@ -1,5 +1,4 @@
-import { afterEach, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, describe, expect, it } from "vitest";
 import { getShardInfoList, sendToShard } from "./shardRegistry.ts";
 import { lobbies } from "./lobby.ts";
 import { lobbyContext } from "./contexts.ts";

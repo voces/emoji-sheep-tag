@@ -1,8 +1,7 @@
 import "@/client-testing/setup.ts";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { expect } from "@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
 import { Chat } from "./Chat.tsx";
 import { showChatBoxVar } from "@/vars/showChatBox.ts";

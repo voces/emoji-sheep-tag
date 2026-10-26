@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { beforeEach, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { beforeEach, describe, expect, it } from "vitest";
 import { app, Entity, SystemEntity } from "../ecs.ts";
 import { selection } from "../systems/selection.ts";
 

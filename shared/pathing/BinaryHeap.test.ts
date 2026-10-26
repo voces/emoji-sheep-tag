@@ -1,5 +1,4 @@
-import { it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { expect, it } from "vitest";
 import { BinaryHeap } from "./BinaryHeap.ts";
 
 type Node = { name: string; score: number };

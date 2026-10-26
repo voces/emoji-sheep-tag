@@ -1,5 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type {
   ServerToShardMessage,
   ShardToServerMessage,
@@ -9,6 +8,7 @@ import { getShard, getShards, handleShardSocket } from "./shardRegistry.ts";
 import { lobbies, newLobby } from "./lobby.ts";
 import { ComputerPlayer } from "./computerPlayer.ts";
 import type { Socket, SocketEventMap } from "./util/socketHandler.ts";
+import { startWsServer, type TestWsServer } from "./testing/wsServer.ts";
 
 type Listener = (ev: SocketEventMap[keyof SocketEventMap]) => void;
 
@@ -42,9 +42,8 @@ type ShardConnection = ReturnType<typeof connectShard>;
 
 describe(
   "handleShardSocket",
-  { sanitizeOps: false, sanitizeResources: false },
   () => {
-    let healthServer: Deno.HttpServer<Deno.NetAddr>;
+    let healthServer: TestWsServer;
     let publicUrl: string;
     const connections: ShardConnection[] = [];
 
@@ -62,18 +61,14 @@ describe(
       return { ...shard, reply };
     };
 
-    beforeAll(() => {
-      healthServer = Deno.serve(
-        { port: 0, hostname: "127.0.0.1", onListen: () => {} },
-        (req) =>
-          new URL(req.url).pathname === "/unreachable"
-            ? new Response(null, { status: 404 })
-            : Deno.upgradeWebSocket(req).response,
-      );
-      publicUrl = `ws://127.0.0.1:${healthServer.addr.port}`;
+    beforeAll(async () => {
+      healthServer = await startWsServer({
+        accept: (url) => url.pathname !== "/unreachable",
+      });
+      publicUrl = `ws://127.0.0.1:${healthServer.port}`;
     });
 
-    afterAll(() => healthServer.shutdown());
+    afterAll(() => healthServer.close());
 
     afterEach(() => {
       for (const shard of connections.splice(0)) shard.close();

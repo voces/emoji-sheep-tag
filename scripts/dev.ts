@@ -14,7 +14,7 @@ const debounce = <T extends (...args: any[]) => Promise<any>>(
   func: T,
   delay: number,
 ) => {
-  let timeoutId: number;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return (...args: Parameters<T>): Promise<ReturnType<T>> =>
     new Promise((resolve, reject) => {

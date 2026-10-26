@@ -1,5 +1,4 @@
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { GameClient } from "./gameClient.ts";
 import { ShardLobby } from "./shardLobby.ts";
 import type { z } from "zod";

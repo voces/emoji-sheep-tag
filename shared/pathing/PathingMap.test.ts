@@ -1,6 +1,5 @@
-import { describe, it } from "@std/testing/bdd";
+import { describe, expect, it } from "vitest";
 import { PathingMap } from "./PathingMap.ts";
-import { expect } from "@std/expect";
 
 describe("PathingMap", () => {
   it("sees across open ground whether or not anything has touched it", () => {

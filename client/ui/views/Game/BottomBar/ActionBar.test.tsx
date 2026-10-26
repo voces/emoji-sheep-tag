@@ -1,7 +1,6 @@
 import "@/client-testing/setup.ts";
-import { afterEach, describe, it } from "@std/testing/bdd";
+import { afterEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { expect } from "@std/expect";
 import { ActionBar, actionsToRows } from "./ActionBar.tsx";
 import { selectionFocusVar as selectionVar } from "@/vars/selectionFocus.ts";
 import { menuStateVar } from "@/vars/menuState.ts";

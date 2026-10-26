@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { PATHING_TYPES } from "@/shared/pathing/constants.ts";
 import { app, Entity } from "../ecs.ts";
 import "./pathing.ts";

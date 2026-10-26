@@ -1,5 +1,4 @@
-import { expect } from "@std/expect";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { Vector4, WebGLRenderTarget } from "three";
 import { fakeContext2d, fakeRenderer } from "@/client-testing/fakeRenderer.ts";
 import { renderInCorner, withRendererState } from "./rendererState.ts";

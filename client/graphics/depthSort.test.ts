@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { expect, it } from "vitest";
 import type { Material } from "three";
 import { collections } from "../systems/models.ts";
 import { instanceZ } from "./depthSort.ts";

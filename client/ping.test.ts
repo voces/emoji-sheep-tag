@@ -1,5 +1,4 @@
-import { afterEach, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, describe, expect, it } from "vitest";
 import { clearPing, getPing, recordPing } from "./pingStore.ts";
 
 describe("per-server ping tracking", () => {
