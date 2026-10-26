@@ -177,12 +177,14 @@ const unitToTilemap = (unit: Unit) =>
     { type: unit.pathing },
   );
 
-// Tier 1: grid-aligned positions produce identical footprint shapes per radius.
-// Cache relative offsets as flat [dx0, dy0, dx1, dy1, ...] keyed by radius.
-const gridRelativeCache = new Map<number, number[]>();
+// Tier 1: grid-aligned positions produce identical footprint shapes per radius
+// and pathing (a pathing of 0 has no footprint). Cache relative offsets as flat
+// [dx0, dy0, dx1, dy1, ...].
+const gridRelativeCache = new Map<string, number[]>();
 
 const getGridRelativeFlat = (entity: Unit): number[] => {
-  const cached = gridRelativeCache.get(entity.radius);
+  const key = `${entity.radius}:${entity.pathing}`;
+  const cached = gridRelativeCache.get(key);
   if (cached) return cached;
   const tilemap = unitToTilemap(entity);
   const pts = footprintPointsFlat(tilemap, entity.position);
@@ -199,7 +201,7 @@ const getGridRelativeFlat = (entity: Unit): number[] => {
     relative[i] = pts[i] - ox;
     relative[i + 1] = pts[i + 1] - oy;
   }
-  gridRelativeCache.set(entity.radius, relative);
+  gridRelativeCache.set(key, relative);
   return relative;
 };
 
@@ -258,6 +260,7 @@ export const entityPoints = (entity: Entity): number[] => {
 
     if (isGridAligned) {
       const relative = getGridRelativeFlat(entity as Unit);
+      if (!relative.length) return [x, y];
       const ox = xTileToWorld(xTile, RESOLUTION);
       const oy = yTileToWorld(yTile, RESOLUTION);
       const result = new Array<number>(relative.length);
