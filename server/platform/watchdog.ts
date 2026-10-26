@@ -1,9 +1,11 @@
 /// <reference lib="deno.unstable" />
 
+import { env } from "./env.ts";
+
 const enc = new TextEncoder();
 
-const NOTIFY_SOCKET = Deno.env.get("NOTIFY_SOCKET");
-const WATCHDOG_USEC = Number(Deno.env.get("WATCHDOG_USEC") || 0);
+const NOTIFY_SOCKET = env("NOTIFY_SOCKET");
+const WATCHDOG_USEC = Number(env("WATCHDOG_USEC") || 0);
 
 let notifySocket: Deno.DatagramConn | null = null;
 

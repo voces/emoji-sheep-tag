@@ -12,6 +12,7 @@ import {
   UNRECORDED_MESSAGES,
 } from "./format.ts";
 import { hashState } from "./stateHash.ts";
+import { env, nodeFs } from "../platform/env.ts";
 
 type Recording = {
   header: ReplayHeader;
@@ -21,11 +22,6 @@ type Recording = {
 };
 
 const recordings = new WeakMap<Game, Recording>();
-
-// This module is also bundled into the browser's local server, so it uses only
-// web APIs and a guarded Deno global
-const env = (key: string) =>
-  typeof Deno !== "undefined" ? Deno.env.get(key) : undefined;
 
 /** Recording is on when REPLAY_DIR names a directory to write replays to. */
 export const replayDir = () => env("REPLAY_DIR") || undefined;
@@ -126,7 +122,8 @@ export const finishRecording = (ecs: Game) => {
   const path = `${dir}/${stamp}-${lobby}-${ecs.seed}.jsonl.gz`;
   const text = serializeReplay(replay);
   (async () => {
-    await Deno.mkdir(dir, { recursive: true });
-    await Deno.writeFile(path, await gzip(text));
+    const fs = nodeFs()!.promises;
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path, await gzip(text));
   })().catch((err) => console.error("[replay] Failed to write", path, err));
 };

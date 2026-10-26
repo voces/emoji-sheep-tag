@@ -1,48 +1,46 @@
-import { serveFile } from "@std/http/file-server";
-import { resolve } from "@std/path";
+import { lstat, mkdir, realpath } from "node:fs/promises";
+import { resolve } from "node:path";
 import { handleSocket } from "./client.ts";
 import { handleShardSocket } from "./shardRegistry.ts";
-import { startWatchdog } from "./watchdog.ts";
-import { ensureDir } from "@std/fs";
+import { startWatchdog } from "./platform/watchdog.ts";
+import { serve, serveFile } from "./platform/serve.ts";
+import { args, env } from "./platform/env.ts";
 import { handleStatusRoute, isPageLoad } from "./status/handlers.ts";
 import { getPlayerCount } from "./status/sse.ts";
 import { incrementPageLoads } from "./status/storage.ts";
 import { startFlyReconciliation } from "./flyMachines.ts";
 import { buildLobbyMetaTags } from "./lobbyMeta.ts";
 
-const isDev = Deno.args.includes("--dev");
+const isDev = args.includes("--dev");
 
 if (isDev) {
   import("../scripts/dev.ts");
-  await ensureDir("dist");
+  await mkdir("dist", { recursive: true });
 } else await (await import("../scripts/build.ts")).build("prod");
 
-const dist = await Deno.realPath("dist");
+const dist = await realpath("dist");
 
-const rawPort = Deno.env.get("PORT");
+const rawPort = env("PORT");
 const port = rawPort ? parseInt(rawPort) : undefined;
 
-Deno.serve({
+serve({
   port,
-  onListen: async (path) => {
+  onListen: async ({ hostname, port }) => {
     await startWatchdog();
     startFlyReconciliation();
-    console.log(
-      `[Server] Server ready on port ${path.transport}://${path.hostname}:${path.port}`,
-    );
+    console.log(`[Server] Server ready on http://${hostname}:${port}`);
   },
-}, async (req, info) => {
+}, async (req, connection) => {
   const url = new URL(req.url);
 
   if (req.headers.get("upgrade") === "websocket") {
-    // Read request headers before upgrading; after Deno.upgradeWebSocket the
-    // request is closed and accessing req.headers throws.
+    // Read request headers before upgrading; the request is unusable after
     const remoteIp = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
       req.headers.get("x-real-ip") ??
-      info.remoteAddr.hostname;
+      connection.remoteAddress;
     const isSecure = url.protocol === "https:" ||
       req.headers.get("x-forwarded-proto") === "https";
-    const { socket, response } = Deno.upgradeWebSocket(req);
+    const { socket, response } = connection.upgradeWebSocket();
     // Route shard connections to shard handler
     if (url.pathname === "/shard") {
       handleShardSocket(socket, remoteIp, isSecure);
@@ -64,7 +62,7 @@ Deno.serve({
   const filepath = resolve(dist, url.pathname.slice(1));
   if (
     url.pathname === "/" ||
-    (await Deno.lstat(filepath).catch(() => undefined) &&
+    (await lstat(filepath).catch(() => undefined) &&
       filepath.startsWith(dist))
   ) {
     const response = await serveFile(

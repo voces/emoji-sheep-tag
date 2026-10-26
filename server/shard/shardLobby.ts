@@ -17,6 +17,7 @@ import { addPlayerToPracticeGame, removeLeavingPlayer } from "../api/player.ts";
 import { flushUpdates } from "../updates.ts";
 import { serializeLobbySettings } from "../actions/lobbySettings.ts";
 import { serializeCaptainsDraft } from "../actions/captains.ts";
+import { nodeFs } from "../platform/env.ts";
 
 type AssignLobbyMessage = Extract<
   z.infer<typeof zServerToShardMessage>,
@@ -236,7 +237,7 @@ export class ShardLobby {
     const meta = getMapMeta(mapId);
     if (!meta) throw new Error(`Unknown map id "${mapId}"`);
     const url = new URL(`../../shared/maps/${meta.id}.json`, import.meta.url);
-    const text = Deno.readTextFileSync(url);
+    const text = nodeFs()!.readFileSync(url, "utf8");
     return JSON.parse(text) as PackedMap;
   }
 

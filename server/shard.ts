@@ -10,17 +10,19 @@ import {
   WS_CLOSE_LOBBY_NOT_FOUND,
   WS_CLOSE_MISSING_PARAMS,
 } from "./util/socketHandler.ts";
+import { env } from "./platform/env.ts";
+import { serve } from "./platform/serve.ts";
 
 // Shard configuration from environment variables
-const SHARD_NAME = Deno.env.get("SHARD_NAME"); // Optional - derived from hostname/IP by primary if not provided
-const SHARD_PORT = parseInt(Deno.env.get("SHARD_PORT") || "");
-const PRIMARY_SERVER = Deno.env.get("PRIMARY_SERVER") || "wss://est.w3x.io";
-const FLY_MACHINE_ID = Deno.env.get("FLY_MACHINE_ID");
-const FLY_APP_NAME = Deno.env.get("FLY_APP_NAME");
+const SHARD_NAME = env("SHARD_NAME"); // Optional - derived from hostname/IP by primary if not provided
+const SHARD_PORT = parseInt(env("SHARD_PORT") || "");
+const PRIMARY_SERVER = env("PRIMARY_SERVER") || "wss://est.w3x.io";
+const FLY_MACHINE_ID = env("FLY_MACHINE_ID");
+const FLY_APP_NAME = env("FLY_APP_NAME");
 
 // Build public URL with machine ID for fly-replay routing
 const getPublicUrl = (): string | undefined => {
-  const explicit = Deno.env.get("SHARD_PUBLIC_URL");
+  const explicit = env("SHARD_PUBLIC_URL");
   if (explicit) return explicit;
 
   // On Fly.io, use the app URL with machine param for fly-replay routing
@@ -215,17 +217,14 @@ const connectToPrimary = () => {
 };
 
 // Start the shard server for player connections
-Deno.serve({
+serve({
   port: SHARD_PORT,
-  onListen: (addr) => {
-    console.log(
-      new Date(),
-      `Listening on ${addr.hostname}:${addr.port}`,
-    );
+  onListen: ({ hostname, port }) => {
+    console.log(new Date(), `Listening on ${hostname}:${port}`);
     // Connect to primary server after local server is ready
     connectToPrimary();
   },
-}, (req) => {
+}, (req, connection) => {
   const url = new URL(req.url);
 
   // Fly.io fly-replay routing: if request has a machine param that doesn't match us, replay to correct machine
@@ -238,7 +237,7 @@ Deno.serve({
   }
 
   if (req.headers.get("upgrade") === "websocket") {
-    const { socket, response } = Deno.upgradeWebSocket(req);
+    const { socket, response } = connection.upgradeWebSocket();
 
     const isHealthCheck = url.searchParams.has("healthcheck");
 

@@ -4,6 +4,7 @@ import { type PackedMap } from "@/shared/map.ts";
 import { getMapMeta, MAPS } from "@/shared/maps/manifest.ts";
 import { getCustomMapForLobby } from "./actions/uploadCustomMap.ts";
 import type { Lobby } from "./lobby.ts";
+import { nodeFs } from "./platform/env.ts";
 
 const packedCache = new Map<string, PackedMap>([
   ["revo", defaultPackedMap],
@@ -43,12 +44,11 @@ const readPackedMap = (map: string): PackedMap => {
 
   const meta = getMapMeta(map);
   if (!meta) throw new Error(`Unknown map id "${map}"`);
-  if (typeof Deno === "undefined") {
-    throw new Error("Packed maps can only be loaded on the server");
-  }
+  const fs = nodeFs();
+  if (!fs) throw new Error("Packed maps can only be loaded on the server");
 
   const url = new URL(`../shared/maps/${meta.id}.json`, import.meta.url);
-  const text = Deno.readTextFileSync(url);
+  const text = fs.readFileSync(url, "utf8");
   const packed = JSON.parse(text) as PackedMap;
   packedCache.set(map, packed);
   return packed;

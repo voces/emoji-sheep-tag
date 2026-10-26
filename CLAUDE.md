@@ -78,6 +78,15 @@ applies to every tool invocation regardless of apparent independence.
   update the corresponding zod schema in `client/schemas.ts` (the `zUpdate`
   schema uses `.strict()` which rejects unknown keys)
 
+# Runtime
+
+- The server is moving off Deno. Server code reaches runtime-specific APIs only
+  through `server/platform/` (`serve`, `env`, `args`, `nodeFs`, the systemd
+  watchdog); `server/status/storage.ts` (Deno KV) is the one exception left.
+  Elsewhere use web APIs or `node:` modules, never `Deno.*`
+- Modules reachable from `server/local.ts` are also bundled into the browser, so
+  they must not import `node:` modules; read files through `nodeFs()` instead
+
 # Game System Implementation Patterns
 
 ## Items and Buffs System

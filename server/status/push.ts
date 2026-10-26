@@ -1,3 +1,5 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { env } from "../platform/env.ts";
 import {
   buildPushPayload,
   type PushSubscription,
@@ -10,7 +12,7 @@ import {
 } from "./storage.ts";
 
 const DEFAULT_SUBJECT = "mailto:status@example.com";
-const SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? DEFAULT_SUBJECT;
+const SUBJECT = env("VAPID_SUBJECT") ?? DEFAULT_SUBJECT;
 const DEV_KEY_FILE = ".vapid.json";
 
 if (SUBJECT === DEFAULT_SUBJECT) {
@@ -58,15 +60,15 @@ const generateVapidKeys = async (): Promise<StoredKeys> => {
 };
 
 const loadOrGenerateKeys = async (): Promise<StoredKeys> => {
-  const pub = Deno.env.get("VAPID_PUBLIC_KEY");
-  const priv = Deno.env.get("VAPID_PRIVATE_KEY");
+  const pub = env("VAPID_PUBLIC_KEY");
+  const priv = env("VAPID_PRIVATE_KEY");
   if (pub && priv) return { publicKey: pub, privateKey: priv };
 
   try {
-    return JSON.parse(await Deno.readTextFile(DEV_KEY_FILE));
+    return JSON.parse(await readFile(DEV_KEY_FILE, "utf8"));
   } catch {
     const generated = await generateVapidKeys();
-    await Deno.writeTextFile(DEV_KEY_FILE, JSON.stringify(generated, null, 2));
+    await writeFile(DEV_KEY_FILE, JSON.stringify(generated, null, 2));
     console.log(
       `[status] Generated VAPID keys at ${DEV_KEY_FILE}. To override, set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars.`,
     );

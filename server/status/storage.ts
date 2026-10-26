@@ -1,3 +1,5 @@
+import { env } from "../platform/env.ts";
+
 const PAGE_LOAD_TOTAL = ["status", "pageLoads", "total"] as const;
 const PAGE_LOAD_BUCKET = ["status", "pageLoads", "bucket"] as const;
 const SUB_PREFIX = ["status", "subs"] as const;
@@ -19,10 +21,10 @@ export type PageLoadStats = {
   windows: Record<keyof typeof WINDOW_MS, number>;
 };
 
-const ENABLED = Deno.env.get("STATUS_KV_DISABLED") !== "1";
+const ENABLED = env("STATUS_KV_DISABLED") !== "1";
 
 let kvPromise: Promise<Deno.Kv> | undefined;
-const getKv = () => kvPromise ??= Deno.openKv(Deno.env.get("KV_PATH"));
+const getKv = () => kvPromise ??= Deno.openKv(env("KV_PATH"));
 
 export const incrementPageLoads = async () => {
   if (!ENABLED) return;
