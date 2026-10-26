@@ -10,7 +10,9 @@ import {
   SHEEP_INDIVIDUAL_GOLD_CAP,
 } from "./teamGold.ts";
 import { spawnPracticeUnits } from "../st/gameStartHelpers.ts";
-import { getPlayerUnits } from "../systems/playerEntities.ts";
+import { findPlayerUnit, getPlayerUnits } from "../systems/playerEntities.ts";
+import { isPractice } from "./st.ts";
+import type { Entity } from "@/shared/types.ts";
 import { appContext } from "@/shared/context.ts";
 import { getSheep } from "../systems/collections.ts";
 import { distributeEquitably } from "../util/equitableDistribution.ts";
@@ -202,4 +204,37 @@ export const removePlayerFromEcs = (playerId: string) => {
   // Remove the player entity itself
   const playerEntity = getPlayer(playerId);
   if (playerEntity) ecs.removeEntity(playerEntity);
+};
+
+/**
+ * The round-side effect of a player leaving mid-round: outside practice their
+ * gold goes to surviving allies, then their entities are removed. Runs inside
+ * the round's batch.
+ */
+export const removeLeavingPlayer = (
+  leaver: { id: string; team?: string },
+) => {
+  const leavingPlayerGold = getPlayer(leaver.id)?.gold ?? 0;
+  if (!isPractice() && leavingPlayerGold > 0) {
+    const survivingAllies: Entity[] = leaver.team === "sheep"
+      ? Array.from(getSheep())
+        .filter((s) => s.health && s.health > 0 && s.owner !== leaver.id)
+      : leaver.team === "wolf"
+      ? Array.from(lobbyContext.current.players)
+        .filter((p) => p.id !== leaver.id && p.team === "wolf")
+        .flatMap((p) => findPlayerUnit(p.id, (e) => e.prefab === "wolf") ?? [])
+      : [];
+
+    const shares = distributeEquitably(
+      leavingPlayerGold,
+      survivingAllies.map((ally) => getPlayer(ally.owner)?.gold ?? 0),
+    );
+    survivingAllies.forEach((ally, i) => {
+      if (ally.owner && shares[i]) {
+        sendPlayerGold(leaver.id, ally.owner, shares[i]);
+      }
+    });
+  }
+
+  removePlayerFromEcs(leaver.id);
 };
