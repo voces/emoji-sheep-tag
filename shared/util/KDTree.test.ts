@@ -1,4 +1,4 @@
-import { expect } from "@std/expect";
+import { expect, test } from "vitest";
 import { KdTree } from "./KDTree.ts";
 
 type PointTreeNode = {
@@ -18,7 +18,7 @@ const toPointTree = (node: KdTree["root"]): PointTreeNode => {
   };
 };
 
-Deno.test("add and delete root", () => {
+test("add and delete root", () => {
   const kd = new KdTree();
   const p = { x: 0, y: 0 };
   kd.add(p);
@@ -30,7 +30,7 @@ Deno.test("add and delete root", () => {
   expect(kd.root).toEqual(null);
 });
 
-Deno.test("add three levels and delete mid level (repeat)", () => {
+test("add three levels and delete mid level (repeat)", () => {
   const kd = new KdTree();
   const p = { x: -1, y: 0 };
   kd.add({ x: 0, y: 0 });
@@ -85,7 +85,7 @@ Deno.test("add three levels and delete mid level (repeat)", () => {
   });
 });
 
-Deno.test("nearest returns closest point matching filter", () => {
+test("nearest returns closest point matching filter", () => {
   const kd = new KdTree();
   const a = { x: 1, y: 1 };
   const b = { x: 3, y: 3 };
@@ -100,7 +100,7 @@ Deno.test("nearest returns closest point matching filter", () => {
   expect(kd.nearest(0, 0, () => false)).toBe(null);
 });
 
-Deno.test("kNearest returns k closest points in order", () => {
+test("kNearest returns k closest points in order", () => {
   const kd = new KdTree();
   const points = [
     { x: 10, y: 0 },
@@ -119,7 +119,7 @@ Deno.test("kNearest returns k closest points in order", () => {
   ]);
 });
 
-Deno.test("kNearest with filter skips non-matching points", () => {
+test("kNearest with filter skips non-matching points", () => {
   const kd = new KdTree();
   const a = { x: 1, y: 0 };
   const b = { x: 2, y: 0 };
@@ -134,7 +134,7 @@ Deno.test("kNearest with filter skips non-matching points", () => {
   expect(result).toEqual([b, d]);
 });
 
-Deno.test("kNearest returns fewer than k when not enough points match", () => {
+test("kNearest returns fewer than k when not enough points match", () => {
   const kd = new KdTree();
   kd.add({ x: 1, y: 0 });
   kd.add({ x: 2, y: 0 });

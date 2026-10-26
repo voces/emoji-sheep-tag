@@ -62,7 +62,7 @@ type ManagedMachine = {
   launchTime: number;
   lobbies: Set<string>; // Lobby IDs using this machine
   shardId?: string; // Set once shard registers
-  destroyTimer?: number; // setTimeout ID for delayed destruction
+  destroyTimer?: ReturnType<typeof setTimeout>; // setTimeout ID for delayed destruction
 };
 
 const managedMachines = new Map<string, ManagedMachine>();
@@ -528,7 +528,7 @@ const reconcileFlyMachines = async () => {
   }
 };
 
-let reconcileTimer: number | undefined;
+let reconcileTimer: ReturnType<typeof setInterval> | undefined;
 
 export const startFlyReconciliation = () => {
   if (!isFlyEnabled() || reconcileTimer !== undefined) return;

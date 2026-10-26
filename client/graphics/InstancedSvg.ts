@@ -6,7 +6,7 @@ import {
   InstancedMesh,
   Material,
 } from "three";
-import { mergeGeometries } from "three/BufferGeometryUtils";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { SpriteSort } from "./depthSort.ts";
 import {
   createInstanceAttribute,

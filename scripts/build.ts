@@ -1,6 +1,8 @@
-import { ensureDir } from "@std/fs";
 import esbuild, { type BuildOptions, type Plugin } from "esbuild";
-import { join, relative } from "@std/path";
+import { mkdir } from "node:fs/promises";
+import { join, relative } from "node:path";
+
+const mkdirp = (dir: string) => mkdir(dir, { recursive: true });
 import { processSoundAssets } from "./processSoundAssets.ts";
 import { buildMapManifest } from "./buildMapManifest.ts";
 
@@ -24,9 +26,8 @@ const assetInlinePlugin = {
   },
 } satisfies Plugin;
 
-// Derives esbuild `alias` entries from the deno.json import map.
-// Path aliases (@/...) map to local dirs; npm subpath overrides
-// (three/SVGLoader) map to node_modules paths.
+// Derives esbuild `alias` entries from the deno.json import map's path
+// aliases (@/...); packages resolve from node_modules.
 const buildAliasFromImportMap = (
   imports: Record<string, string>,
 ): Record<string, string> => {
@@ -34,110 +35,10 @@ const buildAliasFromImportMap = (
   for (const [bare, target] of Object.entries(imports)) {
     if (bare.startsWith("@/") && target.startsWith("./")) {
       alias[bare.replace(/\/$/, "")] = target.replace(/\/$/, "");
-    } else if (
-      target.startsWith("npm:") && target.includes("/examples/")
-    ) {
-      alias[bare] = target.replace("npm:", "./node_modules/");
     }
   }
   return alias;
 };
-
-// Collects import map entries that point to remote (non-npm) sources.
-const getRemoteImports = (
-  imports: Record<string, string>,
-): Record<string, string> => {
-  const remote: Record<string, string> = {};
-  for (const [bare, target] of Object.entries(imports)) {
-    if (target.startsWith("jsr:") || target.startsWith("https://")) {
-      remote[bare] = target;
-    }
-  }
-  return remote;
-};
-
-// Builds a specifier→local-file map from `deno info` for remote modules.
-// Runs once at startup; the map is immutable (versioned/pinned deps).
-const buildDenoResolveMap = async (
-  entryPoints: string[],
-): Promise<Map<string, string>> => {
-  const infos = await Promise.all(entryPoints.map(async (entry) => {
-    const { stdout } = await new Deno.Command(Deno.execPath(), {
-      args: ["info", "--json", entry],
-      stdout: "piped",
-      stderr: "null",
-    }).output();
-    return JSON.parse(new TextDecoder().decode(stdout));
-  }));
-  const map = new Map<string, string>();
-  for (const info of infos) {
-    for (const m of info.modules) {
-      if (m.local && m.specifier.startsWith("https://")) {
-        map.set(m.specifier, m.local);
-      }
-    }
-  }
-  return map;
-};
-
-// Resolves non-npm remote specifiers (JSR and URL imports) using a
-// pre-built map. Everything else falls through to esbuild's native
-// resolver, which caches properly in incremental mode.
-const denoRemotePlugin = (
-  resolveMap: Map<string, string>,
-  remoteImports: Record<string, string>,
-): Plugin => ({
-  name: "deno-remote",
-  setup(build) {
-    const localToUrl = new Map<string, string>();
-    for (const [specifier, local] of resolveMap) {
-      localToUrl.set(local, specifier);
-    }
-
-    const ns = "deno-remote";
-
-    for (const [bare, target] of Object.entries(remoteImports)) {
-      let local: string | undefined;
-      if (target.startsWith("https://")) {
-        local = resolveMap.get(target);
-      } else if (target.startsWith("jsr:")) {
-        const jsrPath = target.replace("jsr:", "");
-        for (const [specifier, l] of resolveMap) {
-          if (specifier.includes(jsrPath)) {
-            local = l;
-            break;
-          }
-        }
-      }
-      if (!local) continue;
-
-      const escapedBare = bare.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const resolvedLocal = local;
-      build.onResolve(
-        { filter: new RegExp(`^${escapedBare}$`) },
-        () => ({ path: resolvedLocal, namespace: ns }),
-      );
-    }
-
-    build.onResolve({ filter: /^\./, namespace: ns }, (args) => {
-      const importerUrl = localToUrl.get(args.importer);
-      if (!importerUrl) return undefined;
-      const base = importerUrl.substring(
-        0,
-        importerUrl.lastIndexOf("/") + 1,
-      );
-      const resolved = base + args.path.replace("./", "");
-      const localPath = resolveMap.get(resolved);
-      if (localPath) return { path: localPath, namespace: ns };
-      return undefined;
-    });
-
-    build.onLoad({ filter: /.*/, namespace: ns }, async (args) => ({
-      contents: await Deno.readTextFile(args.path),
-      loader: "ts",
-    }));
-  },
-});
 
 const entryPoints = ["client/index.ts", "server/local.ts"];
 
@@ -146,9 +47,6 @@ export const buildOptions = async (
 ): Promise<BuildOptions> => {
   const denoJson = JSON.parse(await Deno.readTextFile("deno.json"));
   const imports: Record<string, string> = denoJson.imports ?? {};
-
-  const resolveMap = await buildDenoResolveMap(entryPoints);
-  console.log(`[Build] Mapped ${resolveMap.size} remote modules`);
 
   return {
     bundle: true,
@@ -159,10 +57,7 @@ export const buildOptions = async (
     entryNames: "[name]-[hash]",
     sourcemap: true,
     metafile: true,
-    plugins: [
-      assetInlinePlugin,
-      denoRemotePlugin(resolveMap, getRemoteImports(imports)),
-    ],
+    plugins: [assetInlinePlugin],
     alias: buildAliasFromImportMap(imports),
     jsx: "automatic",
     jsxImportSource: "react",
@@ -178,7 +73,7 @@ export const buildOptions = async (
 export const copyMaps = async () => {
   const srcDir = "shared/maps";
   const destDir = "dist/maps";
-  await ensureDir(destDir);
+  await mkdirp(destDir);
   for await (const entry of Deno.readDir(srcDir)) {
     if (!entry.isFile || !entry.name.endsWith(".json")) continue;
     await Deno.copyFile(`${srcDir}/${entry.name}`, `${destDir}/${entry.name}`);
@@ -214,7 +109,7 @@ export const extractFilenames = (
 export const copyHtml = async (
   filenames: { index: string; local: string },
 ) => {
-  await ensureDir("dist");
+  await mkdirp("dist");
 
   const html = await Deno.readTextFile("client/index.html");
   await Deno.writeTextFile(
@@ -232,7 +127,7 @@ export const build = async (env: "dev" | "prod") => {
   const start = performance.now();
 
   try {
-    await ensureDir("dist");
+    await mkdirp("dist");
     await cleanOldBundles();
     await buildMapManifest();
 

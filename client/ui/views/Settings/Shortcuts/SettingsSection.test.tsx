@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { afterEach, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, describe, expect, it } from "vitest";
 import { fireEvent, render, renderHook } from "@testing-library/react";
 import { Wrapper } from "../../../Wrapper.tsx";
 import { SettingsSection } from "./SettingsSection.tsx";

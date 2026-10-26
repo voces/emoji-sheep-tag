@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { expect } from "@std/expect";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { Matrix4, PerspectiveCamera, Scene, Vector3 } from "three";
 import { addEntity } from "@/shared/api/entity.ts";
 import { fakeRenderer } from "@/client-testing/fakeRenderer.ts";

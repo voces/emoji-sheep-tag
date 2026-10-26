@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { lobbyContext } from "../contexts.ts";
 import { appContext } from "@/shared/context.ts";
 import { newEcs } from "../ecs.ts";

@@ -60,7 +60,7 @@ const syncHttpTarget = () => {
   httpTarget = next;
 };
 
-let pingInterval: number | undefined;
+let pingInterval: ReturnType<typeof setInterval> | undefined;
 let unsubscribe: (() => void) | undefined;
 
 export const startPing = () => {

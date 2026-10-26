@@ -41,7 +41,7 @@ export class ShardLobby {
   // Player management
   expectedPlayers: Map<string, PlayerInfo> = new Map(); // token -> player info
   clients: Map<string, GameClient> = new Map(); // player id -> client
-  private tokenExpirationTimer?: number;
+  private tokenExpirationTimer?: ReturnType<typeof setTimeout>;
   private notifiedPrimary = false;
 
   get players(): Set<GameClient> {

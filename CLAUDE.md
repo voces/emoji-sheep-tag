@@ -66,9 +66,13 @@ applies to every tool invocation regardless of apparent independence.
   perfunctorily
 - Aim for test driven development. When fixing a bug, first try to reproduce it
   with a test, then fix the bug
+- Tests run with Vitest: `deno task test` runs it on Deno,
+  `deno task
+  test:node` on Node (22.12 or later; `deno install` first). Client
+  tests run under jsdom, everything else without a DOM
 - To run a specific test file: `deno task test server/rl/env.test.ts`
 - To run a specific test: use `it.only(...)` on the test, then run the file
-- Do not use `--filter` with `deno task test`
+- Do not use `-t`/`--testNamePattern` with `deno task test`
 
 # Workflow
 
@@ -86,6 +90,11 @@ applies to every tool invocation regardless of apparent independence.
   Elsewhere use web APIs or `node:` modules, never `Deno.*`
 - Modules reachable from `server/local.ts` are also bundled into the browser, so
   they must not import `node:` modules; read files through `nodeFs()` instead
+- Client code checks `headless` (`client/util/headless.ts`) rather than the
+  runtime to skip WebGL work, so it behaves the same under any test runner
+- Dependencies live in `package.json`; `deno.json` keeps only the `@/` path
+  aliases. JSR packages install through JSR's npm registry (`.npmrc`), aliased
+  to their JSR names, e.g. `"@verit/ecs": "npm:@jsr/verit__ecs@0.7.0"`
 
 # Game System Implementation Patterns
 

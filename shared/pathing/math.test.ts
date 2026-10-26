@@ -1,10 +1,9 @@
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import {
   distanceBetweenEntities,
   entityPoints,
   tweenAbsAngles,
 } from "./math.ts";
-import { describe, it } from "@std/testing/bdd";
 
 const sheep = {
   id: "sheep-1",

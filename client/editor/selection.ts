@@ -18,6 +18,7 @@ import {
   fillTilesCommand,
 } from "./commands.ts";
 import { clipCells } from "./previewCells.ts";
+import { headless } from "../util/headless.ts";
 
 let overlay: SelectionOverlay | undefined;
 let attachment: AbortController | undefined;
@@ -259,7 +260,7 @@ const detach = () => {
 };
 
 const init = () => {
-  if (overlay || "Deno" in globalThis) return;
+  if (overlay || headless) return;
   overlay = new SelectionOverlay();
   scene.add(overlay);
   if (editorVar()) attach();

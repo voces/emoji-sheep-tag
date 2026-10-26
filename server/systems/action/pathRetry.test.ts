@@ -1,5 +1,4 @@
-import { afterEach } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, expect } from "vitest";
 import { newUnit, orderMove } from "../../api/unit.ts";
 import { cleanupTest, it } from "../../testing/setup.ts";
 import { handleBlockedPath } from "./pathRetry.ts";

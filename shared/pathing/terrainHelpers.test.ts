@@ -1,5 +1,4 @@
-import { it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { expect, it } from "vitest";
 import {
   getPathingMaskFromTerrainMasks,
   getWaterDepth,

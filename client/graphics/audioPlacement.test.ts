@@ -1,5 +1,4 @@
-import { expect } from "@std/expect";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { Object3D } from "three";
 import { placeOnlyWhenMoved } from "./audioPlacement.ts";
 

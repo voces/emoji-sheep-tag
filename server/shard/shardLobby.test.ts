@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ShardLobby } from "./shardLobby.ts";
 import { GameClient } from "./gameClient.ts";
 import { systemsLoaded } from "../ecs.ts";
@@ -45,7 +44,7 @@ const createAssignLobbyMessage = (
   ...overrides,
 });
 
-describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
+describe("ShardLobby", () => {
   let lobby: ShardLobby;
 
   afterEach(() => {
@@ -225,10 +224,10 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
             lobby.round!.ecs.batch(() => {
               newUnit("sheep-1", "sheep", 10, 10);
               newUnit("sheep-2", "sheep", 11, 10);
+              player("sheep-1").gold = 30;
+              player("sheep-2").gold = 0;
             })),
       );
-      player("sheep-1").gold = 30;
-      player("sheep-2").gold = 0;
 
       lobby.removeClient(clients[0]);
 
