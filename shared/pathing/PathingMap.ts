@@ -7,13 +7,7 @@ import {
   Point,
 } from "./math.ts";
 import { Tile } from "./Tile.ts";
-import {
-  END,
-  FlatSearch,
-  PLAYER_PATHING_BUDGET,
-  type SearchEngine,
-  START,
-} from "./FlatSearch.ts";
+import { END, FlatSearch, PLAYER_PATHING_BUDGET, START } from "./FlatSearch.ts";
 import { Footprint, Pathing, PathingEntity, TargetEntity } from "./types.ts";
 import {
   PATHING_WALK_ANGLE_DIFFERENCE,
@@ -30,7 +24,6 @@ import {
 import { isMoving } from "./util.ts";
 import { FlatGrid } from "./FlatGrid.ts";
 import { DistanceCheck } from "./DistanceCheck.ts";
-import { VlSearch, wasmPathingEnabled } from "./vl/VlSearch.ts";
 
 // Raw-coordinate versions of trueMinX/trueMaxX for tile-native _linearPathable
 // Avoids Point object allocation by accepting px, py directly
@@ -208,11 +201,7 @@ export class PathingMap {
     for (let y = 0; y < this.heightMap; y++) {
       this.grid[y] = [];
     }
-    if (wasmPathingEnabled()) {
-      const engine = new VlSearch(this.widthMap, this.heightMap);
-      this.searchState = engine;
-      this.flat = engine.grid;
-    } else this.flat = new FlatGrid(this.widthMap, this.heightMap);
+    this.flat = new FlatGrid(this.widthMap, this.heightMap);
     const tilesPerPathingCell = resolution / tileResolution;
     for (let y = 0; y < this.heightMap; y++) {
       const row = pathing[Math.floor(y / tilesPerPathingCell)];
@@ -938,11 +927,11 @@ export class PathingMap {
     }
   }
 
-  private searchState?: SearchEngine;
+  private searchState?: FlatSearch;
 
   /** The flat search, allocated on first use: it is large, and a client map
    * that never paths does not need it. */
-  private get flatSearch(): SearchEngine {
+  private get flatSearch(): FlatSearch {
     return this.searchState ??= new FlatSearch(this.flat);
   }
 

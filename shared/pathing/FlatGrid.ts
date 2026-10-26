@@ -5,8 +5,7 @@ const BITS = 8;
 
 /**
  * A PathingMap's tile state as flat arrays, indexed `y * width + x`, so the
- * search can read it without touching Tile objects and a wasm module can share
- * it in place.
+ * search can read it without touching Tile objects.
  *
  * `pathing` holds -1 until PathingMap creates the tile: a tile that was never
  * created blocks line of sight, so that is part of the state. Entities
@@ -14,30 +13,18 @@ const BITS = 8;
  * removing one O(1) per tile instead of re-ORing every entity on it.
  */
 export class FlatGrid {
-  static byteLength = (width: number, height: number) =>
-    width * height * (4 + 4 + 4 + 2 * BITS);
-
   readonly pathing: Int32Array;
   readonly original: Int32Array;
   /** Each tile's pathing before entities, or -1 where it has no terrain. */
   readonly terrain: Int32Array;
   private readonly counts: Uint16Array;
 
-  constructor(
-    readonly width: number,
-    readonly height: number,
-    buffer: ArrayBufferLike = new ArrayBuffer(
-      FlatGrid.byteLength(width, height),
-    ),
-    byteOffset = 0,
-  ) {
+  constructor(readonly width: number, readonly height: number) {
     const n = width * height;
-    this.pathing = new Int32Array(buffer, byteOffset, n);
-    this.original = new Int32Array(buffer, byteOffset + n * 4, n);
-    this.terrain = new Int32Array(buffer, byteOffset + n * 8, n);
-    this.counts = new Uint16Array(buffer, byteOffset + n * 12, n * BITS);
-    this.pathing.fill(-1);
-    this.terrain.fill(-1);
+    this.pathing = new Int32Array(n).fill(-1);
+    this.original = new Int32Array(n);
+    this.terrain = new Int32Array(n).fill(-1);
+    this.counts = new Uint16Array(n * BITS);
   }
 
   /** Creates the tile at `index` if it has terrain; whether it exists. */

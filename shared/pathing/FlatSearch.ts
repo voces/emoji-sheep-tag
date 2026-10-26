@@ -260,41 +260,7 @@ export type SearchParams = {
 export const START = 0;
 export const END = 1;
 
-/**
- * What PathingMap needs from a search engine: this TypeScript one, or the VL
- * one compiled to wasm (./vl/).
- */
-export type SearchEngine = {
-  readonly grid: FlatGrid;
-  /** Starts a search, clearing the per-search caches. */
-  prepare(params: SearchParams): void;
-  /** PathingMap#_pathable for the search's minimal tilemap, memoised. */
-  pathable(x: number, y: number): boolean;
-  begin(
-    side: Side,
-    tag: number,
-    best: number,
-    goalX: number,
-    goalY: number,
-  ): void;
-  seed(side: Side, tile: number, g: number, h: number): void;
-  best(side: Side): number;
-  setBest(side: Side, tile: number): void;
-  /** Whether the end side has reached `tile` in this search. */
-  endReached(tile: number): boolean;
-  /** The end side's heap top, or -1 when it is empty. */
-  endTop(): number;
-  /** Makes `tile` end the search when the start side pops it. */
-  markEnd(tile: number): void;
-  /** The bidirectional search; returns the owner's iterations this tick. */
-  run(startTile: number): number;
-  /** The owner's iterations this tick, current even if `run` threw. */
-  readonly spent: number;
-  /** The joined, smoothed path as tile indices. */
-  path(): number[];
-};
-
-export class FlatSearch implements SearchEngine {
+export class FlatSearch {
   readonly start: SearchSide;
   readonly end: SearchSide;
   private readonly width: number;

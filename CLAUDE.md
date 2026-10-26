@@ -140,7 +140,3 @@ applies to every tool invocation regardless of apparent independence.
   search exactly, quirks included: an uncreated tile blocks line of sight, and
   the per-search line-of-sight memo changes answers, not just speed. Check any
   change with the replay fixture and the pathing tests
-- `PATHING_WASM=1` (or `deno task replay --wasm`) runs the search with the same
-  algorithm compiled from VL (`shared/pathing/vl/search.vl`) instead. Rebuild
-  `search.wasm` after editing it:
-  `vl build shared/pathing/vl/search.vl -O3 -o shared/pathing/vl/search.wasm`
