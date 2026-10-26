@@ -132,3 +132,15 @@ applies to every tool invocation regardless of apparent independence.
   recorded state hashes, and times the simulation (`--systems`, `--repeat N`)
 - Code that builds a game outside the running server (scripts, tests that
   record) must `await systemsLoaded` from `server/ecs.ts` first
+
+## Pathing
+
+- `PathingMap` keeps tile state in flat typed arrays (`FlatGrid`) and runs
+  `path()`'s search in `FlatSearch`. Both reproduce the original object-based
+  search exactly, quirks included: an uncreated tile blocks line of sight, and
+  the per-search line-of-sight memo changes answers, not just speed. Check any
+  change with the replay fixture and the pathing tests
+- `PATHING_WASM=1` (or `deno task replay --wasm`) runs the search with the same
+  algorithm compiled from VL (`shared/pathing/vl/search.vl`) instead. Rebuild
+  `search.wasm` after editing it:
+  `vl build shared/pathing/vl/search.vl -O3 -o shared/pathing/vl/search.wasm`

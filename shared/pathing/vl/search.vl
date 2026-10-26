@@ -1,0 +1,923 @@
+// PathingMap's path search (FlatSearch.ts) compiled to wasm. It must agree
+// with FlatSearch bit for bit: every float operation is the one the
+// TypeScript performs, in the same order.
+//
+// All state lives in one block of linear memory. The first part is the grid
+// (FlatGrid's layout), which the host keeps current through views of its own;
+// the rest is search state only this module touches.
+import { Buffer } from "std:buffer"
+
+// Whether the start side may stop at `tile` for the path's distanceFromTarget.
+extern function withinDistance(tile: i32): boolean
+// Restarts the exhausted end side, seeding it through `seed`.
+extern function reopenEnd(): void
+// Writes both footprints' points through setDistancePoints, once a search
+// first needs them.
+extern function loadDistancePoints(): void
+
+const BITS = 8
+const PLAYER_PATHING_BUDGET = 5000
+const VISITED = 1
+const CLOSED = 2
+// The line-of-sight memo starts at LOS_START slots and doubles when half full,
+// up to LOS_MAX; each slot is four i32s: tag, a, b, answer.
+const LOS_START = 4096
+const LOS_MAX = 1048576
+const FOOTPRINT_CELLS = 4096
+const POINT_VALUES = 16384
+
+let width = 0
+let height = 0
+let size = 0
+
+// The grid, as FlatGrid lays it out.
+let pathingBase = 0
+let originalBase = 0
+let terrainBase = 0
+let countsBase = 0
+
+// The two search sides' arrays (side 0 starts at the entity, side 1 at the
+// target), and their scalars. Globals rather than a table in memory, so the
+// engine can keep them in registers across stores.
+let tag0 = 0
+let tag1 = 0
+let g0 = 0
+let g1 = 0
+let h0 = 0
+let h1 = 0
+let f0 = 0
+let f1 = 0
+let parent0 = 0
+let parent1 = 0
+let flags0 = 0
+let flags1 = 0
+let hpos0 = 0
+let hpos1 = 0
+let items0 = 0
+let items1 = 0
+let scores0 = 0
+let scores1 = 0
+let length0 = 0
+let length1 = 0
+let current0 = 0
+let current1 = 0
+let best0 = 0
+let best1 = 0
+let goalX0 = 0.0
+let goalX1 = 0.0
+let goalY0 = 0.0
+let goalY1 = 0.0
+
+let pathableTagBase = 0
+let pathableResultBase = 0
+let endMarkBase = 0
+let losTable = 0
+let losScratch = 0
+let losSlots = LOS_START
+let losCount = 0
+let losCurrent = 1
+let footprintBase = 0
+let outBase = 0
+let selfPointsBase = 0
+let targetPointsBase = 0
+
+// The search in progress.
+let searchTag = 0
+let searchPathing = 0
+let footTop = 0
+let footLeft = 0
+let footWidth = 0
+let footHeight = 0
+let losRadius = 0.0
+let losOffset = 0.0
+let unitBudget = 0
+let hasOwner = false
+let spentCount = 0
+
+// The distance check (DistanceCheck.ts): 0 none, 1 to a point, 2 to an entity.
+let distanceMode = 0
+let distanceLimit = 0.0
+let distanceResolution = 0.0
+let distanceX = 0.0
+let distanceY = 0.0
+let distanceMax = 0.0
+let entityRadius = 0.0
+let targetRadius = 0.0
+let distanceEarly = false
+let pointsLoaded = false
+let pointsInHost = false
+let selfValues = 0
+let targetValues = 0
+
+let next = 0
+
+// Bump-allocates `bytes` from the block, 8-byte aligned.
+function take(bytes: i32): i32 {
+  const at = next
+  next = next + ((bytes + 7) & (0 - 8))
+  return at
+}
+
+function fillI32(at: i32, count: i32, value: i32) {
+  for i in 0 until count { __store_i32__(at + i * 4, value) }
+}
+
+// Allocates every array for a w-by-h map and returns the grid's address.
+export function init(w: i32, h: i32): i32 {
+  width = w
+  height = h
+  size = w * h
+  const n = size
+  const bytes = n * (4 + 4 + 4 + 2 * BITS) + 2 * (n * (4 + 8 + 8 + 8 + 4 + 1 + 4 + 2 * 4 + 2 * 8) + 64) +
+    n * (4 + 1 + 4) + LOS_MAX * 16 + (LOS_MAX / 2) * 12 + FOOTPRINT_CELLS * 4 + n * 4 +
+    2 * POINT_VALUES * 8 + 256
+  const block = Buffer(bytes + 8)
+  next = (block.base + 7) & (0 - 8)
+
+  pathingBase = take(n * 4)
+  originalBase = pathingBase + n * 4
+  terrainBase = pathingBase + n * 8
+  countsBase = pathingBase + n * 12
+  next = pathingBase
+  take(n * (4 + 4 + 4 + 2 * BITS))
+  fillI32(pathingBase, n, -1)
+  fillI32(terrainBase, n, -1)
+
+  tag0 = take(n * 4)
+  tag1 = take(n * 4)
+  g0 = take(n * 8)
+  g1 = take(n * 8)
+  h0 = take(n * 8)
+  h1 = take(n * 8)
+  f0 = take(n * 8)
+  f1 = take(n * 8)
+  parent0 = take(n * 4)
+  parent1 = take(n * 4)
+  fillI32(parent0, n, -1)
+  fillI32(parent1, n, -1)
+  flags0 = take(n)
+  flags1 = take(n)
+  hpos0 = take(n * 4)
+  hpos1 = take(n * 4)
+  fillI32(hpos0, n, -1)
+  fillI32(hpos1, n, -1)
+  items0 = take(n * 2 * 4)
+  items1 = take(n * 2 * 4)
+  scores0 = take(n * 2 * 8)
+  scores1 = take(n * 2 * 8)
+
+  pathableTagBase = take(n * 4)
+  pathableResultBase = take(n)
+  endMarkBase = take(n * 4)
+  losTable = take(LOS_MAX * 16)
+  losScratch = take((LOS_MAX / 2) * 12)
+  footprintBase = take(FOOTPRINT_CELLS * 4)
+  outBase = take(n * 4)
+  selfPointsBase = take(POINT_VALUES * 8)
+  targetPointsBase = take(POINT_VALUES * 8)
+  return pathingBase
+}
+
+export function footprintAddress(): i32 { return footprintBase }
+export function outAddress(): i32 { return outBase }
+export function selfPointsAddress(): i32 { return selfPointsBase }
+export function targetPointsAddress(): i32 { return targetPointsBase }
+export function pointCapacity(): i32 { return POINT_VALUES }
+
+// Configures this search's distance check; see DistanceCheck.ts.
+export function setDistance(
+  mode: i32,
+  limit: f64,
+  resolution: f64,
+  x: f64,
+  y: f64,
+  max: f64,
+  radius: f64,
+  otherRadius: f64,
+  early: boolean,
+) {
+  distanceMode = mode
+  distanceLimit = limit
+  distanceResolution = resolution
+  distanceX = x
+  distanceY = y
+  distanceMax = max
+  entityRadius = radius
+  targetRadius = otherRadius
+  distanceEarly = early
+  pointsLoaded = false
+  pointsInHost = false
+}
+
+// Records the points the host wrote, or that they did not fit, in which case
+// the host answers each check itself.
+export function setDistancePoints(self: i32, target: i32, overflow: boolean) {
+  selfValues = self
+  targetValues = target
+  pointsInHost = overflow
+  pointsLoaded = true
+}
+
+function within(tile: i32): boolean {
+  const x = ((tile % width) as f64) / distanceResolution
+  const y = ((tile / width) as f64) / distanceResolution
+  if (distanceMode == 1) {
+    const dx = x - distanceX
+    const dy = y - distanceY
+    return sqrt(dx * dx + dy * dy) * distanceResolution < distanceLimit
+  }
+  if (distanceEarly) {
+    const cdx = x - distanceX
+    const cdy = y - distanceY
+    const centerDist = sqrt(cdx * cdx + cdy * cdy)
+    if (centerDist - entityRadius - targetRadius > distanceMax + 1.0) { return false }
+  }
+  if (!pointsLoaded) { loadDistancePoints() }
+  if (pointsInHost) { return withinDistance(tile) }
+  if (selfValues == 0 || targetValues == 0) { return false }
+
+  const ox = floor(x * 4.0) / 4.0
+  const oy = floor(y * 4.0) / 4.0
+  let minSq = POSITIVE_INFINITY
+  let i = 0
+  while (i < selfValues) {
+    const ax = __load_f64__(selfPointsBase + i * 8) + ox
+    const ay = __load_f64__(selfPointsBase + (i + 1) * 8) + oy
+    let j = 0
+    while (j < targetValues) {
+      const dx = ax - __load_f64__(targetPointsBase + j * 8)
+      const dxSq = dx * dx
+      if (dxSq < minSq) {
+        const dy = ay - __load_f64__(targetPointsBase + (j + 1) * 8)
+        const dSq = dxSq + dy * dy
+        if (dSq < minSq) { minSq = dSq }
+      }
+      j = j + 2
+    }
+    i = i + 2
+  }
+  return sqrt(minSq) * distanceResolution < distanceLimit
+}
+
+// The grid --------------------------------------------------------------------
+
+function entityBits(index: i32): i32 {
+  const base = countsBase + index * BITS * 2
+  let bits = 0
+  for bit in 0 until BITS {
+    if (__load_u16__(base + bit * 2) != 0) { bits = bits | (1 << bit) }
+  }
+  return bits
+}
+
+// Creates the tile at `index` if it has terrain; whether it exists.
+function ensure(index: i32): boolean {
+  if (__load_i32__(pathingBase + index * 4) != -1) { return true }
+  const terrain = __load_i32__(terrainBase + index * 4)
+  if (terrain == -1) { return false }
+  __store_i32__(originalBase + index * 4, terrain)
+  __store_i32__(pathingBase + index * 4, terrain | entityBits(index))
+  return true
+}
+
+function cell(index: i32): i32 { return __load_i32__(pathingBase + index * 4) }
+
+// Sides and their heaps -------------------------------------------------------
+
+function tagOf(side: i32): i32 { return if (side == 0) { tag0 } else { tag1 } }
+function gOf(side: i32): i32 { return if (side == 0) { g0 } else { g1 } }
+function hOf(side: i32): i32 { return if (side == 0) { h0 } else { h1 } }
+function fOf(side: i32): i32 { return if (side == 0) { f0 } else { f1 } }
+function parentOf(side: i32): i32 { return if (side == 0) { parent0 } else { parent1 } }
+function flagsOf(side: i32): i32 { return if (side == 0) { flags0 } else { flags1 } }
+function hposOf(side: i32): i32 { return if (side == 0) { hpos0 } else { hpos1 } }
+function itemsOf(side: i32): i32 { return if (side == 0) { items0 } else { items1 } }
+function scoresOf(side: i32): i32 { return if (side == 0) { scores0 } else { scores1 } }
+function lengthOf(side: i32): i32 { return if (side == 0) { length0 } else { length1 } }
+function currentOf(side: i32): i32 { return if (side == 0) { current0 } else { current1 } }
+function bestOf(side: i32): i32 { return if (side == 0) { best0 } else { best1 } }
+
+function setLength(side: i32, length: i32) {
+  if (side == 0) { length0 = length } else { length1 = length }
+}
+
+function setBestOf(side: i32, tile: i32) {
+  if (side == 0) { best0 = tile } else { best1 = tile }
+}
+
+function touch(side: i32, tile: i32) {
+  const tag = tagOf(side) + tile * 4
+  const current = currentOf(side)
+  if (__load_i32__(tag) == current) { return }
+  __store_i32__(tag, current)
+  __store_f64__(hOf(side) + tile * 8, 0.0)
+  __store_f64__(fOf(side) + tile * 8, 0.0)
+  __store_f64__(gOf(side) + tile * 8, 0.0)
+  __store_i8__(flagsOf(side) + tile, 0)
+  __store_i32__(parentOf(side) + tile * 4, -1)
+}
+
+function bubbleUp(side: i32, start: i32) {
+  const items = itemsOf(side)
+  const scores = scoresOf(side)
+  const hpos = hposOf(side)
+  let index = start
+  const element = __load_i32__(items + index * 4)
+  const score = __load_f64__(fOf(side) + element * 8)
+  __store_f64__(scores + index * 8, score)
+  while (index > 0) {
+    const parentIndex = ((index + 1) >> 1) - 1
+    const parentScore = __load_f64__(scores + parentIndex * 8)
+    if (score >= parentScore) { break }
+    const parent = __load_i32__(items + parentIndex * 4)
+    __store_i32__(items + parentIndex * 4, element)
+    __store_i32__(items + index * 4, parent)
+    __store_f64__(scores + parentIndex * 8, score)
+    __store_f64__(scores + index * 8, parentScore)
+    __store_i32__(hpos + parent * 4, index)
+    index = parentIndex
+  }
+  __store_i32__(hpos + element * 4, index)
+}
+
+function sinkDown(side: i32, start: i32) {
+  const items = itemsOf(side)
+  const scores = scoresOf(side)
+  const hpos = hposOf(side)
+  const length = lengthOf(side)
+  let index = start
+  const element = __load_i32__(items + index * 4)
+  const score = __load_f64__(fOf(side) + element * 8)
+  __store_f64__(scores + index * 8, score)
+  while (true) {
+    const rightIndex = (index + 1) * 2
+    const leftIndex = rightIndex - 1
+    let swapIndex = -1
+    let swapScore = score
+    if (leftIndex < length) {
+      const leftScore = __load_f64__(scores + leftIndex * 8)
+      if (leftScore < swapScore) {
+        swapIndex = leftIndex
+        swapScore = leftScore
+      }
+    }
+    if (rightIndex < length) {
+      const rightScore = __load_f64__(scores + rightIndex * 8)
+      if (rightScore < swapScore) { swapIndex = rightIndex }
+    }
+    if (swapIndex == -1) { break }
+    const swapped = __load_i32__(items + swapIndex * 4)
+    const swappedScore = __load_f64__(scores + swapIndex * 8)
+    __store_i32__(items + index * 4, swapped)
+    __store_i32__(items + swapIndex * 4, element)
+    __store_f64__(scores + index * 8, swappedScore)
+    __store_f64__(scores + swapIndex * 8, score)
+    __store_i32__(hpos + swapped * 4, index)
+    index = swapIndex
+  }
+  __store_i32__(hpos + element * 4, index)
+}
+
+function heapPush(side: i32, tile: i32) {
+  const index = lengthOf(side)
+  if (index >= size * 2) { __trap__("pathing heap overflow") }
+  setLength(side, index + 1)
+  __store_i32__(itemsOf(side) + index * 4, tile)
+  __store_i32__(hposOf(side) + tile * 4, index)
+  bubbleUp(side, index)
+}
+
+function heapPop(side: i32): i32 {
+  const items = itemsOf(side)
+  const scores = scoresOf(side)
+  const top = __load_i32__(items)
+  const end = lengthOf(side) - 1
+  __store_i32__(hposOf(side) + top * 4, -1)
+  setLength(side, end)
+  if (end > 0) {
+    const bottom = __load_i32__(items + end * 4)
+    __store_i32__(items, bottom)
+    __store_f64__(scores, __load_f64__(scores + end * 8))
+    __store_i32__(hposOf(side) + bottom * 4, 0)
+    sinkDown(side, 0)
+  }
+  return top
+}
+
+function heapDecrease(side: i32, tile: i32) {
+  const index = __load_i32__(hposOf(side) + tile * 4)
+  if (index != -1) { bubbleUp(side, index) }
+}
+
+export function begin(side: i32, tag: i32, best: i32, goalX: f64, goalY: f64) {
+  const items = itemsOf(side)
+  const hpos = hposOf(side)
+  for i in 0 until lengthOf(side) {
+    __store_i32__(hpos + __load_i32__(items + i * 4) * 4, -1)
+  }
+  setLength(side, 0)
+  if (side == 0) {
+    current0 = tag
+    goalX0 = goalX
+    goalY0 = goalY
+  } else {
+    current1 = tag
+    goalX1 = goalX
+    goalY1 = goalY
+  }
+  setBestOf(side, best)
+}
+
+export function seed(side: i32, tile: i32, g: f64, h: f64) {
+  touch(side, tile)
+  __store_f64__(gOf(side) + tile * 8, g)
+  __store_f64__(hOf(side) + tile * 8, h)
+  __store_f64__(fOf(side) + tile * 8, h + g)
+  __store_i8__(flagsOf(side) + tile, 0)
+  __store_i32__(parentOf(side) + tile * 4, -1)
+  heapPush(side, tile)
+}
+
+export function best(side: i32): i32 { return bestOf(side) }
+
+export function setBest(side: i32, tile: i32) { setBestOf(side, tile) }
+
+export function endReached(tile: i32): boolean {
+  return __load_i32__(tag1 + tile * 4) == current1
+}
+
+export function endTop(): i32 {
+  if (length1 == 0) { return -1 }
+  return __load_i32__(items1)
+}
+
+export function markEnd(tile: i32) {
+  __store_i32__(endMarkBase + tile * 4, searchTag)
+}
+
+export function spent(): i32 { return spentCount }
+
+// Starts a search. The minimal tilemap's cells are already at footprintAddress.
+export function prepare(
+  pathing: i32,
+  top: i32,
+  left: i32,
+  footprintWidth: i32,
+  footprintHeight: i32,
+  radius: f64,
+  radiusTileOffset: f64,
+  budget: i32,
+  ownerSpent: i32,
+  owned: boolean,
+) {
+  searchPathing = pathing
+  footTop = top
+  footLeft = left
+  footWidth = footprintWidth
+  footHeight = footprintHeight
+  losRadius = radius
+  losOffset = radiusTileOffset
+  unitBudget = budget
+  hasOwner = owned
+  spentCount = ownerSpent
+  distanceMode = 0
+  searchTag = searchTag + 1
+  losCurrent = losCurrent + 1
+  losCount = 0
+}
+
+// The minimal tilemap check ---------------------------------------------------
+
+function footprintPathable(xTile: i32, yTile: i32): boolean {
+  if (xTile < 0 || yTile < 0 || xTile >= width || yTile >= height) { return false }
+  let i = 0
+  let y = yTile + footTop
+  while (y < yTile + footHeight + footTop) {
+    let x = xTile + footLeft
+    while (x < xTile + footWidth + footLeft) {
+      if (y < 0 || y >= height || x < 0 || x >= width) { return false }
+      const index = y * width + x
+      if (!ensure(index)) { return false }
+      if ((cell(index) & __load_i32__(footprintBase + i * 4)) != 0) { return false }
+      x = x + 1
+      i = i + 1
+    }
+    y = y + 1
+  }
+  return true
+}
+
+export function pathable(x: i32, y: i32): boolean {
+  const key = x * height + y
+  if (key >= 0 && key < size) {
+    if (__load_i32__(pathableTagBase + key * 4) == searchTag) {
+      return __load_u8__(pathableResultBase + key) == 1
+    }
+    const result = footprintPathable(x, y)
+    __store_i32__(pathableTagBase + key * 4, searchTag)
+    __store_i8__(pathableResultBase + key, if (result) { 1 } else { 0 })
+    return result
+  }
+  return footprintPathable(x, y)
+}
+
+// Line of sight ---------------------------------------------------------------
+
+const POSITIVE_INFINITY = f64fromBits(0x7FF0000000000000)
+const NEGATIVE_INFINITY = f64fromBits(0xFFF0000000000000)
+
+function isFinite(x: f64): boolean { return x - x == 0.0 }
+
+// Math.sign, keeping a zero's sign and a NaN.
+function sign(x: f64): f64 {
+  if (x > 0.0) { return 1.0 }
+  if (x < 0.0) { return -1.0 }
+  return x
+}
+
+function trueMinX(px: f64, py: f64, radiusSq: f64, yCoord: f64, offValue: f64): f64 {
+  if (abs(py - yCoord) - 0.5 <= 1.0) { return offValue }
+  const yRef = if (yCoord > py) { yCoord } else { yCoord + 1.0 }
+  const squared = -(py * py) + 2.0 * py * yRef + radiusSq - yRef * yRef
+  return floor(px - sign(squared) * sqrt(abs(squared)))
+}
+
+function trueMaxX(px: f64, py: f64, radiusSq: f64, yCoord: f64, offValue: f64): f64 {
+  if (abs(py - yCoord) - 0.5 <= 1.0) { return offValue }
+  const yRef = if (yCoord > py) { yCoord } else { yCoord + 1.0 }
+  const squared = -(py * py) + 2.0 * py * yRef + radiusSq - yRef * yRef
+  return floor(px + sign(squared) * sqrt(abs(squared)))
+}
+
+function lineOfSight(a: i32, b: i32): boolean {
+  const radius = losRadius
+  const pathing = searchPathing
+  let startX = ((a % width) as f64) + losOffset
+  let startY = ((a / width) as f64) + losOffset
+  let endX = ((b % width) as f64) + losOffset
+  let endY = ((b / width) as f64) + losOffset
+
+  if (floor(startX) == floor(endX) && floor(startY) == floor(endY)) {
+    const x = floor(startX)
+    const y = floor(startY)
+    if (x < 0.0 || y < 0.0 || x >= (width as f64) || y >= (height as f64)) { return false }
+    const c = cell((y as! i32) * width + (x as! i32))
+    return c != -1 && (c & pathing) == 0
+  }
+
+  if (startX > endX) {
+    const tmpX = startX
+    const tmpY = startY
+    startX = endX
+    startY = endY
+    endX = tmpX
+    endY = tmpY
+  }
+
+  const dx = endX - startX
+  const dy = endY - startY
+  const dist = sqrt(dx * dx + dy * dy)
+  const cosA = dx / dist
+  const sinA = dy / dist
+  const tan = dx / dy
+  const positiveSlope = endY > startY
+
+  const minY = if (positiveSlope) { floor(startY - radius) } else { floor(endY - radius) }
+  const maxY = if (positiveSlope) { floor(endY + radius) } else { floor(startY + radius) }
+  const yStart = if (positiveSlope) { minY } else { maxY }
+  const yStep = if (positiveSlope) { 1.0 } else { -1.0 }
+  const ySteps = abs(minY - maxY)
+
+  const minX = floor(startX - radius)
+  const maxX = floor(endX + radius)
+
+  const sinAR = sinA * radius
+  const cosAR = cosA * radius
+  const leftTangentX = startX + sinAR
+  const leftTangentY = startY - cosAR
+  const rightTangentX = startX - sinAR
+  const rightTangentY = startY + cosAR
+  const endLeftTangentX = endX + sinAR
+  const endLeftTangentY = endY - cosAR
+  const tangentDy = 2.0 * cosAR
+  const tangentDx = -2.0 * sinAR
+  const radiusSq = radius * radius
+
+  const startFloor = if (positiveSlope) {
+    floor(startY - radius) + 1.0
+  } else {
+    ceil(startY + radius) - 1.0
+  }
+
+  const finiteTan = isFinite(tan)
+  const rightGuideX = if (finiteTan) {
+    rightTangentX + (startFloor - rightTangentY) * tan
+  } else {
+    rightTangentX - radius
+  }
+  const leftGuideX = if (finiteTan) {
+    leftTangentX - (leftTangentY - startFloor) * tan
+  } else {
+    leftTangentX - radius
+  }
+
+  const guide = max(rightGuideX, leftGuideX)
+  const guideDistance = abs(rightGuideX - leftGuideX)
+  const absTan = abs(tan)
+  const finiteAbsTan = isFinite(absTan)
+  const totalShift = if (finiteAbsTan) { absTan + guideDistance } else { guideDistance }
+
+  let xStartRaw = guide - totalShift
+  let y = 0.0
+  while (y <= ySteps) {
+    const xEndRaw = xStartRaw + (if (finiteAbsTan) { totalShift } else { POSITIVE_INFINITY })
+    const xStartTest = floor(xStartRaw)
+    const xEndTest = floor(xEndRaw)
+    const yCoord = yStart + y * yStep
+
+    const xStartMin = if (
+      xStartRaw < startX &&
+      (xStartTest + 1.0 - leftTangentX) * tangentDy - (yCoord - leftTangentY) * tangentDx < 0.0
+    ) {
+      trueMinX(startX, startY, radiusSq, yCoord, max(xStartTest, minX))
+    } else { NEGATIVE_INFINITY }
+    const xEndMin = if (
+      xStartRaw < endX &&
+      (xStartTest - 1.0 - endLeftTangentX) * tangentDy - (yCoord - endLeftTangentY) * tangentDx > 0.0
+    ) {
+      trueMinX(endX, endY, radiusSq, yCoord, max(xStartTest, minX))
+    } else { NEGATIVE_INFINITY }
+    const xStart = max(max(max(xStartMin, xEndMin), xStartTest), minX)
+
+    const xStartMax = if (
+      xEndRaw > startX &&
+      (xEndTest + 1.0 - leftTangentX) * tangentDy - (yCoord - leftTangentY) * tangentDx < 0.0
+    ) {
+      trueMaxX(startX, startY, radiusSq, yCoord, min(xEndTest, maxX))
+    } else { POSITIVE_INFINITY }
+    const xEndMax = if (
+      xEndRaw > endX &&
+      (xEndTest - 1.0 - endLeftTangentX) * tangentDy - (yCoord - endLeftTangentY) * tangentDx > 0.0
+    ) {
+      trueMaxX(endX, endY, radiusSq, yCoord, min(xEndTest, maxX))
+    } else { POSITIVE_INFINITY }
+    const xEnd = min(min(min(xStartMax, xEndMax), xEndTest), maxX)
+
+    if (yCoord < 0.0 || yCoord >= (height as f64)) { return false }
+    if (xStart <= xEnd) {
+      if (xStart < 0.0 || xEnd >= (width as f64)) { return false }
+      const row = pathingBase + (yCoord as! i32) * width * 4
+      const last = row + (xEnd as! i32) * 4
+      let at = row + (xStart as! i32) * 4
+      while (at <= last) {
+        const c = __load_i32__(at)
+        if (c == -1 || (c & pathing) != 0) { return false }
+        at = at + 4
+      }
+    }
+
+    xStartRaw = xStartRaw + (if (finiteAbsTan) { absTan } else { 0.0 })
+    y = y + 1.0
+  }
+
+  return true
+}
+
+// Line of sight memoised per search, as FlatSearch's PairCache does. The memo
+// is load-bearing: tiles are created as the search runs, so a second ask can
+// answer differently.
+function losSlot(a: i32, b: i32): i32 {
+  const mask = losSlots - 1
+  let i = ((a * (0 - 1640531535)) ^ (b * (0 - 2048144777))) & mask
+  while (true) {
+    const slot = losTable + i * 16
+    if (__load_i32__(slot) != losCurrent) { break }
+    if (__load_i32__(slot + 4) == a && __load_i32__(slot + 8) == b) { break }
+    i = (i + 1) & mask
+  }
+  return losTable + i * 16
+}
+
+function losStore(a: i32, b: i32, value: i32) {
+  const slot = losSlot(a, b)
+  if (__load_i32__(slot) != losCurrent) { losCount = losCount + 1 }
+  __store_i32__(slot, losCurrent)
+  __store_i32__(slot + 4, a)
+  __store_i32__(slot + 8, b)
+  __store_i32__(slot + 12, value)
+}
+
+// Doubles the memo, keeping this search's answers.
+function losGrow() {
+  if (losSlots * 2 > LOS_MAX) { __trap__("line of sight memo is full") }
+  let kept = 0
+  for i in 0 until losSlots {
+    const slot = losTable + i * 16
+    if (__load_i32__(slot) == losCurrent) {
+      const to = losScratch + kept * 12
+      __store_i32__(to, __load_i32__(slot + 4))
+      __store_i32__(to + 4, __load_i32__(slot + 8))
+      __store_i32__(to + 8, __load_i32__(slot + 12))
+      kept = kept + 1
+    }
+  }
+  losSlots = losSlots * 2
+  losCurrent = losCurrent + 1
+  losCount = 0
+  for i in 0 until kept {
+    const from = losScratch + i * 12
+    losStore(__load_i32__(from), __load_i32__(from + 4), __load_i32__(from + 8))
+  }
+}
+
+function linearPathable(a: i32, b: i32): boolean {
+  const slot = losSlot(a, b)
+  if (__load_i32__(slot) == losCurrent) { return __load_i32__(slot + 12) == 1 }
+  const result = lineOfSight(a, b)
+  if ((losCount + 1) * 2 > losSlots) { losGrow() }
+  losStore(a, b, if (result) { 1 } else { 0 })
+  return result
+}
+
+// The search ------------------------------------------------------------------
+
+function tileDistance(a: i32, b: i32): f64 {
+  const dx = ((b % width) - (a % width)) as f64
+  const dy = ((b / width) - (a / width)) as f64
+  return sqrt(dx * dx + dy * dy)
+}
+
+function relax(side: i32, current: i32, parent: i32, neighbor: i32): boolean {
+  touch(side, neighbor)
+  const flags = flagsOf(side)
+  const gBase = gOf(side)
+  const hBase = hOf(side)
+  const flag = __load_u8__(flags + neighbor)
+  const wasVisited = (flag & VISITED) != 0
+
+  if (!wasVisited) {
+    if ((flag & CLOSED) != 0 || (cell(neighbor) & searchPathing) != 0) { return false }
+    if (!pathable(neighbor % width, neighbor / width)) {
+      __store_i8__(flags + neighbor, flag | CLOSED)
+      return false
+    }
+  }
+
+  const viaParent = parent != -1 && linearPathable(parent, neighbor)
+  const via = if (viaParent) { parent } else { current }
+  const realCostFromOrigin = if (viaParent) {
+    __load_f64__(gBase + parent * 8) + tileDistance(parent, neighbor)
+  } else {
+    __load_f64__(gBase + current * 8) + 1.0
+  }
+
+  if (wasVisited && !(realCostFromOrigin < __load_f64__(gBase + neighbor * 8))) { return false }
+
+  __store_i8__(flags + neighbor, __load_u8__(flags + neighbor) | VISITED)
+  __store_i32__(parentOf(side) + neighbor * 4, via)
+  let h = __load_f64__(hBase + neighbor * 8)
+  if (h == 0.0 || h != h) {
+    const nx = (neighbor % width) as f64
+    const ny = (neighbor / width) as f64
+    const gx = (if (side == 0) { goalX0 } else { goalX1 }) - nx
+    const gy = (if (side == 0) { goalY0 } else { goalY1 }) - ny
+    h = sqrt(gx * gx + gy * gy)
+    __store_f64__(hBase + neighbor * 8, h)
+  }
+  __store_f64__(gBase + neighbor * 8, realCostFromOrigin)
+  __store_f64__(fOf(side) + neighbor * 8, realCostFromOrigin + h)
+
+  const bestTile = bestOf(side)
+  const bestH = __load_f64__(hBase + bestTile * 8)
+  let improved = false
+  if (h < bestH || (h == bestH && realCostFromOrigin < __load_f64__(gBase + bestTile * 8))) {
+    setBestOf(side, neighbor)
+    improved = true
+  }
+
+  if (wasVisited) { heapDecrease(side, neighbor) } else { heapPush(side, neighbor) }
+  return improved
+}
+
+// Closes `current` and relaxes its neighbours below, right, above and left,
+// creating them as PathingMap#getNeighbors does.
+function expand(side: i32, current: i32): boolean {
+  touch(side, current)
+  const flags = flagsOf(side)
+  __store_i8__(flags + current, __load_u8__(flags + current) | CLOSED)
+  const parent = __load_i32__(parentOf(side) + current * 4)
+  const x = current % width
+  const y = current / width
+  const below = y + 1 < height && ensure(current + width)
+  const right = x + 1 < width && ensure(current + 1)
+  const above = y - 1 >= 0 && ensure(current - width)
+  const left = x - 1 >= 0 && ensure(current - 1)
+  let improved = false
+  if (below && relax(side, current, parent, current + width)) { improved = true }
+  if (right && relax(side, current, parent, current + 1)) { improved = true }
+  if (above && relax(side, current, parent, current - width)) { improved = true }
+  if (left && relax(side, current, parent, current - 1)) { improved = true }
+  return improved
+}
+
+// The bidirectional search. Returns 0, or 1 where the end side ran dry, which
+// the TypeScript reports by throwing.
+export function run(startTile: i32): i32 {
+  let checksSinceBestChange = 0
+  let unitIterations = 0
+
+  while (length0 > 0) {
+    checksSinceBestChange = checksSinceBestChange + 1
+    if (checksSinceBestChange > 500) { break }
+
+    let overPlayerBudget = false
+    if (hasOwner) {
+      spentCount = spentCount + 1
+      overPlayerBudget = spentCount > PLAYER_PATHING_BUDGET
+    }
+    unitIterations = unitIterations + 1
+    if (unitIterations > unitBudget || overPlayerBudget) { break }
+
+    const startCurrent = heapPop(0)
+    if (__load_i32__(endMarkBase + startCurrent * 4) == searchTag) {
+      best0 = startCurrent
+      break
+    }
+    if (endReached(startCurrent)) {
+      best0 = startCurrent
+      best1 = startCurrent
+      break
+    }
+    if (distanceMode != 0 && within(startCurrent)) {
+      best0 = startCurrent
+      break
+    }
+    if (expand(0, startCurrent)) { checksSinceBestChange = 0 }
+
+    if (length1 == 0) { reopenEnd() }
+    if (length1 == 0) { return 1 }
+    const endCurrent = heapPop(1)
+    if (endCurrent == startTile) {
+      best1 = startTile
+      break
+    }
+    if (__load_i32__(tag0 + endCurrent * 4) == current0) {
+      best0 = endCurrent
+      best1 = endCurrent
+      break
+    }
+    if (expand(1, endCurrent)) { checksSinceBestChange = 0 }
+  }
+  return 0
+}
+
+// Joins the sides' parent chains and smooths the result, as FlatSearch#path
+// does; writes the tiles at outAddress and returns how many there are.
+export function path(): i32 {
+  let length = 0
+  let tile = best0
+  while (tile != -1) {
+    __store_i32__(outBase + length * 4, tile)
+    length = length + 1
+    tile = __load_i32__(parent0 + tile * 4)
+  }
+  let i = 0
+  while (i < length / 2) {
+    const a = __load_i32__(outBase + i * 4)
+    __store_i32__(outBase + i * 4, __load_i32__(outBase + (length - 1 - i) * 4))
+    __store_i32__(outBase + (length - 1 - i) * 4, a)
+    i = i + 1
+  }
+  if (best0 == best1) {
+    tile = __load_i32__(parent1 + best0 * 4)
+    while (tile != -1) {
+      __store_i32__(outBase + length * 4, tile)
+      length = length + 1
+      tile = __load_i32__(parent1 + tile * 4)
+    }
+  }
+
+  let skip = length - 1
+  while (skip > 1) {
+    let index = 0
+    while (index < length - skip) {
+      if (linearPathable(
+        __load_i32__(outBase + index * 4),
+        __load_i32__(outBase + (index + skip) * 4),
+      )) {
+        // splice(index + 1, skip - 1)
+        let from = index + skip
+        while (from < length) {
+          __store_i32__(outBase + (from - skip + 1) * 4, __load_i32__(outBase + from * 4))
+          from = from + 1
+        }
+        length = length - (skip - 1)
+        skip = length
+        break
+      }
+      index = index + 1
+    }
+    skip = skip - 1
+  }
+  return length
+}

@@ -2,7 +2,9 @@
  * Replays recorded rounds headlessly, verifying them against their recorded
  * checkpoints and timing the simulation.
  *
- *   deno task replay [--repeat N] [--systems] <file.jsonl[.gz]>...
+ *   deno task replay [--repeat N] [--systems] [--wasm] <file.jsonl[.gz]>...
+ *
+ * `--wasm` runs path searches in the VL-compiled engine (shared/pathing/vl/).
  *
  * Exits non-zero when any replay diverges from its recording.
  */
@@ -12,6 +14,7 @@ import { loadReplay } from "../server/replay/load.ts";
 import { type ReplayResult, replayRound } from "../server/replay/replay.ts";
 import { TICK_RATE } from "@/shared/constants.ts";
 import { systemsLoaded } from "../server/ecs.ts";
+import { setWasmPathing } from "@/shared/pathing/vl/VlSearch.ts";
 
 const { values, positionals } = parseArgs({
   args: process.argv.slice(2),
@@ -19,13 +22,14 @@ const { values, positionals } = parseArgs({
   options: {
     repeat: { type: "string", default: "1" },
     systems: { type: "boolean", default: false },
+    wasm: { type: "boolean", default: false },
   },
 });
 
 const repeat = Math.max(1, Number(values.repeat) || 1);
 if (!positionals.length) {
   console.error(
-    "usage: deno task replay [--repeat N] [--systems] <file.jsonl[.gz]>...",
+    "usage: deno task replay [--repeat N] [--systems] [--wasm] <file.jsonl[.gz]>...",
   );
   process.exit(2);
 }
@@ -65,6 +69,7 @@ const describeRun = (result: ReplayResult) => {
 };
 
 await systemsLoaded;
+if (values.wasm) setWasmPathing(true);
 
 let diverged = false;
 
