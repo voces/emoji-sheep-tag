@@ -6,17 +6,12 @@ import { recordLeave } from "./replay/recorder.ts";
 import { deleteLobby } from "./lobby.ts";
 import { clearUpdatesCache, flushUpdates } from "./updates.ts";
 import { serializeLobbySettings } from "./actions/lobbySettings.ts";
-import { findPlayerUnit } from "./systems/playerEntities.ts";
 import { getPlayer } from "@/shared/api/player.ts";
-import { removePlayerFromEcs, sendPlayerGold } from "./api/player.ts";
-import { getSheep } from "./systems/collections.ts";
-import { distributeEquitably } from "./util/equitableDistribution.ts";
-import { isPractice } from "./api/st.ts";
+import { removeLeavingPlayer } from "./api/player.ts";
 import { broadcastLobbyList, joinHub } from "./hub.ts";
-import type { Entity } from "@/shared/types.ts";
 import { autoAssignSheepOrWolf } from "./st/roundHelpers.ts";
 import { getCustomMapForLobby } from "./actions/uploadCustomMap.ts";
-import type { Lobby, LobbyPlayer } from "./lobby.ts";
+import type { Lobby } from "./lobby.ts";
 import {
   handleCaptainsPlayerLeave,
   serializeCaptainsDraft,
@@ -252,61 +247,6 @@ export const sendJoinMessage = (client: Client) => {
     localPlayer: client.id,
     captainsDraft: serializeCaptainsDraft(lobby.captainsDraft),
   });
-};
-
-/**
- * The round-side effect of a player leaving the primary server mid-round: their
- * gold goes to surviving allies and their entities are removed. Runs inside the
- * round's batch.
- */
-export const removeLeavingPlayer = (client: LobbyPlayer) => {
-  const lobby = lobbyContext.current;
-  // Distribute gold to allies if leaving during a game (non-practice)
-  if (!isPractice() && client.team) {
-    const leavingPlayerGold = getPlayer(client.id)?.gold ?? 0;
-
-    if (leavingPlayerGold > 0) {
-      // Get surviving allies from same team
-      let survivingAllies: Entity[] = [];
-      if (client.team === "sheep") {
-        survivingAllies = Array.from(getSheep())
-          .filter((s) => s.health && s.health > 0 && s.owner !== client.id);
-      } else if (client.team === "wolf") {
-        // For wolves, find wolf units owned by players still in the team
-        for (const wolfPlayer of lobby.players) {
-          if (wolfPlayer === client || wolfPlayer.team !== "wolf") {
-            continue;
-          }
-          const wolfUnit = findPlayerUnit(
-            wolfPlayer.id,
-            (e) => e.prefab === "wolf",
-          );
-          if (wolfUnit) survivingAllies.push(wolfUnit);
-        }
-      }
-
-      if (survivingAllies.length > 0) {
-        const currentGold = survivingAllies.map((ally) =>
-          getPlayer(ally.owner)?.gold ?? 0
-        );
-        const shares = distributeEquitably(
-          leavingPlayerGold,
-          currentGold,
-        );
-
-        for (let i = 0; i < survivingAllies.length; i++) {
-          const ally = survivingAllies[i];
-          const share = shares[i];
-          if (!ally.owner || share === 0) continue;
-
-          sendPlayerGold(client.id, ally.owner, share);
-        }
-      }
-    }
-  }
-
-  // Clean up player entities (including sheep and spirits)
-  removePlayerFromEcs(client.id);
 };
 
 /** Causes the local player to leave their current lobby. */

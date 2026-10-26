@@ -13,7 +13,7 @@ import { addEntity } from "@/shared/api/entity.ts";
 import { appContext } from "@/shared/context.ts";
 import { lobbyContext } from "../contexts.ts";
 import { createRoundSummary, send } from "../lobbyApi.ts";
-import { addPlayerToPracticeGame, removePlayerFromEcs } from "../api/player.ts";
+import { addPlayerToPracticeGame, removeLeavingPlayer } from "../api/player.ts";
 import { flushUpdates } from "../updates.ts";
 import { serializeLobbySettings } from "../actions/lobbySettings.ts";
 import { serializeCaptainsDraft } from "../actions/captains.ts";
@@ -195,7 +195,7 @@ export class ShardLobby {
       lobbyContext.with(this, () => {
         appContext.with(this.round!.ecs, () => {
           recordLeave(client.id);
-          this.round!.ecs.batch(() => removePlayerFromEcs(client.id));
+          this.round!.ecs.batch(() => removeLeavingPlayer(client));
 
           // Send leave event to remaining clients
           send({

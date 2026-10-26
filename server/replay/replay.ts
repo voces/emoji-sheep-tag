@@ -4,8 +4,7 @@ import { Client, getAllClients } from "../client.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import type { Game } from "../ecs.ts";
 import { lobbies, newLobby } from "../lobby.ts";
-import { removeLeavingPlayer } from "../lobbyApi.ts";
-import { removePlayerFromEcs } from "../api/player.ts";
+import { removeLeavingPlayer } from "../api/player.ts";
 import { gameActions, zGameMessage } from "../shard/gameClient.ts";
 import { initializeGame, stepGame } from "../st/gameStartHelpers.ts";
 import { flushUpdates } from "../updates.ts";
@@ -215,11 +214,7 @@ export const replayRound = (
       () =>
         appContext.with(ecs, () =>
           clientContext.with(client, () => {
-            ecs.batch(() =>
-              header.host === "primary"
-                ? removeLeavingPlayer(client)
-                : removePlayerFromEcs(client.id)
-            );
+            ecs.batch(() => removeLeavingPlayer(client));
             flushUpdates();
           })),
     );

@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import { expect } from "@std/expect";
 import { ShardLobby } from "./shardLobby.ts";
 import { GameClient } from "./gameClient.ts";
+import { systemsLoaded } from "../ecs.ts";
+import { lobbyContext } from "../contexts.ts";
+import { appContext } from "@/shared/context.ts";
+import { newUnit } from "../api/unit.ts";
 import type { z } from "zod";
 import type { zServerToShardMessage } from "@/shared/shard.ts";
 
@@ -186,6 +190,49 @@ describe("ShardLobby", { sanitizeOps: false, sanitizeResources: false }, () => {
       expect(lobby.players).toBeInstanceOf(Set);
       expect(lobby.players.size).toBe(1);
       expect(lobby.players.has(client)).toBe(true);
+    });
+  });
+
+  describe("player leaving mid-round", () => {
+    it("distributes their gold to surviving allies", async () => {
+      await systemsLoaded;
+      const players = [
+        ["sheep-1", "sheep"],
+        ["sheep-2", "sheep"],
+        ["wolf-1", "wolf"],
+      ] as const;
+      lobby = new ShardLobby(createAssignLobbyMessage({
+        settings: { ...createAssignLobbyMessage().settings, teamGold: false },
+        players: players.map(([id, team]) => ({
+          id,
+          name: id,
+          playerColor: "#ff0000",
+          team,
+          token: id,
+        })),
+      }));
+      const clients = players.map(([id]) =>
+        new GameClient(createMockSocket(), lobby, lobby.authenticatePlayer(id)!)
+      );
+      for (const client of clients) lobby.addClient(client);
+      const player = (id: string) =>
+        Array.from(lobby.round!.ecs.entities).find((e) => e.id === id)!;
+      // The round spawns sheep after a countdown; place them now
+      lobbyContext.with(
+        lobby,
+        () =>
+          appContext.with(lobby.round!.ecs, () =>
+            lobby.round!.ecs.batch(() => {
+              newUnit("sheep-1", "sheep", 10, 10);
+              newUnit("sheep-2", "sheep", 11, 10);
+            })),
+      );
+      player("sheep-1").gold = 30;
+      player("sheep-2").gold = 0;
+
+      lobby.removeClient(clients[0]);
+
+      expect(player("sheep-2").gold).toBe(30);
     });
   });
 
