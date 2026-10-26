@@ -66,8 +66,10 @@ applies to every tool invocation regardless of apparent independence.
   perfunctorily
 - Aim for test driven development. When fixing a bug, first try to reproduce it
   with a test, then fix the bug
-- Tests run with Vitest on Node (22.12 or later; `deno install` first). Client
-  tests run under jsdom, everything else under plain Node
+- Tests run with Vitest: `deno task test` runs it on Deno,
+  `deno task
+  test:node` on Node (22.12 or later; `deno install` first). Client
+  tests run under jsdom, everything else without a DOM
 - To run a specific test file: `deno task test server/rl/env.test.ts`
 - To run a specific test: use `it.only(...)` on the test, then run the file
 - Do not use `-t`/`--testNamePattern` with `deno task test`

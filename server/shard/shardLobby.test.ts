@@ -224,10 +224,10 @@ describe("ShardLobby", () => {
             lobby.round!.ecs.batch(() => {
               newUnit("sheep-1", "sheep", 10, 10);
               newUnit("sheep-2", "sheep", 11, 10);
+              player("sheep-1").gold = 30;
+              player("sheep-2").gold = 0;
             })),
       );
-      player("sheep-1").gold = 30;
-      player("sheep-2").gold = 0;
 
       lobby.removeClient(clients[0]);
 

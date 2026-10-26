@@ -2,7 +2,8 @@
   "nodeModulesDir": "auto",
   "tasks": {
     "dev": "deno run -A --watch --env-file server/index.ts --dev",
-    "test": "FLY_API_TOKEN= STATUS_KV_DISABLED=1 node node_modules/vitest/vitest.mjs run",
+    "test": "FLY_API_TOKEN= STATUS_KV_DISABLED=1 deno run -A npm:vitest run",
+    "test:node": "FLY_API_TOKEN= STATUS_KV_DISABLED=1 node node_modules/vitest/vitest.mjs run",
     "test:fast": "deno task test --reporter=dot",
     "build": "deno run --allow-env --allow-read --allow-write --allow-run scripts/build.ts",
     "replay": "FLY_API_TOKEN= STATUS_KV_DISABLED=1 deno run --allow-env --allow-read --allow-net scripts/replay.ts",
