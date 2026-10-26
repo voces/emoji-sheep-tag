@@ -164,6 +164,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     tick: (count: number = 1) => {
       while (count--) {
         time.tick(50);
+        ecs.tick++;
         ecs.update(0.05);
       }
     },
