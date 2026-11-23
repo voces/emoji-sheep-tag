@@ -4,3 +4,5 @@ node_modules
 .vapid.json
 src-tauri/target/
 replays/
+status.db
+status.db-*

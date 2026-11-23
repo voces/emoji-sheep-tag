@@ -1,6 +1,14 @@
 import esbuild, { type BuildOptions, type Plugin } from "esbuild";
-import { mkdir } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { join, relative } from "node:path";
+import process from "node:process";
 
 const mkdirp = (dir: string) => mkdir(dir, { recursive: true });
 import { processSoundAssets } from "./processSoundAssets.ts";
@@ -12,14 +20,14 @@ const assetInlinePlugin = {
     build.onResolve(
       { filter: /\.svg$/ },
       (args) => ({
-        path: relative(Deno.cwd(), join(args.resolveDir, args.path)),
+        path: relative(process.cwd(), join(args.resolveDir, args.path)),
         namespace: "asset-inline",
       }),
     );
     build.onLoad(
       { filter: /\.svg$/, namespace: "asset-inline" },
       async (args) => ({
-        contents: await Deno.readTextFile(args.path),
+        contents: await readFile(args.path, "utf8"),
         loader: "text",
       }),
     );
@@ -45,7 +53,7 @@ const entryPoints = ["client/index.ts", "server/local.ts"];
 export const buildOptions = async (
   env: "dev" | "prod",
 ): Promise<BuildOptions> => {
-  const denoJson = JSON.parse(await Deno.readTextFile("deno.json"));
+  const denoJson = JSON.parse(await readFile("deno.json", "utf8"));
   const imports: Record<string, string> = denoJson.imports ?? {};
 
   return {
@@ -74,19 +82,19 @@ export const copyMaps = async () => {
   const srcDir = "shared/maps";
   const destDir = "dist/maps";
   await mkdirp(destDir);
-  for await (const entry of Deno.readDir(srcDir)) {
-    if (!entry.isFile || !entry.name.endsWith(".json")) continue;
-    await Deno.copyFile(`${srcDir}/${entry.name}`, `${destDir}/${entry.name}`);
+  for (const entry of await readdir(srcDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    await copyFile(`${srcDir}/${entry.name}`, `${destDir}/${entry.name}`);
   }
 };
 
 export const cleanOldBundles = async () => {
   try {
-    for await (const entry of Deno.readDir("dist")) {
+    for (const entry of await readdir("dist", { withFileTypes: true })) {
       if (
-        entry.isFile &&
+        entry.isFile() &&
         /^(index|local)-.*\.js(\.map)?$/.test(entry.name)
-      ) await Deno.remove(`dist/${entry.name}`);
+      ) await rm(`dist/${entry.name}`);
     }
   } catch { /* dist doesn't exist yet */ }
 };
@@ -111,8 +119,8 @@ export const copyHtml = async (
 ) => {
   await mkdirp("dist");
 
-  const html = await Deno.readTextFile("client/index.html");
-  await Deno.writeTextFile(
+  const html = await readFile("client/index.html", "utf8");
+  await writeFile(
     "dist/index.html",
     html
       .replace('src="index.js"', `src="${filenames.index}"`)
@@ -150,4 +158,6 @@ export const build = async (env: "dev" | "prod") => {
   }
 };
 
-if (import.meta.main) await build(Deno.args.includes("--dev") ? "dev" : "prod");
+if (import.meta.main) {
+  await build(process.argv.includes("--dev") ? "dev" : "prod");
+}

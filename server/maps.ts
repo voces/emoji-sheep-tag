@@ -10,7 +10,7 @@ const packedCache = new Map<string, PackedMap>([
   ["revo", defaultPackedMap],
 ]);
 
-if (typeof Deno === "undefined" && typeof globalThis.fetch === "function") {
+if (!nodeFs() && typeof globalThis.fetch === "function") {
   const base = (globalThis as { location?: { origin?: string } }).location
     ?.origin ?? globalThis.origin ?? "";
   const preload = async () => {

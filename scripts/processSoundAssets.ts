@@ -1,4 +1,12 @@
-import { mkdir, readdir } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  stat as statFile,
+  writeFile,
+} from "node:fs/promises";
 import { basename, dirname, extname, join, relative } from "node:path";
 
 const ensureDir = (dir: string) => mkdir(dir, { recursive: true });
@@ -80,14 +88,12 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
   let ffmpegPath: string | null = null;
   let runner: Runner | null = null;
 
-  // Get number of CPU cores for concurrency limit (Deno doesn't have a direct API for this)
-  // Use a reasonable default based on typical systems
-  const concurrencyLimit = 8; // Good balance for most systems
+  const concurrencyLimit = 8;
 
   // Process files in batches
   const processFile = async (abs: string) => {
     const rel = relative(cfg.inputDir, abs);
-    const stat = await Deno.stat(abs);
+    const stat = await statFile(abs);
     const srcHash = await sha256File(abs);
 
     // classify
@@ -156,7 +162,7 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
     // update cache
     const outputs: CacheEntry["outputs"] = {};
     for (const t of cfg.targets) {
-      const st = await Deno.stat(outPath(cfg, rel, t));
+      const st = await statFile(outPath(cfg, rel, t));
       outputs[t] = { mtimeMs: st.mtime?.getTime() ?? 0, size: st.size };
     }
     cache.entries[key] = {
@@ -204,20 +210,10 @@ export async function processSoundAssets(opts: ProcessOptions = {}) {
 async function findFFmpeg(
   cfg: Required<ProcessOptions>,
 ): Promise<{ ffmpegPath: string; haveFfprobe: boolean }> {
-  // Try system FFmpeg first
   if (cfg.preferCli && await isCmdAvailable("ffmpeg")) {
     return {
       ffmpegPath: "ffmpeg",
       haveFfprobe: await isCmdAvailable("ffprobe"),
-    };
-  }
-
-  // Try bundled FFmpeg
-  const bundledPath = await findBundledFFmpeg(cfg.verbose);
-  if (bundledPath) {
-    return {
-      ffmpegPath: bundledPath,
-      haveFfprobe: false, // Bundled version doesn't include ffprobe
     };
   }
 
@@ -226,56 +222,14 @@ async function findFFmpeg(
   );
 }
 
-async function findBundledFFmpeg(verbose: boolean): Promise<string | null> {
-  try {
-    const platform = Deno.build.os === "linux"
-      ? "linux-x64"
-      : Deno.build.os === "darwin"
-      ? "darwin-x64"
-      : Deno.build.os === "windows"
-      ? "win32-x64"
-      : null;
+/** Runs `cmd`, resolving with its exit code; rejects if it cannot start. */
+const run = (cmd: string, args: string[], stdio: "inherit" | "ignore") =>
+  new Promise<number>((resolve, reject) =>
+    spawn(cmd, args, { stdio })
+      .on("error", reject)
+      .on("close", (code) => resolve(code ?? 1))
+  );
 
-    if (!platform) return null;
-
-    const homeDir = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-    const possiblePaths = [
-      `${homeDir}/.cache/deno/npm/registry.npmjs.org/@ffmpeg-installer/linux-x64/4.1.0/ffmpeg`,
-      `${homeDir}/.cache/deno/npm/registry.npmjs.org/@ffmpeg-installer/${platform}/4.1.0/ffmpeg`,
-      `${homeDir}/.cache/deno/npm/registry.npmjs.org/@ffmpeg-installer/${platform}/ffmpeg`,
-    ];
-
-    for (const path of possiblePaths) {
-      if (await testExecutable(path)) {
-        if (verbose) {
-          console.log(`Using bundled FFmpeg from: ${path}`);
-        }
-        return path;
-      }
-    }
-  } catch (error) {
-    if (verbose) {
-      console.log(`Bundled FFmpeg search failed: ${(error as Error).message}`);
-    }
-  }
-
-  return null;
-}
-
-async function testExecutable(path: string): Promise<boolean> {
-  try {
-    await Deno.stat(path);
-    const testCmd = new Deno.Command(path, {
-      args: ["-version"],
-      stdout: "null",
-      stderr: "null",
-    });
-    const { code } = await testCmd.output();
-    return code === 0;
-  } catch {
-    return false;
-  }
-}
 const AUDIO_EXTS = new Set([
   ".wav",
   ".wave",
@@ -296,25 +250,11 @@ type Runner = {
 function makeCliRunner(ffmpegPath = "ffmpeg"): Runner {
   return {
     runOnDisk: async (args: string[]) => {
-      const cmd = new Deno.Command(ffmpegPath, {
-        args,
-        stdout: "inherit",
-        stderr: "inherit",
-      });
-      const { code } = await cmd.spawn().status;
+      const code = await run(ffmpegPath, args, "inherit");
       if (code !== 0) throw new Error(`ffmpeg failed (${code})`);
     },
     supportsLoudnorm: () => Promise.resolve(true),
   };
-}
-
-function existsSync(path: string) {
-  try {
-    Deno.statSync(path);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function outPath(
@@ -405,13 +345,7 @@ async function encodeOne(
 
 async function isCmdAvailable(cmd: string): Promise<boolean> {
   try {
-    const proc = new Deno.Command(cmd, {
-      args: ["-version"],
-      stdout: "null",
-      stderr: "null",
-    });
-    const { code } = await proc.output();
-    return code === 0;
+    return await run(cmd, ["-version"], "ignore") === 0;
   } catch {
     return false;
   }
@@ -419,7 +353,7 @@ async function isCmdAvailable(cmd: string): Promise<boolean> {
 
 // ---- hashing & cache I/O ----
 async function sha256File(path: string): Promise<string> {
-  const data = await Deno.readFile(path); // Uint8Array<ArrayBuffer>
+  const data = await readFile(path);
   const hash = await crypto.subtle.digest("SHA-256", data);
   return hex(new Uint8Array(hash));
 }
@@ -433,7 +367,7 @@ function hex(bytes: Uint8Array): string {
 }
 async function loadCache(path: string): Promise<CacheManifest> {
   try {
-    const data = await Deno.readTextFile(path);
+    const data = await readFile(path, "utf8");
     const json = JSON.parse(data) as CacheManifest;
     if (json.version !== 1 || !json.entries) throw new Error("bad cache");
     return json;
@@ -443,7 +377,7 @@ async function loadCache(path: string): Promise<CacheManifest> {
 }
 async function saveCache(path: string, cache: CacheManifest): Promise<void> {
   await ensureDir(dirname(path));
-  await Deno.writeTextFile(path, JSON.stringify(cache, null, 2));
+  await writeFile(path, JSON.stringify(cache, null, 2));
 }
 
 if (import.meta.main) await processSoundAssets();

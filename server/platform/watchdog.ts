@@ -2,57 +2,77 @@
 
 import { env } from "./env.ts";
 
-const enc = new TextEncoder();
-
 const NOTIFY_SOCKET = env("NOTIFY_SOCKET");
 const WATCHDOG_USEC = Number(env("WATCHDOG_USEC") || 0);
 
-let notifySocket: Deno.DatagramConn | null = null;
+type Notifier = (state: string) => void | Promise<void>;
 
-/** Initialize datagram socket for systemd notifications */
-function initNotifySocket() {
-  if (!NOTIFY_SOCKET || notifySocket) return;
+type BunFfi = {
+  dlopen: (
+    path: string,
+    symbols: { sd_notify: { args: ["i32", "cstring"]; returns: "i32" } },
+  ) => { symbols: { sd_notify: (unset: number, state: Uint8Array) => number } };
+};
 
-  try {
-    // Create a datagram socket - we'll send to the systemd socket path
-    notifySocket = Deno.listenDatagram({ transport: "unixpacket", path: "" });
-  } catch (error) {
-    console.debug(
-      `[Watchdog] Failed to create notify socket: ${(error as Error).message}`,
-    );
-  }
-}
+/** libsystemd's sd_notify, which reads NOTIFY_SOCKET itself. */
+const bunNotifier = async (): Promise<Notifier> => {
+  const ffiModule = "bun:ffi";
+  const { dlopen }: BunFfi = await import(ffiModule);
+  const { symbols } = dlopen("libsystemd.so.0", {
+    sd_notify: { args: ["i32", "cstring"], returns: "i32" },
+  });
+  const enc = new TextEncoder();
+  return (state) => {
+    if (symbols.sd_notify(0, enc.encode(`${state}\0`)) < 0) {
+      throw new Error("sd_notify failed");
+    }
+  };
+};
 
-async function sdNotify(state: string) {
-  if (!NOTIFY_SOCKET) return;
-
-  initNotifySocket();
-  if (!notifySocket) return;
-
-  try {
-    // Abstract-namespace sockets start with "@"; replace with leading NUL
-    const targetPath = NOTIFY_SOCKET.startsWith("@")
-      ? `\0${NOTIFY_SOCKET.slice(1)}`
-      : NOTIFY_SOCKET;
-
-    await notifySocket.send(enc.encode(state), {
+const denoNotifier = (socketPath: string): Notifier => {
+  const socket = Deno.listenDatagram({ transport: "unixpacket", path: "" });
+  const enc = new TextEncoder();
+  // Abstract-namespace sockets start with "@"; replace with leading NUL
+  const path = socketPath.startsWith("@")
+    ? `\0${socketPath.slice(1)}`
+    : socketPath;
+  return async (state) =>
+    void await socket.send(enc.encode(state), {
       transport: "unixpacket",
-      path: targetPath,
+      path,
     });
+};
+
+let notifier: Promise<Notifier | undefined> | undefined;
+
+const getNotifier = () =>
+  notifier ??= (async () => {
+    if (!NOTIFY_SOCKET) return;
+    try {
+      return "Bun" in globalThis
+        ? await bunNotifier()
+        : denoNotifier(NOTIFY_SOCKET);
+    } catch (error) {
+      console.debug(
+        `[Watchdog] Failed to create notifier: ${(error as Error).message}`,
+      );
+    }
+  })();
+
+const sdNotify = async (state: string) => {
+  const notify = await getNotifier();
+  try {
+    await notify?.(state);
   } catch (error) {
     console.debug(`[Watchdog] Notify failed: ${(error as Error).message}`);
   }
-}
-
-/* ------------------------------------------------------------------------- */
+};
 
 /** Call once, as soon as the server is ready to accept players */
-export async function notifyReady() {
-  await sdNotify("READY=1");
-}
+export const notifyReady = () => sdNotify("READY=1");
 
 /** Start the periodic WATCHDOG=1 pings (no-op if watchdog not configured) */
-export function armWatchdog() {
+export const armWatchdog = () => {
   if (WATCHDOG_USEC === 0) {
     console.debug("[Watchdog] Not armed - WATCHDOG_USEC not set");
     return;
@@ -65,7 +85,7 @@ export function armWatchdog() {
     }ms)`,
   );
   setInterval(() => void sdNotify("WATCHDOG=1"), intervalMs);
-}
+};
 
 export const startWatchdog = async () => {
   console.debug(

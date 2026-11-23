@@ -84,10 +84,14 @@ applies to every tool invocation regardless of apparent independence.
 
 # Runtime
 
-- The server is moving off Deno. Server code reaches runtime-specific APIs only
-  through `server/platform/` (`serve`, `env`, `args`, `nodeFs`, the systemd
-  watchdog); `server/status/storage.ts` (Deno KV) is the one exception left.
-  Elsewhere use web APIs or `node:` modules, never `Deno.*`
+- The server is moving off Deno to Bun: `bun run dev` / `bun run start` run it
+  on Bun, while tests, typechecking and CI still run on Deno. Server code
+  reaches runtime-specific APIs only through `server/platform/` (`serve`,
+  `serveFile`, `env`, `args`, `nodeFs`, the systemd watchdog), which supports
+  both runtimes for now. Elsewhere use web APIs or `node:` modules (status
+  storage is `node:sqlite`), never `Deno.*` or `Bun.*`
+- Bun resolves the `@/` aliases from `tsconfig.json` and Deno from `deno.json`;
+  keep the two in step
 - Modules reachable from `server/local.ts` are also bundled into the browser, so
   they must not import `node:` modules; read files through `nodeFs()` instead
 - Client code checks `headless` (`client/util/headless.ts`) rather than the

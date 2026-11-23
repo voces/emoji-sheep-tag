@@ -2,9 +2,14 @@
   "name": "emoji-sheep-tag",
   "private": true,
   "type": "module",
+  "scripts": {
+    "dev": "bun --watch server/index.ts --dev",
+    "start": "bun server/index.ts",
+    "build": "bun scripts/build.ts",
+    "shard": "PRIMARY_SERVER=ws://localhost:8000 SHARD_PORT=8001 bun --watch server/shard.ts"
+  },
   "dependencies": {
     "@block65/webcrypto-web-push": "1.0.2",
-    "@std/http": "npm:@jsr/std__http@1.0.23",
     "@tauri-apps/api": "2.10.1",
     "@verit/ecs": "npm:@jsr/verit__ecs@0.7.0",
     "i18next": "26.0.5",
