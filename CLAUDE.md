@@ -90,6 +90,10 @@ applies to every tool invocation regardless of apparent independence.
   `serveFile`, `env`, `args`, `nodeFs`, the systemd watchdog), which supports
   both runtimes for now. Elsewhere use web APIs or `node:` modules (status
   storage is `node:sqlite`), never `Deno.*` or `Bun.*`
+- `ops/` holds the prod systemd unit and nginx site; deploys install them
+  through w3xio's validating installer, so keep them within its rules and keep
+  secrets in `/etc/emojist/env`, never in the repo. `bun.lock` pins the server's
+  install (`bun install --frozen-lockfile` on deploy)
 - Bun resolves the `@/` aliases from `tsconfig.json` and Deno from `deno.json`;
   keep the two in step
 - Modules reachable from `server/local.ts` are also bundled into the browser, so
