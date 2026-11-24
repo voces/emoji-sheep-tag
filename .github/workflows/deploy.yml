@@ -89,7 +89,12 @@ jobs:
         if: env.DEPLOY_WEBHOOK_URL
         env:
           DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
         run: |
-          curl -sf -X POST "$DEPLOY_WEBHOOK_URL" \
+          auth=()
+          if [ -n "$DEPLOY_TOKEN" ]; then
+            auth=(-H "Authorization: Bearer $DEPLOY_TOKEN")
+          fi
+          curl -sf -X POST "$DEPLOY_WEBHOOK_URL" "${auth[@]}" \
             -H "Content-Type: application/json" \
             -d '{"version": "${{ steps.version.outputs.version }}"}'
