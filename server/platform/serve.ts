@@ -55,6 +55,7 @@ type BunRuntime = {
       server: BunServer,
     ) => Response | undefined | Promise<Response | undefined>;
     websocket: {
+      idleTimeout?: number;
       open: (ws: BunSocket) => void;
       message: (ws: BunSocket, message: string | Uint8Array) => void;
       close: (ws: BunSocket, code: number, reason: string) => void;
@@ -158,6 +159,10 @@ const serveBun = (bun: BunRuntime, options: ServeOptions, handler: Handler) => {
       socket.handlerReturned();
     },
     websocket: {
+      // Bun pings a socket idle this many seconds and drops it if the ping goes
+      // unanswered. Keep it under proxies' idle timeouts (nginx's is 60s), as
+      // sockets go quiet while a round runs on a shard.
+      idleTimeout: 30,
       open: (ws) => ws.data.opened(ws),
       message: (ws, message) => ws.data.received(message),
       close: (ws, code, reason) => ws.data.closed(code, reason),
