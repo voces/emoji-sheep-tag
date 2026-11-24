@@ -1,9 +1,8 @@
 import "@/client-testing/setup.ts";
-import { describe, it } from "@std/testing/bdd";
+import { describe, expect, it } from "vitest";
 import { handlers } from "../messageHandlers.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";
 import "./fog.ts";
-import { expect } from "@std/expect/expect";
 import { lookup } from "./lookup.ts";
 import { mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { app } from "../ecs.ts";

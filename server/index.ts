@@ -51,9 +51,11 @@ serve({
   }
 
   if (req.method === "GET" && isPageLoad(url.pathname)) {
-    incrementPageLoads().catch((err) =>
-      console.error("[status] incrementPageLoads failed:", err)
-    );
+    try {
+      incrementPageLoads();
+    } catch (err) {
+      console.error("[status] incrementPageLoads failed:", err);
+    }
   }
 
   const statusResponse = await handleStatusRoute(req, url);

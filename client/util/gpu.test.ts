@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { expect } from "@std/expect";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { gpuInfoOf, softwareRendererOf } from "./gpu.ts";
 
 /** A context naming `renderer`, counting how often it is asked. */

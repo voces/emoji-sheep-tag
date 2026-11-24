@@ -1,5 +1,4 @@
-import { afterEach, describe } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, describe, expect } from "vitest";
 import { endRound, leave } from "./lobbyApi.ts";
 import { cleanupTest, it } from "./testing/setup.ts";
 import { getPlayerGold, grantPlayerGold } from "./api/player.ts";

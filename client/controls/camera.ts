@@ -23,7 +23,7 @@ export const endPanGrab = () => {
 };
 
 // Camera controls
-let zoomTimeout = 0;
+let zoomTimeout: ReturnType<typeof setTimeout> | undefined;
 globalThis.addEventListener("wheel", (e) => {
   const element = document.elementFromPoint(mouse.pixels.x, mouse.pixels.y);
   if (!isGameElement(element)) return;

@@ -25,6 +25,7 @@ import {
   getResolvedAnimation,
 } from "../../../systems/animation.ts";
 import { getPlayer } from "@/shared/api/player.ts";
+import { headless } from "../../../util/headless.ts";
 
 const Canvas = styled.canvas`
   width: 100%;
@@ -70,7 +71,7 @@ export const PortraitCanvas = ({ entity }: { entity: Entity }) => {
   const modelName = entity?.model ?? entity?.prefab;
 
   useEffect(() => {
-    if ("Deno" in globalThis || !canvas || !modelName || !renderer) return;
+    if (headless || !canvas || !modelName || !renderer) return;
 
     const collection = collections[modelName];
     if (!(collection instanceof AnimatedInstancedMesh)) return;

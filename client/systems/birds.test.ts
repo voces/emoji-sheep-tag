@@ -1,5 +1,4 @@
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { AREA_PER_BIRD, birdLimit } from "./birds.ts";
 
 const bounds = (w: number, h: number) => ({

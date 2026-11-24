@@ -1,5 +1,4 @@
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { Entity } from "@/shared/types.ts";
 import { practiceModeActions } from "@/shared/data.ts";
 import { getOrder } from "./index.ts";

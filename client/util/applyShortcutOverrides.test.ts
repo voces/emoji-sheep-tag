@@ -1,5 +1,4 @@
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { UnitDataAction } from "@/shared/types.ts";
 import { Shortcuts } from "../ui/util/shortcutUtils.ts";
 import { applyShortcutOverride } from "./applyShortcutOverrides.ts";

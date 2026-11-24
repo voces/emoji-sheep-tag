@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { expect, it } from "vitest";
 import { act, render, renderHook, screen } from "@testing-library/react";
 import { Wrapper } from "../../Wrapper.tsx";
 import { app, type Entity } from "../../../ecs.ts";

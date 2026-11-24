@@ -41,7 +41,7 @@ if (!SHARD_PORT) {
 
 let primarySocket: WebSocket | undefined;
 let shardId: string | undefined;
-let reconnectTimeout: number | undefined;
+let reconnectTimeout: ReturnType<typeof setTimeout> | undefined;
 
 // Active lobbies on this shard (indexed by ID for connection routing)
 const shardLobbies = new Map<string, ShardLobby>();

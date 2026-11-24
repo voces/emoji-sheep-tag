@@ -33,6 +33,7 @@ import { editorVar, editorWaterViewVar } from "@/vars/editor.ts";
 import { stateVar } from "@/vars/state.ts";
 import { Entity } from "../ecs.ts";
 import { clearGeneratedFlowers, regenerateFlowers } from "../flowers.ts";
+import { headless } from "../util/headless.ts";
 
 const terrainTilePalette = tileDefs.map((t) => ({
   color: `#${t.color.toString(16).padStart(6, "0")}`,
@@ -88,7 +89,7 @@ export const setFogPass = (pass: FogPass) => {
   fogPass = pass;
 };
 
-if (!("Deno" in globalThis)) {
+if (!headless) {
   renderer = new WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(globalThis.devicePixelRatio);
   // The dark grass past the map's edge, shown wherever nothing has drawn
@@ -224,7 +225,7 @@ const getTerrainData = () => ({
   cliffField: terrain.cliffField,
 });
 
-let flowerDebounce: number | undefined;
+let flowerDebounce: ReturnType<typeof setTimeout> | undefined;
 export const triggerFlowerRegeneration = () => {
   clearTimeout(flowerDebounce);
   regenerateFlowers(getTerrainData());

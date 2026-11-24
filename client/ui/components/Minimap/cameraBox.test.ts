@@ -1,5 +1,4 @@
-import { expect } from "@std/expect";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { PerspectiveCamera } from "three";
 import { cameraBoxOnMinimap } from "./cameraBox.ts";
 

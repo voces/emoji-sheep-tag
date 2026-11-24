@@ -7,14 +7,14 @@ import {
   extractFilenames,
 } from "./build.ts";
 import { processSoundAssets } from "./processSoundAssets.ts";
-import { ensureDir } from "@std/fs";
+import { mkdir, watch } from "node:fs/promises";
 
 // deno-lint-ignore no-explicit-any
 const debounce = <T extends (...args: any[]) => Promise<any>>(
   func: T,
   delay: number,
 ) => {
-  let timeoutId: number;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return (...args: Parameters<T>): Promise<ReturnType<T>> =>
     new Promise((resolve, reject) => {
@@ -30,7 +30,7 @@ const debounce = <T extends (...args: any[]) => Promise<any>>(
     });
 };
 
-await ensureDir("dist");
+await mkdir("dist", { recursive: true });
 await cleanOldBundles();
 
 const ctx = await esbuild.context(await buildOptions("dev"));
@@ -63,7 +63,8 @@ const debouncedRebuild = debounce(
 await debouncedRebuild();
 console.log("[Build] Waiting for changes...");
 
-const watcher = Deno.watchFs(["client", "shared/maps"]);
-for await (const _ of watcher) {
-  debouncedRebuild();
+for (const dir of ["client", "shared/maps"]) {
+  (async () => {
+    for await (const _ of watch(dir, { recursive: true })) debouncedRebuild();
+  })();
 }

@@ -115,7 +115,7 @@ const sendOne = async (
       body: built.body as BodyInit,
     });
     if (res.status === 404 || res.status === 410) {
-      await removeSubscription(sub.endpoint);
+      removeSubscription(sub.endpoint);
     } else if (!res.ok) {
       console.error(
         `[status] Push delivery failed: ${res.status} ${await res.text()}`,
@@ -127,7 +127,7 @@ const sendOne = async (
 };
 
 export const sendPushToAll = async (payload: unknown) => {
-  const subs = await listSubscriptions();
+  const subs = listSubscriptions();
   if (subs.length === 0) return;
   const vapid = toVapid(await ensureKeys());
   await Promise.allSettled(subs.map((sub) => sendOne(sub, payload, vapid)));

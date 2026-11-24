@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { expect } from "@std/expect";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { Color } from "three";
 import { fakeContext2d, fakeRenderer } from "@/client-testing/fakeRenderer.ts";
 import { drawPortrait } from "./PortraitCanvas.tsx";

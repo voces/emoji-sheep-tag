@@ -195,7 +195,7 @@ export const Chat = () => {
   useEffect(() => {
     if (showChatBox === "open" || showChatBox === "dismissed") return;
 
-    const timers: number[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
     for (const log of chatLog) {
       const age = now - log.timestamp;
       // Schedule re-render at 7s mark to start fade

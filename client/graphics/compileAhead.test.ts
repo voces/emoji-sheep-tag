@@ -1,5 +1,4 @@
-import { expect } from "@std/expect";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, Scene } from "three";
 import { watchForUncompiled } from "./compileAhead.ts";
 

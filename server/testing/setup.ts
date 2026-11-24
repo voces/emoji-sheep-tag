@@ -1,9 +1,8 @@
-import { it as baseIt } from "@std/testing/bdd";
+import { it as baseIt, vi } from "vitest";
 import { newEcs } from "../ecs.ts";
 import { Client } from "../client.ts";
 import { clientContext, lobbyContext } from "../contexts.ts";
 import { newLobby } from "../lobby.ts";
-import { FakeTime } from "@std/testing/time";
 import { appContext } from "@/shared/context.ts";
 import { buildDefaultMap } from "@/shared/map.ts";
 
@@ -116,7 +115,7 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
   };
   appContext.current = ecs;
 
-  const time = new FakeTime();
+  vi.useFakeTimers();
 
   // Set up client properties and add separate player entities to ECS
   for (const { client } of sheepClients) {
@@ -169,12 +168,12 @@ export const createTestSetup = (options: TestSetupOptions = {}): TestSetup => {
     clients,
     tick: (count: number = 1) => {
       while (count--) {
-        time.tick(50);
+        vi.advanceTimersByTime(50);
         ecs.tick++;
         ecs.update(0.05);
       }
     },
-    [Symbol.dispose]: () => time.restore(),
+    [Symbol.dispose]: () => vi.useRealTimers(),
   };
 };
 

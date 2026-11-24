@@ -1,24 +1,24 @@
-import { assertEquals } from "@std/assert";
 import { editorMapModifiedVar, editorVar } from "@/vars/editor.ts";
 import {
   confirmEditorExit,
   resetEditorModifiedState,
 } from "./editorExitConfirmation.ts";
+import { assert, test } from "vitest";
 
-Deno.test("confirmEditorExit returns true when editor is not open", () => {
+test("confirmEditorExit returns true when editor is not open", () => {
   editorVar(false);
   editorMapModifiedVar(false);
-  assertEquals(confirmEditorExit(), true);
+  assert.deepEqual(confirmEditorExit(), true);
 });
 
-Deno.test("confirmEditorExit returns true when editor is open but no changes", () => {
+test("confirmEditorExit returns true when editor is open but no changes", () => {
   editorVar(true);
   editorMapModifiedVar(false);
-  assertEquals(confirmEditorExit(), true);
+  assert.deepEqual(confirmEditorExit(), true);
 });
 
-Deno.test("resetEditorModifiedState resets the modified flag", () => {
+test("resetEditorModifiedState resets the modified flag", () => {
   editorMapModifiedVar(true);
   resetEditorModifiedState();
-  assertEquals(editorMapModifiedVar(), false);
+  assert.deepEqual(editorMapModifiedVar(), false);
 });

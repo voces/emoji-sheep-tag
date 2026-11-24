@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { app, type Entity, map } from "../../ecs.ts";
 import { lobbySettingsVar } from "@/vars/lobbySettings.ts";

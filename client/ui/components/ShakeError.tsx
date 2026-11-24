@@ -49,7 +49,7 @@ const Bubble = styled.div`
 
 export const useShakeError = () => {
   const ref = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<number | undefined>(undefined);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState(0);
 

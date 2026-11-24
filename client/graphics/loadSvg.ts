@@ -8,7 +8,7 @@ import {
   Vector3,
   WebGLProgramParametersWithUniforms,
 } from "three";
-import { SVGLoader } from "three/SVGLoader";
+import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
 import { InstancedSvg } from "./InstancedSvg.ts";
 import { scene } from "./three.ts";
 import { svgs } from "../systems/models.ts";

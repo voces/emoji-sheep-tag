@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@/client-testing/*": [
+        "./client/testing/*"
+      ],
+      "@/components/*": [
+        "./client/ui/components/*"
+      ],
+      "@/hooks/*": [
+        "./client/ui/hooks/*"
+      ],
+      "@/server-testing/*": [
+        "./server/testing/*"
+      ],
+      "@/shared/*": [
+        "./shared/*"
+      ],
+      "@/util/*": [
+        "./client/ui/util/*"
+      ],
+      "@/vars/*": [
+        "./client/ui/vars/*"
+      ]
+    }
+  }
+}

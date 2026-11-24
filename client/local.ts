@@ -26,7 +26,7 @@ export class LocalWebSocket {
   private port: MessagePort | undefined;
   private portListener: ((e: MessageEvent) => void) | undefined;
   private id: number;
-  private openTimeout: number | undefined;
+  private openTimeout: ReturnType<typeof setTimeout> | undefined;
   private name: string | undefined;
 
   constructor(name?: string) {

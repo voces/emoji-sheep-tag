@@ -63,7 +63,7 @@ export const EntityTooltip = () => {
   const [screenPos, setScreenPos] = useState<{ x: number; y: number } | null>(
     null,
   );
-  const hoverTimerRef = useRef<number | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentEntityRef = useRef<Entity | null>(null);
 
   useEffect(() => {

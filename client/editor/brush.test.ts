@@ -1,5 +1,4 @@
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { getAllCells, getBrushCells, getFloodFillCells } from "./brush.ts";
 
 const sortCells = (cells: [number, number][]) =>

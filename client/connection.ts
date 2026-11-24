@@ -9,8 +9,8 @@ import { recordPing } from "./ping.ts";
 import { isTauri } from "./isTauri.ts";
 
 let ws: WebSocket | LocalWebSocket | undefined;
-let reconnectTimeout: number | undefined;
-const delayTimeouts: Set<number> = new Set();
+let reconnectTimeout: ReturnType<typeof setTimeout> | undefined;
+const delayTimeouts = new Set<ReturnType<typeof setTimeout>>();
 let testCleanupMode = false;
 let userStoppedReconnecting = false;
 
@@ -45,7 +45,7 @@ export const connect = () => {
   const nameParam = storedName ? `?name=${encodeURIComponent(storedName)}` : "";
 
   // Use LocalWebSocket for offline mode, regular WebSocket otherwise
-  ws = server === "local"
+  const socket = ws = server === "local"
     ? new LocalWebSocket(storedName || undefined)
     : new WebSocket(
       `ws${
@@ -53,7 +53,9 @@ export const connect = () => {
       }://${server}${nameParam}`,
     );
 
-  ws.addEventListener("close", () => {
+  // A socket replaced by a later connect() must not touch the new one's state
+  socket.addEventListener("close", () => {
+    if (ws !== socket) return;
     ws = undefined;
 
     if (userStoppedReconnecting) return;
@@ -66,7 +68,8 @@ export const connect = () => {
     }
   });
 
-  ws.addEventListener("open", () => {
+  socket.addEventListener("open", () => {
+    if (ws !== socket) return;
     const prev = connectionStatusVar();
     connectionStatusVar("connected");
     if (prev === "disconnected") {
@@ -75,7 +78,7 @@ export const connect = () => {
     }
   });
 
-  ws.addEventListener("message", (e) => {
+  socket.addEventListener("message", (e) => {
     const json = JSON.parse(e.data);
     let data: ServerToClientMessage;
     try {

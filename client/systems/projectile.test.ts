@@ -1,6 +1,5 @@
 import "../testing/setup.ts";
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { app } from "../ecs.ts";
 import "./projectile.ts"; // Import to register the projectile system
 

@@ -3,7 +3,7 @@ import { deepEqual } from "../util/deepEqual.ts";
 import { Entity, listen } from "../../ecs.ts";
 
 // Shared batch flush: one timer for all throttled listeners
-let batchTimeout: number | undefined;
+let batchTimeout: ReturnType<typeof setTimeout> | undefined;
 const pendingFlushes = new Set<() => void>();
 
 const scheduleBatchFlush = (flush: () => void) => {

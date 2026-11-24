@@ -1,10 +1,7 @@
 import "@/client-testing/integration-setup.ts";
-import { setCurrentTestFile } from "@/client-testing/integration-setup.ts";
 
 // Set the current test file name for deterministic port assignment
-setCurrentTestFile("messaging.test.ts");
-import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { waitFor } from "@testing-library/react";
 import { send } from "./messaging.ts";
 import { connect, setServer, stopReconnecting } from "./connection.ts";

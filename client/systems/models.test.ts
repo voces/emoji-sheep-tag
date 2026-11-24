@@ -1,6 +1,5 @@
 import "@/client-testing/setup.ts";
-import { it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { expect, it } from "vitest";
 import { collections, getModelScale } from "./models.ts";
 
 it("keeps reporting an svg model's scale after its collection loads", () => {

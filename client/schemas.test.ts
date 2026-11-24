@@ -1,8 +1,8 @@
-import { expect } from "@std/expect";
+import { expect, test } from "vitest";
 import { Order } from "@/shared/types.ts";
 import { zUpdate } from "./schemas.ts";
 
-Deno.test("orders keep lastRepath through parsing", () => {
+test("orders keep lastRepath through parsing", () => {
   const orders: Order[] = [
     { type: "walk", target: { x: 1, y: 2 }, lastRepath: 3 },
     { type: "walk", targetId: "u1", lastRepath: 3 },

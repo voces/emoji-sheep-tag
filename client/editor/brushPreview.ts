@@ -36,6 +36,7 @@ import {
   TERRAIN_TOOL_COLORS,
   type TerrainTool,
 } from "./terrainTools.ts";
+import { headless } from "../util/headless.ts";
 
 const CLIFF_FILL_COLOR = 0xffffff;
 
@@ -213,7 +214,7 @@ const detachEditorListeners = () => {
 };
 
 const init = () => {
-  if (preview || "Deno" in globalThis) return;
+  if (preview || headless) return;
   preview = new BrushPreview();
   scene.add(preview);
 

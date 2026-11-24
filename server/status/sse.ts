@@ -95,7 +95,7 @@ const countHubPlayers = () => {
   return n;
 };
 
-const buildSnapshot = async (): Promise<StatusSnapshot> => {
+const buildSnapshot = (): StatusSnapshot => {
   const rawShards = getShardInfoList();
   const players = getPlayerCount();
   const lobbyCount = getLobbyCount();
@@ -120,8 +120,8 @@ const buildSnapshot = async (): Promise<StatusSnapshot> => {
     players,
     lobbies: lobbyCount,
     activeRounds: getActiveRoundCount(),
-    pageLoads: await getPageLoadStats(),
-    recentRounds: await recentRounds(20),
+    pageLoads: getPageLoadStats(),
+    recentRounds: recentRounds(20),
     clients: collectClients(),
     lobbyList: collectLobbies(shards),
     shards,
@@ -165,7 +165,7 @@ const maybeSendPush = async (snapshot: StatusSnapshot) => {
 };
 
 const broadcast = async () => {
-  const snapshot = await buildSnapshot();
+  const snapshot = buildSnapshot();
   const data = JSON.stringify(snapshot);
   for (const controller of controllers) {
     try {
@@ -191,9 +191,11 @@ setInterval(() => {
 }, KEEPALIVE_MS);
 
 onRoundEnded((event) => {
-  addRoundRecord(event).catch((err) =>
-    console.error("[status] Failed to record round:", err)
-  );
+  try {
+    addRoundRecord(event);
+  } catch (err) {
+    console.error("[status] Failed to record round:", err);
+  }
 });
 
 let statusChangeRegistered = false;
@@ -207,9 +209,9 @@ const registerStatusChangeOnce = () => {
   });
 };
 
-export const createStatusStream = async () => {
+export const createStatusStream = () => {
   registerStatusChangeOnce();
-  const initial = JSON.stringify(await buildSnapshot());
+  const initial = JSON.stringify(buildSnapshot());
   let ctrl: ReadableStreamDefaultController;
   const body = new ReadableStream({
     start(controller) {

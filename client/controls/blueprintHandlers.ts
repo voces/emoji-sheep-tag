@@ -156,7 +156,7 @@ export const createBlueprint = (
   return blueprint;
 };
 
-let updateBlueprintInterval = 0;
+let updateBlueprintInterval: ReturnType<typeof setInterval> | undefined;
 
 const validateBlueprintAtPosition = (
   builder: Entity,
@@ -215,7 +215,7 @@ export const updateBlueprint = (x: number, y: number) => {
     updateBlueprintInterval = setInterval(() => {
       if (!blueprint?.position) {
         clearInterval(updateBlueprintInterval);
-        updateBlueprintInterval = 0;
+        updateBlueprintInterval = undefined;
         return;
       }
 
@@ -242,7 +242,7 @@ export const cancelBlueprint = () => {
   if (buildGrid) buildGrid.hide();
   if (updateBlueprintInterval) {
     clearInterval(updateBlueprintInterval);
-    updateBlueprintInterval = 0;
+    updateBlueprintInterval = undefined;
   }
   if (editorActiveActionVar()) editorActiveActionVar(undefined);
 };

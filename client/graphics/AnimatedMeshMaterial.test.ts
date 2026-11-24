@@ -1,4 +1,4 @@
-import { expect } from "@std/expect";
+import { expect, test } from "vitest";
 import {
   ShaderLib,
   WebGLProgramParametersWithUniforms,
@@ -21,7 +21,7 @@ const compile = (material: ReturnType<typeof createAnimatedMeshMaterial>) =>
     {} as WebGLRenderer,
   );
 
-Deno.test("onShaderReady runs every callback registered before compile", () => {
+test("onShaderReady runs every callback registered before compile", () => {
   const material = createAnimatedMeshMaterial();
   const calls: string[] = [];
   onShaderReady(material, () => calls.push("first"));

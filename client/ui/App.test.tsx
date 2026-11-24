@@ -3,10 +3,9 @@ import {
   getTestServerMessages,
   getTestServerPort,
   sendMessageFromServer,
-  setCurrentTestFile,
 } from "@/client-testing/integration-setup.ts";
 import "@/client-testing/setup.ts";
-import { afterEach, it } from "@std/testing/bdd";
+import { afterEach, expect, it } from "vitest";
 import { setServer, stopReconnecting } from "../connection.ts";
 import { render, screen, waitFor } from "@testing-library/react";
 import { App } from "./App.tsx";
@@ -14,9 +13,7 @@ import { userEvent } from "@testing-library/user-event";
 import { colors, practiceModeActions } from "@/shared/data.ts";
 import { mergeEntityWithPrefab } from "@/shared/api/entity.ts";
 import { Entity } from "@/shared/types.ts";
-import { expect } from "@std/expect/expect";
 import { menusVar } from "@/vars/menus.ts";
-setCurrentTestFile("App.test.ts");
 
 afterEach(() => {
   stopReconnecting();

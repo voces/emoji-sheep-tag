@@ -1,5 +1,4 @@
-import { describe, it } from "@std/testing/bdd";
-import { expect } from "@std/expect";
+import { describe, expect, it } from "vitest";
 import { PathingMap } from "./PathingMap.ts";
 import { DIRECTION, PATHING_TYPES } from "./constants.ts";
 import { PathingEntity } from "./types.ts";

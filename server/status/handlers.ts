@@ -31,7 +31,7 @@ const handleSubscribe = async (req: Request) => {
     if (!result.success) {
       return Response.json({ error: "invalid subscription" }, { status: 400 });
     }
-    await addSubscription({ ...result.data, createdAt: Date.now() });
+    addSubscription({ ...result.data, createdAt: Date.now() });
     return Response.json({ ok: true }, NO_STORE);
   }
   if (req.method === "DELETE") {
@@ -39,7 +39,7 @@ const handleSubscribe = async (req: Request) => {
     if (!result.success) {
       return Response.json({ error: "missing endpoint" }, { status: 400 });
     }
-    await removeSubscription(result.data.endpoint);
+    removeSubscription(result.data.endpoint);
     return Response.json({ ok: true }, NO_STORE);
   }
   return Response.json({ error: "method not allowed" }, { status: 405 });
@@ -51,7 +51,7 @@ export const handleStatusRoute = async (
 ): Promise<Response | undefined> => {
   const path = url.pathname;
 
-  if (path === "/api/status") return await createStatusStream();
+  if (path === "/api/status") return createStatusStream();
   if (path === "/api/status/subscribe") return await handleSubscribe(req);
   if (path === "/api/status/vapid-public-key") {
     return Response.json(

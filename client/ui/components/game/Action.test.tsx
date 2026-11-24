@@ -1,7 +1,6 @@
 import "@/client-testing/setup.ts";
-import { it } from "@std/testing/bdd";
+import { expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { expect } from "@std/expect";
 import { Wrapper } from "../../Wrapper.tsx";
 import { getAllTexts } from "@/client-testing/utils.tsx";
 import { Action } from "./Action.tsx";
